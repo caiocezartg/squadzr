@@ -94,3 +94,15 @@ export type {
   RoomReadyPayload,
   WsErrorPayload,
 } from './ws'
+
+export type {
+  MemberReadySquad,
+  MemberRecruitingSquad,
+  MemberSquad,
+  MembershipRole,
+  PublicRecruitingSquad,
+  ReadyNotification,
+  SquadLanguage,
+  SquadLifecycleState,
+  SquadRosterMembership,
+} from './squad'

@@ -8,7 +8,7 @@
     "build": "bun build src/index.ts --outdir dist --target node",
     "start": "bun dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "cd .. && bunx vitest run --project server",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "db:generate": "drizzle-kit generate",
