@@ -5,6 +5,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.url(),
+  SQUADZR_TEST_DATABASE_URL: z.url().optional(),
   CORS_ORIGIN: z.url({ error: 'CORS_ORIGIN must be a valid URL' }).default('http://localhost:5173'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
