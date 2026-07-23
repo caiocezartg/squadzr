@@ -120,3 +120,5 @@ export const createRoomInputSchema = z.object({
 })
 
 export type CreateRoomInput = z.infer<typeof createRoomInputSchema>
+
+export * from './squad'
