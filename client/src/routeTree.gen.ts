@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SquadsIndexRouteImport } from './routes/squads/index'
 import { Route as RoomsIndexRouteImport } from './routes/rooms/index'
+import { Route as SquadsCodeRouteImport } from './routes/squads/$code'
 import { Route as RoomsMyRouteImport } from './routes/rooms/my'
 import { Route as RoomsCodeRouteImport } from './routes/rooms/$code'
 
@@ -19,9 +21,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SquadsIndexRoute = SquadsIndexRouteImport.update({
+  id: '/squads/',
+  path: '/squads/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoomsIndexRoute = RoomsIndexRouteImport.update({
   id: '/rooms/',
   path: '/rooms/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SquadsCodeRoute = SquadsCodeRouteImport.update({
+  id: '/squads/$code',
+  path: '/squads/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoomsMyRoute = RoomsMyRouteImport.update({
@@ -39,34 +51,61 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/rooms/$code': typeof RoomsCodeRoute
   '/rooms/my': typeof RoomsMyRoute
+  '/squads/$code': typeof SquadsCodeRoute
   '/rooms/': typeof RoomsIndexRoute
+  '/squads/': typeof SquadsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/rooms/$code': typeof RoomsCodeRoute
   '/rooms/my': typeof RoomsMyRoute
+  '/squads/$code': typeof SquadsCodeRoute
   '/rooms': typeof RoomsIndexRoute
+  '/squads': typeof SquadsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/rooms/$code': typeof RoomsCodeRoute
   '/rooms/my': typeof RoomsMyRoute
+  '/squads/$code': typeof SquadsCodeRoute
   '/rooms/': typeof RoomsIndexRoute
+  '/squads/': typeof SquadsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/rooms/$code' | '/rooms/my' | '/rooms/'
+  fullPaths:
+    | '/'
+    | '/rooms/$code'
+    | '/rooms/my'
+    | '/squads/$code'
+    | '/rooms/'
+    | '/squads/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/rooms/$code' | '/rooms/my' | '/rooms'
-  id: '__root__' | '/' | '/rooms/$code' | '/rooms/my' | '/rooms/'
+  to:
+    | '/'
+    | '/rooms/$code'
+    | '/rooms/my'
+    | '/squads/$code'
+    | '/rooms'
+    | '/squads'
+  id:
+    | '__root__'
+    | '/'
+    | '/rooms/$code'
+    | '/rooms/my'
+    | '/squads/$code'
+    | '/rooms/'
+    | '/squads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   RoomsCodeRoute: typeof RoomsCodeRoute
   RoomsMyRoute: typeof RoomsMyRoute
+  SquadsCodeRoute: typeof SquadsCodeRoute
   RoomsIndexRoute: typeof RoomsIndexRoute
+  SquadsIndexRoute: typeof SquadsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -78,11 +117,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/squads/': {
+      id: '/squads/'
+      path: '/squads'
+      fullPath: '/squads/'
+      preLoaderRoute: typeof SquadsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rooms/': {
       id: '/rooms/'
       path: '/rooms'
       fullPath: '/rooms/'
       preLoaderRoute: typeof RoomsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/squads/$code': {
+      id: '/squads/$code'
+      path: '/squads/$code'
+      fullPath: '/squads/$code'
+      preLoaderRoute: typeof SquadsCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rooms/my': {
@@ -106,7 +159,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   RoomsCodeRoute: RoomsCodeRoute,
   RoomsMyRoute: RoomsMyRoute,
+  SquadsCodeRoute: SquadsCodeRoute,
   RoomsIndexRoute: RoomsIndexRoute,
+  SquadsIndexRoute: SquadsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
