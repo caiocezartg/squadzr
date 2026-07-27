@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: squad_finder
+      POSTGRES_DB: squadzr
     ports:
       - '5432:5432'
     volumes:
