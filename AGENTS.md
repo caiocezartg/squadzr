@@ -84,3 +84,17 @@ Project rules are defined in `.agents/rules/` and MUST always be followed.
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
 - **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
 - **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+
+## Agent skills
+
+### Issue tracker
+
+Squadzr work is tracked as Linear issues in the Squadzr project. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The canonical triage labels are supplemented with code-area labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This monorepo uses a multi-context domain-documentation layout. See `docs/agents/domain.md`.
