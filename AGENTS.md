@@ -6,14 +6,14 @@
 
 **Monorepo**: Turbo + Bun workspaces
 
-| Scope     | Technologies                                                          |
-| --------- | --------------------------------------------------------------------- |
-| Server    | Fastify v5, Drizzle ORM, PostgreSQL, Better Auth, Zod                 |
-| Client    | React 18, Vite, TanStack Router, TanStack Query, Tailwind CSS         |
+| Scope     | Technologies                                                  |
+| --------- | ------------------------------------------------------------- |
+| Server    | Fastify v5, Drizzle ORM, PostgreSQL, Better Auth, Zod         |
+| Client    | React 18, Vite, TanStack Router, TanStack Query, Tailwind CSS |
 | Shared    | `@squadzr/types` (TS types), `@squadzr/schemas` (Zod schemas) |
-| Real-time | Fastify WebSocket plugin                                              |
-| Auth      | Better Auth with Discord OAuth                                        |
-| Testing   | Vitest (all workspaces)                                               |
+| Real-time | Fastify WebSocket plugin                                      |
+| Auth      | Better Auth with Discord OAuth                                |
+| Testing   | Vitest (all workspaces)                                       |
 
 ## Project Structure
 
@@ -52,32 +52,15 @@
 - **DTOs**: Domain entities are pure interfaces. DTOs in `application/dtos/` handle cross-boundary data transfer.
 - **Shared schemas**: Validation schemas used by both client and server live in `packages/@squadzr/schemas`, not duplicated per workspace.
 
-## Agents (only Claude Code)
-
-Agents are located in `.claude/agents/` and should be used according to their specialization.
-
-## Rules
-
-Project rules are defined in `.agents/rules/` and MUST always be followed.
-
-## Important Skills
-
-- For any UI creation or modification, use the **frontend-design** skill.
-- For any new library or provider implementation, use the **context7** skill.
-- For landing page text creation, use the **copywriting** skill.
-- For simulating user interaction with the browser, use the **playwright** skill.
-- When working within the React ecosystem, use the **vercel-react-best-practices** skill.
-
 ## Workflow Orchestration
 
-1. ALWAYS enter planning mode whenever starting a new task. Never begin implementing instructions directly.
-2. If necessary, break the task into specialized sub-agents for execution, keeping the main context clean and containing only essential information.
-3. Each planning step must be highly detailed, with clear key points, so execution is fully optimized.
-4. Each sub-agent must only be invoked to execute its specific assigned task.
-5. Upon completing any new task, always run every relevant verification/check to ensure no errors or bugs are left behind. All existing flows must continue working after new implementations.
-6. If you find any new bug, fix it immediately using the best approach that does not add unnecessary complexity to the codebase.
-7. If the task has been successfully implemented and is free of bugs, you may commit the changes. Do not combine multiple tasks into a single commit each completed task must have its own separate commit.
-8. After completing the task, write a report of the new implementations or fixes, explaining every piece of code that was modified, created, or removed.
+1. If necessary, break the task into specialized sub-agents for execution, keeping the main context clean and containing only essential information.
+2. Each planning step must be highly detailed, with clear key points, so execution is fully optimized.
+3. Each sub-agent must only be invoked to execute its specific assigned task.
+4. Upon completing any new task, always run every relevant verification/check to ensure no errors or bugs are left behind. All existing flows must continue working after new implementations.
+5. If you find any new bug, fix it immediately using the best approach that does not add unnecessary complexity to the codebase.
+6. If the task has been successfully implemented and is free of bugs, you may commit the changes. Do not combine multiple tasks into a single commit each completed task must have its own separate commit.
+7. After completing the task, write a report of the new implementations or fixes, explaining every piece of code that was modified, created, or removed.
 
 ## Core Principles
 
