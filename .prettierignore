@@ -1,0 +1,31 @@
+# TanStack Router owns this generated route registry. Do not rewrite its topology.
+client/src/routeTree.gen.ts
+
+# Build and tooling outputs are generated from committed sources.
+**/dist/**
+**/build/**
+**/coverage/**
+**/.turbo/**
+
+# Drizzle owns migration metadata snapshots and journal files.
+server/drizzle/meta/**
+server/drizzle/*.sql
+
+# Binary assets are not formatter inputs.
+**/*.avif
+**/*.eot
+**/*.gif
+**/*.ico
+**/*.jpeg
+**/*.jpg
+**/*.mp3
+**/*.mp4
+**/*.pdf
+**/*.png
+**/*.ttf
+**/*.wasm
+**/*.webm
+**/*.webp
+**/*.woff
+**/*.woff2
+**/*.zip
