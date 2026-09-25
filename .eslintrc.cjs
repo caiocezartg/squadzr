@@ -101,7 +101,8 @@ module.exports = {
       },
     },
     {
-      // Bun's test runner provides the standard test globals but not Vitest's vi.
+      // The server suite also runs under Vitest; globals mirror the client
+      // block because tests import the runner API explicitly.
       files: [
         'server/**/*.test.ts',
         'server/**/*.test.tsx',
@@ -117,6 +118,7 @@ module.exports = {
         expect: 'readonly',
         it: 'readonly',
         test: 'readonly',
+        vi: 'readonly',
       },
     },
   ],
