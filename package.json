@@ -18,6 +18,7 @@
     "build:server": "turbo build --filter=server",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "test:watch": "vitest",
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
     "format": "prettier --ignore-path .prettierignore --ignore-path .gitignore --write \"**/*.{ts,tsx,js,jsx,json}\"",
@@ -37,7 +38,8 @@
     "eslint-plugin-react-hooks": "^4.6.2",
     "prettier": "^3.3.0",
     "turbo": "2.8.3",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
   },
   "engines": {
     "bun": ">=1.1.0"
