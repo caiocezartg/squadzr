@@ -8,7 +8,7 @@
     "build": "bun build src/index.ts --outdir dist --target node",
     "start": "bun dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "vitest run",
     "lint": "eslint --max-warnings=0 src",
     "lint:fix": "eslint --max-warnings=0 src --fix",
     "db:generate": "drizzle-kit generate",
@@ -39,6 +39,7 @@
     "bun-types": "^1.1.0",
     "drizzle-kit": "^0.26.0",
     "pino-pretty": "13.1.3",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
   }
 }
