@@ -9,8 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix"
+    "lint": "eslint --max-warnings=0 src",
+    "lint:fix": "eslint --max-warnings=0 src --fix"
   },
   "dependencies": {
     "@base-ui-components/react": "1.0.0-rc.0",
