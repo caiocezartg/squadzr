@@ -1,11 +1,16 @@
 /**
  * Render harness for the room flows.
  *
- * Builds a TanStack Router tree from the real route files
- * (`/rooms/` index and `/rooms/$code` lobby) re-parented onto a test root —
- * the same wiring `routeTree.gen.ts` performs at runtime, without importing
- * any generated file. The tree is mounted inside a fresh TanStack Query
- * client so cache updates are observable through public query APIs.
+ * Composes a TanStack Router tree using only the library's public code-based
+ * API (`createRootRoute` + `createRoute` + `addChildren`). The tree mounts the
+ * REAL page components and search validation, taken from the public `options`
+ * of the imported route files (`/rooms/` index and `/rooms/$code` lobby), so
+ * the tests exercise the actual route implementations without any generated
+ * internals (`_addFileChildren`, `_addFileTypes`, `update` re-parenting) or
+ * details of `routeTree.gen.ts`.
+ *
+ * The tree is mounted inside a fresh TanStack Query client so cache updates
+ * are observable through public query APIs.
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -14,6 +19,7 @@ import {
   RouterProvider,
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
 } from '@tanstack/react-router'
 import type { AnyRoute, Router } from '@tanstack/react-router'
@@ -36,21 +42,21 @@ export function createTestQueryClient(): QueryClient {
 
 function buildRoomsRouteTree(): AnyRoute {
   const rootRoute = createRootRoute({ component: () => <Outlet /> })
-  RoomsIndexRoute.update({
-    id: '/rooms/',
-    path: '/rooms/',
-    getParentRoute: () => rootRoute,
-  } as never)
-  RoomsCodeRoute.update({
-    id: '/rooms/$code',
-    path: '/rooms/$code',
-    getParentRoute: () => rootRoute,
-  } as never)
 
-  const rootWithChildren = rootRoute as unknown as {
-    _addFileChildren: (children: unknown[]) => unknown
-  }
-  return rootWithChildren._addFileChildren([RoomsIndexRoute, RoomsCodeRoute]) as AnyRoute
+  const roomsIndexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/rooms/',
+    validateSearch: RoomsIndexRoute.options.validateSearch,
+    component: RoomsIndexRoute.options.component,
+  })
+
+  const roomsCodeRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/rooms/$code',
+    component: RoomsCodeRoute.options.component,
+  })
+
+  return rootRoute.addChildren([roomsIndexRoute, roomsCodeRoute]) as AnyRoute
 }
 
 export interface RoomsFlow {

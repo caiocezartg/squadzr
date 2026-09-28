@@ -6,17 +6,21 @@
  * the leave flow (member and host), deletion/redirect events, error
  * presentation (inline AlertBox, room-not-found) and the signed-out gate.
  *
- * The last test records the CURRENT behavior of a lobby reloaded after
- * `room_ready`: the ready state is not rehydrated, so the Discord card stays
- * hidden until the server emits a new `room_ready`. Per CCC-32 this is
- * recorded as behavior to fix in CCC-39 (migrate the lobby into a capability
- * module), NOT as a future invariant.
+ * The last test characterizes a FULL reload of a full room, reproducing the
+ * real server flow: HTTP serves the room already full but with NO ready
+ * indicator, the WS handshake replays `room_joined` with the complete roster,
+ * and the server re-emits `room_ready` (broadcastRoomReadyIfFull) on every
+ * `join_room` of a full room. The ready UI after reload therefore exists ONLY
+ * because of that event re-emission — not because the client derives
+ * readiness from authoritative state (HTTP/snapshot). Recorded for CCC-32 as
+ * behavior to fix in CCC-39 (migrate the lobby into a capability module),
+ * NOT as a future invariant.
  *
  * HTTP runs through the deterministic adapter (./http-router) and WebSocket
  * through the mock socket (./ws-mock). No test touches private hook state.
  */
 
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { renderRoomsFlow } from './harness'
 import { httpError, httpOk, onHttp } from './http-router'
@@ -241,39 +245,72 @@ describe('room lobby — failure and access gates', () => {
   })
 })
 
-describe('room lobby — reload after room_ready (recorded for CCC-39)', () => {
-  it('documents current behavior: ready state is lost after a lobby reload', async () => {
-    // Phase 1: the lobby becomes ready and the Discord invite is revealed.
-    renderRoomsFlow('/rooms/LOBBY1')
-    await screen.findByText('Squad ready check')
-    openLatestWebSocket()
-    sendFromServer({
-      type: 'room_ready',
-      payload: { roomId: lobbyRoom.id, roomCode: 'LOBBY1', message: 'ready' },
-    })
-    expect(await screen.findByText('Your squad is ready!')).toBeInTheDocument()
+describe('room lobby — full reload after room_ready (recorded for CCC-39)', () => {
+  // Server truth (characterized here, read-only): on EVERY `join_room` the
+  // server re-emits `room_ready` when the room is full
+  // (server/src/infrastructure/websocket/handlers/room.handler.ts →
+  // broadcastRoomReadyIfFull). A real reload of a full room is therefore:
+  // HTTP returns the full room (with NO ready indicator the client can
+  // rehydrate from), the WS handshake replays `room_joined` with the complete
+  // roster from the DB, and the server re-emits `room_ready`. The ready UI
+  // after reload exists ONLY because of that re-emission — not because the
+  // client derives readiness from authoritative state (HTTP/snapshot). That
+  // gap is the behavior to fix in CCC-39 (lobby capability module); this test
+  // records it, it does not endorse it.
+  const thirdPlayer = { id: 'user-3', name: 'Bruno', image: null, isHost: false }
+  const fullRoster = [hostPlayer, guestPlayer, thirdPlayer]
 
-    // Phase 2: the user reloads the page — a fresh mount with the same HTTP
-    // state (room data unchanged) but no `room_ready` re-emission.
-    cleanup()
+  function registerFullRoomRoutes(): void {
+    onHttp('GET', '/api/rooms', () => httpOk(catalogRooms))
+    onHttp('GET', '/api/games', () => httpOk(catalogGames))
+    onHttp('GET', '/api/rooms/:code', (req) => {
+      if (req.params.code !== lobbyRoom.code) {
+        return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
+      }
+      return httpOk({ room: lobbyRoom, players: fullRoster })
+    })
+    onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
+  }
+
+  it('full reload of a full room regains Discord access only via the re-emitted room_ready (CCC-39)', async () => {
+    registerFullRoomRoutes()
+
+    // Reload: a fresh mount of the lobby — the authoritative HTTP state still
+    // carries the room as full, but contains no ready indicator at all.
     renderRoomsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
+
     openLatestWebSocket()
+    const reloadedSocket = latestWebSocket()
+    await waitFor(() =>
+      expect(reloadedSocket.sentFrames().some((frame) => frame.type === 'join_room')).toBe(true)
+    )
+
+    // Server replays `room_joined` with the complete roster from the DB.
     sendFromServer({
       type: 'room_joined',
+      payload: { roomId: lobbyRoom.id, roomCode: 'LOBBY1', players: fullRoster },
+    })
+    expect(await screen.findByText('3/3 players')).toBeInTheDocument()
+
+    // Transient gap (transitory, recorded): between `room_joined` and the
+    // re-emitted `room_ready` the invite is hidden and leaving is still
+    // possible — readiness is pure local WS state at this point.
+    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Leave squad' })).toBeEnabled()
+
+    // Server re-emits `room_ready` because the room is full
+    // (broadcastRoomReadyIfFull) — the invite reappears ONLY thanks to this
+    // re-emission, not from the HTTP snapshot. CCC-39 owns the fix.
+    sendFromServer({
+      type: 'room_ready',
       payload: {
         roomId: lobbyRoom.id,
         roomCode: 'LOBBY1',
-        players: [hostPlayer, guestPlayer],
+        message: 'Room is full! Time to play!',
       },
     })
-
-    // Current behavior (recorded, not endorsed): the roster is rehydrated
-    // from WS, but the ready state is not — the invite stays hidden and the
-    // leave button stays enabled. CCC-39 (lobby capability module) owns the
-    // fix; do not treat this as a future invariant.
-    expect(await screen.findByText('2/3 players')).toBeInTheDocument()
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Leave squad' })).toBeEnabled()
+    expect(await screen.findByText('Your squad is ready!')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Squad locked' })).toBeDisabled()
   })
 })
