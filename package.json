@@ -19,7 +19,6 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
     "format": "prettier --ignore-path .prettierignore --ignore-path .gitignore --write \"**/*.{ts,tsx,js,jsx,json}\"",
@@ -40,7 +39,7 @@
     "prettier": "^3.3.0",
     "turbo": "2.8.3",
     "typescript": "^5.6.0",
-    "vitest": "^2.0.0"
+    "vitest": "^2.1.0"
   },
   "engines": {
     "bun": ">=1.1.0"
