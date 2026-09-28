@@ -6,6 +6,7 @@ export default defineConfig({
     name: 'client:unit',
     environment: 'jsdom',
     include: ['src/**/*.spec.{ts,tsx}'],
+    setupFiles: ['./src/test/setup.ts'],
   },
   resolve: {
     alias: {
