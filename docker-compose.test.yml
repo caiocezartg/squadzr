@@ -1,0 +1,20 @@
+# Disposable PostgreSQL 16 for the server integration suite (`bun run test:integration`).
+# Data lives in tmpfs, so every `docker compose ... up` starts from an empty server.
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: squadzr-db-test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    command: ['postgres', '-c', 'fsync=off', '-c', 'synchronous_commit=off', '-c', 'full_page_writes=off']
+    ports:
+      - '5433:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 2s
+      timeout: 5s
+      retries: 15
