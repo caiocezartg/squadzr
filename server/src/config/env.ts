@@ -19,8 +19,30 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>
 
-function validateEnv(): Env {
-  const result = envSchema.safeParse(process.env)
+type EnvSource = Record<string, string | undefined>
+
+/**
+ * Parses and validates an environment source without touching the process.
+ * Throws when the source is invalid, so tests can build isolated configurations.
+ */
+export function parseEnv(source: EnvSource): Env {
+  const result = envSchema.safeParse(source)
+
+  if (!result.success) {
+    throw new Error(
+      `Invalid environment variables: ${JSON.stringify(z.treeifyError(result.error))}`
+    )
+  }
+
+  return result.data
+}
+
+/**
+ * Loads the environment for a process entry point (server, scripts).
+ * Keeps the production contract: invalid variables are reported and the process exits.
+ */
+export function loadEnv(source: EnvSource = process.env): Env {
+  const result = envSchema.safeParse(source)
 
   if (!result.success) {
     console.error('Invalid environment variables:')
@@ -30,5 +52,3 @@ function validateEnv(): Env {
 
   return result.data
 }
-
-export const env: Env = validateEnv()

@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
-import { env } from '@config/env'
+import { loadEnv } from '@config/env'
 import { games } from '../schema/games'
 
 const { Pool } = pg
@@ -142,6 +142,7 @@ const GAMES_DATA = [
 ]
 
 async function seed() {
+  const env = loadEnv()
   const pool = new Pool({ connectionString: env.DATABASE_URL })
   const db = drizzle(pool)
 

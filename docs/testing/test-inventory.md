@@ -24,6 +24,7 @@ inventory (see the equivalence proof below).
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
 | `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 10 | 39 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 1 | 6 |
 | `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}` | 1 | 3 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 1 | 6 |
 | `@squadzr/types` | `types:unit` | `node` | `src/**/*.spec.ts` | 1 | 2 |
@@ -40,8 +41,8 @@ with its project entry.
 
 ## Unit and integration projects
 
-Project names carry the suite kind after the `:` separator. Today every project is a unit project
-(`*:unit`) running against mock/in-memory dependencies:
+Project names carry the suite kind after the `:` separator. Unit projects (`*:unit`) run against
+mock/in-memory dependencies:
 
 - `server:unit` — 39 historical use-case tests across 10 specs (also the historical baseline
   recorded for this monorepo, retained under Vitest with identical assertions and test names).
@@ -51,18 +52,31 @@ Project names carry the suite kind after the `:` separator. Today every project 
 - `types:unit` — loads every static contract entry point in Node (the package intentionally has no
   runtime exports).
 
-Integration projects are explicitly reserved for later issues and will follow the same naming
-convention:
+Integration projects follow the same naming convention:
 
-- `server:integration` (planned in CCC-29/CCC-31) — Fastify injection and PostgreSQL 16 suites
-  under `server/tests/integration/**`.
+- `server:integration` (CCC-29) — Fastify injection and PostgreSQL 16 suites under
+  `server/tests/integration/**`, configured by `server/vitest.integration.config.ts`. Run it with
+  `bun run test:integration` inside `server/` after starting the disposable database with
+  `docker compose -f docker-compose.test.yml up -d --wait` (PostgreSQL 16 on port 5433, tmpfs
+  storage). `TEST_DATABASE_URL` overrides the admin connection
+  (default `postgresql://postgres:postgres@localhost:5433/postgres`).
 - Client and realtime flows stay in jsdom projects under the planned capability work
   (CCC-32/CCC-33).
 
-When the first integration project lands, it must be composed in the root `vitest.workspace.ts`
-as an additional entry that loads its own project config (Vitest 2.1 composes multiple projects
-through the workspace file, per https://v2.vitest.dev/guide/workspace), carry an explicit
-`*:integration` name with its own `include` pattern, and be recorded in this table.
+How the server harness works (`server/src/test/harness/`):
+
+- `global-setup.ts` asserts the server is PostgreSQL 16, creates one template database per run,
+  applies every Drizzle migration from `server/drizzle/` to it, and drops the template plus any
+  leftover per-test database when the run ends.
+- `buildTestServer()` clones the template into a fresh database for the calling test, then builds
+  a ready, non-listening app through `buildApp({ env, logger: false })`. Its `close()` shuts the
+  app down (Fastify, WebSocket clients, the room-cleanup interval, the pool) and drops the
+  database, so every test starts from the same migrated, empty state and instances never share
+  data, even across parallel workers.
+
+`server:integration` is deliberately not part of `bun run test` (Turbo) nor of the root
+`vitest.workspace.ts` composition: it needs an external PostgreSQL 16 server, and the unit gate
+must keep running without Docker. CI wiring for the integration command belongs to CCC-30.
 
 ## Known limitations
 

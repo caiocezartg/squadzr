@@ -1,17 +1,23 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import fp from 'fastify-plugin'
-import { auth, type Session } from '@infrastructure/auth'
+import { createAuth, type Auth, type AuthConfig, type Session } from '@infrastructure/auth'
 
 declare module 'fastify' {
   interface FastifyInstance {
-    auth: typeof auth
+    auth: Auth
   }
   interface FastifyRequest {
     session: Session | null
   }
 }
 
-async function authPlugin(fastify: FastifyInstance): Promise<void> {
+export interface AuthPluginOptions {
+  config: AuthConfig
+}
+
+async function authPlugin(fastify: FastifyInstance, options: AuthPluginOptions): Promise<void> {
+  const auth = createAuth(fastify.db, options.config)
+
   fastify.decorate('auth', auth)
   fastify.decorateRequest('session', null)
 
@@ -79,4 +85,5 @@ async function authPlugin(fastify: FastifyInstance): Promise<void> {
 export default fp(authPlugin, {
   name: 'auth',
   fastify: '5.x',
+  dependencies: ['database'],
 })
