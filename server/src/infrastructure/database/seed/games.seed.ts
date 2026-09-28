@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
+import { env } from '@config/env'
 import { games } from '../schema/games'
 
 const { Pool } = pg
@@ -141,10 +142,7 @@ const GAMES_DATA = [
 ]
 
 async function seed() {
-  const databaseUrl =
-    process.env['DATABASE_URL'] || 'postgresql://postgres:postgres@localhost:5432/squad_finder'
-
-  const pool = new Pool({ connectionString: databaseUrl })
+  const pool = new Pool({ connectionString: env.DATABASE_URL })
   const db = drizzle(pool)
 
   console.log('Seeding games...')

@@ -11,11 +11,11 @@
     "test": "vitest run",
     "lint": "eslint --max-warnings=0 src",
     "lint:fix": "eslint --max-warnings=0 src --fix",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
-    "db:seed": "bun run src/infrastructure/database/seed/games.seed.ts"
+    "db:generate": "bun --env-file=../.env --bun drizzle-kit generate",
+    "db:migrate": "bun --env-file=../.env --bun drizzle-kit migrate",
+    "db:push": "bun --env-file=../.env --bun drizzle-kit push",
+    "db:studio": "bun --env-file=../.env --bun drizzle-kit studio",
+    "db:seed": "bun --env-file=../.env src/infrastructure/database/seed/games.seed.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
