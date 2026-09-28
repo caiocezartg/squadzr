@@ -1,32 +1,45 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { db } from '@infrastructure/database/drizzle'
-import { env } from '@config/env'
+import type { Database } from '@infrastructure/database/drizzle'
+import type { Env } from '@config/env'
 
-const isProduction = env.NODE_ENV === 'production'
+export type AuthConfig = Pick<
+  Env,
+  | 'NODE_ENV'
+  | 'BETTER_AUTH_SECRET'
+  | 'BETTER_AUTH_URL'
+  | 'CORS_ORIGIN'
+  | 'DISCORD_CLIENT_ID'
+  | 'DISCORD_CLIENT_SECRET'
+>
 
-export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: 'pg',
-  }),
-  secret: env.BETTER_AUTH_SECRET,
-  baseURL: env.BETTER_AUTH_URL,
-  trustedOrigins: [env.CORS_ORIGIN, env.BETTER_AUTH_URL],
-  socialProviders: {
-    discord: {
-      clientId: env.DISCORD_CLIENT_ID,
-      clientSecret: env.DISCORD_CLIENT_SECRET,
+export function createAuth(db: Database, config: AuthConfig) {
+  const isProduction = config.NODE_ENV === 'production'
+
+  return betterAuth({
+    database: drizzleAdapter(db, {
+      provider: 'pg',
+    }),
+    secret: config.BETTER_AUTH_SECRET,
+    baseURL: config.BETTER_AUTH_URL,
+    trustedOrigins: [config.CORS_ORIGIN, config.BETTER_AUTH_URL],
+    socialProviders: {
+      discord: {
+        clientId: config.DISCORD_CLIENT_ID,
+        clientSecret: config.DISCORD_CLIENT_SECRET,
+      },
     },
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // 1 day
-  },
-  advanced: {
-    // Required for cross-origin auth (client and server on different domains)
-    defaultCookieAttributes: isProduction ? { sameSite: 'none', secure: true } : {},
-  },
-})
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
+      updateAge: 60 * 60 * 24, // 1 day
+    },
+    advanced: {
+      // Required for cross-origin auth (client and server on different domains)
+      defaultCookieAttributes: isProduction ? { sameSite: 'none', secure: true } : {},
+    },
+  })
+}
 
-export type Session = typeof auth.$Infer.Session
-export type User = typeof auth.$Infer.Session.user
+export type Auth = ReturnType<typeof createAuth>
+export type Session = Auth['$Infer']['Session']
+export type User = Session['user']
