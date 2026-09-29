@@ -1,0 +1,105 @@
+# Repository quality gates (CCC-30). Every job name below is a stable required-check
+# name referenced by the branch rulesets in .github/rulesets/ and documented in
+# docs/ci/quality-gates.md. Renaming a job silently breaks branch protection: update
+# both places in the same change. This workflow never deploys.
+name: CI
+
+on:
+  pull_request:
+    branches: [development, main]
+    # `edited` re-runs every gate when a pull request is retargeted to a protected base.
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [development, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Every gate executes for real: no Turbo cache reads, no remote cache, no telemetry.
+  TURBO_FORCE: 'true'
+  TURBO_TELEMETRY_DISABLED: '1'
+  FORCE_COLOR: '1'
+
+jobs:
+  format-check:
+    name: format-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-bun
+      - run: bun run format:check
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-bun
+      # Workspace lint scripts run ESLint with --max-warnings=0, so any warning fails.
+      - run: bun run lint
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-bun
+      - run: bun run typecheck
+
+  unit-tests:
+    name: unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-bun
+      - run: bun run test
+
+  integration-tests:
+    name: integration-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      # Disposable service credentials, identical to docker-compose.test.yml; not a secret.
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-bun
+      - name: Run server:integration against PostgreSQL 16
+        working-directory: server
+        run: bun run test:integration
+      - name: PostgreSQL logs on failure
+        if: failure()
+        run: docker logs "${{ job.services.postgres.id }}"
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-bun
+      - run: bun run build
