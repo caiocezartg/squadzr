@@ -98,16 +98,18 @@ confirm `promotion-source` fails and merging is blocked.
 
 Recorded on 2026-09-29, before any destructive migration in CCC-35:
 
-| Host    | Linked service                                        | Production trigger                                                                                                | Evidence                                                                                                                                                              |
-| ------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vercel  | Client (`client/vercel.json`, `bun run build:client`) | Vercel Git integration: `main` → `Production`, every other branch/PR → `Preview`. Not gated by these checks.      | GitHub deployments API: 14 `Production` deployments (latest `25ae3d1`, the `main` head) and 28 `Preview` deployments by `vercel[bot]`; commit status context `Vercel` |
-| Railway | Fastify server and managed PostgreSQL                 | **Unverified.** Railway reports no GitHub deployments or commit statuses and no local project link was available. | Owner must confirm the Railway service's source repo, deploy branch (`main` expected), and whether "Wait for CI" is enabled                                           |
+| Host    | Linked service                                        | Production trigger                                                                                           | Evidence                                                                                                                                                                                              |
+| ------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vercel  | Client (`client/vercel.json`, `bun run build:client`) | Vercel Git integration: `main` → `Production`, every other branch/PR → `Preview`. Not gated by these checks. | GitHub deployments API: 14 `Production` deployments (latest `25ae3d1`, the `main` head) and 28 `Preview` deployments by `vercel[bot]`; commit status context `Vercel`                                 |
+| Railway | None (removed)                                        | **None.** The server has no hosted deployment.                                                               | Owner deleted the `squadzr` Railway project (services `server`, `Postgres`, `Postgres-AVPC`); `railway list --json` on 2026-09-29 shows it scheduled for deletion (`deletedAt: 2026-10-01T20:58:55Z`) |
+
+There is no production server or production PostgreSQL today, so no destructive migration in CCC-35
+can reach hosted data. Choosing where the server runs belongs to roadmap issue 18 (CCC-44).
 
 Consequences until roadmap issue 18 (gated automatic delivery):
 
-- Merging a promotion pull request into `main` triggers Vercel Production (and Railway, if it
-  auto-deploys `main`). The `main` ruleset ensures that merge only happens after every required
-  check passes.
+- Merging a promotion pull request into `main` triggers Vercel Production for the client. The
+  `main` ruleset ensures that merge only happens after every required check passes.
 - Vercel `Preview` deployments on task branches are not production and are unaffected.
 - The `Vercel` commit status is **not** a required check; it must not become one of the stable
   names above.
