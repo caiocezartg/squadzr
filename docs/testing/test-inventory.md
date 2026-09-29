@@ -63,6 +63,22 @@ Integration projects follow the same naming convention:
 - Client and realtime flows stay in jsdom projects under the planned capability work
   (CCC-32/CCC-33).
 
+Realtime characterization (CCC-33) spans both sides of the `/ws` protocol:
+
+- `server:integration` — `tests/integration/realtime-{connections,payloads,disconnects}.test.ts`
+  open in-memory sockets through `app.injectWS` (no ports, no network) with the helpers in
+  `server/src/test/harness/realtime.ts`: `connect()` (guest or Better Auth session cookie),
+  `drain()` (ping/pong barrier for synchronous handlers; DB-backed handlers such as `join_room`
+  are awaited message by message), and `subscriptionState()` (read-only probe of catalog/room
+  subscriptions). The harness destroys the in-memory stream once both directions end, as a TCP
+  socket would; otherwise `ws` keeps the server socket CLOSING for its 30 s fallback timer.
+- `client:unit` — `src/lib/ws-client.spec.ts` (reconnect backoff with fake timers) and
+  `src/test/realtime-reconnect.spec.tsx` (catalog/lobby resubscription and cleanup on the real
+  pages). `MockWebSocket.close(code)` accepts a close code (default 1000).
+- Assertions tagged `REPLACED BY CCC-37` (server) or `REPLACED BY CCC-38` (client) record the
+  current Membership/Presence conflation, payload limits and error codes as behavior to replace,
+  not preserve.
+
 How the server harness works (`server/src/test/harness/`):
 
 - `global-setup.ts` asserts the server is PostgreSQL 16, creates one template database per run,
