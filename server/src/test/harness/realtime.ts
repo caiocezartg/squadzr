@@ -32,8 +32,11 @@ export interface RealtimeSession {
   /** Resolves with the next unread server message, strictly in arrival order. */
   next: () => Promise<ServerMessage>
   /**
-   * Sends a `ping` and returns every message that arrived before its `pong`. The
-   * server writes frames in order, so an empty result proves nothing is pending.
+   * Sends a `ping` and returns every message that arrived before its `pong`. Only
+   * replies from synchronous handlers are guaranteed to precede the `pong`: a handler
+   * that awaits (e.g. a database call in `join_room`) may answer after it, so an empty
+   * result proves nothing is pending only for synchronous work. Await DB-backed replies
+   * message by message instead (see docs/testing/test-inventory.md).
    */
   drain: () => Promise<ServerMessage[]>
   /** Resolves once the server-side socket has closed and the plugin has cleaned up. */
