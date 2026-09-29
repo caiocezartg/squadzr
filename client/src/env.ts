@@ -14,6 +14,7 @@ function validateEnv() {
   if (!result.success) {
     console.error('Invalid environment variables:', z.treeifyError(result.error))
     throw new Error('Invalid environment variables')
+    return;
   }
 
   return result.data
