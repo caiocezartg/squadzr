@@ -7,6 +7,8 @@ name: CI
 on:
   pull_request:
     branches: [development, main]
+    # `edited` re-runs every gate when a pull request is retargeted to a protected base.
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [development, main]
   workflow_dispatch:

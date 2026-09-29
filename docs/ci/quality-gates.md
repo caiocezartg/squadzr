@@ -1,8 +1,8 @@
 # CI quality gates and branch protection
 
 Repository-owned GitHub Actions checks (CCC-30). They run from a clean checkout on every pull
-request into `development` or `main`, on pushes to those branches, and on manual dispatch. **CI
-never deploys.**
+request into `development` or `main` (including an existing pull request retargeted to one of them,
+via the `edited` event), on pushes to those branches, and on manual dispatch. **CI never deploys.**
 
 ## Branch model
 
@@ -84,7 +84,8 @@ reported at least once, which the first `CI` run on this pull request provides.
 Documentation alone does not satisfy CCC-30. After applying the rulesets:
 
 1. Branch from `development`, introduce a deliberate failure (for example an unformatted line in a
-   `.ts` file), push, and open a draft pull request into `development`.
+   `.ts` file), push, and open a pull request into `development` as **ready for review**. Do not
+   use a draft: a draft blocks merging on its own and would not prove the check blocks it.
 2. Confirm `format-check` fails and the pull request shows **Merging is blocked** with the merge
    button disabled, including for the repository owner.
 3. Record the pull request URL and a screenshot in CCC-30, then close the pull request without
