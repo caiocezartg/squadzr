@@ -4,6 +4,9 @@ import { buildApp } from '@/app'
 import { parseEnv, type Env } from '@config/env'
 import { createIsolatedDatabase } from './postgres'
 
+/** Better Auth secret of every test server; session cookies in tests are signed with it. */
+export const TEST_AUTH_SECRET = 'integration-test-secret-with-32-plus-chars'
+
 export interface TestServer {
   app: FastifyInstance
   databaseUrl: string
@@ -15,7 +18,7 @@ export function createTestEnv(overrides: Partial<Env> & Pick<Env, 'DATABASE_URL'
   return parseEnv({
     NODE_ENV: 'test',
     LOG_LEVEL: 'fatal',
-    BETTER_AUTH_SECRET: 'integration-test-secret-with-32-plus-chars',
+    BETTER_AUTH_SECRET: TEST_AUTH_SECRET,
     BETTER_AUTH_URL: 'http://localhost:3000',
     CORS_ORIGIN: 'http://localhost:5173',
     DISCORD_CLIENT_ID: 'integration-test-client-id',
