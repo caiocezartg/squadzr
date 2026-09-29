@@ -46,7 +46,10 @@ afterEach(async () => {
   await server?.close()
 })
 
-/** A JSON text frame of exactly `bytes` bytes that parses but fails the message schema. */
+/**
+ * A JSON text frame of exactly `bytes` bytes: a valid `ping` padded with an extra `padding`
+ * field, used only to cross the payload size limit.
+ */
 function paddedJsonFrame(bytes: number): string {
   const envelope = JSON.stringify({ type: 'ping', padding: '' })
   return envelope.replace('"padding":""', `"padding":"${'x'.repeat(bytes - envelope.length)}"`)
