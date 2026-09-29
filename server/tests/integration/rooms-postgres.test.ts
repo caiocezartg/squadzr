@@ -129,22 +129,28 @@ describe('concurrent joins', () => {
 })
 
 describe('catalog of open rooms (GET /api/rooms)', () => {
+  // Pins the current 5-minute grace window. Changes together with CCC-36:
+  // editing ROOM.GRACE_WINDOW_MS must fail here instead of silently moving the tests below.
+  it('[replaced in CCC-36] uses a 5-minute grace window (ROOM.GRACE_WINDOW_MS)', () => {
+    expect(ROOM.GRACE_WINDOW_MS).toBe(300_000)
+  })
+
   // Replaced in CCC-36: a Ready Room must leave the catalog immediately.
-  it(`[replaced in CCC-36] keeps a full room listed for GRACE_WINDOW_MS (${ROOM.GRACE_WINDOW_MS} ms)`, async () => {
+  it('[replaced in CCC-36] keeps a full room listed within 5 minutes of completion', async () => {
     const { room } = await createFullRoom(host)
 
     expect(await listedRoomIds()).toEqual([room.id])
     const [listed] = (await get(server, '/api/rooms')).json<{ rooms: unknown[] }>().rooms
     expect(listed).toMatchObject({ memberCount: 2, maxPlayers: 2 })
 
-    await backdateCompletion(server, room.id, ROOM.GRACE_WINDOW_MS / 60_000 - 1)
+    await backdateCompletion(server, room.id, 4)
     expect(await listedRoomIds()).toEqual([room.id])
   })
 
-  it('drops a full room once GRACE_WINDOW_MS has elapsed since completion', async () => {
+  it('drops a full room once 5 minutes have elapsed since completion', async () => {
     const { room } = await createFullRoom(host)
 
-    await backdateCompletion(server, room.id, ROOM.GRACE_WINDOW_MS / 60_000 + 1)
+    await backdateCompletion(server, room.id, 6)
 
     expect(await listedRoomIds()).toEqual([])
   })
