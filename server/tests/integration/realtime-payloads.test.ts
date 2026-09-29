@@ -155,13 +155,14 @@ describe('1 MiB maxPayload', () => {
     expect(state.roomSockets(room.code)).toBe(1)
     expect(await countMembers(server, room.id)).toBe(2)
 
-    // REPLACED BY CCC-37: the oversized frame triggers both the `error` and the `close`
-    // listeners, and disconnect is not idempotent, so the room hears viewer_left twice.
-    const viewerLeft = {
-      type: 'viewer_left',
-      timestamp: expect.any(Number),
-      payload: { playerId: member!.id, roomCode: room.code },
-    }
-    expect(await hostSocket.drain()).toEqual([viewerLeft, viewerLeft])
+    // The oversized frame fires both the `error` and the `close` listeners; disconnect is
+    // idempotent, so the room hears viewer_left exactly once.
+    expect(await hostSocket.drain()).toEqual([
+      {
+        type: 'viewer_left',
+        timestamp: expect.any(Number),
+        payload: { playerId: member!.id, roomCode: room.code },
+      },
+    ])
   })
 })
