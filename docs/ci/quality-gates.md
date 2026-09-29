@@ -88,8 +88,9 @@ Documentation alone does not satisfy CCC-30. After applying the rulesets:
    use a draft: a draft blocks merging on its own and would not prove the check blocks it.
 2. Confirm `format-check` fails and the pull request shows **Merging is blocked** with the merge
    button disabled, including for the repository owner.
-3. Record the pull request URL and a screenshot in CCC-30, then close the pull request without
-   merging and delete the branch.
+3. Record the pull request URL and the merge state GitHub reports
+   (`gh pr view <number> --json mergeStateStatus` returns `BLOCKED`) in CCC-30, then close the
+   pull request without merging and delete the branch.
 
 To verify the `main` promotion rule, open a pull request from any other branch into `main` and
 confirm `promotion-source` fails and merging is blocked.
