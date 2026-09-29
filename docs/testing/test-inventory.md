@@ -92,7 +92,8 @@ How the server harness works (`server/src/test/harness/`):
 
 `server:integration` is deliberately not part of `bun run test` (Turbo) nor of the root
 `vitest.workspace.ts` composition: it needs an external PostgreSQL 16 server, and the unit gate
-must keep running without Docker. CI wiring for the integration command belongs to CCC-30.
+must keep running without Docker. CI runs it as the separate `integration-tests` required check
+against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-gates.md)).
 
 ## Known limitations
 

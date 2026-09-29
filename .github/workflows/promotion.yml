@@ -1,0 +1,40 @@
+# `main` is release-only (CCC-30): it accepts pull requests from `development` in this
+# repository and nothing else. The job name is a stable required check for the `main`
+# ruleset (.github/rulesets/main.json). It re-runs on `edited` so retargeting an
+# existing pull request to `main` cannot reuse a result computed for another base.
+name: Promotion
+
+on:
+  pull_request:
+    branches: [development, main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions: {}
+
+concurrency:
+  group: promotion-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  promotion-source:
+    name: promotion-source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Only development may be promoted to main
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$BASE_REF" != "main" ]; then
+            echo "Pull request into $BASE_REF; promotion rule does not apply."
+            exit 0
+          fi
+          if [ "$HEAD_REF" = "development" ] && [ "$HEAD_REPO" = "$REPO" ]; then
+            echo "Promotion from $REPO:development into main."
+            exit 0
+          fi
+          echo "::error::main only accepts promotion pull requests from $REPO:development (got $HEAD_REPO:$HEAD_REF)."
+          exit 1
