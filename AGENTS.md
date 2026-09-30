@@ -1,72 +1,46 @@
-# Project Overview
+# Squadzr
 
-**Squadzr** — real-time web app connecting gamers to complete full teams (premades) for multiplayer games like LoL, Dota, and CS.
+Real-time web app where gamers fill out full teams (premades) for multiplayer games like LoL, Dota, and CS. Turbo + Bun monorepo: `client/`, `server/`, `packages/`.
 
-## Tech Stack
+## Toolchain
 
-**Monorepo**: Turbo + Bun workspaces
+Bun is the only package manager and script runner: `bun install`, `bun add`, `bun run <script>`, `bunx <bin>`. CI pins the Bun version from `packageManager` in the root `package.json` and installs with `--frozen-lockfile`, so every dependency change lands together with its `bun.lock` update.
 
-| Scope     | Technologies                                                  |
-| --------- | ------------------------------------------------------------- |
-| Server    | Fastify v5, Drizzle ORM, PostgreSQL, Better Auth, Zod         |
-| Client    | React 18, Vite, TanStack Router, TanStack Query, Tailwind CSS |
-| Shared    | `@squadzr/types` (TS types), `@squadzr/schemas` (Zod schemas) |
-| Real-time | Fastify WebSocket plugin                                      |
-| Auth      | Better Auth with Discord OAuth                                |
-| Testing   | Vitest (all workspaces)                                       |
+## Scope
 
-## Project Structure
+The Linear spec issue for the task is the contract. Change only what its decisions and acceptance criteria require, and satisfy every acceptance criterion. When the spec is silent, choose the smallest change that fits the existing code; when the spec conflicts with the code or an ADR, surface the conflict before implementing.
+
+## Code shape
+
+Build small-to-medium units that each own one responsibility and stand on their own: a function does one thing, a module groups one concern. When a unit starts coordinating several behaviours, split it into named pieces and compose them.
+
+## Server architecture
+
+Clean Architecture: dependencies point inward (`interface → application → domain`); `infrastructure` implements domain interfaces.
+
+- Business logic lives in `application/use-cases/` and depends on repository interfaces only.
+- `interface/factories/` is the single place where concrete repositories are instantiated and injected.
+- `domain/` stays free of framework and database imports.
+
+## Contracts
+
+Validate every external input with Zod. HTTP and WebSocket contracts live in `@squadzr/schemas` and are shared by client and server (see `docs/adr/0001-own-runtime-contracts-in-schemas.md`).
+
+## Definition of done
+
+A task is done when it is **CI-green**: every gate in `.github/workflows/ci.yml` passes locally, with zero errors and zero warnings.
 
 ```
-/server/src/
-  domain/          # Entities + repository interfaces (no external deps)
-  application/     # Use cases + DTOs (depends on domain only)
-  infrastructure/  # Drizzle repos, WebSocket, auth, Fastify plugins
-  interface/       # Controllers, routes, factories (DI wiring)
-  config/          # Zod-validated env vars (env.ts)
-
-/client/src/
-  routes/          # TanStack Router pages (file-based routing)
-  components/      # React UI (landing/, layout/, rooms/, ui/)
-  hooks/           # Custom hooks (WebSocket, notifications, rooms)
-  lib/             # API client, auth-client, ws-client, query-client
-
-/packages/
-  @/types    # Shared TypeScript types (entities, DTOs, WS)
-  @/schemas  # Shared Zod schemas (rooms, users, WS messages)
+bun run format:check
+bun run lint
+bun run typecheck
+bun run test
+bun run build
 ```
 
-## General Rules
+When the change touches persistence, repositories, or server wiring, also run `bun run test:integration` in `server/` against `docker-compose.test.yml`. Existing flows keep working: a bug found along the way is fixed at its root cause, in the same task.
 
-- ALWAYS use `bun` instead of any package manager such as `npm`.
-- NEVER violate the project's SOLID principles and Clean Architecture. Always analyze and review whether the logic is placed in the correct layer. See **Architectu Rules** section for more informations.
-- Do not let functions become too large; break them into smaller, modular pieces.
-- ALWAYS use Zod for schema creation and input validation throughout the codebase.
-- For every completed task, always run the typecheck, lint, and format commands, and verify that there are no errors or warnings that need to be fixed.
-
-## Architecture Rules
-
-- **Dependency direction**: `interface → application → domain`. Infrastructure implements domain interfaces. Never import outward.
-- **Use cases**: All business logic lives in `application/use-cases/`. They depend only on repository interfaces (domain layer), never on concrete Drizzle implementations.
-- **Factories**: Dependency injection is wired in `interface/factories/`. This is the only place where concrete repositories are instantiated and injected into use cases.
-- **DTOs**: Domain entities are pure interfaces. DTOs in `application/dtos/` handle cross-boundary data transfer.
-- **Shared schemas**: Validation schemas used by both client and server live in `packages/@squadzr/schemas`, not duplicated per workspace.
-
-## Workflow Orchestration
-
-1. If necessary, break the task into specialized sub-agents for execution, keeping the main context clean and containing only essential information.
-2. Each planning step must be highly detailed, with clear key points, so execution is fully optimized.
-3. Each sub-agent must only be invoked to execute its specific assigned task.
-4. Upon completing any new task, always run every relevant verification/check to ensure no errors or bugs are left behind. All existing flows must continue working after new implementations.
-5. If you find any new bug, fix it immediately using the best approach that does not add unnecessary complexity to the codebase.
-6. If the task has been successfully implemented and is free of bugs, you may commit the changes. Do not combine multiple tasks into a single commit each completed task must have its own separate commit.
-7. After completing the task, write a report of the new implementations or fixes, explaining every piece of code that was modified, created, or removed.
-
-## Core Principles
-
-- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
-- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
-- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+Then commit the task on its own (one task, one commit) and report every file created, modified, or removed, with what changed and why.
 
 ## Agent skills
 
