@@ -70,10 +70,10 @@ export class MockWebSocket {
     this.sent.push(data)
   }
 
-  /** Server closes the connection. */
-  close(): void {
+  /** Server closes the connection (1000 by default; 1006 models a dropped link). */
+  close(code = 1000): void {
     this.readyState = MockWebSocket.CLOSED
-    this.onclose?.(new CloseEvent('close', { code: 1000 }))
+    this.onclose?.(new CloseEvent('close', { code }))
   }
 
   /** Client frames decoded from `sent`, in order. */

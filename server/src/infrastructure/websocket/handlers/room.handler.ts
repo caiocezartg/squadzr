@@ -170,12 +170,15 @@ export function handleDisconnect(socket: WebSocket, connectionManager: WsConnect
   // Remove from lobby subscribers
   if (client?.isInLobby) {
     connectionManager.unsubscribeLobby(socket)
+    client.isInLobby = false
   }
 
   if (!client?.roomCode) return
   if (!client.userId) return
 
+  // Cleared up front so a second call (both `error` and `close` fire) is a no-op
   const roomCode = client.roomCode
+  client.roomCode = null
   connectionManager.removeFromRoom(roomCode, socket)
 
   const roomSockets = connectionManager.getRoomSockets(roomCode)
