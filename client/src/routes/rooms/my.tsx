@@ -14,7 +14,12 @@ import { RoomFilters } from '@/components/rooms/room-filters'
 import { CreateRoomModal } from '@/components/rooms/create-room-modal'
 import { AlertBox } from '@/components/ui/alert-box'
 import { Plus } from 'lucide-react'
-import type { MyRoomsResponse, GamesResponse, CreateRoomResponse, Game } from '@/types'
+import {
+  createRoomResponseSchema,
+  gamesResponseSchema,
+  myRoomsResponseSchema,
+} from '@squadzr/schemas'
+import type { Game } from '@/types'
 
 export const Route = createFileRoute('/rooms/my')({
   component: MyRoomsPage,
@@ -43,7 +48,7 @@ function MyRoomsPage() {
     isError: myRoomsError,
   } = useQuery({
     queryKey: ['my-rooms'],
-    queryFn: () => api.get<MyRoomsResponse>('/api/rooms/my'),
+    queryFn: () => api.get('/api/rooms/my', myRoomsResponseSchema),
     enabled: !!session?.user,
     refetchOnWindowFocus: true,
   })
@@ -51,7 +56,7 @@ function MyRoomsPage() {
   // Fetch games
   const { data: gamesData, isLoading: gamesLoading } = useQuery({
     queryKey: ['games'],
-    queryFn: () => api.get<GamesResponse>('/api/games'),
+    queryFn: () => api.get('/api/games', gamesResponseSchema),
     staleTime: 60_000,
     enabled: !!session?.user,
   })
@@ -65,7 +70,7 @@ function MyRoomsPage() {
       discordLink: string
       tags: string[]
       language: 'en' | 'pt-br'
-    }) => api.post<CreateRoomResponse>('/api/rooms', body),
+    }) => api.post('/api/rooms', body, createRoomResponseSchema),
     onSuccess: (result) => {
       setModalOpen(false)
       queryClient.invalidateQueries({ queryKey: ['my-rooms'] })

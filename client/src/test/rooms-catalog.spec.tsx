@@ -44,8 +44,8 @@ const extraRoom: Room = {
   language: 'en',
   memberCount: 1,
   isMember: false,
-  createdAt: new Date(Date.now() - 300_000),
-  updatedAt: new Date(Date.now() - 300_000),
+  createdAt: new Date(Date.now() - 300_000).toISOString(),
+  updatedAt: new Date(Date.now() - 300_000).toISOString(),
 }
 
 function registerCatalogRoutes(): void {

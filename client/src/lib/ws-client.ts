@@ -1,3 +1,6 @@
+import { describeContractIssues } from '@squadzr/schemas'
+import { wsServerEnvelopeSchema } from '@squadzr/schemas/ws'
+
 export type WebSocketEventHandler = (data: unknown) => void
 
 interface WebSocketClientOptions {
@@ -66,7 +69,16 @@ export class WebSocketClient {
     this.ws.onmessage = (event: MessageEvent<string>) => {
       try {
         // Server sends { type, timestamp, payload }
-        const message = JSON.parse(event.data) as { type: string; payload: unknown }
+        const frame: unknown = JSON.parse(event.data)
+        const envelope = wsServerEnvelopeSchema.safeParse(frame)
+        if (!envelope.success) {
+          console.error('Invalid WebSocket message:', {
+            issues: describeContractIssues(envelope.error),
+          })
+          return
+        }
+
+        const message = envelope.data
         const handlers = this.eventHandlers.get(message.type)
 
         if (handlers) {

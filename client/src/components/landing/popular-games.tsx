@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import * as motion from 'motion/react-client'
+import { gamesResponseSchema } from '@squadzr/schemas'
 import type { GamesResponse, Game } from '@/types'
 import { useTranslation } from 'react-i18next'
 
@@ -20,7 +21,7 @@ export function PopularGames() {
   const { t } = useTranslation()
   const { data, isLoading } = useQuery({
     queryKey: ['games'],
-    queryFn: () => api.get<GamesResponse>('/api/games'),
+    queryFn: () => api.get('/api/games', gamesResponseSchema),
     staleTime: 60_000,
   })
 

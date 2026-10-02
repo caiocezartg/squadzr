@@ -1,4 +1,5 @@
 import type { Room } from '@domain/entities/room.entity'
+import { toPublicRoom } from '@application/projections'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
 import type { WsConnectionManager } from './ws-connection-manager'
 import type { RoomCreatedMessage, RoomUpdatedMessage, RoomDeletedMessage } from './types'
@@ -10,7 +11,7 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
     const message: RoomCreatedMessage = {
       type: 'room_created',
       timestamp: Date.now(),
-      payload: { room },
+      payload: { room: toPublicRoom(room) },
     }
     this.connectionManager.broadcastToLobby(message)
   }

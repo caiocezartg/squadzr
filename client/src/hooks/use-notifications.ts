@@ -3,7 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
-import type { NotificationsResponse, UserNotification } from '@/types'
+import {
+  notificationChangeResponseSchema,
+  notificationsResponseSchema,
+  readAllNotificationsResponseSchema,
+} from '@squadzr/schemas'
+import type { UserNotification } from '@/types'
 
 const EMPTY_NOTIFICATIONS: UserNotification[] = []
 
@@ -50,7 +55,7 @@ export function useNotifications(options: UseNotificationsOptions) {
 
   const query = useQuery({
     queryKey: ['notifications', { limit }],
-    queryFn: () => api.get<NotificationsResponse>(`/api/notifications?limit=${limit}`),
+    queryFn: () => api.get(`/api/notifications?limit=${limit}`, notificationsResponseSchema),
     enabled,
     refetchInterval: enabled ? 30_000 : false,
     staleTime: 15_000,
@@ -58,7 +63,7 @@ export function useNotifications(options: UseNotificationsOptions) {
 
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: string) =>
-      api.post<{ success: boolean }>(`/api/notifications/${notificationId}/read`, {}),
+      api.post(`/api/notifications/${notificationId}/read`, {}, notificationChangeResponseSchema),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
@@ -69,7 +74,7 @@ export function useNotifications(options: UseNotificationsOptions) {
 
   const markAllAsReadMutation = useMutation({
     mutationFn: () =>
-      api.post<{ success: boolean; count: number }>('/api/notifications/read-all', {}),
+      api.post('/api/notifications/read-all', {}, readAllNotificationsResponseSchema),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
@@ -80,7 +85,7 @@ export function useNotifications(options: UseNotificationsOptions) {
 
   const deleteNotificationMutation = useMutation({
     mutationFn: (notificationId: string) =>
-      api.delete<{ success: boolean }>(`/api/notifications/${notificationId}`),
+      api.delete(`/api/notifications/${notificationId}`, notificationChangeResponseSchema),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },

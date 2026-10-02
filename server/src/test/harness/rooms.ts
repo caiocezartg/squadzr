@@ -22,7 +22,12 @@ export async function insertGame(server: TestServer, maxPlayers = 5): Promise<Ga
     })
     .returning()
   if (!game) throw new Error('Failed to insert game')
-  return game
+  // The row carries Date columns; the transport contract models them as ISO strings.
+  return {
+    ...game,
+    createdAt: game.createdAt.toISOString(),
+    updatedAt: game.updatedAt.toISOString(),
+  }
 }
 
 export interface CreateRoomBody {

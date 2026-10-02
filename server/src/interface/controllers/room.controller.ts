@@ -9,6 +9,7 @@ import type { IGetMyRoomsUseCase } from '@application/use-cases/room/get-my-room
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
 import { RoomNotFoundError, NotRoomMemberError } from '@application/errors'
 import { createRoomRequestSchema, roomCodeParamSchema } from '@application/dtos'
+import { toMemberRoom, toPublicRoom, toRoomMemberDto } from '@application/projections'
 
 export interface RoomControllerDeps {
   readonly createRoomUseCase: ICreateRoomUseCase
@@ -28,18 +29,27 @@ export class RoomController {
     const userId = request.session?.user?.id
     const result = await this.deps.getAvailableRoomsUseCase.execute(userId ? { userId } : undefined)
 
-    await reply.send({ rooms: result.rooms })
+    await reply.send({ rooms: result.rooms.map(toPublicRoom) })
   }
 
   async getByCode(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const params = roomCodeParamSchema.parse(request.params)
-    const result = await this.deps.getRoomByCodeUseCase.execute({ code: params.code })
+    const result = await this.deps.getRoomByCodeUseCase.execute({
+      code: params.code,
+      viewerId: request.session?.user?.id,
+    })
 
     if (!result.room) {
       throw new RoomNotFoundError(params.code)
     }
 
-    await reply.send({ room: result.room, players: result.players })
+    // Discord invite and roster are lobby details: members only.
+    if (!result.isMember) {
+      await reply.send({ room: toPublicRoom(result.room) })
+      return
+    }
+
+    await reply.send({ room: toMemberRoom(result.room), players: result.players })
   }
 
   async create(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -58,7 +68,7 @@ export class RoomController {
 
     this.deps.broadcaster.broadcastRoomCreated(result.room)
 
-    await reply.status(201).send({ room: result.room })
+    await reply.status(201).send({ room: toMemberRoom(result.room) })
   }
 
   async join(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -104,7 +114,7 @@ export class RoomController {
 
     await reply.send({
       message: 'Joined room successfully',
-      roomMember: result.roomMember,
+      roomMember: toRoomMemberDto(result.roomMember),
     })
   }
 
@@ -142,6 +152,9 @@ export class RoomController {
     const userId = request.userId
     const result = await this.deps.getMyRoomsUseCase.execute({ userId })
 
-    await reply.send({ hosted: result.hosted, joined: result.joined })
+    await reply.send({
+      hosted: result.hosted.map(toMemberRoom),
+      joined: result.joined.map(toMemberRoom),
+    })
   }
 }
