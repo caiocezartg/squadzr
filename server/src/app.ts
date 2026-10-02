@@ -1,4 +1,9 @@
-import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify'
+import Fastify, {
+  type FastifyInstance,
+  type FastifyLoggerOptions,
+  type FastifyRequest,
+  type FastifyServerOptions,
+} from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import websocket from '@fastify/websocket'
@@ -17,7 +22,34 @@ export interface BuildAppOptions {
   logger?: FastifyServerOptions['logger']
 }
 
-function defaultLogger(env: Env): FastifyServerOptions['logger'] {
+/**
+ * Serializes a request for the request log with the whole query string removed
+ * (the path alone is kept), so sensitive parameters can never leak into the log
+ * by omission — e.g. the Discord OAuth `code` on the auth callback.
+ * Mirrors Fastify's default `req` serializer field for field.
+ */
+function serializeRequestUrl(req: FastifyRequest): {
+  method?: string
+  url?: string
+  version?: string
+  host?: string
+  remoteAddress?: string
+  remotePort?: number
+  [key: string]: unknown
+} {
+  const params = req.url.indexOf('?')
+  return {
+    method: req.method,
+    url: params === -1 ? req.url : req.url.slice(0, params),
+    version: req.headers['accept-version'] as string | undefined,
+    host: req.host,
+    remoteAddress: req.ip,
+    remotePort: req.socket ? req.socket.remotePort : undefined,
+  }
+}
+
+/** Options of the environment-derived server logger, as consumed by Fastify. */
+export function defaultLogger(env: Env): FastifyLoggerOptions {
   return {
     level: env.LOG_LEVEL,
     ...(env.NODE_ENV !== 'production' && {
@@ -26,6 +58,8 @@ function defaultLogger(env: Env): FastifyServerOptions['logger'] {
         options: { colorize: true },
       },
     }),
+    // Fastify merges these over its default serializers (pino-http style).
+    serializers: { req: serializeRequestUrl },
   }
 }
 
