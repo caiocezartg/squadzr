@@ -91,6 +91,40 @@ describe('onServerEvent', () => {
 })
 
 describe('diagnostics', () => {
+  it.each([
+    [
+      'truncated JSON',
+      `{"type":"room_created","payload":{"discordLink":"${SECRET_INVITE}","sessionToken":"session-secret`,
+    ],
+    ['text that is not JSON', `discordLink=${SECRET_INVITE} sessionToken=session-secret`],
+  ])('reports %s by code without logging the frame', (_label, frame) => {
+    const { client, socket } = connectedClient()
+    const handler = vi.fn()
+    client.on('room_created', handler)
+
+    socket.onmessage?.(new MessageEvent('message', { data: frame }))
+
+    expect(handler).not.toHaveBeenCalled()
+    expect(vi.mocked(console.error).mock.calls).toEqual([
+      ['Invalid WebSocket message:', { issues: [{ path: '', code: 'invalid_json' }] }],
+    ])
+    expect(client.isConnected).toBe(true)
+  })
+
+  it('reports a throwing handler by event type only and keeps the connection', () => {
+    const { client, socket } = connectedClient()
+    client.on('player_left', () => {
+      throw new Error(`cannot handle ${SECRET_INVITE}`)
+    })
+
+    socket.serverSend({ type: 'player_left', payload: { playerId: SECRET_INVITE } })
+
+    expect(vi.mocked(console.error).mock.calls).toEqual([
+      ['WebSocket handler failed:', { type: 'player_left' }],
+    ])
+    expect(client.isConnected).toBe(true)
+  })
+
   it('reports issue paths and codes without any payload content', () => {
     const payload = {
       roomId: openRoom.id,

@@ -79,9 +79,42 @@ describe('invalid responses', () => {
       code: 'INVALID_RESPONSE',
       method: 'GET',
       path: '/api/rooms',
+      status: 200,
     })
     expect((error as ApiContractError).issues.length).toBeGreaterThan(0)
   })
+
+  it.each([
+    ['a roster that is not a list', { players: 'invalid-roster' }, 'players'],
+    [
+      'a roster entry with a wrong field type',
+      { players: [{ id: 'u1', name: 42, image: null, isHost: true }] },
+      'players.0.name',
+    ],
+    [
+      'an invite that is not a URL',
+      { room: { ...lobbyRoom, discordLink: 'not a url' } },
+      'room.discordLink',
+    ],
+  ])(
+    'rejects lobby details with %s instead of downgrading them to a public room',
+    async (_label, override, path) => {
+      onHttp('GET', '/api/rooms/:code', () =>
+        httpOk({ room: lobbyRoom, players: [hostPlayer], ...override })
+      )
+
+      const error = await api.get('/api/rooms/LOBBY1', roomResponseSchema).catch((e: unknown) => e)
+
+      expect(error).toBeInstanceOf(ApiContractError)
+      expect((error as ApiContractError).issues).toEqual([{ path, code: expect.any(String) }])
+      expect(console.error).toHaveBeenCalledWith('Invalid API response:', {
+        method: 'GET',
+        path: '/api/rooms/LOBBY1',
+        status: 200,
+        issues: [{ path, code: expect.any(String) }],
+      })
+    }
+  )
 
   it('logs structured diagnostics without the response body or the query string', async () => {
     onHttp('GET', '/api/rooms/:code', () =>
@@ -100,7 +133,8 @@ describe('invalid responses', () => {
     expect(console.error).toHaveBeenCalledWith('Invalid API response:', {
       method: 'GET',
       path: '/api/rooms/LOBBY1',
-      issues: expect.arrayContaining([{ path: 'room.createdAt', code: 'invalid_format' }]),
+      status: 200,
+      issues: [{ path: 'room.createdAt', code: 'invalid_format' }],
     })
     const logged = JSON.stringify(vi.mocked(console.error).mock.calls)
     expect(logged).not.toContain(SECRET_INVITE)
@@ -128,7 +162,62 @@ describe('error responses and commands', () => {
 
     expect(error).toBeInstanceOf(ApiClientError)
     expect(error).toMatchObject({ status: 404, code: 'ROOM_NOT_FOUND', message: 'Squad not found' })
+    expect(console.error).not.toHaveBeenCalled()
   })
+
+  it('accepts the validation details of an error response without exposing them', async () => {
+    onHttp('POST', '/api/rooms', () =>
+      httpError(400, {
+        error: 'VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: [{ field: 'name', message: 'Room name is required' }],
+      })
+    )
+
+    const error = await api.post('/api/rooms', {}).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ApiClientError)
+    expect(error).toMatchObject({ status: 400, code: 'VALIDATION_ERROR' })
+    expect(getUserFriendlyError(error)).toBe('Please check the form fields and try again.')
+  })
+
+  it.each([
+    ['a null body', null, ''],
+    ['a body that is not an object', '<html>Bad Gateway</html>', ''],
+    ['a numeric error code', { message: 'broken', error: 123 }, 'error'],
+    ['an object as error code', { message: 'broken', error: { token: SECRET_INVITE } }, 'error'],
+    ['a missing message', { error: 'ROOM_NOT_FOUND' }, 'message'],
+  ])(
+    'rejects an error response with %s as a typed ApiContractError',
+    async (_label, body, path) => {
+      onHttp('GET', '/api/rooms/:code', () => httpError(400, body))
+
+      const error = await api
+        .get('/api/rooms/ABC123?token=session-secret', roomResponseSchema)
+        .catch((e: unknown) => e)
+
+      expect(error).toBeInstanceOf(ApiContractError)
+      expect(error).not.toBeInstanceOf(ApiClientError)
+      expect(error).toMatchObject({
+        code: 'INVALID_RESPONSE',
+        method: 'GET',
+        path: '/api/rooms/ABC123',
+        status: 400,
+        issues: [{ path, code: 'invalid_type' }],
+      })
+      expect(console.error).toHaveBeenCalledTimes(1)
+      expect(console.error).toHaveBeenCalledWith('Invalid API response:', {
+        method: 'GET',
+        path: '/api/rooms/ABC123',
+        status: 400,
+        issues: [{ path, code: 'invalid_type' }],
+      })
+      const logged = JSON.stringify(vi.mocked(console.error).mock.calls)
+      expect(logged).not.toContain(SECRET_INVITE)
+      expect(logged).not.toContain('session-secret')
+      expect(getUserFriendlyError(error)).toBe('Something went wrong. Please try again.')
+    }
+  )
 
   it('discards the body of a command sent without a schema', async () => {
     onHttp('POST', '/api/rooms/:code/leave', () => httpOk({ anything: SECRET_INVITE }))

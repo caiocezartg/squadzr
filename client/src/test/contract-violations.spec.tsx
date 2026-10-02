@@ -50,6 +50,7 @@ describe('catalog', () => {
     expect(console.error).toHaveBeenCalledWith('Invalid API response:', {
       method: 'GET',
       path: '/api/rooms',
+      status: 200,
       issues: [{ path: 'rooms.0.maxPlayers', code: 'invalid_type' }],
     })
   })

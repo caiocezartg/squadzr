@@ -7,6 +7,7 @@ import {
   notificationsResponseSchema,
   publicRoomSchema,
   roomCodeParamSchema,
+  roomLobbyResponseSchema,
   roomMemberSchema,
   roomResponseSchema,
   roomSchema,
@@ -192,12 +193,51 @@ describe('roomResponseSchema', () => {
     expect(isRoomLobbyResponse(parsed)).toBe(false)
   })
 
-  it('reduces a partial lobby payload to the public projection instead of leaking half of it', () => {
-    const withoutRoster = roomResponseSchema.parse({ room: memberRoom })
-    const withoutInvite = roomResponseSchema.parse({ room: publicRoom, players })
+  it.each([
+    ['a roster that is not a list', { room: memberRoom, players: 'invalid-roster' }, ['players']],
+    [
+      'a roster entry with a wrong field type',
+      { room: memberRoom, players: [{ id: 'u1', name: 42, image: null, isHost: true }] },
+      ['players.0.name'],
+    ],
+    [
+      'an invite that is not a URL',
+      { room: { ...memberRoom, discordLink: 'not a url' }, players },
+      ['room.discordLink'],
+    ],
+  ])('rejects %s instead of downgrading it to the public projection', (_label, payload, paths) => {
+    const result = roomResponseSchema.safeParse(payload)
 
-    expect(withoutRoster).toEqual({ room: publicRoom })
-    expect(withoutInvite).toEqual({ room: publicRoom })
+    expect(roomLobbyResponseSchema.safeParse(payload).success).toBe(false)
+    if (result.success) throw new Error('expected an invalid response')
+    expect(describeContractIssues(result.error).map((issue) => issue.path)).toEqual(paths)
+  })
+
+  // Half of the lobby details is neither projection: the missing half and the
+  // unexpected half are both reported.
+  it.each([
+    ['an invite without a roster', { room: memberRoom }],
+    ['a null invite without a roster', { room: { ...publicRoom, discordLink: null } }],
+    ['a roster without an invite', { room: publicRoom, players }],
+    ['an empty roster without an invite', { room: publicRoom, players: [] }],
+  ])('rejects %s', (_label, payload) => {
+    const result = roomResponseSchema.safeParse(payload)
+
+    if (result.success) throw new Error('expected an invalid response')
+    expect(
+      describeContractIssues(result.error)
+        .map((issue) => issue.path)
+        .sort()
+    ).toEqual(['players', 'room.discordLink'])
+  })
+
+  it('keeps ignoring unknown fields that are not lobby details', () => {
+    const parsed = roomResponseSchema.parse({
+      room: { ...publicRoom, futureField: 1 },
+      futureField: 1,
+    })
+
+    expect(parsed).toEqual({ room: publicRoom })
   })
 
   it('rejects a response without a valid room', () => {

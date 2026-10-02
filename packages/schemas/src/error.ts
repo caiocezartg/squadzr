@@ -19,11 +19,17 @@ export type ContractIssue = {
 
 type ZodIssue = z.core.$ZodIssue
 
-// A union only says "no branch matched"; the useful location is inside its branches.
+// A union only says "no branch matched"; the useful location is inside its
+// branches. The branch with the fewest issues is the one the payload was closest
+// to, so only that one is reported (all of them on a tie).
 function flattenIssue(issue: ZodIssue, parentPath: PropertyKey[]): ContractIssue[] {
   const path = [...parentPath, ...issue.path]
   if (issue.code === 'invalid_union' && issue.errors.length > 0) {
-    return issue.errors.flatMap((branch) => branch.flatMap((nested) => flattenIssue(nested, path)))
+    const branches = issue.errors.map((branch) =>
+      branch.flatMap((nested) => flattenIssue(nested, path))
+    )
+    const fewest = Math.min(...branches.map((branch) => branch.length))
+    return branches.filter((branch) => branch.length === fewest).flat()
   }
   return [{ path: path.map(String).join('.'), code: issue.code }]
 }

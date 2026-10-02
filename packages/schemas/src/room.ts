@@ -115,19 +115,25 @@ export const roomLobbyResponseSchema = z.object({
 
 export type RoomLobbyResponse = z.infer<typeof roomLobbyResponseSchema>
 
-export const publicRoomResponseSchema = z.object({ room: publicRoomSchema })
+// Non-member answer: the public projection and nothing else. A payload that
+// carries a roster or an invite claims to be lobby details, so it is refused
+// here instead of being stripped down to a public room: it has to satisfy
+// `roomLobbyResponseSchema` in full or fail.
+export const publicRoomResponseSchema = z.object({
+  room: publicRoomSchema.extend({ discordLink: z.never().optional() }),
+  players: z.never().optional(),
+})
 
 export type PublicRoomResponse = z.infer<typeof publicRoomResponseSchema>
 
 // `GET /api/rooms/:code` answers members with the lobby details and everyone
-// else with the public projection. The lobby member comes first so a member
-// payload is never narrowed down to the public one.
+// else with the public projection.
 export const roomResponseSchema = z.union([roomLobbyResponseSchema, publicRoomResponseSchema])
 
 export type RoomResponse = z.infer<typeof roomResponseSchema>
 
 export function isRoomLobbyResponse(response: RoomResponse): response is RoomLobbyResponse {
-  return 'players' in response
+  return response.players !== undefined
 }
 
 export const joinRoomResponseSchema = z.object({

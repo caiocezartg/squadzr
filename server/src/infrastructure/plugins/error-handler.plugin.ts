@@ -1,6 +1,8 @@
 import type { FastifyInstance, FastifyError, FastifyRequest } from 'fastify'
 import fp from 'fastify-plugin'
+import { ResponseSerializationError } from 'fastify-type-provider-zod'
 import { ZodError } from 'zod'
+import { describeContractIssues } from '@squadzr/schemas'
 import { AppError } from '@application/errors'
 
 interface ErrorResponse {
@@ -71,23 +73,40 @@ function parseError(error: FastifyError | Error): ParsedError {
   }
 }
 
+/** Request path without its query string, which may carry tokens or other user input. */
+function requestPath(request: FastifyRequest): string {
+  const [path = request.url] = request.url.split('?')
+  return path
+}
+
 function logError(
   fastify: FastifyInstance,
   error: Error,
   request: FastifyRequest,
   statusCode: number
 ): void {
+  const context = { method: request.method, path: requestPath(request), statusCode }
+
+  // A response that broke its contract is reported by issue path and code only:
+  // the error object carries the full request URL and is never logged itself.
+  if (error instanceof ResponseSerializationError) {
+    fastify.log.error(
+      {
+        ...context,
+        code: 'RESPONSE_CONTRACT_VIOLATION',
+        issues: describeContractIssues(new ZodError(error.cause.issues)),
+      },
+      'Response does not match its contract'
+    )
+    return
+  }
+
   if (statusCode === 500) {
     fastify.log.error(error, 'Unhandled error')
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    fastify.log.error({
-      err: error,
-      url: request.url,
-      method: request.method,
-      statusCode,
-    })
+    fastify.log.error({ err: error, ...context })
   }
 }
 

@@ -1,6 +1,6 @@
 import axios, { type AxiosRequestConfig } from 'axios'
 import type { z } from 'zod'
-import { describeContractIssues, type ContractIssue } from '@squadzr/schemas'
+import { describeContractIssues, errorResponseSchema, type ContractIssue } from '@squadzr/schemas'
 import { env } from '@/env'
 
 export class ApiClientError extends Error {
@@ -15,18 +15,20 @@ export class ApiClientError extends Error {
   }
 }
 
-/** A successful response whose body does not match the contract in @squadzr/schemas. */
+/** A response, successful or not, whose body does not match its contract in @squadzr/schemas. */
 export class ApiContractError extends Error {
   public readonly code = 'INVALID_RESPONSE'
   public readonly method: string
   public readonly path: string
+  public readonly status: number
   public readonly issues: ContractIssue[]
 
-  constructor(method: string, path: string, issues: ContractIssue[]) {
+  constructor(method: string, path: string, status: number, issues: ContractIssue[]) {
     super(`Invalid response for ${method} ${path}`)
     this.name = 'ApiContractError'
     this.method = method
     this.path = path
+    this.status = status
     this.issues = issues
   }
 }
@@ -36,27 +38,17 @@ const client = axios.create({
   withCredentials: true,
 })
 
-client.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (axios.isAxiosError(error) && error.response) {
-      const body = error.response.data as { message?: string; error?: string }
-      throw new ApiClientError(
-        body.message ?? error.response.statusText,
-        error.response.status,
-        body.error
-      )
-    }
-    throw error
-  }
-)
-
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+
+interface ResponseContext {
+  method: string
+  path: string
+  status: number
+}
 
 function parseResponse<S extends z.ZodType>(
   schema: S,
-  method: Method,
-  path: string,
+  { method, path, status }: ResponseContext,
   data: unknown
 ): z.output<S> {
   const result = schema.safeParse(data)
@@ -65,9 +57,25 @@ function parseResponse<S extends z.ZodType>(
   // The query string and the response body stay out of the diagnostics.
   const [pathname = path] = path.split('?')
   const issues = describeContractIssues(result.error)
-  console.error('Invalid API response:', { method, path: pathname, issues })
-  throw new ApiContractError(method, pathname, issues)
+  console.error('Invalid API response:', { method, path: pathname, status, issues })
+  throw new ApiContractError(method, pathname, status, issues)
 }
+
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error) && error.response) {
+      const { status, config, data } = error.response
+      const body = parseResponse(
+        errorResponseSchema,
+        { method: (config.method ?? 'get').toUpperCase(), path: config.url ?? '', status },
+        data
+      )
+      throw new ApiClientError(body.message, status, body.error)
+    }
+    throw error
+  }
+)
 
 /**
  * With a schema, the response body is parsed before it is returned and a
@@ -78,9 +86,9 @@ async function request<S extends z.ZodType>(
   config: AxiosRequestConfig & { method: Method; url: string },
   schema: S | undefined
 ): Promise<z.output<S> | void> {
-  const { data } = await client.request<unknown>(config)
+  const { data, status } = await client.request<unknown>(config)
   if (!schema) return
-  return parseResponse(schema, config.method, config.url, data)
+  return parseResponse(schema, { method: config.method, path: config.url, status }, data)
 }
 
 function get<S extends z.ZodType>(path: string, schema: S): Promise<z.output<S>> {

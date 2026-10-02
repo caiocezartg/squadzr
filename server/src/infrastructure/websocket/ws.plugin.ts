@@ -1,19 +1,14 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { WebSocket } from '@fastify/websocket'
 import fp from 'fastify-plugin'
-import { describeContractIssues } from '@squadzr/schemas'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
 import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
 import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzle-room-member.repository'
 import { DrizzleUserRepository } from '@infrastructure/repositories/drizzle-user.repository'
 import { WsConnectionManager } from './ws-connection-manager'
 import { WsRoomBroadcaster } from './room-broadcaster.service'
-import {
-  wsIncomingMessageSchema,
-  type PongMessage,
-  type WsClient,
-  type WsServerMessage,
-} from './types'
+import { parseIncomingMessage } from './incoming-message'
+import type { PongMessage, WsClient, WsServerMessage } from './types'
 import {
   handleJoinRoom,
   handleLeaveRoom,
@@ -74,22 +69,16 @@ async function wsPlugin(fastify: FastifyInstance): Promise<void> {
     const userRepository = new DrizzleUserRepository(db)
 
     socket.on('message', async (rawData: Buffer | ArrayBuffer | Buffer[]) => {
+      const parsed = parseIncomingMessage(rawData)
+      if (!parsed.ok) {
+        fastify.log.warn({ code: parsed.code, issues: parsed.issues }, 'Invalid WebSocket message')
+        sendError(socket, parsed.code, parsed.reason)
+        return
+      }
+
+      const { message } = parsed
+
       try {
-        const data: unknown = JSON.parse(rawData.toString())
-        const result = wsIncomingMessageSchema.safeParse(data)
-
-        if (!result.success) {
-          // Issue paths and codes only: the rejected frame itself is never logged.
-          fastify.log.warn(
-            { issues: describeContractIssues(result.error) },
-            'Invalid WebSocket message'
-          )
-          sendError(socket, 'INVALID_MESSAGE', 'Invalid message format')
-          return
-        }
-
-        const message = result.data
-
         switch (message.type) {
           case 'join_room':
             await handleJoinRoom(
