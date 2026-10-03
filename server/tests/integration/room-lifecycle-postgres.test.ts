@@ -524,11 +524,11 @@ describe('join and leave transactions', () => {
     await joinAll(server, room.code, [member!])
     const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
     const leftAt = new Date(FIXED_NOW.getTime() + 5 * 60_000)
+    clock.set(leftAt)
 
     const outcome = await repository.leaveOpenRoom({
       roomId: room.id,
       userId: member!.id,
-      now: leftAt,
     })
 
     expect(outcome).toEqual({ status: 'left', wasHost: false, memberCount: 1 })
@@ -546,11 +546,29 @@ describe('join and leave transactions', () => {
     const outcome = await repository.leaveOpenRoom({
       roomId: room.id,
       userId: member!.id,
-      now: FIXED_NOW,
     })
 
     expect(outcome).toEqual({ status: 'ready' })
     expect(await repository.countByRoomId(room.id)).toBe(2)
+  })
+
+  it('reads concurrent join and leave clocks in lock order without regressing Room Activity', async () => {
+    const [leaving, joining] = await signInMany(server, 2)
+    const room = await createRoom(server, host, { gameId, maxPlayers: 4 })
+    await joinAll(server, room.code, [leaving!])
+    const repository = new DrizzleRoomMemberRepository(server.app.db, new TickingClock(FIXED_NOW))
+
+    const [joined, left] = await Promise.all([
+      repository.joinOpenRoom({ roomId: room.id, userId: joining!.id }),
+      repository.leaveOpenRoom({ roomId: room.id, userId: leaving!.id }),
+    ])
+
+    expect(joined.status).toBe('joined')
+    expect(left.status).toBe('left')
+    expect(await repository.countByRoomId(room.id)).toBe(2)
+    const row = await findRoomRow(server, room.id)
+    expect(row?.lastActivityAt).toEqual(new Date(FIXED_NOW.getTime() + 2))
+    expect(row?.readyAt).toBeNull()
   })
 
   it('deletes the room and every membership when the host leaves', async () => {
@@ -562,7 +580,6 @@ describe('join and leave transactions', () => {
     const outcome = await repository.leaveOpenRoom({
       roomId: room.id,
       userId: host.id,
-      now: FIXED_NOW,
     })
 
     expect(outcome).toEqual({ status: 'left', wasHost: true, memberCount: 0 })
@@ -582,7 +599,6 @@ describe('join and leave transactions', () => {
     const outcome = await repository.leaveOpenRoom({
       roomId: room.id,
       userId: outsider!.id,
-      now: FIXED_NOW,
     })
 
     expect(outcome).toEqual({ status: 'not_member' })

@@ -11,6 +11,7 @@ import type { Database } from '@infrastructure/database/drizzle'
 import type { Clock } from '@domain/services/clock.interface'
 import { roomMembers } from '@infrastructure/database/schema/room-members'
 import { rooms } from '@infrastructure/database/schema/rooms'
+import { user } from '@infrastructure/database/schema/auth'
 import { userNotifications } from '@infrastructure/database/schema/user-notifications'
 import { isRoomExpired } from '@domain/services/room-lifecycle'
 import { ROOM } from '@config/constants'
@@ -158,16 +159,21 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
       }
 
       const memberRows = await tx
-        .select()
+        .select({
+          member: roomMembers,
+          user: { id: user.id, name: user.name, avatarUrl: user.image },
+        })
         .from(roomMembers)
+        .innerJoin(user, eq(user.id, roomMembers.userId))
         .where(eq(roomMembers.roomId, input.roomId))
-      const members = memberRows.map(mapRoomMemberRowToEntity)
+      const members = memberRows.map((row) => mapRoomMemberRowToEntity(row.member))
+      const users = memberRows.map((row) => row.user)
 
       // Built from the authoritative member list inside the transaction and
       // persisted here: a failure rolls the readiness and the join back too.
-      // The builder may read the roster's users through the pool, which happens
-      // while the room lock is held, so no concurrent member can slip past it.
-      const inputs = await input.buildReadyNotifications(members)
+      // Profiles use the same transaction connection; the builder is pure so it
+      // cannot exhaust the pool by acquiring a second connection under the lock.
+      const inputs = input.buildReadyNotifications(members, users)
       if (inputs.length === 0) {
         return {
           status: 'joined',
@@ -211,7 +217,8 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
       if (!roomRow) return { status: 'not_found' }
 
       const room = mapRoomRowToEntity(roomRow)
-      if (isRoomExpired(room, input.now, ROOM)) return { status: 'not_found' }
+      const now = this.clock.now()
+      if (isRoomExpired(room, now, ROOM)) return { status: 'not_found' }
       if (room.readyAt) return { status: 'ready' }
 
       const membershipRows = await tx
@@ -234,7 +241,7 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
 
       await tx
         .update(rooms)
-        .set({ lastActivityAt: input.now, updatedAt: input.now })
+        .set({ lastActivityAt: now, updatedAt: now })
         .where(eq(rooms.id, input.roomId))
 
       const remainingRows = await tx

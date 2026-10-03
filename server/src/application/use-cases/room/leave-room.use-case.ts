@@ -1,5 +1,4 @@
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
-import type { Clock } from '@domain/services/clock.interface'
 import { RoomNotFoundError, RoomReadyError } from '@application/errors'
 
 export interface LeaveRoomInput {
@@ -18,10 +17,7 @@ export interface ILeaveRoomUseCase {
 }
 
 export class LeaveRoomUseCase implements ILeaveRoomUseCase {
-  constructor(
-    private readonly roomMemberRepository: IRoomMemberRepository,
-    private readonly clock: Clock
-  ) {}
+  constructor(private readonly roomMemberRepository: IRoomMemberRepository) {}
 
   async execute(input: LeaveRoomInput): Promise<LeaveRoomOutput> {
     // The repository locks the room and decides readiness, host deletion and
@@ -30,7 +26,6 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
     const outcome = await this.roomMemberRepository.leaveOpenRoom({
       roomId: input.roomId,
       userId: input.userId,
-      now: this.clock.now(),
     })
 
     switch (outcome.status) {

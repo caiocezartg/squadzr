@@ -4,7 +4,6 @@ import type { UserNotification } from '@domain/entities/user-notification.entity
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
-import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import { isRoomExpired } from '@domain/services/room-lifecycle'
 import {
@@ -40,7 +39,6 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     private readonly roomRepository: IRoomRepository,
     private readonly roomMemberRepository: IRoomMemberRepository,
     private readonly gameRepository: IGameRepository,
-    private readonly userRepository: IUserRepository,
     private readonly clock: Clock
   ) {}
 
@@ -74,28 +72,21 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       throw new RoomJoinLimitReachedError(ROOM.JOIN_LIMIT)
     }
 
-    // The game name is stable and read up front; the roster's users are read
-    // inside the join transaction, once the authoritative members are known.
+    // The game name is stable and read before acquiring a transaction connection.
+    // The repository reads the authoritative roster and profiles through tx.
     const game = await this.gameRepository.findById(room.gameId)
     const gameName = game?.name ?? 'Unknown game'
 
     const outcome = await this.roomMemberRepository.joinOpenRoom({
       roomId: room.id,
       userId: input.userId,
-      buildReadyNotifications: async (authoritativeMembers) => {
-        // Resolved inside the transaction, after the room lock: a member that
-        // joined concurrently is part of the authoritative roster and must not
-        // fall back to `Unknown` in the persisted payload.
-        const users = await this.userRepository.findByIds(
-          authoritativeMembers.map((member) => member.userId)
-        )
-        return buildRoomReadyNotifications({
+      buildReadyNotifications: (authoritativeMembers, users) =>
+        buildRoomReadyNotifications({
           room,
           members: authoritativeMembers,
           users,
           gameName,
-        })
-      },
+        }),
     })
 
     switch (outcome.status) {

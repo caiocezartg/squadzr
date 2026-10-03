@@ -1,17 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { LeaveRoomUseCase } from './leave-room.use-case'
 import { RoomNotFoundError, RoomReadyError } from '@application/errors'
-import { createMockClock, createMockRoomMemberRepository, FIXED_NOW } from '@test/mocks'
+import { createMockRoomMemberRepository } from '@test/mocks'
 
 describe('LeaveRoomUseCase', () => {
   let useCase: LeaveRoomUseCase
   let mockRoomMemberRepository: ReturnType<typeof createMockRoomMemberRepository>
-  let clock: ReturnType<typeof createMockClock>
 
   beforeEach(() => {
     mockRoomMemberRepository = createMockRoomMemberRepository()
-    clock = createMockClock()
-    useCase = new LeaveRoomUseCase(mockRoomMemberRepository, clock)
+    useCase = new LeaveRoomUseCase(mockRoomMemberRepository)
   })
 
   describe('execute', () => {
@@ -33,7 +31,6 @@ describe('LeaveRoomUseCase', () => {
       expect(mockRoomMemberRepository.leaveOpenRoom).toHaveBeenCalledWith({
         roomId: 'room-1',
         userId: 'regular-user',
-        now: FIXED_NOW,
       })
     })
 

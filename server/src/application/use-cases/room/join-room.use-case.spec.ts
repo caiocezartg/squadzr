@@ -17,7 +17,6 @@ import {
   createMockRoomMemberRepository,
   createMockRoomRepository,
   createMockUser,
-  createMockUserRepository,
   FIXED_NOW,
 } from '@test/mocks'
 
@@ -26,20 +25,17 @@ describe('JoinRoomUseCase', () => {
   let mockRoomRepository: ReturnType<typeof createMockRoomRepository>
   let mockRoomMemberRepository: ReturnType<typeof createMockRoomMemberRepository>
   let mockGameRepository: ReturnType<typeof createMockGameRepository>
-  let mockUserRepository: ReturnType<typeof createMockUserRepository>
   let clock: ReturnType<typeof createMockClock>
 
   beforeEach(() => {
     mockRoomRepository = createMockRoomRepository()
     mockRoomMemberRepository = createMockRoomMemberRepository()
     mockGameRepository = createMockGameRepository()
-    mockUserRepository = createMockUserRepository()
     clock = createMockClock()
     useCase = new JoinRoomUseCase(
       mockRoomRepository,
       mockRoomMemberRepository,
       mockGameRepository,
-      mockUserRepository,
       clock
     )
   })
@@ -209,10 +205,10 @@ describe('JoinRoomUseCase', () => {
       mockRoomRepository.findByCode.mockResolvedValue(room)
       mockRoomMemberRepository.findByRoomAndUser.mockResolvedValue(null)
       mockGameRepository.findById.mockResolvedValue(createMockGame({ name: 'League' }))
-      mockUserRepository.findByIds.mockResolvedValue([
+      const users = [
         createMockUser({ id: 'host', name: 'Host' }),
         createMockUser({ id: 'user-2', name: 'Joiner' }),
-      ])
+      ]
 
       let captured: JoinOpenRoomInput | undefined
       mockRoomMemberRepository.joinOpenRoom.mockImplementation(async (input) => {
@@ -221,7 +217,7 @@ describe('JoinRoomUseCase', () => {
           createMockRoomMember({ roomId: input.roomId, userId: 'host' }),
           createMockRoomMember({ roomId: input.roomId, userId: input.userId }),
         ]
-        const notifications = (await input.buildReadyNotifications?.(members)) ?? []
+        const notifications = input.buildReadyNotifications?.(members, users) ?? []
         return {
           status: 'joined',
           member: members[1]!,
@@ -249,7 +245,9 @@ describe('JoinRoomUseCase', () => {
         { name: 'Host', image: null },
         { name: 'Joiner', image: null },
       ])
-      expect(mockUserRepository.findByIds).toHaveBeenCalledWith(['host', 'user-2'])
+      expect(result.createdNotifications[1]?.payload.players).toEqual(
+        result.createdNotifications[0]?.payload.players
+      )
     })
 
     it('should resolve the notification players from the members that committed inside the join', async () => {
@@ -257,9 +255,6 @@ describe('JoinRoomUseCase', () => {
       mockRoomRepository.findByCode.mockResolvedValue(room)
       mockRoomMemberRepository.findByRoomAndUser.mockResolvedValue(null)
       mockGameRepository.findById.mockResolvedValue(createMockGame({ name: 'League' }))
-      mockUserRepository.findByIds.mockImplementation(async (ids) =>
-        ids.map((id) => createMockUser({ id, name: `Name-${id}` }))
-      )
 
       mockRoomMemberRepository.joinOpenRoom.mockImplementation(async (input) => {
         // A member that committed after the use case started: only the member
@@ -269,7 +264,10 @@ describe('JoinRoomUseCase', () => {
           createMockRoomMember({ roomId: input.roomId, userId: 'late-member' }),
           createMockRoomMember({ roomId: input.roomId, userId: input.userId }),
         ]
-        const notifications = (await input.buildReadyNotifications?.(members)) ?? []
+        const users = members.map((member) =>
+          createMockUser({ id: member.userId, name: `Name-${member.userId}` })
+        )
+        const notifications = input.buildReadyNotifications?.(members, users) ?? []
         return {
           status: 'joined',
           member: members[2]!,
@@ -286,7 +284,11 @@ describe('JoinRoomUseCase', () => {
 
       const result = await useCase.execute({ code: 'ABC123', userId: 'user-2' })
 
-      expect(mockUserRepository.findByIds).toHaveBeenCalledWith(['host', 'late-member', 'user-2'])
+      expect(result.createdNotifications.map((notification) => notification.userId)).toEqual([
+        'host',
+        'late-member',
+        'user-2',
+      ])
       expect(result.createdNotifications[0]?.payload.players).toEqual([
         { name: 'Name-host', image: null },
         { name: 'Name-late-member', image: null },

@@ -3,20 +3,21 @@ import type {
   UserNotification,
 } from '@domain/entities/user-notification.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
+import type { User } from '@domain/entities/user.entity'
 
 export interface JoinOpenRoomInput {
   readonly roomId: string
   readonly userId: string
   /**
-   * Builds the room_ready notifications from the authoritative member list once
-   * this join fills the room. Called inside the join transaction, after the room
-   * lock, so the caller can resolve the players from the members that actually
-   * committed. A failure to persist the notifications rolls the whole
-   * Membership change back.
+   * Pure builder called with the authoritative members and player profiles read
+   * through the join transaction, after the room lock. It must not perform I/O
+   * or acquire another pool connection while the transaction holds the lock.
+   * A failure to persist notifications rolls the whole Membership change back.
    */
   readonly buildReadyNotifications?: (
-    members: readonly RoomMember[]
-  ) => readonly CreateUserNotificationInput[] | Promise<readonly CreateUserNotificationInput[]>
+    members: readonly RoomMember[],
+    users: readonly Pick<User, 'id' | 'name' | 'avatarUrl'>[]
+  ) => readonly CreateUserNotificationInput[]
 }
 
 export type JoinOpenRoomOutcome =
@@ -36,7 +37,6 @@ export type JoinOpenRoomOutcome =
 export interface LeaveOpenRoomInput {
   readonly roomId: string
   readonly userId: string
-  readonly now: Date
 }
 
 export type LeaveOpenRoomOutcome =
@@ -64,7 +64,7 @@ export interface IRoomMemberRepository {
   /**
    * Atomic leave: locks the room, rejects readiness, removes the Membership (or
    * deletes the room and its memberships when the host leaves) and advances Room
-   * Activity in the same transaction.
+   * Activity in the same transaction, reading the clock after the room lock.
    */
   leaveOpenRoom(input: LeaveOpenRoomInput): Promise<LeaveOpenRoomOutcome>
 }

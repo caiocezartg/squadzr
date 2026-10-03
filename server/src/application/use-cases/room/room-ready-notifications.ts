@@ -6,7 +6,7 @@ import type { CreateUserNotificationInput } from '@domain/entities/user-notifica
 export interface BuildRoomReadyNotificationsInput {
   readonly room: Pick<Room, 'id' | 'code' | 'name'>
   readonly members: readonly RoomMember[]
-  readonly users: readonly User[]
+  readonly users: readonly Pick<User, 'id' | 'name' | 'avatarUrl'>[]
   readonly gameName: string
 }
 
