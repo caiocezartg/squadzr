@@ -31,6 +31,7 @@ export type JoinOpenRoomOutcome =
     }
   | { readonly status: 'ready' }
   | { readonly status: 'full'; readonly memberCount: number }
+  | { readonly status: 'limit_reached' }
   | { readonly status: 'expired' }
   | { readonly status: 'not_found' }
 
@@ -50,15 +51,20 @@ export interface IRoomMemberRepository {
   findByUserId(userId: string): Promise<RoomMember[]>
   findByRoomAndUser(roomId: string, userId: string): Promise<RoomMember | null>
   countByRoomId(roomId: string): Promise<number>
-  /** Valid Open Rooms only: Ready Rooms and expired Open Rooms never count. */
-  countActiveByUserId(userId: string, now: Date): Promise<number>
   /**
-   * Atomic join: locks the room, verifies existence, expiration, readiness and
-   * capacity, inserts the Membership, advances Room Activity and, when the last
-   * seat is taken, sets readiness and persists every member's `room_ready`
+   * Atomic join: locks the room row, verifies existence, expiration, readiness
+   * and capacity, inserts the Membership, advances Room Activity and, when the
+   * last seat is taken, sets readiness and persists every member's `room_ready`
    * notification in the same transaction. The lifecycle instant is read from
    * the injected clock only after the room lock is held, so concurrent joins
    * never write a timestamp older than the state they replaced.
+   *
+   * The per-user limit of valid Open Room Memberships is decided in the same
+   * transaction: after the room row, the user row is locked, then the count and
+   * the insert happen under that lock. Concurrent joins by one user into
+   * different rooms therefore serialize on the user lock, and the limit cannot
+   * be exceeded. The room-then-user order is global to this repository and to
+   * `IRoomRepository.create`, so no cycle is possible.
    */
   joinOpenRoom(input: JoinOpenRoomInput): Promise<JoinOpenRoomOutcome>
   /**
