@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { roomSchema } from './index'
+import { playerSchema, publicRoomSchema } from './room'
 
 export const wsMessageTypeSchema = z.enum([
   'join_room',
@@ -34,12 +34,7 @@ export const baseWsMessageSchema = z.object({
 })
 
 // Shared player schema for WS payloads
-export const wsPlayerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  image: z.string().nullable(),
-  isHost: z.boolean(),
-})
+export const wsPlayerSchema = playerSchema
 
 // Client only sends roomCode - userId comes from authenticated session
 export const joinRoomMessageSchema = baseWsMessageSchema.extend({
@@ -128,10 +123,11 @@ export const lobbySubscribedMessageSchema = baseWsMessageSchema.extend({
   }),
 })
 
+// Catalog event pushed to every lobby subscriber, guests included: public projection only.
 export const roomCreatedMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('room_created'),
   payload: z.object({
-    room: roomSchema,
+    room: publicRoomSchema,
   }),
 })
 
@@ -160,6 +156,26 @@ export const wsIncomingMessageSchema = z.discriminatedUnion('type', [
   unsubscribeLobbyMessageSchema,
 ])
 
+export const wsServerMessageSchema = z.discriminatedUnion('type', [
+  roomJoinedMessageSchema,
+  playerJoinedMessageSchema,
+  playerLeftMessageSchema,
+  viewerLeftMessageSchema,
+  roomReadyMessageSchema,
+  errorMessageSchema,
+  pongMessageSchema,
+  lobbySubscribedMessageSchema,
+  roomCreatedMessageSchema,
+  roomUpdatedMessageSchema,
+  roomDeletedMessageSchema,
+])
+
+// Frame envelope every server message shares, before its payload is checked per event
+export const wsServerEnvelopeSchema = z.object({
+  type: z.string(),
+  payload: z.unknown(),
+})
+
 // Payload-only schemas (for client-side validation of incoming WS events)
 export const roomJoinedPayloadSchema = roomJoinedMessageSchema.shape.payload
 export const playerJoinedPayloadSchema = playerJoinedMessageSchema.shape.payload
@@ -170,9 +186,31 @@ export const errorPayloadSchema = errorMessageSchema.shape.payload
 export const roomCreatedPayloadSchema = roomCreatedMessageSchema.shape.payload
 export const roomUpdatedPayloadSchema = roomUpdatedMessageSchema.shape.payload
 export const roomDeletedPayloadSchema = roomDeletedMessageSchema.shape.payload
+export const lobbySubscribedPayloadSchema = lobbySubscribedMessageSchema.shape.payload
+
+// Payload schema of each server event that carries one, keyed by message type
+export const wsServerEventPayloadSchemas = {
+  room_joined: roomJoinedPayloadSchema,
+  player_joined: playerJoinedPayloadSchema,
+  player_left: playerLeftPayloadSchema,
+  viewer_left: viewerLeftPayloadSchema,
+  room_ready: roomReadyPayloadSchema,
+  error: errorPayloadSchema,
+  lobby_subscribed: lobbySubscribedPayloadSchema,
+  room_created: roomCreatedPayloadSchema,
+  room_updated: roomUpdatedPayloadSchema,
+  room_deleted: roomDeletedPayloadSchema,
+} as const
+
+export type WsServerEventType = keyof typeof wsServerEventPayloadSchemas
+export type WsServerEventPayload<T extends WsServerEventType> = z.infer<
+  (typeof wsServerEventPayloadSchemas)[T]
+>
 
 // Inferred types
 export type WsIncomingMessage = z.infer<typeof wsIncomingMessageSchema>
+export type WsServerMessage = z.infer<typeof wsServerMessageSchema>
+export type WsServerEnvelope = z.infer<typeof wsServerEnvelopeSchema>
 export type JoinRoomMessage = z.infer<typeof joinRoomMessageSchema>
 export type LeaveRoomMessage = z.infer<typeof leaveRoomMessageSchema>
 export type RoomJoinedMessage = z.infer<typeof roomJoinedMessageSchema>

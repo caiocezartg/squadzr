@@ -199,7 +199,9 @@ describe('event handlers', () => {
     socket.serverSend({ type: 'something_else' })
     socket.serverSend({ type: 'pong', payload: { ok: true } })
 
-    expect(console.error).toHaveBeenCalledWith('Failed to parse WebSocket message:', '{not json')
+    expect(console.error).toHaveBeenCalledWith('Invalid WebSocket message:', {
+      issues: [{ path: '', code: 'invalid_json' }],
+    })
     expect(handler.mock.calls).toEqual([[{ ok: true }]])
     expect(client.isConnected).toBe(true)
   })

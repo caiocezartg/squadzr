@@ -1,15 +1,15 @@
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
-import { z } from 'zod'
 import { requireAuth } from '@interface/hooks/auth.hook'
 import { createUserController } from '@interface/factories/user.factory'
-import { userSchema, userNotificationSchema } from '@squadzr/schemas'
+import {
+  errorResponseSchema as errorResponse,
+  notificationChangeResponseSchema,
+  notificationsResponseSchema,
+  readAllNotificationsResponseSchema,
+  userResponseSchema,
+} from '@squadzr/schemas'
 import { listNotificationsQuerySchema, notificationIdParamSchema } from '@application/dtos'
-
-const errorResponse = z.object({
-  error: z.string(),
-  message: z.string(),
-})
 
 export async function userRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
@@ -22,7 +22,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       description: 'Returns the authenticated user profile. Requires authentication.',
       security: [{ session: [] }],
       response: {
-        200: z.object({ user: userSchema }),
+        200: userResponseSchema,
         401: errorResponse,
         404: errorResponse,
       },
@@ -39,9 +39,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       security: [{ session: [] }],
       querystring: listNotificationsQuerySchema,
       response: {
-        200: z.object({
-          notifications: z.array(userNotificationSchema),
-        }),
+        200: notificationsResponseSchema,
         401: errorResponse,
       },
     },
@@ -57,7 +55,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       security: [{ session: [] }],
       params: notificationIdParamSchema,
       response: {
-        200: z.object({ success: z.boolean() }),
+        200: notificationChangeResponseSchema,
         401: errorResponse,
       },
     },
@@ -72,7 +70,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       description: 'Marks all unread notifications as read for the authenticated user.',
       security: [{ session: [] }],
       response: {
-        200: z.object({ success: z.boolean(), count: z.number() }),
+        200: readAllNotificationsResponseSchema,
         401: errorResponse,
       },
     },
@@ -88,7 +86,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       security: [{ session: [] }],
       params: notificationIdParamSchema,
       response: {
-        200: z.object({ success: z.boolean() }),
+        200: notificationChangeResponseSchema,
         401: errorResponse,
       },
     },

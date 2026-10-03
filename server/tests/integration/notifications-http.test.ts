@@ -23,6 +23,8 @@ afterEach(async () => {
 })
 
 const UNAUTHORIZED = { error: 'UNAUTHORIZED', message: 'Authentication required' }
+// Transport dates are ISO 8601 UTC strings, as produced by `Date.prototype.toISOString()`.
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
 
 /** Fills a 2-seat room with `host` and `member`, which triggers Room Ready notifications. */
 async function fillRoom(name = 'Ready squad') {
@@ -132,7 +134,7 @@ describe('POST /api/notifications/:id/read', () => {
     expect(first.json()).toEqual({ success: true })
     expect(second.statusCode).toBe(200)
     expect(second.json()).toEqual({ success: false })
-    expect((await listNotifications(member))[0]?.readAt).toBeInstanceOf(Date)
+    expect((await listNotifications(member))[0]?.readAt).toMatch(ISO_DATE_TIME)
   })
 
   it("answers success: false for another user's notification and leaves it unread", async () => {

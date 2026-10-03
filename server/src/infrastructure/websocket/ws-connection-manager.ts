@@ -1,5 +1,5 @@
 import type { WebSocket } from '@fastify/websocket'
-import type { WsClient } from './types'
+import type { WsClient, WsServerMessage } from './types'
 
 export class WsConnectionManager {
   private readonly rooms: Map<string, Set<WebSocket>> = new Map()
@@ -50,7 +50,7 @@ export class WsConnectionManager {
     this.lobbySubscribers.delete(socket)
   }
 
-  broadcastToRoom(roomCode: string, message: unknown, excludeSocket?: WebSocket): void {
+  broadcastToRoom(roomCode: string, message: WsServerMessage, excludeSocket?: WebSocket): void {
     const roomSockets = this.rooms.get(roomCode)
     if (!roomSockets) return
 
@@ -61,18 +61,18 @@ export class WsConnectionManager {
     }
   }
 
-  broadcastToLobby(message: unknown): void {
+  broadcastToLobby(message: WsServerMessage): void {
     for (const socket of this.lobbySubscribers) {
       this.sendToSocket(socket, message)
     }
   }
 
-  broadcastToRoomAndLobby(roomCode: string, message: unknown): void {
+  broadcastToRoomAndLobby(roomCode: string, message: WsServerMessage): void {
     this.broadcastToLobby(message)
     this.broadcastToRoom(roomCode, message)
   }
 
-  private sendToSocket(socket: WebSocket, message: unknown): void {
+  private sendToSocket(socket: WebSocket, message: WsServerMessage): void {
     if (socket.readyState === socket.OPEN) {
       socket.send(JSON.stringify(message))
     }

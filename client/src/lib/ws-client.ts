@@ -1,4 +1,31 @@
+import { describeContractIssues } from '@squadzr/schemas'
+import { wsServerEnvelopeSchema, type WsServerEnvelope } from '@squadzr/schemas/ws'
+
 export type WebSocketEventHandler = (data: unknown) => void
+
+/**
+ * Reads a server frame as { type, timestamp, payload }. A frame that is not
+ * JSON or has no string type is reported by issue path and code only: neither
+ * the raw frame nor the parser message, which quotes it, reaches the log.
+ */
+function parseServerFrame(raw: string): WsServerEnvelope | null {
+  let frame: unknown
+  try {
+    frame = JSON.parse(raw)
+  } catch {
+    console.error('Invalid WebSocket message:', { issues: [{ path: '', code: 'invalid_json' }] })
+    return null
+  }
+
+  const envelope = wsServerEnvelopeSchema.safeParse(frame)
+  if (!envelope.success) {
+    console.error('Invalid WebSocket message:', {
+      issues: describeContractIssues(envelope.error),
+    })
+    return null
+  }
+  return envelope.data
+}
 
 interface WebSocketClientOptions {
   url: string
@@ -64,16 +91,16 @@ export class WebSocketClient {
     }
 
     this.ws.onmessage = (event: MessageEvent<string>) => {
-      try {
-        // Server sends { type, timestamp, payload }
-        const message = JSON.parse(event.data) as { type: string; payload: unknown }
-        const handlers = this.eventHandlers.get(message.type)
+      const message = parseServerFrame(event.data)
+      if (!message) return
 
-        if (handlers) {
-          handlers.forEach((handler) => handler(message.payload))
-        }
+      const handlers = this.eventHandlers.get(message.type)
+      if (!handlers) return
+
+      try {
+        handlers.forEach((handler) => handler(message.payload))
       } catch {
-        console.error('Failed to parse WebSocket message:', event.data)
+        console.error('WebSocket handler failed:', { type: message.type })
       }
     }
   }

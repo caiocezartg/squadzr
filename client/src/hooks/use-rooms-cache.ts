@@ -1,10 +1,10 @@
 import { useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import type { Room, RoomsResponse } from '@/types'
+import type { PublicRoom, RoomsResponse } from '@/types'
 
 interface UseRoomsCacheReturn {
-  addRoom: (room: Room) => void
-  updateRoom: (roomId: string, updates: Partial<Room>) => void
+  addRoom: (room: PublicRoom) => void
+  updateRoom: (roomId: string, updates: Partial<PublicRoom>) => void
   removeRoom: (roomId: string) => void
 }
 
@@ -12,7 +12,7 @@ export function useRoomsCache(): UseRoomsCacheReturn {
   const queryClient = useQueryClient()
 
   const addRoom = useCallback(
-    (room: Room) => {
+    (room: PublicRoom) => {
       queryClient.setQueryData<RoomsResponse>(['rooms'], (old) => {
         if (!old) return { rooms: [room] }
         // Avoid duplicates
@@ -24,7 +24,7 @@ export function useRoomsCache(): UseRoomsCacheReturn {
   )
 
   const updateRoom = useCallback(
-    (roomId: string, updates: Partial<Room>) => {
+    (roomId: string, updates: Partial<PublicRoom>) => {
       queryClient.setQueryData<RoomsResponse>(['rooms'], (old) => {
         if (!old) return { rooms: [] }
         return {

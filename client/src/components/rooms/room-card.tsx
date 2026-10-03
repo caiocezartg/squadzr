@@ -2,10 +2,10 @@ import * as motion from 'motion/react-client'
 import { useTranslation } from 'react-i18next'
 import { useTimeAgo } from '@/hooks/use-time-ago'
 import { Check, Users } from 'lucide-react'
-import type { Room, Game } from '@/types'
+import type { PublicRoom, Game } from '@/types'
 
 interface RoomCardProps {
-  room: Room
+  room: PublicRoom
   game: Game | undefined
   onJoin?: (roomCode: string) => void
   isLoading?: boolean

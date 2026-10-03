@@ -3,6 +3,7 @@ import type { IUserNotificationRepository } from '@domain/repositories/user-noti
 import type { IGetUserUseCase } from '@application/use-cases/user/get-user.use-case'
 import { UserNotFoundError, UnauthorizedError } from '@application/errors'
 import { listNotificationsQuerySchema, notificationIdParamSchema } from '@application/dtos'
+import { toUserDto, toUserNotificationDto } from '@application/projections'
 
 function getUserId(request: FastifyRequest): string {
   if (!request.session?.user?.id) {
@@ -27,7 +28,7 @@ export class UserController {
       throw new UserNotFoundError(userId)
     }
 
-    await reply.send({ user: result.user })
+    await reply.send({ user: toUserDto(result.user) })
   }
 
   async listNotifications(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -37,7 +38,7 @@ export class UserController {
 
     const notifications = await this.deps.userNotificationRepository.findByUserId(userId, limit)
 
-    await reply.send({ notifications })
+    await reply.send({ notifications: notifications.map(toUserNotificationDto) })
   }
 
   async markNotificationAsRead(request: FastifyRequest, reply: FastifyReply): Promise<void> {

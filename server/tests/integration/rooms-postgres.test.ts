@@ -85,7 +85,12 @@ describe('Membership durability', () => {
       logger: false,
     })
     try {
-      const response = await restarted.inject({ method: 'GET', url: `/api/rooms/${room.code}` })
+      // The roster is a lobby detail: only an authenticated member reads it (CCC-34).
+      const response = await restarted.inject({
+        method: 'GET',
+        url: `/api/rooms/${room.code}`,
+        headers: host.headers,
+      })
       expect(response.json<{ players: unknown[] }>().players).toHaveLength(2)
     } finally {
       await restarted.close()

@@ -1,4 +1,5 @@
 import type { WebSocket } from '@fastify/websocket'
+import type { PlayerDto } from '@squadzr/schemas'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { User } from '@domain/entities/user.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
@@ -15,12 +16,11 @@ import type {
   RoomReadyMessage,
   ErrorMessage,
   LobbySubscribedMessage,
+  WsServerMessage,
 } from '../types'
 import type { WsConnectionManager } from '../ws-connection-manager'
 
-type Player = { id: string; name: string; image: string | null; isHost: boolean }
-
-function sendToSocket(socket: WebSocket, message: unknown): void {
+function sendToSocket(socket: WebSocket, message: WsServerMessage): void {
   if (socket.readyState === socket.OPEN) {
     socket.send(JSON.stringify(message))
   }
@@ -35,7 +35,7 @@ export function sendError(socket: WebSocket, code: string, message: string): voi
   sendToSocket(socket, errorMessage)
 }
 
-function buildPlayerList(members: RoomMember[], users: User[], hostId: string): Player[] {
+function buildPlayerList(members: RoomMember[], users: User[], hostId: string): PlayerDto[] {
   const usersById = new Map(users.map((u) => [u.id, u]))
   return members.map((member) => {
     const u = usersById.get(member.userId)

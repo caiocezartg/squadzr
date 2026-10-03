@@ -7,7 +7,8 @@ import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzl
 import { DrizzleUserRepository } from '@infrastructure/repositories/drizzle-user.repository'
 import { WsConnectionManager } from './ws-connection-manager'
 import { WsRoomBroadcaster } from './room-broadcaster.service'
-import { wsIncomingMessageSchema, type PongMessage, type WsClient } from './types'
+import { parseIncomingMessage } from './incoming-message'
+import type { PongMessage, WsClient, WsServerMessage } from './types'
 import {
   handleJoinRoom,
   handleLeaveRoom,
@@ -53,7 +54,7 @@ async function wsPlugin(fastify: FastifyInstance): Promise<void> {
       userImage: session?.user?.image ?? null,
       roomCode: null,
       isInLobby: false,
-      send: (message: unknown) => {
+      send: (message: WsServerMessage) => {
         if (socket.readyState === socket.OPEN) {
           socket.send(JSON.stringify(message))
         }
@@ -68,17 +69,16 @@ async function wsPlugin(fastify: FastifyInstance): Promise<void> {
     const userRepository = new DrizzleUserRepository(db)
 
     socket.on('message', async (rawData: Buffer | ArrayBuffer | Buffer[]) => {
+      const parsed = parseIncomingMessage(rawData)
+      if (!parsed.ok) {
+        fastify.log.warn({ code: parsed.code, issues: parsed.issues }, 'Invalid WebSocket message')
+        sendError(socket, parsed.code, parsed.reason)
+        return
+      }
+
+      const { message } = parsed
+
       try {
-        const data: unknown = JSON.parse(rawData.toString())
-        const result = wsIncomingMessageSchema.safeParse(data)
-
-        if (!result.success) {
-          sendError(socket, 'INVALID_MESSAGE', 'Invalid message format')
-          return
-        }
-
-        const message = result.data
-
         switch (message.type) {
           case 'join_room':
             await handleJoinRoom(

@@ -209,17 +209,19 @@ describe('GET /api/rooms/:code', () => {
     expect(body.players).toHaveLength(2)
   })
 
-  // Replaced in CCC-34/CCC-36: room, roster and Discord invite are currently public.
-  it('[replaced in CCC-34/CCC-36] exposes room, roster and invite to anonymous callers', async () => {
+  // CCC-34 closed the invite leak: non-members get the public projection.
+  // Replaced in CCC-36: a Ready Room answers 404 to non-members.
+  it('[replaced in CCC-36] answers anonymous callers with the public projection, without invite or roster', async () => {
     const room = await createRoom(server, host, { gameId })
 
     const response = await get(server, `/api/rooms/${room.code}`)
 
     expect(response.statusCode).toBe(200)
-    expect(response.json()).toMatchObject({
-      room: { id: room.id, discordLink: DISCORD_INVITE },
-      players: [{ id: host.id, isHost: true }],
-    })
+    const body = response.json<{ room: Record<string, unknown> }>()
+    expect(body.room).toMatchObject({ id: room.id, code: room.code })
+    expect(body.room).not.toHaveProperty('discordLink')
+    expect(body).not.toHaveProperty('players')
+    expect(response.body).not.toContain(DISCORD_INVITE)
   })
 
   it('answers 404 ROOM_NOT_FOUND for an unknown code', async () => {
