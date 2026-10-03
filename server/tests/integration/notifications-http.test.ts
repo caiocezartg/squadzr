@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { sql } from 'drizzle-orm'
 import { userNotificationSchema, type UserNotificationDto } from '@squadzr/schemas'
-import { signIn, type TestUser } from '@test/harness/auth'
+import { signIn, signInMany, type TestUser } from '@test/harness/auth'
 import {
   DISCORD_INVITE,
   countMembers,
@@ -233,6 +233,27 @@ describe('Room Ready notification persistence and delivery', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]?.payload).not.toHaveProperty('discordLink')
     expect(JSON.stringify(rows[0]?.payload)).not.toContain(DISCORD_INVITE)
+  })
+
+  it('resolves every concurrent member with a name in the ready payload', async () => {
+    const game = await insertGame(server)
+    const room = await createRoom(server, host, { gameId: game.id, maxPlayers: 3 })
+    const contenders = await signInMany(server, 2)
+
+    const responses = await Promise.all(
+      contenders.map((user) => roomAction(server, user, room.code, 'join'))
+    )
+    for (const response of responses) expect(response.statusCode).toBe(200)
+
+    const expectedPlayers = [
+      { name: host.name, image: host.image },
+      ...contenders.map((user) => ({ name: user.name, image: user.image })),
+    ]
+    for (const user of [host, ...contenders]) {
+      const [notification] = await listNotifications(user)
+      expect(notification?.payload.players).toEqual(expect.arrayContaining(expectedPlayers))
+      expect(JSON.stringify(notification?.payload.players)).not.toContain('Unknown')
+    }
   })
 
   it('resolves the invite at read time and hides it once retention passed', async () => {

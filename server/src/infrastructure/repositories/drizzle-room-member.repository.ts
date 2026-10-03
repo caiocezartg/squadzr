@@ -8,6 +8,7 @@ import type {
   LeaveOpenRoomOutcome,
 } from '@domain/repositories/room-member.repository'
 import type { Database } from '@infrastructure/database/drizzle'
+import type { Clock } from '@domain/services/clock.interface'
 import { roomMembers } from '@infrastructure/database/schema/room-members'
 import { rooms } from '@infrastructure/database/schema/rooms'
 import { userNotifications } from '@infrastructure/database/schema/user-notifications'
@@ -24,7 +25,10 @@ function openRoomCutoff(now: Date): Date {
 }
 
 export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
-  constructor(private readonly db: Database) {}
+  constructor(
+    private readonly db: Database,
+    private readonly clock: Clock
+  ) {}
 
   async findByRoomId(roomId: string): Promise<RoomMember[]> {
     const result = await this.db.select().from(roomMembers).where(eq(roomMembers.roomId, roomId))
@@ -85,8 +89,13 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
       const roomRow = roomRows[0]
       if (!roomRow) return { status: 'not_found' }
 
+      // The lifecycle instant is read only now, with the lock held: concurrent
+      // joins get distinct, increasing instants in lock order, so Room Activity
+      // never moves backwards and expiration is checked against current time.
+      const now = this.clock.now()
+
       const room = mapRoomRowToEntity(roomRow)
-      if (isRoomExpired(room, input.now, ROOM)) return { status: 'expired' }
+      if (isRoomExpired(room, now, ROOM)) return { status: 'expired' }
 
       const countRows = await tx
         .select({ currentCount: count() })
@@ -103,7 +112,7 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
 
       const insertedRows = await tx
         .insert(roomMembers)
-        .values({ roomId: input.roomId, userId: input.userId, joinedAt: input.now })
+        .values({ roomId: input.roomId, userId: input.userId, joinedAt: now })
         .onConflictDoNothing({ target: [roomMembers.roomId, roomMembers.userId] })
         .returning()
 
@@ -132,9 +141,9 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
       await tx
         .update(rooms)
         .set({
-          lastActivityAt: input.now,
-          updatedAt: input.now,
-          ...(becameReady && { readyAt: input.now }),
+          lastActivityAt: now,
+          updatedAt: now,
+          ...(becameReady && { readyAt: now }),
         })
         .where(eq(rooms.id, input.roomId))
 
@@ -156,7 +165,9 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
 
       // Built from the authoritative member list inside the transaction and
       // persisted here: a failure rolls the readiness and the join back too.
-      const inputs = input.buildReadyNotifications(members)
+      // The builder may read the roster's users through the pool, which happens
+      // while the room lock is held, so no concurrent member can slip past it.
+      const inputs = await input.buildReadyNotifications(members)
       if (inputs.length === 0) {
         return {
           status: 'joined',

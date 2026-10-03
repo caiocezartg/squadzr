@@ -102,6 +102,12 @@ export async function handleJoinRoom(
 
   const membership = await roomMemberRepository.findByRoomAndUser(room.id, client.userId)
   if (!membership) {
+    // A Ready Room answers to non-members exactly like a missing room, matching
+    // the HTTP 404 and never leaking that the room exists.
+    if (room.readyAt) {
+      sendError(socket, 'ROOM_NOT_FOUND', `Room "${roomCode}" not found`)
+      return
+    }
     sendError(socket, 'NOT_ROOM_MEMBER', 'You are not a member of this room')
     return
   }

@@ -68,7 +68,7 @@ async function wsPlugin(fastify: FastifyInstance): Promise<void> {
 
     const db = fastify.db
     const roomRepository = new DrizzleRoomRepository(db)
-    const roomMemberRepository = new DrizzleRoomMemberRepository(db)
+    const roomMemberRepository = new DrizzleRoomMemberRepository(db, fastify.clock)
     const userRepository = new DrizzleUserRepository(db)
 
     socket.on('message', async (rawData: Buffer | ArrayBuffer | Buffer[]) => {

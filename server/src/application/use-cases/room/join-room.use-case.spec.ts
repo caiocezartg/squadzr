@@ -81,7 +81,6 @@ describe('JoinRoomUseCase', () => {
       expect(mockRoomMemberRepository.joinOpenRoom).toHaveBeenCalledWith({
         roomId: 'room-1',
         userId: 'user-1',
-        now: FIXED_NOW,
         buildReadyNotifications: expect.any(Function),
       })
     })
@@ -209,9 +208,6 @@ describe('JoinRoomUseCase', () => {
       const room = openRoom({ maxPlayers: 2, discordLink: 'https://discord.gg/x' })
       mockRoomRepository.findByCode.mockResolvedValue(room)
       mockRoomMemberRepository.findByRoomAndUser.mockResolvedValue(null)
-      mockRoomMemberRepository.findByRoomId.mockResolvedValue([
-        createMockRoomMember({ roomId: 'room-1', userId: 'host' }),
-      ])
       mockGameRepository.findById.mockResolvedValue(createMockGame({ name: 'League' }))
       mockUserRepository.findByIds.mockResolvedValue([
         createMockUser({ id: 'host', name: 'Host' }),
@@ -225,7 +221,7 @@ describe('JoinRoomUseCase', () => {
           createMockRoomMember({ roomId: input.roomId, userId: 'host' }),
           createMockRoomMember({ roomId: input.roomId, userId: input.userId }),
         ]
-        const notifications = input.buildReadyNotifications?.(members) ?? []
+        const notifications = (await input.buildReadyNotifications?.(members)) ?? []
         return {
           status: 'joined',
           member: members[1]!,
@@ -235,7 +231,7 @@ describe('JoinRoomUseCase', () => {
             ...notification,
             id: `notification-${index}`,
             readAt: null,
-            createdAt: input.now,
+            createdAt: FIXED_NOW,
           })),
         }
       })
@@ -253,6 +249,50 @@ describe('JoinRoomUseCase', () => {
         { name: 'Host', image: null },
         { name: 'Joiner', image: null },
       ])
+      expect(mockUserRepository.findByIds).toHaveBeenCalledWith(['host', 'user-2'])
+    })
+
+    it('should resolve the notification players from the members that committed inside the join', async () => {
+      const room = openRoom({ maxPlayers: 3 })
+      mockRoomRepository.findByCode.mockResolvedValue(room)
+      mockRoomMemberRepository.findByRoomAndUser.mockResolvedValue(null)
+      mockGameRepository.findById.mockResolvedValue(createMockGame({ name: 'League' }))
+      mockUserRepository.findByIds.mockImplementation(async (ids) =>
+        ids.map((id) => createMockUser({ id, name: `Name-${id}` }))
+      )
+
+      mockRoomMemberRepository.joinOpenRoom.mockImplementation(async (input) => {
+        // A member that committed after the use case started: only the member
+        // list read inside the transaction knows about them.
+        const members = [
+          createMockRoomMember({ roomId: input.roomId, userId: 'host' }),
+          createMockRoomMember({ roomId: input.roomId, userId: 'late-member' }),
+          createMockRoomMember({ roomId: input.roomId, userId: input.userId }),
+        ]
+        const notifications = (await input.buildReadyNotifications?.(members)) ?? []
+        return {
+          status: 'joined',
+          member: members[2]!,
+          memberCount: 3,
+          becameReady: true,
+          notifications: notifications.map((notification, index) => ({
+            ...notification,
+            id: `notification-${index}`,
+            readAt: null,
+            createdAt: FIXED_NOW,
+          })),
+        }
+      })
+
+      const result = await useCase.execute({ code: 'ABC123', userId: 'user-2' })
+
+      expect(mockUserRepository.findByIds).toHaveBeenCalledWith(['host', 'late-member', 'user-2'])
+      expect(result.createdNotifications[0]?.payload.players).toEqual([
+        { name: 'Name-host', image: null },
+        { name: 'Name-late-member', image: null },
+        { name: 'Name-user-2', image: null },
+      ])
+      expect(JSON.stringify(result.createdNotifications)).not.toContain('Unknown')
     })
 
     it('should throw RoomJoinLimitReachedError when user is already in 5 valid rooms', async () => {

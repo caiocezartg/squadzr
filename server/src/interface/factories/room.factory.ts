@@ -15,7 +15,7 @@ import { RoomController } from '@interface/controllers/room.controller'
 
 export function createRoomController(db: Database, broadcaster: IRoomBroadcaster, clock: Clock) {
   const roomRepository = new DrizzleRoomRepository(db)
-  const roomMemberRepository = new DrizzleRoomMemberRepository(db)
+  const roomMemberRepository = new DrizzleRoomMemberRepository(db, clock)
   const gameRepository = new DrizzleGameRepository(db)
   const userRepository = new DrizzleUserRepository(db)
 

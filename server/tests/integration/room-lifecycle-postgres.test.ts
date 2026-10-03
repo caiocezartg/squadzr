@@ -8,7 +8,7 @@ import { DrizzleUserNotificationRepository } from '@infrastructure/repositories/
 import { userNotifications } from '@infrastructure/database/schema'
 import { ROOM } from '@config/constants'
 import { signIn, signInMany, type TestUser } from '@test/harness/auth'
-import { FakeClock } from '@test/harness/clock'
+import { FakeClock, TickingClock } from '@test/harness/clock'
 import { createRoom, findRoomRow, insertGame, joinAll, setRoomLifecycle } from '@test/harness/rooms'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
@@ -314,13 +314,13 @@ describe('join and leave transactions', () => {
   it('advances Room Activity on a non-final join and leaves ready_at null', async () => {
     const [member] = await signInMany(server, 1)
     const room = await createRoom(server, host, { gameId, maxPlayers: 3 })
-    const repository = new DrizzleRoomMemberRepository(server.app.db)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
     const joinedAt = new Date(FIXED_NOW.getTime() + 5 * 60_000)
+    clock.set(joinedAt)
 
     const outcome = await repository.joinOpenRoom({
       roomId: room.id,
       userId: member!.id,
-      now: joinedAt,
     })
 
     expect(outcome.status).toBe('joined')
@@ -329,19 +329,48 @@ describe('join and leave transactions', () => {
     expect(row?.readyAt).toBeNull()
   })
 
+  it('stamps each concurrent join from the clock read after the room lock', async () => {
+    const [first, second] = await signInMany(server, 2)
+    const room = await createRoom(server, host, { gameId, maxPlayers: 3 })
+    // Ticks on every read: if the instant were captured before the lock, both
+    // transactions would share one value and the later write could regress.
+    const ticking = new TickingClock(FIXED_NOW)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, ticking)
+
+    const [firstOutcome, secondOutcome] = await Promise.all([
+      repository.joinOpenRoom({ roomId: room.id, userId: first!.id }),
+      repository.joinOpenRoom({ roomId: room.id, userId: second!.id }),
+    ])
+
+    expect(firstOutcome.status).toBe('joined')
+    expect(secondOutcome.status).toBe('joined')
+    if (firstOutcome.status !== 'joined' || secondOutcome.status !== 'joined') {
+      throw new Error('unreachable')
+    }
+
+    const joinedAt = [
+      firstOutcome.member.joinedAt.getTime(),
+      secondOutcome.member.joinedAt.getTime(),
+    ]
+    expect(new Set(joinedAt).size).toBe(2)
+
+    const row = await findRoomRow(server, room.id)
+    expect(row?.lastActivityAt.getTime()).toBe(Math.max(...joinedAt))
+    expect(row?.lastActivityAt.getTime()).toBeGreaterThan(Math.min(...joinedAt))
+  })
+
   it('persists readiness and every member notification in one transaction', async () => {
     const [member] = await signInMany(server, 1)
     const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
-    const repository = new DrizzleRoomMemberRepository(server.app.db)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
     const users = await server.app.db.execute<{ id: string; name: string }>(
       sql`SELECT id, name FROM "user" WHERE id IN (${host.id}, ${member!.id})`
     )
-    const memberRepository = new DrizzleRoomMemberRepository(server.app.db)
+    const memberRepository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
 
     const outcome = await repository.joinOpenRoom({
       roomId: room.id,
       userId: member!.id,
-      now: FIXED_NOW,
       buildReadyNotifications: (members) =>
         buildRoomReadyNotifications({
           room: {
@@ -389,12 +418,11 @@ describe('join and leave transactions', () => {
     await server.app.db.execute(sql`
       UPDATE "rooms" SET ready_at = ${FIXED_NOW} WHERE id = ${room.id}
     `)
-    const repository = new DrizzleRoomMemberRepository(server.app.db)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
 
     const outcome = await repository.joinOpenRoom({
       roomId: room.id,
       userId: member!.id,
-      now: FIXED_NOW,
     })
 
     expect(outcome).toEqual({ status: 'ready' })
@@ -406,12 +434,11 @@ describe('join and leave transactions', () => {
     const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
     await joinAll(server, room.code, [member!])
     const [late] = await signInMany(server, 1)
-    const repository = new DrizzleRoomMemberRepository(server.app.db)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
 
     const outcome = await repository.joinOpenRoom({
       roomId: room.id,
       userId: late!.id,
-      now: FIXED_NOW,
     })
 
     expect(outcome).toEqual({ status: 'full', memberCount: 2 })
@@ -425,12 +452,11 @@ describe('join and leave transactions', () => {
       lastActivityAt: new Date(FIXED_NOW.getTime() - OPEN_TTL),
       readyAt: null,
     })
-    const repository = new DrizzleRoomMemberRepository(server.app.db)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
 
     const outcome = await repository.joinOpenRoom({
       roomId: room.id,
       userId: member!.id,
-      now: FIXED_NOW,
     })
 
     expect(outcome).toEqual({ status: 'expired' })
@@ -454,12 +480,11 @@ describe('join and leave transactions', () => {
         players: [],
       },
     })
-    const repository = new DrizzleRoomMemberRepository(server.app.db)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
 
     const outcome = await repository.joinOpenRoom({
       roomId: room.id,
       userId: member!.id,
-      now: FIXED_NOW,
       buildReadyNotifications: (members) =>
         members.map((roomMember) => ({
           userId: roomMember.userId,
@@ -497,7 +522,7 @@ describe('join and leave transactions', () => {
     const [member] = await signInMany(server, 1)
     const room = await createRoom(server, host, { gameId, maxPlayers: 3 })
     await joinAll(server, room.code, [member!])
-    const repository = new DrizzleRoomMemberRepository(server.app.db)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
     const leftAt = new Date(FIXED_NOW.getTime() + 5 * 60_000)
 
     const outcome = await repository.leaveOpenRoom({
@@ -516,7 +541,7 @@ describe('join and leave transactions', () => {
     const [member] = await signInMany(server, 1)
     const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
     await joinAll(server, room.code, [member!])
-    const repository = new DrizzleRoomMemberRepository(server.app.db)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
 
     const outcome = await repository.leaveOpenRoom({
       roomId: room.id,
@@ -532,7 +557,7 @@ describe('join and leave transactions', () => {
     const [member] = await signInMany(server, 1)
     const room = await createRoom(server, host, { gameId, maxPlayers: 3 })
     await joinAll(server, room.code, [member!])
-    const repository = new DrizzleRoomMemberRepository(server.app.db)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
 
     const outcome = await repository.leaveOpenRoom({
       roomId: room.id,
@@ -552,7 +577,7 @@ describe('join and leave transactions', () => {
   it('returns not_member for a caller without Membership', async () => {
     const [outsider] = await signInMany(server, 1)
     const room = await createRoom(server, host, { gameId })
-    const repository = new DrizzleRoomMemberRepository(server.app.db)
+    const repository = new DrizzleRoomMemberRepository(server.app.db, server.app.clock)
 
     const outcome = await repository.leaveOpenRoom({
       roomId: room.id,

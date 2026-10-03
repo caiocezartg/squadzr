@@ -14,6 +14,7 @@ import {
   insertGame,
   joinAll,
   markRoomActivity,
+  markRoomReady,
   postRoom,
   roomAction,
 } from '@test/harness/rooms'
@@ -140,6 +141,37 @@ describe('connection identity', () => {
       message: `Room "${room.code}" not found`,
     })
     expect(subscriptionState(server).roomSockets(room.code)).toBe(0)
+  })
+
+  it('answers ROOM_NOT_FOUND to non-members of a Ready Room, like a missing room', async () => {
+    await setup()
+    const [host, member, outsider] = await signInMany(server, 3)
+    const game = await insertGame(server)
+    const room = await createRoom(server, host!, { gameId: game.id, maxPlayers: 2 })
+    await joinAll(server, room.code, [member!])
+    const outsiderSocket = await open(server, outsider!)
+    const memberSocket = await open(server, member!)
+
+    // A non-member cannot tell a Ready Room from a missing one: no existence leak.
+    outsiderSocket.send({ type: 'join_room', payload: { roomCode: room.code } })
+    expect((await outsiderSocket.next()).payload).toEqual({
+      code: 'ROOM_NOT_FOUND',
+      message: `Room "${room.code}" not found`,
+    })
+
+    // A member still subscribes to the room during retention.
+    await joinRoomChannel(memberSocket, room.code)
+    expect(subscriptionState(server).roomSockets(room.code)).toBe(1)
+    // Subscribing to the full room re-emits room_ready to its sockets.
+    expect((await memberSocket.next()).type).toBe('room_ready')
+
+    // Past retention the Ready Room is gone for everyone, member included.
+    await markRoomReady(server, room.id, 61)
+    memberSocket.send({ type: 'join_room', payload: { roomCode: room.code } })
+    expect((await memberSocket.next()).payload).toEqual({
+      code: 'ROOM_NOT_FOUND',
+      message: `Room "${room.code}" not found`,
+    })
   })
 })
 

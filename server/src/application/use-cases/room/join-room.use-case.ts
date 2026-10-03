@@ -74,27 +74,28 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       throw new RoomJoinLimitReachedError(ROOM.JOIN_LIMIT)
     }
 
-    // Everything the notification builder needs is read before the transaction;
-    // the member list it receives comes from the locked transaction instead.
-    const [game, members] = await Promise.all([
-      this.gameRepository.findById(room.gameId),
-      this.roomMemberRepository.findByRoomId(room.id),
-    ])
-    const users = await this.userRepository.findByIds([
-      ...new Set([...members.map((member) => member.userId), input.userId]),
-    ])
+    // The game name is stable and read up front; the roster's users are read
+    // inside the join transaction, once the authoritative members are known.
+    const game = await this.gameRepository.findById(room.gameId)
+    const gameName = game?.name ?? 'Unknown game'
 
     const outcome = await this.roomMemberRepository.joinOpenRoom({
       roomId: room.id,
       userId: input.userId,
-      now,
-      buildReadyNotifications: (authoritativeMembers) =>
-        buildRoomReadyNotifications({
+      buildReadyNotifications: async (authoritativeMembers) => {
+        // Resolved inside the transaction, after the room lock: a member that
+        // joined concurrently is part of the authoritative roster and must not
+        // fall back to `Unknown` in the persisted payload.
+        const users = await this.userRepository.findByIds(
+          authoritativeMembers.map((member) => member.userId)
+        )
+        return buildRoomReadyNotifications({
           room,
           members: authoritativeMembers,
           users,
-          gameName: game?.name ?? 'Unknown game',
-        }),
+          gameName,
+        })
+      },
     })
 
     switch (outcome.status) {

@@ -31,8 +31,6 @@ export interface BuildAppOptions {
   logger?: FastifyServerOptions['logger']
   /** Overrides the system clock; tests inject a fixed clock for exact instants. */
   clock?: Clock
-  /** Suppresses Fastify's per-request logs (log-capture tests keep the signal only). */
-  disableRequestLogging?: boolean
 }
 
 /**
@@ -81,16 +79,10 @@ export function defaultLogger(env: Env): FastifyLoggerOptions {
  * Every instance owns its database pool, WebSocket server and timers, and
  * releases all of them on `app.close()`.
  */
-export async function buildApp({
-  env,
-  logger,
-  clock,
-  disableRequestLogging,
-}: BuildAppOptions): Promise<FastifyInstance> {
+export async function buildApp({ env, logger, clock }: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
     trustProxy: true,
     logger: logger ?? defaultLogger(env),
-    disableRequestLogging: disableRequestLogging ?? false,
   })
 
   fastify.decorate('clock', clock ?? new SystemClock())

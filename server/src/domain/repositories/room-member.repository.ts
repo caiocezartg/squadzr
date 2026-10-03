@@ -7,16 +7,16 @@ import type { RoomMember } from '@domain/entities/room-member.entity'
 export interface JoinOpenRoomInput {
   readonly roomId: string
   readonly userId: string
-  /** Single injected-clock instant shared by `joined_at`, `last_activity_at` and `ready_at`. */
-  readonly now: Date
   /**
    * Builds the room_ready notifications from the authoritative member list once
-   * this join fills the room. Called inside the join transaction, so a failure
-   * to persist the notifications rolls the whole Membership change back.
+   * this join fills the room. Called inside the join transaction, after the room
+   * lock, so the caller can resolve the players from the members that actually
+   * committed. A failure to persist the notifications rolls the whole
+   * Membership change back.
    */
   readonly buildReadyNotifications?: (
     members: readonly RoomMember[]
-  ) => readonly CreateUserNotificationInput[]
+  ) => readonly CreateUserNotificationInput[] | Promise<readonly CreateUserNotificationInput[]>
 }
 
 export type JoinOpenRoomOutcome =
@@ -56,7 +56,9 @@ export interface IRoomMemberRepository {
    * Atomic join: locks the room, verifies existence, expiration, readiness and
    * capacity, inserts the Membership, advances Room Activity and, when the last
    * seat is taken, sets readiness and persists every member's `room_ready`
-   * notification in the same transaction.
+   * notification in the same transaction. The lifecycle instant is read from
+   * the injected clock only after the room lock is held, so concurrent joins
+   * never write a timestamp older than the state they replaced.
    */
   joinOpenRoom(input: JoinOpenRoomInput): Promise<JoinOpenRoomOutcome>
   /**
