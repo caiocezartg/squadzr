@@ -12,17 +12,11 @@ import { ROOM } from '@config/constants'
 const languageSchema = z.enum(['en', 'pt-br']).catch('pt-br')
 
 export function activeRoomCondition() {
-  return and(
-    or(eq(rooms.status, 'waiting'), eq(rooms.status, 'playing')),
-    isNull(rooms.completedAt)
-  )
+  return isNull(rooms.readyAt)
 }
 
 export function activeRoomWithGraceCondition(graceMs: number) {
-  return and(
-    eq(rooms.status, 'waiting'),
-    or(isNull(rooms.completedAt), gte(rooms.completedAt, new Date(Date.now() - graceMs)))
-  )
+  return or(isNull(rooms.readyAt), gte(rooms.readyAt, new Date(Date.now() - graceMs)))
 }
 
 function generateRoomCode(): string {
@@ -61,13 +55,12 @@ function mapRowToEntity(row: RoomRow): Room {
     name: row.name,
     hostId: row.hostId,
     gameId: row.gameId,
-    status: row.status,
     maxPlayers: row.maxPlayers,
     discordLink: row.discordLink,
     tags: row.tags,
     language: languageSchema.parse(row.language),
-    completedAt: row.completedAt,
-    readyNotifiedAt: row.readyNotifiedAt,
+    readyAt: row.readyAt,
+    lastActivityAt: row.lastActivityAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -119,7 +112,7 @@ export class DrizzleRoomRepository implements IRoomRepository {
     const result = await this.db
       .select({ count: count() })
       .from(rooms)
-      // Note: unlike findAvailable(), no grace window — a room with completedAt set is done.
+      // Note: unlike findAvailable(), no grace window — a room with readyAt set is done.
       .where(and(eq(rooms.hostId, hostId), activeRoomCondition()))
     return result[0]?.count ?? 0
   }
@@ -128,8 +121,8 @@ export class DrizzleRoomRepository implements IRoomRepository {
     const allMembersAlias = alias(roomMembers, 'all_members')
     const userMembershipAlias = alias(roomMembers, 'user_membership')
 
-    // Note: unlike findAvailable(), we use strict isNull(completedAt) here with no grace window.
-    // My Rooms shows only genuinely active rooms (not ones in the 5-min deletion window).
+    // Note: unlike findAvailable(), we use strict isNull(readyAt) here with no grace window.
+    // My Rooms shows only genuinely open rooms (not ones in the 5-min deletion window).
     const activeCondition = activeRoomCondition()
 
     const selectFields = {
@@ -138,11 +131,10 @@ export class DrizzleRoomRepository implements IRoomRepository {
       name: rooms.name,
       hostId: rooms.hostId,
       gameId: rooms.gameId,
-      status: rooms.status,
       maxPlayers: rooms.maxPlayers,
       discordLink: rooms.discordLink,
-      completedAt: rooms.completedAt,
-      readyNotifiedAt: rooms.readyNotifiedAt,
+      readyAt: rooms.readyAt,
+      lastActivityAt: rooms.lastActivityAt,
       tags: rooms.tags,
       language: rooms.language,
       createdAt: rooms.createdAt,
@@ -178,7 +170,7 @@ export class DrizzleRoomRepository implements IRoomRepository {
   }
 
   async findExpiredRooms(beforeDate: Date): Promise<Room[]> {
-    const result = await this.db.select().from(rooms).where(lte(rooms.completedAt, beforeDate))
+    const result = await this.db.select().from(rooms).where(lte(rooms.readyAt, beforeDate))
 
     return result.map(mapRowToEntity)
   }
@@ -215,13 +207,11 @@ export class DrizzleRoomRepository implements IRoomRepository {
   async update(id: string, input: UpdateRoomInput): Promise<Room | null> {
     const updateData: Partial<{
       name: string
-      status: 'waiting' | 'playing' | 'finished'
       maxPlayers: number
       discordLink: string
       tags: string[]
       language: string
-      completedAt: Date
-      readyNotifiedAt: Date
+      readyAt: Date
       updatedAt: Date
     }> = {
       updatedAt: new Date(),
@@ -229,9 +219,6 @@ export class DrizzleRoomRepository implements IRoomRepository {
 
     if (input.name !== undefined) {
       updateData.name = input.name
-    }
-    if (input.status !== undefined) {
-      updateData.status = input.status
     }
     if (input.maxPlayers !== undefined) {
       updateData.maxPlayers = input.maxPlayers
@@ -245,30 +232,14 @@ export class DrizzleRoomRepository implements IRoomRepository {
     if (input.language !== undefined) {
       updateData.language = input.language
     }
-    if (input.completedAt !== undefined) {
-      updateData.completedAt = input.completedAt
-    }
-    if (input.readyNotifiedAt !== undefined) {
-      updateData.readyNotifiedAt = input.readyNotifiedAt
+    if (input.readyAt !== undefined) {
+      updateData.readyAt = input.readyAt
     }
 
     const result = await this.db.update(rooms).set(updateData).where(eq(rooms.id, id)).returning()
 
     const row = result[0]
     return row ? mapRowToEntity(row) : null
-  }
-
-  async markReadyNotified(roomId: string, notifiedAt: Date): Promise<boolean> {
-    const result = await this.db
-      .update(rooms)
-      .set({
-        readyNotifiedAt: notifiedAt,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(rooms.id, roomId), isNull(rooms.readyNotifiedAt)))
-      .returning({ id: rooms.id })
-
-    return result.length > 0
   }
 
   async delete(id: string): Promise<boolean> {

@@ -1,6 +1,6 @@
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
-import { RoomCompletedError } from '@application/errors'
+import { RoomReadyError } from '@application/errors'
 
 export interface LeaveRoomInput {
   readonly roomId: string
@@ -24,10 +24,10 @@ export class LeaveRoomUseCase implements ILeaveRoomUseCase {
   ) {}
 
   async execute(input: LeaveRoomInput): Promise<LeaveRoomOutput> {
-    // Block leaving a completed (full) room
+    // Block leaving a ready (full) room
     const room = await this.roomRepository.findById(input.roomId)
-    if (room?.completedAt) {
-      throw new RoomCompletedError(input.roomId)
+    if (room?.readyAt) {
+      throw new RoomReadyError(input.roomId)
     }
 
     const deleted = await this.roomMemberRepository.delete(input.roomId, input.userId)

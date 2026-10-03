@@ -76,13 +76,13 @@ describe('LeaveRoomUseCase', () => {
       expect(mockRoomRepository.delete).not.toHaveBeenCalled()
     })
 
-    it('should throw RoomCompletedError if room is completed', async () => {
-      const room = createMockRoom({ id: 'room-1', completedAt: new Date() })
+    it('should throw RoomReadyError if room is ready', async () => {
+      const room = createMockRoom({ id: 'room-1', readyAt: new Date() })
 
       mockRoomRepository.findById.mockResolvedValue(room)
 
       await expect(useCase.execute({ roomId: 'room-1', userId: 'any-user' })).rejects.toThrow(
-        'completed'
+        'ready'
       )
     })
   })

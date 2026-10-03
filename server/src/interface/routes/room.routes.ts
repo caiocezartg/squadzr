@@ -55,7 +55,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       tags: ['Rooms'],
       summary: 'List available rooms',
       description:
-        'Returns all rooms with "waiting" status that can be joined, as the public projection: no Discord invite and no roster.',
+        'Returns all open rooms that can be joined, as the public projection: no Discord invite and no roster.',
       response: {
         200: roomsResponseSchema,
       },
@@ -117,7 +117,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       tags: ['Rooms'],
       summary: 'Join a room',
       description:
-        'Joins an existing room by its code. Room must be in "waiting" status and not full. Requires authentication.',
+        'Joins an existing open room by its code. A room that is already ready or full rejects the join. Requires authentication.',
       security: [{ session: [] }],
       params: roomCodeParamSchema,
       response: {

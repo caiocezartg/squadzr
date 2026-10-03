@@ -14,8 +14,8 @@ describe('DeleteExpiredRoomsUseCase', () => {
   describe('execute', () => {
     it('should delete expired rooms and return their ids and codes', async () => {
       const expiredRooms = [
-        createMockRoom({ id: 'room-1', code: 'ABC123', status: 'finished' }),
-        createMockRoom({ id: 'room-2', code: 'DEF456', status: 'finished' }),
+        createMockRoom({ id: 'room-1', code: 'ABC123' }),
+        createMockRoom({ id: 'room-2', code: 'DEF456' }),
       ]
 
       mockRoomRepository.findExpiredRooms.mockResolvedValue(expiredRooms)
@@ -44,8 +44,8 @@ describe('DeleteExpiredRoomsUseCase', () => {
 
     it('should skip rooms that fail to delete', async () => {
       const expiredRooms = [
-        createMockRoom({ id: 'room-1', code: 'ABC123', status: 'finished' }),
-        createMockRoom({ id: 'room-2', code: 'DEF456', status: 'finished' }),
+        createMockRoom({ id: 'room-1', code: 'ABC123' }),
+        createMockRoom({ id: 'room-2', code: 'DEF456' }),
       ]
 
       mockRoomRepository.findExpiredRooms.mockResolvedValue(expiredRooms)

@@ -9,9 +9,9 @@ import {
   get,
   insertGame,
   joinAll,
+  markRoomReady,
   postRoom,
   roomAction,
-  setRoomStatus,
 } from '@test/harness/rooms'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
@@ -58,7 +58,6 @@ describe('POST /api/rooms', () => {
         'language',
         'maxPlayers',
         'name',
-        'status',
         'tags',
         'updatedAt',
       ].sort()
@@ -67,7 +66,6 @@ describe('POST /api/rooms', () => {
       name: 'Ranked squad',
       hostId: host.id,
       gameId,
-      status: 'waiting',
       maxPlayers: 4,
       discordLink: DISCORD_INVITE,
       tags: ['ranked', 'eu'],
@@ -179,9 +177,9 @@ describe('GET /api/rooms', () => {
     expect(asOutsider.json()).toMatchObject({ rooms: [{ id: room.id, isMember: false }] })
   })
 
-  it('excludes rooms that are not waiting', async () => {
+  it('excludes ready rooms from the catalog once the grace window has elapsed', async () => {
     const room = await createRoom(server, host, { gameId })
-    await setRoomStatus(server, room.id, 'playing')
+    await markRoomReady(server, room.id, 6)
 
     const response = await get(server, '/api/rooms')
 
@@ -293,21 +291,7 @@ describe('POST /api/rooms/:code/join', () => {
     })
   })
 
-  it('answers 422 ROOM_NOT_WAITING when the room is not waiting', async () => {
-    const [member] = await signInMany(server, 1)
-    const room = await createRoom(server, host, { gameId })
-    await setRoomStatus(server, room.id, 'playing')
-
-    const response = await roomAction(server, member!, room.code, 'join')
-
-    expect(response.statusCode).toBe(422)
-    expect(response.json()).toEqual({
-      error: 'ROOM_NOT_WAITING',
-      message: `Room "${room.id}" is not accepting players (status: playing)`,
-    })
-  })
-
-  it('fills the room, marks it completed and rejects the next player with 422 ROOM_FULL', async () => {
+  it('fills the room, marks it ready and rejects the next player with 422 ROOM_FULL', async () => {
     const [member, late] = await signInMany(server, 2)
     const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
 
@@ -320,9 +304,7 @@ describe('POST /api/rooms/:code/join', () => {
       message: `Room "${room.id}" is full`,
     })
     const row = await findRoomRow(server, room.id)
-    expect(row?.status).toBe('waiting')
-    expect(row?.completedAt).toBeInstanceOf(Date)
-    expect(row?.readyNotifiedAt).toBeInstanceOf(Date)
+    expect(row?.readyAt).toBeInstanceOf(Date)
     expect(await countMembers(server, room.id)).toBe(2)
   })
 })
@@ -369,7 +351,7 @@ describe('POST /api/rooms/:code/leave', () => {
     expect(await countMembers(server, room.id)).toBe(1)
   })
 
-  it('answers 422 ROOM_COMPLETED once the room is full', async () => {
+  it('answers 422 ROOM_READY once the room is full', async () => {
     const [member] = await signInMany(server, 1)
     const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
     await joinAll(server, room.code, [member!])
@@ -378,8 +360,8 @@ describe('POST /api/rooms/:code/leave', () => {
 
     expect(response.statusCode).toBe(422)
     expect(response.json()).toEqual({
-      error: 'ROOM_COMPLETED',
-      message: `Room "${room.id}" is completed — players cannot leave`,
+      error: 'ROOM_READY',
+      message: `Room "${room.id}" is ready — players cannot leave`,
     })
     expect(await countMembers(server, room.id)).toBe(2)
   })

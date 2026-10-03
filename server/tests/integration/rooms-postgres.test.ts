@@ -3,12 +3,12 @@ import { buildApp } from '@/app'
 import { ROOM } from '@config/constants'
 import { signIn, signInMany, type TestUser } from '@test/harness/auth'
 import {
-  backdateCompletion,
   countMembers,
   createRoom,
   get,
   insertGame,
   joinAll,
+  markRoomReady,
   postRoom,
   roomAction,
 } from '@test/harness/rooms'
@@ -148,14 +148,14 @@ describe('catalog of open rooms (GET /api/rooms)', () => {
     const [listed] = (await get(server, '/api/rooms')).json<{ rooms: unknown[] }>().rooms
     expect(listed).toMatchObject({ memberCount: 2, maxPlayers: 2 })
 
-    await backdateCompletion(server, room.id, 4)
+    await markRoomReady(server, room.id, 4)
     expect(await listedRoomIds()).toEqual([room.id])
   })
 
   it('drops a full room once 5 minutes have elapsed since completion', async () => {
     const { room } = await createFullRoom(host)
 
-    await backdateCompletion(server, room.id, 6)
+    await markRoomReady(server, room.id, 6)
 
     expect(await listedRoomIds()).toEqual([])
   })

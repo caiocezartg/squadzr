@@ -1,14 +1,5 @@
 import { AppError } from './base.error'
 
-export class RoomNotWaitingError extends AppError {
-  readonly statusCode = 422
-  readonly code = 'ROOM_NOT_WAITING'
-
-  constructor(roomId: string, status: string) {
-    super(`Room "${roomId}" is not accepting players (status: ${status})`)
-  }
-}
-
 export class RoomFullError extends AppError {
   readonly statusCode = 422
   readonly code = 'ROOM_FULL'
@@ -18,12 +9,12 @@ export class RoomFullError extends AppError {
   }
 }
 
-export class RoomCompletedError extends AppError {
+export class RoomReadyError extends AppError {
   readonly statusCode = 422
-  readonly code = 'ROOM_COMPLETED'
+  readonly code = 'ROOM_READY'
 
   constructor(roomId: string) {
-    super(`Room "${roomId}" is completed — players cannot leave`)
+    super(`Room "${roomId}" is ready — players cannot leave`)
   }
 }
 

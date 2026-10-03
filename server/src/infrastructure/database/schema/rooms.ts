@@ -1,10 +1,11 @@
 import { sql } from 'drizzle-orm'
-import { pgTable, uuid, varchar, timestamp, integer, pgEnum, text } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, timestamp, integer, text } from 'drizzle-orm/pg-core'
 import { user } from './auth'
 import { games } from './games'
 
-export const roomStatusEnum = pgEnum('room_status', ['waiting', 'playing', 'finished'])
-
+// The room lifecycle is timestamp-driven (ADR-0001): an Open Room has a null
+// `readyAt`, a Ready Room has it set, and `lastActivityAt` feeds the Open Room
+// expiration rule. There is no status column and no PostgreSQL enum.
 export const rooms = pgTable('rooms', {
   id: uuid('id').primaryKey().defaultRandom(),
   code: varchar('code', { length: 6 }).notNull().unique(),
@@ -15,11 +16,10 @@ export const rooms = pgTable('rooms', {
   gameId: uuid('game_id')
     .notNull()
     .references(() => games.id, { onDelete: 'restrict' }),
-  status: roomStatusEnum('status').notNull().default('waiting'),
   maxPlayers: integer('max_players').notNull().default(5),
   discordLink: text('discord_link'),
-  completedAt: timestamp('completed_at', { withTimezone: true }),
-  readyNotifiedAt: timestamp('ready_notified_at', { withTimezone: true }),
+  readyAt: timestamp('ready_at', { withTimezone: true }),
+  lastActivityAt: timestamp('last_activity_at', { withTimezone: true }).notNull().defaultNow(),
   tags: text('tags')
     .array()
     .notNull()

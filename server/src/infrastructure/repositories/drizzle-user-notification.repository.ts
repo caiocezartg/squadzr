@@ -27,6 +27,7 @@ function mapRowToEntity(row: UserNotificationRow): UserNotification {
   return {
     id: row.id,
     userId: row.userId,
+    roomId: row.roomId,
     type: userNotificationTypeSchema.parse(row.type),
     title: row.title,
     message: row.message,
@@ -55,6 +56,7 @@ export class DrizzleUserNotificationRepository implements IUserNotificationRepos
       .insert(userNotifications)
       .values({
         userId: input.userId,
+        roomId: input.roomId,
         type: input.type,
         title: input.title,
         message: input.message,

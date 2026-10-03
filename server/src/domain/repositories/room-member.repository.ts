@@ -8,7 +8,7 @@ export interface IRoomMemberRepository {
   delete(roomId: string, userId: string): Promise<boolean>
   deleteByRoomId(roomId: string): Promise<boolean>
   countByRoomId(roomId: string): Promise<number>
-  /** Counts memberships where the room is still active (status waiting|playing, completedAt null). */
+  /** Counts memberships where the room is still open (readyAt null). */
   countActiveByUserId(userId: string): Promise<number>
   /**
    * Atomically checks room capacity and inserts the member if space is available.

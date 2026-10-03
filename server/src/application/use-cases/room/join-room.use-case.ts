@@ -1,12 +1,7 @@
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
-import {
-  RoomNotFoundError,
-  RoomNotWaitingError,
-  RoomFullError,
-  RoomJoinLimitReachedError,
-} from '@application/errors'
+import { RoomNotFoundError, RoomFullError, RoomJoinLimitReachedError } from '@application/errors'
 import { ROOM } from '@config/constants'
 
 export interface JoinRoomInput {
@@ -36,10 +31,9 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       throw new RoomNotFoundError(input.roomId)
     }
 
-    if (room.status !== 'waiting') {
-      throw new RoomNotWaitingError(input.roomId, room.status)
-    }
-
+    // Readiness (readyAt) is not checked here: CCC-36 owns the rule that a
+    // Ready Room rejects every Membership change. Capacity is still enforced
+    // atomically below, so a full room rejects the join with ROOM_FULL.
     // If user is already a member, return their existing membership (idempotent)
     const existingMember = await this.roomMemberRepository.findByRoomAndUser(
       input.roomId,
@@ -71,9 +65,8 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
 
     if (isRoomNowFull) {
       await this.roomRepository.update(input.roomId, {
-        completedAt: new Date(),
+        readyAt: new Date(),
       })
-      await this.roomRepository.markReadyNotified(input.roomId, new Date())
     }
 
     return { roomMember, memberCount: newMemberCount, isRoomNowFull }

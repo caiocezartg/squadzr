@@ -21,7 +21,7 @@ import { buildTestServer, type TestServer } from '@test/harness/test-server'
 // room. The Ready Room access rules (404 for non-members, retention cutoff)
 // arrive in CCC-36.
 
-const PRIVATE_ROOM_KEYS = ['discordLink', 'completedAt', 'readyNotifiedAt']
+const PRIVATE_ROOM_KEYS = ['discordLink', 'readyAt', 'lastActivityAt']
 
 let server: TestServer
 let host: TestUser

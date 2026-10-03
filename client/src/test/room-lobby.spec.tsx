@@ -204,7 +204,7 @@ describe('room lobby — server-driven errors and redirects', () => {
     openLatestWebSocket()
     sendFromServer({
       type: 'error',
-      payload: { code: 'ROOM_NOT_WAITING', message: 'Join rejected by server' },
+      payload: { code: 'ROOM_FULL', message: 'Join rejected by server' },
     })
 
     expect(await screen.findByText('Join rejected by server')).toBeInTheDocument()

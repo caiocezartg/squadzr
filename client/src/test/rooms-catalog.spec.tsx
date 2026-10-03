@@ -37,7 +37,6 @@ const extraRoom: Room = {
   name: 'Extra room',
   hostId: 'user-9',
   gameId: gameLol.id,
-  status: 'waiting',
   maxPlayers: 5,
   discordLink: null,
   tags: [],

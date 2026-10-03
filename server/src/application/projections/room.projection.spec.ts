@@ -11,8 +11,8 @@ const readyRoom = createMockRoom({
   id: ROOM_ID,
   gameId: GAME_ID,
   discordLink: INVITE,
-  completedAt: new Date('2024-01-02T10:00:00.000Z'),
-  readyNotifiedAt: new Date('2024-01-02T10:00:01.000Z'),
+  readyAt: new Date('2024-01-02T10:00:00.000Z'),
+  lastActivityAt: new Date('2024-01-02T09:59:59.000Z'),
   createdAt: new Date('2024-01-01T08:30:00.000Z'),
   updatedAt: new Date('2024-01-01T09:45:00.000Z'),
 })
@@ -25,7 +25,6 @@ describe('toPublicRoom', () => {
       name: 'Test Room',
       hostId: 'user-uuid-1',
       gameId: GAME_ID,
-      status: 'waiting',
       maxPlayers: 5,
       tags: [],
       language: 'pt-br',
@@ -39,8 +38,8 @@ describe('toPublicRoom', () => {
 
     expect(JSON.stringify(projection)).not.toContain(INVITE)
     expect(projection).not.toHaveProperty('discordLink')
-    expect(projection).not.toHaveProperty('completedAt')
-    expect(projection).not.toHaveProperty('readyNotifiedAt')
+    expect(projection).not.toHaveProperty('readyAt')
+    expect(projection).not.toHaveProperty('lastActivityAt')
   })
 
   it('includes memberCount and isMember only when the room carries them', () => {

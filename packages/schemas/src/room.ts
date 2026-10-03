@@ -1,20 +1,18 @@
 import { z } from 'zod'
 import { isoDateTimeSchema } from './date'
 
-// Room status schema
-export const roomStatusSchema = z.enum(['waiting', 'playing', 'finished'])
-
 export const roomLanguageSchema = z.enum(['en', 'pt-br'])
 
 // Public room projection: what the catalog and guest realtime events may carry.
-// It never holds the Discord invite or the roster.
+// It never holds the Discord invite, the roster, or the internal lifecycle
+// timestamps (`readyAt` / `lastActivityAt`): readiness is not part of the
+// coordinated HTTP contract.
 export const publicRoomSchema = z.object({
   id: z.uuid(),
   code: z.string(),
   name: z.string(),
   hostId: z.string(),
   gameId: z.uuid(),
-  status: roomStatusSchema,
   maxPlayers: z.number().int(),
   tags: z.array(z.string()).default([]),
   language: roomLanguageSchema.default('pt-br'),

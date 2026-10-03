@@ -1,18 +1,17 @@
-export type RoomStatus = 'waiting' | 'playing' | 'finished'
-
 export interface Room {
   readonly id: string
   readonly code: string
   readonly name: string
   readonly hostId: string
   readonly gameId: string
-  readonly status: RoomStatus
   readonly maxPlayers: number
   readonly discordLink: string | null
   readonly tags: string[]
   readonly language: 'en' | 'pt-br'
-  readonly completedAt: Date | null
-  readonly readyNotifiedAt: Date | null
+  /** Null while the room is open; set when the room reaches capacity. */
+  readonly readyAt: Date | null
+  /** Advanced only by durable membership changes; feeds open-room expiration. */
+  readonly lastActivityAt: Date
   readonly memberCount?: number
   readonly isMember?: boolean
   readonly createdAt: Date
@@ -31,11 +30,9 @@ export interface CreateRoomInput {
 
 export interface UpdateRoomInput {
   readonly name?: string
-  readonly status?: RoomStatus
   readonly maxPlayers?: number
   readonly discordLink?: string
   readonly tags?: string[]
   readonly language?: 'en' | 'pt-br'
-  readonly completedAt?: Date
-  readonly readyNotifiedAt?: Date
+  readonly readyAt?: Date
 }
