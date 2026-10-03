@@ -106,22 +106,20 @@ export async function findRoomRow(server: TestServer, roomId: string) {
   return row ?? null
 }
 
-/** Moves `completedAt` into the past to simulate time passing after a room filled up. */
-export async function backdateCompletion(
+/** Sets `readyAt`, optionally backdated, to simulate a room that filled up and time passing. */
+export async function markRoomReady(
   server: TestServer,
   roomId: string,
-  minutesAgo: number
+  minutesAgo = 0
 ): Promise<void> {
+  // Creation and activity move with readiness: the room CHECK constraints
+  // require ready_at >= created_at and ready_at >= last_activity_at.
   await server.app.db
     .update(rooms)
-    .set({ completedAt: sql`now() - make_interval(mins => ${minutesAgo})` })
+    .set({
+      createdAt: sql`now() - make_interval(mins => ${minutesAgo})`,
+      lastActivityAt: sql`now() - make_interval(mins => ${minutesAgo})`,
+      readyAt: sql`now() - make_interval(mins => ${minutesAgo})`,
+    })
     .where(eq(rooms.id, roomId))
-}
-
-export async function setRoomStatus(
-  server: TestServer,
-  roomId: string,
-  status: 'waiting' | 'playing' | 'finished'
-): Promise<void> {
-  await server.app.db.update(rooms).set({ status }).where(eq(rooms.id, roomId))
 }

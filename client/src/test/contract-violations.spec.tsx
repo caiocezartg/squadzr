@@ -71,7 +71,7 @@ describe('catalog', () => {
     await screen.findByText(openRoom.name)
     openLatestWebSocket()
 
-    sendFromServer({ type: 'room_created', payload: { room: { ...newRoom, status: 'archived' } } })
+    sendFromServer({ type: 'room_created', payload: { room: { ...newRoom, maxPlayers: 'many' } } })
     sendFromServer({ type: 'room_updated', payload: { roomId: openRoom.id, memberCount: 'many' } })
 
     expect(screen.queryByText(newRoom.name)).not.toBeInTheDocument()
@@ -80,7 +80,7 @@ describe('catalog', () => {
     )
     expect(console.error).toHaveBeenCalledWith('Invalid WebSocket payload:', {
       type: 'room_created',
-      issues: [{ path: 'room.status', code: 'invalid_value' }],
+      issues: [{ path: 'room.maxPlayers', code: 'invalid_type' }],
     })
 
     sendFromServer({ type: 'room_created', payload: { room: newRoom } })

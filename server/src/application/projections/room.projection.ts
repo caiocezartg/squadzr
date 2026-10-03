@@ -14,7 +14,6 @@ export function toPublicRoom(room: Room): PublicRoomDto {
     name: room.name,
     hostId: room.hostId,
     gameId: room.gameId,
-    status: room.status,
     maxPlayers: room.maxPlayers,
     tags: room.tags,
     language: room.language,

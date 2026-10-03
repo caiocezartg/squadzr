@@ -104,9 +104,10 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 - `@squadzr/typescript-config` has no `test` script, so Turbo skips it when running `turbo test`;
   the no-masking guarantee lives in the Vitest configs (no `--passWithNoTests`) and in the root
   composition listing exactly the four expected projects.
-- The `schemas:unit` suite characterizes the legacy room `status` contract (`roomStatusSchema`),
-  which is still the live runtime contract today. CCC-35 removes that contract and must update
-  the test together with the schema.
+- The `schemas:unit` suite used to characterize the legacy room `status` contract
+  (`roomStatusSchema`). CCC-35 removed that contract from `@squadzr/schemas`, so the suite now
+  covers the remaining runtime contracts (create-room input, notification payload, and the room,
+  game, and user transport shapes) instead.
 - The former root `test:coverage` script (`vitest run --coverage`) never worked on the base
   commit: no coverage provider (`@vitest/coverage-v8`) is installed, so the run failed before
   collecting tests. The script was removed instead of being restored with a new dependency;

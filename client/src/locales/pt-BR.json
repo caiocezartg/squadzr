@@ -221,8 +221,7 @@
   "errors": {
     "ROOM_NOT_FOUND": "Este squad não existe mais ou o código é inválido.",
     "ROOM_FULL": "Este squad já está cheio.",
-    "ROOM_NOT_WAITING": "Este squad não está mais aceitando jogadores.",
-    "ROOM_COMPLETED": "Este squad já foi concluído.",
+    "ROOM_READY": "Este squad está pronto — membros não podem sair.",
     "ALREADY_IN_ROOM": "Você já é membro deste squad.",
     "NOT_ROOM_MEMBER": "Você não é membro deste squad.",
     "ROOM_CREATE_LIMIT_REACHED": "Você atingiu o número máximo de squads ativos.",

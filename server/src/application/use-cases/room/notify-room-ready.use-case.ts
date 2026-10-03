@@ -60,6 +60,7 @@ export class NotifyRoomReadyUseCase implements INotifyRoomReadyUseCase {
       userIds.map((userId) =>
         this.userNotificationRepository.create({
           userId,
+          roomId: room.id,
           type: 'room_ready',
           title,
           message,

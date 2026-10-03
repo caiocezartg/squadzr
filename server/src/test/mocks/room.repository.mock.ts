@@ -9,13 +9,12 @@ export function createMockRoom(overrides?: Partial<Room>): Room {
     name: 'Test Room',
     hostId: 'user-uuid-1',
     gameId: 'game-uuid-1',
-    status: 'waiting',
     maxPlayers: 5,
     discordLink: null,
     tags: [],
     language: 'pt-br' as const,
-    completedAt: null,
-    readyNotifiedAt: null,
+    readyAt: null,
+    lastActivityAt: new Date('2024-01-01'),
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     ...overrides,
@@ -54,9 +53,6 @@ export function createMockRoomRepository(): MockRoomRepository {
     update: vi
       .fn<(id: string, input: UpdateRoomInput) => Promise<Room | null>>()
       .mockResolvedValue(null),
-    markReadyNotified: vi
-      .fn<(roomId: string, notifiedAt: Date) => Promise<boolean>>()
-      .mockResolvedValue(false),
     delete: vi.fn<(id: string) => Promise<boolean>>().mockResolvedValue(false),
   }
 }

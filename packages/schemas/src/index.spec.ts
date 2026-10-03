@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createRoomInputSchema, roomStatusSchema, userNotificationPayloadSchema } from './index'
+import { createRoomInputSchema, userNotificationPayloadSchema } from './index'
 
 describe('createRoomInputSchema', () => {
   it('accepts a valid payload and applies defaults', () => {
@@ -43,13 +43,6 @@ describe('createRoomInputSchema', () => {
         discordLink: 'https://example.com/invite',
       })
     ).toThrow()
-  })
-})
-
-describe('roomStatusSchema', () => {
-  it('only accepts the supported room statuses', () => {
-    expect(roomStatusSchema.parse('waiting')).toBe('waiting')
-    expect(() => roomStatusSchema.parse('cancelled')).toThrow()
   })
 })
 

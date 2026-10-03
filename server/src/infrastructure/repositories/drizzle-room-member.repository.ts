@@ -110,8 +110,7 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
   }
 
   async countActiveByUserId(userId: string): Promise<number> {
-    // A room can be status='waiting' with completedAt set (full, pending deletion).
-    // Exclude those — they are not genuinely active from the member's perspective.
+    // A ready room (readyAt set) is not genuinely active from the member's perspective.
     const result = await this.db
       .select({ count: count() })
       .from(roomMembers)

@@ -4,9 +4,8 @@ export { UnauthorizedError } from './unauthorized.error'
 export { NotFoundError, RoomNotFoundError, UserNotFoundError } from './not-found.error'
 export { ConflictError, EmailAlreadyExistsError, UserAlreadyInRoomError } from './conflict.error'
 export {
-  RoomNotWaitingError,
   RoomFullError,
-  RoomCompletedError,
+  RoomReadyError,
   NotRoomMemberError,
   RoomCreateLimitReachedError,
   RoomJoinLimitReachedError,

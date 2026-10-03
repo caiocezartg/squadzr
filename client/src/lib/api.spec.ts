@@ -67,7 +67,7 @@ describe('invalid responses', () => {
     ['a missing collection', {}],
     ['a room without an id', { rooms: [{ ...openRoom, id: undefined }] }],
     ['a date that is not an ISO string', { rooms: [{ ...openRoom, createdAt: 1_769_000_000 }] }],
-    ['an unknown status', { rooms: [{ ...openRoom, status: 'archived' }] }],
+    ['a room name that is not a string', { rooms: [{ ...openRoom, name: 42 }] }],
   ])('rejects %s with a typed ApiContractError', async (_label, body) => {
     onHttp('GET', '/api/rooms', () => httpOk(body))
 

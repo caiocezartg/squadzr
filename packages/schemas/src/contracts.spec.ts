@@ -37,7 +37,6 @@ const publicRoom = {
   name: 'Ranked 5v5',
   hostId: 'user-1',
   gameId: GAME_ID,
-  status: 'waiting',
   maxPlayers: 5,
   tags: ['ranked'],
   language: 'en',

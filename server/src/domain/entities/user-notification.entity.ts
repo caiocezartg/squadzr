@@ -12,6 +12,8 @@ export interface UserNotificationPayload {
 export interface UserNotification {
   readonly id: string
   readonly userId: string
+  /** No foreign key to `rooms`: the notification survives the room. */
+  readonly roomId: string | null
   readonly type: UserNotificationType
   readonly title: string
   readonly message: string
@@ -22,6 +24,7 @@ export interface UserNotification {
 
 export interface CreateUserNotificationInput {
   readonly userId: string
+  readonly roomId: string | null
   readonly type: UserNotificationType
   readonly title: string
   readonly message: string

@@ -4,38 +4,10 @@ import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room
 import { DeleteExpiredRoomsUseCase } from '@application/use-cases/room/delete-expired-rooms.use-case'
 import { ROOM } from '@config/constants'
 
-async function markLegacyFullRooms(fastify: FastifyInstance): Promise<void> {
-  const repository = new DrizzleRoomRepository(fastify.db)
-  const waitingRooms = await repository.findAvailable()
-  const fullRooms = waitingRooms.filter(
-    (room) =>
-      room.memberCount !== undefined &&
-      room.memberCount >= room.maxPlayers &&
-      room.completedAt === null
-  )
-
-  for (const room of fullRooms) {
-    await repository.update(room.id, {
-      completedAt: new Date(),
-    })
-  }
-
-  if (fullRooms.length > 0) {
-    fastify.log.info(`Marked ${fullRooms.length} legacy full room(s) for cleanup`)
-  }
-}
-
 async function roomCleanupPlugin(fastify: FastifyInstance): Promise<void> {
   let intervalId: ReturnType<typeof setInterval>
 
   fastify.addHook('onReady', async () => {
-    // Mark any existing full rooms that were never transitioned to 'finished'
-    try {
-      await markLegacyFullRooms(fastify)
-    } catch (error) {
-      fastify.log.error(error, 'Failed to mark legacy full rooms')
-    }
-
     fastify.log.info(
       `Room cleanup scheduler started (interval: ${ROOM.CLEANUP_INTERVAL_MS / 1000}s, expiration: ${ROOM.EXPIRATION_MINUTES}min)`
     )
