@@ -120,9 +120,13 @@ field in `@squadzr/schemas`, `@squadzr/types`, or the UI (including the landing 
 
 ## 6. Manual smoke checks (operator)
 
-- **Readiness:** create a room, join it to capacity; the last join sets `ready_at`, the
-  `room_ready` notification is created once per member, and the room leaves the catalog after the
-  grace window (`ROOM.GRACE_WINDOW_MS`); leaving a ready room answers `ROOM_READY`.
+- **Readiness:** create a room, join it to capacity; the last join sets `ready_at` to the same
+  instant as `last_activity_at`, the `room_ready` notification is created once per member in the
+  same transaction, and the room leaves the catalog immediately (no grace window). It stays
+  accessible to its members for `ROOM.READY_ROOM_RETENTION_MS` (60 minutes); leaving a ready room
+  answers `ROOM_READY` and a late join answers `ROOM_FULL`.
+- **Open Room expiration:** an Open Room stops being listed, queryable and joinable at
+  `lastActivityAt + ROOM.OPEN_ROOM_TTL_MS` (24h), even before the cleanup scheduler deletes it.
 - **Catalog without invite:** `GET /api/rooms` returns the public projection with no
   `discordLink`, no roster, and no `readyAt`/`lastActivityAt`.
 - **Member lobby with invite:** `GET /api/rooms/:code` as a member returns `discordLink` and the

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { playerSchema, publicRoomSchema } from './room'
+import { userNotificationSchema } from './notification'
 
 export const wsMessageTypeSchema = z.enum([
   'join_room',
@@ -24,6 +25,8 @@ export const wsMessageTypeSchema = z.enum([
   'room_created',
   'room_updated',
   'room_deleted',
+  // User-targeted notification push
+  'notification',
 ])
 
 export type WsMessageType = z.infer<typeof wsMessageTypeSchema>
@@ -148,6 +151,14 @@ export const roomDeletedMessageSchema = baseWsMessageSchema.extend({
   }),
 })
 
+// User-targeted push: only sent to sockets authenticated as `payload.notification.userId`.
+export const notificationMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('notification'),
+  payload: z.object({
+    notification: userNotificationSchema,
+  }),
+})
+
 export const wsIncomingMessageSchema = z.discriminatedUnion('type', [
   joinRoomMessageSchema,
   leaveRoomMessageSchema,
@@ -168,6 +179,7 @@ export const wsServerMessageSchema = z.discriminatedUnion('type', [
   roomCreatedMessageSchema,
   roomUpdatedMessageSchema,
   roomDeletedMessageSchema,
+  notificationMessageSchema,
 ])
 
 // Frame envelope every server message shares, before its payload is checked per event
@@ -186,6 +198,7 @@ export const errorPayloadSchema = errorMessageSchema.shape.payload
 export const roomCreatedPayloadSchema = roomCreatedMessageSchema.shape.payload
 export const roomUpdatedPayloadSchema = roomUpdatedMessageSchema.shape.payload
 export const roomDeletedPayloadSchema = roomDeletedMessageSchema.shape.payload
+export const notificationPayloadSchema = notificationMessageSchema.shape.payload
 export const lobbySubscribedPayloadSchema = lobbySubscribedMessageSchema.shape.payload
 
 // Payload schema of each server event that carries one, keyed by message type
@@ -200,6 +213,7 @@ export const wsServerEventPayloadSchemas = {
   room_created: roomCreatedPayloadSchema,
   room_updated: roomUpdatedPayloadSchema,
   room_deleted: roomDeletedPayloadSchema,
+  notification: notificationPayloadSchema,
 } as const
 
 export type WsServerEventType = keyof typeof wsServerEventPayloadSchemas
@@ -227,3 +241,4 @@ export type LobbySubscribedMessage = z.infer<typeof lobbySubscribedMessageSchema
 export type RoomCreatedMessage = z.infer<typeof roomCreatedMessageSchema>
 export type RoomUpdatedMessage = z.infer<typeof roomUpdatedMessageSchema>
 export type RoomDeletedMessage = z.infer<typeof roomDeletedMessageSchema>
+export type NotificationMessage = z.infer<typeof notificationMessageSchema>

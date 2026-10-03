@@ -1,8 +1,14 @@
 import type { UserNotificationDto } from '@squadzr/schemas'
 import type { UserNotification } from '@domain/entities/user-notification.entity'
 
-/** Notification as its owner sees it; never sent to anyone but `notification.userId`. */
-export function toUserNotificationDto(notification: UserNotification): UserNotificationDto {
+/**
+ * Notification as its owner sees it; never sent to anyone but `notification.userId`.
+ * `discordLink` is resolved at read time through the retained room, never stored.
+ */
+export function toUserNotificationDto(
+  notification: UserNotification,
+  discordLink: string | null
+): UserNotificationDto {
   return {
     id: notification.id,
     userId: notification.userId,
@@ -18,7 +24,7 @@ export function toUserNotificationDto(notification: UserNotification): UserNotif
         name: player.name,
         image: player.image,
       })),
-      discordLink: notification.payload.discordLink,
+      discordLink,
     },
     readAt: notification.readAt?.toISOString() ?? null,
     createdAt: notification.createdAt.toISOString(),

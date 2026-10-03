@@ -26,6 +26,24 @@ const publicRoom = {
 }
 const player = { id: 'user-1', name: 'Caio', image: null, isHost: true }
 
+const notification = {
+  id: '9b2f7a1e-4c3d-4e5f-8a6b-1c2d3e4f5a6b',
+  userId: 'user-1',
+  type: 'room_ready',
+  title: 'Room ready: your squad is full',
+  message: 'Ranked 5v5 is ready. Your Discord invite is now available.',
+  payload: {
+    roomId: ROOM_ID,
+    roomCode: 'ABC123',
+    roomName: 'Ranked 5v5',
+    gameName: 'League of Legends',
+    players: [{ name: 'Caio', image: null }],
+    discordLink: INVITE,
+  },
+  readAt: null,
+  createdAt: '2026-09-27T12:30:00.000Z',
+}
+
 const serverMessages = [
   { type: 'room_joined', payload: { roomId: ROOM_ID, roomCode: 'ABC123', players: [player] } },
   { type: 'player_joined', payload: { player } },
@@ -38,6 +56,7 @@ const serverMessages = [
   { type: 'room_created', payload: { room: publicRoom } },
   { type: 'room_updated', payload: { roomId: ROOM_ID, roomCode: 'ABC123', memberCount: 2 } },
   { type: 'room_deleted', payload: { roomId: ROOM_ID, roomCode: 'ABC123' } },
+  { type: 'notification', payload: { notification } },
 ].map((message) => ({ ...message, timestamp: 1_769_000_000_000 }))
 
 describe('wsIncomingMessageSchema', () => {

@@ -123,3 +123,51 @@ export async function markRoomReady(
     })
     .where(eq(rooms.id, roomId))
 }
+
+/**
+ * Backdates an Open Room's creation and activity, keeping `readyAt` null, to
+ * simulate a room whose 24h window passed without touching readiness.
+ */
+export async function markRoomActivity(
+  server: TestServer,
+  roomId: string,
+  minutesAgo = 0
+): Promise<void> {
+  await server.app.db
+    .update(rooms)
+    .set({
+      createdAt: sql`now() - make_interval(mins => ${minutesAgo})`,
+      lastActivityAt: sql`now() - make_interval(mins => ${minutesAgo})`,
+    })
+    .where(eq(rooms.id, roomId))
+}
+
+/**
+ * Writes the three lifecycle timestamps from explicit `Date` values, so tests
+ * with a fixed clock can place a room at exact instants (e.g. exactly
+ * `lastActivityAt + 24h`). Honors the CHECK constraints by construction.
+ */
+export async function setRoomLifecycle(
+  server: TestServer,
+  roomId: string,
+  lifecycle: { createdAt: Date; lastActivityAt: Date; readyAt: Date | null }
+): Promise<void> {
+  // Keep created_at at or before the activity/readiness anchors the caller
+  // chose, so the CHECK constraints hold regardless of the combination.
+  const createdAt = new Date(
+    Math.min(
+      lifecycle.createdAt.getTime(),
+      lifecycle.lastActivityAt.getTime(),
+      lifecycle.readyAt?.getTime() ?? Number.POSITIVE_INFINITY
+    )
+  )
+  await server.app.db
+    .update(rooms)
+    .set({
+      createdAt,
+      lastActivityAt: lifecycle.lastActivityAt,
+      readyAt: lifecycle.readyAt,
+      updatedAt: lifecycle.lastActivityAt,
+    })
+    .where(eq(rooms.id, roomId))
+}

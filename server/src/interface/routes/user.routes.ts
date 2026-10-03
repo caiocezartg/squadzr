@@ -13,7 +13,7 @@ import { listNotificationsQuerySchema, notificationIdParamSchema } from '@applic
 
 export async function userRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
-  const userController = createUserController(fastify.db)
+  const userController = createUserController(fastify.db, fastify.clock)
 
   app.get('/api/users/me', {
     schema: {

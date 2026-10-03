@@ -1,74 +1,63 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { DeleteExpiredRoomsUseCase } from './delete-expired-rooms.use-case'
-import { createMockRoom, createMockRoomRepository } from '@test/mocks'
+import { createMockClock, createMockRoom, createMockRoomRepository, FIXED_NOW } from '@test/mocks'
 
 describe('DeleteExpiredRoomsUseCase', () => {
   let useCase: DeleteExpiredRoomsUseCase
   let mockRoomRepository: ReturnType<typeof createMockRoomRepository>
+  let clock: ReturnType<typeof createMockClock>
 
   beforeEach(() => {
     mockRoomRepository = createMockRoomRepository()
-    useCase = new DeleteExpiredRoomsUseCase(mockRoomRepository)
+    clock = createMockClock()
+    useCase = new DeleteExpiredRoomsUseCase(mockRoomRepository, clock)
   })
 
   describe('execute', () => {
-    it('should delete expired rooms and return their ids and codes', async () => {
+    it('should delete expired rooms and report the reason', async () => {
       const expiredRooms = [
-        createMockRoom({ id: 'room-1', code: 'ABC123' }),
-        createMockRoom({ id: 'room-2', code: 'DEF456' }),
+        createMockRoom({ id: 'room-1', code: 'ABC123', readyAt: FIXED_NOW }),
+        createMockRoom({ id: 'room-2', code: 'DEF456', readyAt: null }),
       ]
 
       mockRoomRepository.findExpiredRooms.mockResolvedValue(expiredRooms)
-      mockRoomRepository.delete.mockResolvedValue(true)
+      mockRoomRepository.deleteExpired.mockResolvedValue(true)
 
-      const result = await useCase.execute({ expirationMinutes: 5 })
+      const result = await useCase.execute()
 
       expect(result.deletedRooms).toEqual([
-        { id: 'room-1', code: 'ABC123' },
-        { id: 'room-2', code: 'DEF456' },
+        { id: 'room-1', code: 'ABC123', reason: 'ready_expired' },
+        { id: 'room-2', code: 'DEF456', reason: 'open_expired' },
       ])
-      expect(mockRoomRepository.findExpiredRooms).toHaveBeenCalledWith(expect.any(Date))
-      expect(mockRoomRepository.delete).toHaveBeenCalledTimes(2)
-      expect(mockRoomRepository.delete).toHaveBeenCalledWith('room-1')
-      expect(mockRoomRepository.delete).toHaveBeenCalledWith('room-2')
+      expect(mockRoomRepository.findExpiredRooms).toHaveBeenCalledWith(FIXED_NOW)
+      expect(mockRoomRepository.deleteExpired).toHaveBeenCalledTimes(2)
+      expect(mockRoomRepository.deleteExpired).toHaveBeenCalledWith('room-1', FIXED_NOW)
+      expect(mockRoomRepository.deleteExpired).toHaveBeenCalledWith('room-2', FIXED_NOW)
     })
 
     it('should return empty array when no expired rooms exist', async () => {
       mockRoomRepository.findExpiredRooms.mockResolvedValue([])
 
-      const result = await useCase.execute({ expirationMinutes: 5 })
+      const result = await useCase.execute()
 
       expect(result.deletedRooms).toEqual([])
-      expect(mockRoomRepository.delete).not.toHaveBeenCalled()
+      expect(mockRoomRepository.deleteExpired).not.toHaveBeenCalled()
     })
 
-    it('should skip rooms that fail to delete', async () => {
+    it('should skip rooms that a concurrent activity change kept alive', async () => {
       const expiredRooms = [
         createMockRoom({ id: 'room-1', code: 'ABC123' }),
         createMockRoom({ id: 'room-2', code: 'DEF456' }),
       ]
 
       mockRoomRepository.findExpiredRooms.mockResolvedValue(expiredRooms)
-      mockRoomRepository.delete.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+      mockRoomRepository.deleteExpired.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
 
-      const result = await useCase.execute({ expirationMinutes: 5 })
+      const result = await useCase.execute()
 
-      expect(result.deletedRooms).toEqual([{ id: 'room-1', code: 'ABC123' }])
-    })
-
-    it('should calculate cutoff date correctly', async () => {
-      mockRoomRepository.findExpiredRooms.mockResolvedValue([])
-
-      const before = Date.now()
-      await useCase.execute({ expirationMinutes: 5 })
-      const after = Date.now()
-
-      const calledWith = mockRoomRepository.findExpiredRooms.mock.calls[0]![0] as Date
-      const expectedMin = before - 5 * 60_000
-      const expectedMax = after - 5 * 60_000
-
-      expect(calledWith.getTime()).toBeGreaterThanOrEqual(expectedMin)
-      expect(calledWith.getTime()).toBeLessThanOrEqual(expectedMax)
+      expect(result.deletedRooms).toEqual([
+        { id: 'room-1', code: 'ABC123', reason: 'open_expired' },
+      ])
     })
   })
 })

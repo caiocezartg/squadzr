@@ -5,6 +5,9 @@ import type { User } from '@domain/entities/user.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
+import type { Clock } from '@domain/services/clock.interface'
+import { isRoomExpired } from '@domain/services/room-lifecycle'
+import { ROOM } from '@config/constants'
 import type {
   JoinRoomMessage,
   LeaveRoomMessage,
@@ -70,7 +73,8 @@ export async function handleJoinRoom(
   connectionManager: WsConnectionManager,
   roomRepository: IRoomRepository,
   roomMemberRepository: IRoomMemberRepository,
-  userRepository: IUserRepository
+  userRepository: IUserRepository,
+  clock: Clock
 ): Promise<void> {
   const { roomCode } = message.payload
   const client = connectionManager.getClientData(socket)
@@ -86,6 +90,12 @@ export async function handleJoinRoom(
 
   const room = await roomRepository.findByCode(roomCode)
   if (!room) {
+    sendError(socket, 'ROOM_NOT_FOUND', `Room "${roomCode}" not found`)
+    return
+  }
+
+  // An expired room is gone for reads and subscriptions even before deletion.
+  if (isRoomExpired(room, clock.now(), ROOM)) {
     sendError(socket, 'ROOM_NOT_FOUND', `Room "${roomCode}" not found`)
     return
   }

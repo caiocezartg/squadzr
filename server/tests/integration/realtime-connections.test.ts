@@ -9,7 +9,14 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { signIn, signInMany } from '@test/harness/auth'
-import { createRoom, insertGame, joinAll, postRoom, roomAction } from '@test/harness/rooms'
+import {
+  createRoom,
+  insertGame,
+  joinAll,
+  markRoomActivity,
+  postRoom,
+  roomAction,
+} from '@test/harness/rooms'
 import {
   connect,
   joinRoomChannel,
@@ -114,6 +121,23 @@ describe('connection identity', () => {
     expect((await socket.next()).payload).toEqual({
       code: 'NOT_ROOM_MEMBER',
       message: 'You are not a member of this room',
+    })
+    expect(subscriptionState(server).roomSockets(room.code)).toBe(0)
+  })
+
+  it('rejects room channels once the Open Room expired, even before deletion', async () => {
+    await setup()
+    const host = await signIn(server)
+    const game = await insertGame(server)
+    const room = await createRoom(server, host, { gameId: game.id })
+    await markRoomActivity(server, room.id, 25 * 60)
+    const socket = await open(server, host)
+
+    socket.send({ type: 'join_room', payload: { roomCode: room.code } })
+
+    expect((await socket.next()).payload).toEqual({
+      code: 'ROOM_NOT_FOUND',
+      message: `Room "${room.code}" not found`,
     })
     expect(subscriptionState(server).roomSockets(room.code)).toBe(0)
   })

@@ -1,6 +1,6 @@
-import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
-import { RoomReadyError } from '@application/errors'
+import type { Clock } from '@domain/services/clock.interface'
+import { RoomNotFoundError, RoomReadyError } from '@application/errors'
 
 export interface LeaveRoomInput {
   readonly roomId: string
@@ -19,32 +19,33 @@ export interface ILeaveRoomUseCase {
 
 export class LeaveRoomUseCase implements ILeaveRoomUseCase {
   constructor(
-    private readonly roomRepository: IRoomRepository,
-    private readonly roomMemberRepository: IRoomMemberRepository
+    private readonly roomMemberRepository: IRoomMemberRepository,
+    private readonly clock: Clock
   ) {}
 
   async execute(input: LeaveRoomInput): Promise<LeaveRoomOutput> {
-    // Block leaving a ready (full) room
-    const room = await this.roomRepository.findById(input.roomId)
-    if (room?.readyAt) {
-      throw new RoomReadyError(input.roomId)
+    // The repository locks the room and decides readiness, host deletion and
+    // Room Activity inside one transaction, so no Membership change can slip
+    // through after the room became Ready.
+    const outcome = await this.roomMemberRepository.leaveOpenRoom({
+      roomId: input.roomId,
+      userId: input.userId,
+      now: this.clock.now(),
+    })
+
+    switch (outcome.status) {
+      case 'left':
+        return {
+          success: true,
+          wasHostLeave: outcome.wasHost,
+          memberCount: outcome.memberCount,
+        }
+      case 'not_member':
+        return { success: false, wasHostLeave: false, memberCount: 0 }
+      case 'ready':
+        throw new RoomReadyError(input.roomId)
+      case 'not_found':
+        throw new RoomNotFoundError(input.roomId)
     }
-
-    const deleted = await this.roomMemberRepository.delete(input.roomId, input.userId)
-
-    if (!deleted) {
-      return { success: false, wasHostLeave: false, memberCount: 0 }
-    }
-
-    const wasHostLeave = room !== null && room.hostId === input.userId
-
-    if (wasHostLeave) {
-      await this.roomMemberRepository.deleteByRoomId(input.roomId)
-      await this.roomRepository.delete(input.roomId)
-      return { success: true, wasHostLeave: true, memberCount: 0 }
-    }
-
-    const memberCount = await this.roomMemberRepository.countByRoomId(input.roomId)
-    return { success: true, wasHostLeave: false, memberCount }
   }
 }

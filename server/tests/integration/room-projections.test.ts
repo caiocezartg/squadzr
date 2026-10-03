@@ -18,8 +18,8 @@ import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
 // CCC-34: public catalog/guest payloads never carry the Discord invite or the
 // roster; both are lobby details delivered only to authenticated members of the
-// room. The Ready Room access rules (404 for non-members, retention cutoff)
-// arrive in CCC-36.
+// room. CCC-36 added the Ready Room access rules (404 for non-members, 60min
+// retention) and the user-targeted notification push.
 
 const PRIVATE_ROOM_KEYS = ['discordLink', 'readyAt', 'lastActivityAt']
 
@@ -89,6 +89,25 @@ describe('GET /api/rooms/:code', () => {
     expect(body).not.toHaveProperty('players')
     expect(response.body).not.toContain(DISCORD_INVITE)
     expect(response.body).not.toContain(host.name)
+  })
+
+  it('hides a Ready Room from non-members with 404 while its members keep the lobby', async () => {
+    const [member, outsider] = await signInMany(server, 2)
+    const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
+    await joinAll(server, room.code, [member!])
+
+    const asOutsider = await get(server, `/api/rooms/${room.code}`, outsider!)
+    const anonymous = await get(server, `/api/rooms/${room.code}`)
+    const asMember = await get(server, `/api/rooms/${room.code}`, member!)
+
+    expect(asOutsider.statusCode).toBe(404)
+    expect(asOutsider.json()).toMatchObject({ error: 'ROOM_NOT_FOUND' })
+    expect(anonymous.statusCode).toBe(404)
+    expect(asMember.statusCode).toBe(200)
+    expect(roomLobbyResponseSchema.parse(asMember.json()).room).toMatchObject({
+      id: room.id,
+      discordLink: DISCORD_INVITE,
+    })
   })
 
   it('stops returning the invite and the roster once the member leaves', async () => {
@@ -179,6 +198,7 @@ describe('realtime', () => {
       ...(await guest.drain()),
       await hostSocket.next(),
       await hostSocket.next(),
+      await hostSocket.next(),
     ]
 
     expect(received.map((message) => message.type)).toEqual([
@@ -186,6 +206,7 @@ describe('realtime', () => {
       'room_created',
       'room_updated',
       'error',
+      'notification',
       'player_joined',
       'room_ready',
     ])

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { inject } from 'vitest'
 import { buildApp } from '@/app'
+import type { Clock } from '@domain/services/clock.interface'
 import { parseEnv, type Env } from '@config/env'
 import { createIsolatedDatabase } from './postgres'
 
@@ -12,6 +13,11 @@ export interface TestServer {
   databaseUrl: string
   /** Closes Fastify (WebSockets, timers, pool) and drops the test's database. */
   close: () => Promise<void>
+}
+
+export interface BuildTestServerOptions {
+  /** Injects a deterministic clock; defaults to the production system clock. */
+  clock?: Clock
 }
 
 export function createTestEnv(overrides: Partial<Env> & Pick<Env, 'DATABASE_URL'>): Env {
@@ -31,13 +37,16 @@ export function createTestEnv(overrides: Partial<Env> & Pick<Env, 'DATABASE_URL'
  * Builds a ready, non-listening server backed by its own freshly migrated
  * PostgreSQL database. Several instances can coexist in the same process.
  */
-export async function buildTestServer(overrides: Partial<Env> = {}): Promise<TestServer> {
+export async function buildTestServer(
+  overrides: Partial<Env> = {},
+  options: BuildTestServerOptions = {}
+): Promise<TestServer> {
   const database = await createIsolatedDatabase(inject('postgres'))
   const env = createTestEnv({ ...overrides, DATABASE_URL: database.url })
 
   let app: FastifyInstance | undefined
   try {
-    app = await buildApp({ env, logger: false })
+    app = await buildApp({ env, logger: false, clock: options.clock })
     await app.ready()
   } catch (error) {
     await app?.close()

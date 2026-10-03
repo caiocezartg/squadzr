@@ -4,8 +4,3 @@ export interface RoomMember {
   readonly userId: string
   readonly joinedAt: Date
 }
-
-export interface CreateRoomMemberInput {
-  readonly roomId: string
-  readonly userId: string
-}

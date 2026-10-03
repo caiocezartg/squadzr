@@ -1,22 +1,41 @@
 import { randomInt } from 'node:crypto'
-import { and, eq, count, desc, gte, isNull, lte, ne, or } from 'drizzle-orm'
+import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
-import { z } from 'zod'
 import type { CreateRoomInput, Room, UpdateRoomInput } from '@domain/entities/room.entity'
-import type { IRoomRepository } from '@domain/repositories/room.repository'
+import type { CreatedRoom, IRoomRepository } from '@domain/repositories/room.repository'
 import type { Database } from '@infrastructure/database/drizzle'
 import { rooms, type RoomRow } from '@infrastructure/database/schema/rooms'
 import { roomMembers } from '@infrastructure/database/schema/room-members'
 import { ROOM } from '@config/constants'
+import { mapRoomMemberRowToEntity, mapRoomRowToEntity } from './room-mapping'
 
-const languageSchema = z.enum(['en', 'pt-br']).catch('pt-br')
-
-export function activeRoomCondition() {
-  return isNull(rooms.readyAt)
+function openRoomCutoff(now: Date): Date {
+  return new Date(now.getTime() - ROOM.OPEN_ROOM_TTL_MS)
 }
 
-export function activeRoomWithGraceCondition(graceMs: number) {
-  return or(isNull(rooms.readyAt), gte(rooms.readyAt, new Date(Date.now() - graceMs)))
+function readyRoomCutoff(now: Date): Date {
+  return new Date(now.getTime() - ROOM.READY_ROOM_RETENTION_MS)
+}
+
+/** Open Rooms whose Room Activity is still inside the 24h window. */
+export function validOpenRoomCondition(now: Date) {
+  return and(isNull(rooms.readyAt), gt(rooms.lastActivityAt, openRoomCutoff(now)))
+}
+
+/** Valid Open Rooms plus Ready Rooms still inside their 60min retention. */
+function retainedRoomCondition(now: Date) {
+  return or(
+    validOpenRoomCondition(now),
+    and(isNotNull(rooms.readyAt), gt(rooms.readyAt, readyRoomCutoff(now)))
+  )
+}
+
+/** Rooms whose activity/retention window ended at or before `now`. */
+export function expiredRoomCondition(now: Date) {
+  return or(
+    and(isNotNull(rooms.readyAt), lte(rooms.readyAt, readyRoomCutoff(now))),
+    and(isNull(rooms.readyAt), lte(rooms.lastActivityAt, openRoomCutoff(now)))
+  )
 }
 
 function generateRoomCode(): string {
@@ -29,12 +48,9 @@ function generateRoomCode(): string {
 }
 
 function isUniqueConstraintViolation(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code: string }).code === '23505'
-  )
+  if (typeof error !== 'object' || error === null) return false
+  const candidate = error as { code?: string; cause?: unknown }
+  return candidate.code === '23505' || isUniqueConstraintViolation(candidate.cause)
 }
 
 type MyRoomRow = RoomRow & { memberCount: number }
@@ -42,27 +58,9 @@ type MyRoomRow = RoomRow & { memberCount: number }
 function mapMyRoomRow(r: MyRoomRow): Room {
   const { memberCount, ...roomRow } = r
   return {
-    ...mapRowToEntity(roomRow),
+    ...mapRoomRowToEntity(roomRow),
     memberCount,
     isMember: true as const,
-  }
-}
-
-function mapRowToEntity(row: RoomRow): Room {
-  return {
-    id: row.id,
-    code: row.code,
-    name: row.name,
-    hostId: row.hostId,
-    gameId: row.gameId,
-    maxPlayers: row.maxPlayers,
-    discordLink: row.discordLink,
-    tags: row.tags,
-    language: languageSchema.parse(row.language),
-    readyAt: row.readyAt,
-    lastActivityAt: row.lastActivityAt,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
   }
 }
 
@@ -72,26 +70,35 @@ export class DrizzleRoomRepository implements IRoomRepository {
   async findById(id: string): Promise<Room | null> {
     const result = await this.db.select().from(rooms).where(eq(rooms.id, id)).limit(1)
     const row = result[0]
-    return row ? mapRowToEntity(row) : null
+    return row ? mapRoomRowToEntity(row) : null
   }
 
   async findByCode(code: string): Promise<Room | null> {
     const result = await this.db.select().from(rooms).where(eq(rooms.code, code)).limit(1)
     const row = result[0]
-    return row ? mapRowToEntity(row) : null
+    return row ? mapRoomRowToEntity(row) : null
+  }
+
+  async findByIds(ids: readonly string[]): Promise<Room[]> {
+    if (ids.length === 0) return []
+    const result = await this.db
+      .select()
+      .from(rooms)
+      .where(inArray(rooms.id, [...ids]))
+    return result.map(mapRoomRowToEntity)
   }
 
   async findByHostId(hostId: string): Promise<Room[]> {
     const result = await this.db.select().from(rooms).where(eq(rooms.hostId, hostId))
-    return result.map(mapRowToEntity)
+    return result.map(mapRoomRowToEntity)
   }
 
   async findAll(): Promise<Room[]> {
     const result = await this.db.select().from(rooms)
-    return result.map(mapRowToEntity)
+    return result.map(mapRoomRowToEntity)
   }
 
-  async findAvailable(): Promise<Room[]> {
+  async findAvailable(now: Date): Promise<Room[]> {
     const result = await this.db
       .select({
         room: rooms,
@@ -99,31 +106,26 @@ export class DrizzleRoomRepository implements IRoomRepository {
       })
       .from(rooms)
       .leftJoin(roomMembers, eq(rooms.id, roomMembers.roomId))
-      .where(activeRoomWithGraceCondition(ROOM.GRACE_WINDOW_MS))
+      .where(validOpenRoomCondition(now))
       .groupBy(rooms.id)
 
     return result.map((row) => ({
-      ...mapRowToEntity(row.room),
+      ...mapRoomRowToEntity(row.room),
       memberCount: row.memberCount,
     }))
   }
 
-  async countActiveByHostId(hostId: string): Promise<number> {
+  async countActiveByHostId(hostId: string, now: Date): Promise<number> {
     const result = await this.db
       .select({ count: count() })
       .from(rooms)
-      // Note: unlike findAvailable(), no grace window — a room with readyAt set is done.
-      .where(and(eq(rooms.hostId, hostId), activeRoomCondition()))
+      .where(and(eq(rooms.hostId, hostId), validOpenRoomCondition(now)))
     return result[0]?.count ?? 0
   }
 
-  async findMyRooms(userId: string): Promise<{ hosted: Room[]; joined: Room[] }> {
+  async findMyRooms(userId: string, now: Date): Promise<{ hosted: Room[]; joined: Room[] }> {
     const allMembersAlias = alias(roomMembers, 'all_members')
     const userMembershipAlias = alias(roomMembers, 'user_membership')
-
-    // Note: unlike findAvailable(), we use strict isNull(readyAt) here with no grace window.
-    // My Rooms shows only genuinely open rooms (not ones in the 5-min deletion window).
-    const activeCondition = activeRoomCondition()
 
     const selectFields = {
       id: rooms.id,
@@ -142,12 +144,14 @@ export class DrizzleRoomRepository implements IRoomRepository {
       memberCount: count(allMembersAlias.id),
     }
 
+    const condition = retainedRoomCondition(now)
+
     const [hostedRows, joinedRows] = await Promise.all([
       this.db
         .select(selectFields)
         .from(rooms)
         .leftJoin(allMembersAlias, eq(allMembersAlias.roomId, rooms.id))
-        .where(and(eq(rooms.hostId, userId), activeCondition))
+        .where(and(eq(rooms.hostId, userId), condition))
         .groupBy(rooms.id)
         .orderBy(desc(rooms.createdAt)),
       this.db
@@ -158,7 +162,7 @@ export class DrizzleRoomRepository implements IRoomRepository {
           and(eq(userMembershipAlias.roomId, rooms.id), eq(userMembershipAlias.userId, userId))
         )
         .leftJoin(allMembersAlias, eq(allMembersAlias.roomId, rooms.id))
-        .where(and(ne(rooms.hostId, userId), activeCondition))
+        .where(and(ne(rooms.hostId, userId), condition))
         .groupBy(rooms.id)
         .orderBy(desc(rooms.createdAt)),
     ])
@@ -169,33 +173,54 @@ export class DrizzleRoomRepository implements IRoomRepository {
     }
   }
 
-  async findExpiredRooms(beforeDate: Date): Promise<Room[]> {
-    const result = await this.db.select().from(rooms).where(lte(rooms.readyAt, beforeDate))
+  async findExpiredRooms(now: Date): Promise<Room[]> {
+    const result = await this.db.select().from(rooms).where(expiredRoomCondition(now))
 
-    return result.map(mapRowToEntity)
+    return result.map(mapRoomRowToEntity)
   }
 
-  async create(input: CreateRoomInput): Promise<Room> {
+  async create(input: CreateRoomInput, now: Date): Promise<CreatedRoom> {
     const MAX_ATTEMPTS = 5
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
-        const result = await this.db
-          .insert(rooms)
-          .values({
-            code: generateRoomCode(),
-            name: input.name,
-            hostId: input.hostId,
-            gameId: input.gameId,
-            maxPlayers: input.maxPlayers,
-            discordLink: input.discordLink ?? null,
-            tags: input.tags ?? [],
-            language: input.language ?? 'pt-br',
-          })
-          .returning()
+        return await this.db.transaction(async (tx) => {
+          const roomRows = await tx
+            .insert(rooms)
+            .values({
+              code: generateRoomCode(),
+              name: input.name,
+              hostId: input.hostId,
+              gameId: input.gameId,
+              maxPlayers: input.maxPlayers,
+              discordLink: input.discordLink ?? null,
+              tags: input.tags ?? [],
+              language: input.language ?? 'pt-br',
+              lastActivityAt: now,
+              createdAt: now,
+              updatedAt: now,
+            })
+            .returning()
 
-        const row = result[0]
-        if (!row) throw new Error('Failed to create room')
-        return mapRowToEntity(row)
+          const roomRow = roomRows[0]
+          if (!roomRow) throw new Error('Failed to create room')
+
+          const memberRows = await tx
+            .insert(roomMembers)
+            .values({
+              roomId: roomRow.id,
+              userId: input.hostId,
+              joinedAt: now,
+            })
+            .returning()
+
+          const memberRow = memberRows[0]
+          if (!memberRow) throw new Error('Failed to create room host membership')
+
+          return {
+            room: mapRoomRowToEntity(roomRow),
+            hostMember: mapRoomMemberRowToEntity(memberRow),
+          }
+        })
       } catch (error) {
         if (attempt < MAX_ATTEMPTS - 1 && isUniqueConstraintViolation(error)) continue
         throw error
@@ -204,7 +229,7 @@ export class DrizzleRoomRepository implements IRoomRepository {
     throw new Error('Failed to generate a unique room code after 5 attempts')
   }
 
-  async update(id: string, input: UpdateRoomInput): Promise<Room | null> {
+  async update(id: string, input: UpdateRoomInput, now: Date): Promise<Room | null> {
     const updateData: Partial<{
       name: string
       maxPlayers: number
@@ -214,7 +239,7 @@ export class DrizzleRoomRepository implements IRoomRepository {
       readyAt: Date
       updatedAt: Date
     }> = {
-      updatedAt: new Date(),
+      updatedAt: now,
     }
 
     if (input.name !== undefined) {
@@ -239,11 +264,21 @@ export class DrizzleRoomRepository implements IRoomRepository {
     const result = await this.db.update(rooms).set(updateData).where(eq(rooms.id, id)).returning()
 
     const row = result[0]
-    return row ? mapRowToEntity(row) : null
+    return row ? mapRoomRowToEntity(row) : null
   }
 
   async delete(id: string): Promise<boolean> {
     const result = await this.db.delete(rooms).where(eq(rooms.id, id)).returning({ id: rooms.id })
+    return result.length > 0
+  }
+
+  async deleteExpired(id: string, now: Date): Promise<boolean> {
+    // Conditional delete: a concurrent join that advanced Room Activity after
+    // the scheduler listed the room keeps it alive instead of losing the row.
+    const result = await this.db
+      .delete(rooms)
+      .where(and(eq(rooms.id, id), expiredRoomCondition(now)))
+      .returning({ id: rooms.id })
     return result.length > 0
   }
 }

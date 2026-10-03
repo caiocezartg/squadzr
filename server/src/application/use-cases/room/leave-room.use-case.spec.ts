@@ -1,29 +1,26 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { LeaveRoomUseCase } from './leave-room.use-case'
-import {
-  createMockRoom,
-  createMockRoomRepository,
-  createMockRoomMemberRepository,
-} from '@test/mocks'
+import { RoomNotFoundError, RoomReadyError } from '@application/errors'
+import { createMockClock, createMockRoomMemberRepository, FIXED_NOW } from '@test/mocks'
 
 describe('LeaveRoomUseCase', () => {
   let useCase: LeaveRoomUseCase
-  let mockRoomRepository: ReturnType<typeof createMockRoomRepository>
   let mockRoomMemberRepository: ReturnType<typeof createMockRoomMemberRepository>
+  let clock: ReturnType<typeof createMockClock>
 
   beforeEach(() => {
-    mockRoomRepository = createMockRoomRepository()
     mockRoomMemberRepository = createMockRoomMemberRepository()
-    useCase = new LeaveRoomUseCase(mockRoomRepository, mockRoomMemberRepository)
+    clock = createMockClock()
+    useCase = new LeaveRoomUseCase(mockRoomMemberRepository, clock)
   })
 
   describe('execute', () => {
     it('should leave room successfully and return member count', async () => {
-      const room = createMockRoom({ id: 'room-1', hostId: 'host-user' })
-
-      mockRoomMemberRepository.delete.mockResolvedValue(true)
-      mockRoomRepository.findById.mockResolvedValue(room)
-      mockRoomMemberRepository.countByRoomId.mockResolvedValue(3)
+      mockRoomMemberRepository.leaveOpenRoom.mockResolvedValue({
+        status: 'left',
+        wasHost: false,
+        memberCount: 3,
+      })
 
       const result = await useCase.execute({
         roomId: 'room-1',
@@ -33,18 +30,19 @@ describe('LeaveRoomUseCase', () => {
       expect(result.success).toBe(true)
       expect(result.wasHostLeave).toBe(false)
       expect(result.memberCount).toBe(3)
-      expect(mockRoomMemberRepository.delete).toHaveBeenCalledWith('room-1', 'regular-user')
-      expect(mockRoomMemberRepository.countByRoomId).toHaveBeenCalledWith('room-1')
-      expect(mockRoomRepository.delete).not.toHaveBeenCalled()
+      expect(mockRoomMemberRepository.leaveOpenRoom).toHaveBeenCalledWith({
+        roomId: 'room-1',
+        userId: 'regular-user',
+        now: FIXED_NOW,
+      })
     })
 
-    it('should delete room if host leaves', async () => {
-      const room = createMockRoom({ id: 'room-1', hostId: 'host-user' })
-
-      mockRoomMemberRepository.delete.mockResolvedValue(true)
-      mockRoomRepository.findById.mockResolvedValue(room)
-      mockRoomMemberRepository.deleteByRoomId.mockResolvedValue(true)
-      mockRoomRepository.delete.mockResolvedValue(true)
+    it('should report a host leave so the controller can broadcast the deletion', async () => {
+      mockRoomMemberRepository.leaveOpenRoom.mockResolvedValue({
+        status: 'left',
+        wasHost: true,
+        memberCount: 0,
+      })
 
       const result = await useCase.execute({
         roomId: 'room-1',
@@ -54,16 +52,10 @@ describe('LeaveRoomUseCase', () => {
       expect(result.success).toBe(true)
       expect(result.wasHostLeave).toBe(true)
       expect(result.memberCount).toBe(0)
-      expect(mockRoomMemberRepository.delete).toHaveBeenCalledWith('room-1', 'host-user')
-      expect(mockRoomMemberRepository.deleteByRoomId).toHaveBeenCalledWith('room-1')
-      expect(mockRoomRepository.delete).toHaveBeenCalledWith('room-1')
     })
 
     it('should return false if user not in room', async () => {
-      const room = createMockRoom({ id: 'room-1' })
-
-      mockRoomRepository.findById.mockResolvedValue(room)
-      mockRoomMemberRepository.delete.mockResolvedValue(false)
+      mockRoomMemberRepository.leaveOpenRoom.mockResolvedValue({ status: 'not_member' })
 
       const result = await useCase.execute({
         roomId: 'room-1',
@@ -72,17 +64,22 @@ describe('LeaveRoomUseCase', () => {
 
       expect(result.success).toBe(false)
       expect(result.wasHostLeave).toBe(false)
-      expect(mockRoomMemberRepository.delete).toHaveBeenCalledWith('room-1', 'non-member-user')
-      expect(mockRoomRepository.delete).not.toHaveBeenCalled()
+      expect(result.memberCount).toBe(0)
     })
 
     it('should throw RoomReadyError if room is ready', async () => {
-      const room = createMockRoom({ id: 'room-1', readyAt: new Date() })
-
-      mockRoomRepository.findById.mockResolvedValue(room)
+      mockRoomMemberRepository.leaveOpenRoom.mockResolvedValue({ status: 'ready' })
 
       await expect(useCase.execute({ roomId: 'room-1', userId: 'any-user' })).rejects.toThrow(
-        'ready'
+        RoomReadyError
+      )
+    })
+
+    it('should throw RoomNotFoundError if the room is gone', async () => {
+      mockRoomMemberRepository.leaveOpenRoom.mockResolvedValue({ status: 'not_found' })
+
+      await expect(useCase.execute({ roomId: 'room-1', userId: 'any-user' })).rejects.toThrow(
+        RoomNotFoundError
       )
     })
   })

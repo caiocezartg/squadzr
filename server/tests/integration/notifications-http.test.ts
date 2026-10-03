@@ -1,8 +1,19 @@
 import { randomUUID } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { sql } from 'drizzle-orm'
 import { userNotificationSchema, type UserNotificationDto } from '@squadzr/schemas'
 import { signIn, type TestUser } from '@test/harness/auth'
-import { DISCORD_INVITE, createRoom, get, insertGame, joinAll } from '@test/harness/rooms'
+import {
+  DISCORD_INVITE,
+  countMembers,
+  createRoom,
+  findRoomRow,
+  get,
+  insertGame,
+  joinAll,
+  markRoomReady,
+  roomAction,
+} from '@test/harness/rooms'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
 // Characterizes the in-app notification API, fed by the Room Ready flow that
@@ -208,5 +219,83 @@ describe('DELETE /api/notifications/:id', () => {
 
     expect(response.statusCode).toBe(401)
     expect(response.json()).toEqual(UNAUTHORIZED)
+  })
+})
+
+describe('Room Ready notification persistence and delivery', () => {
+  it('never stores the Discord invite in the persisted payload', async () => {
+    const { room } = await fillRoom()
+
+    const { rows } = await server.app.db.execute<{ payload: Record<string, unknown> }>(
+      sql`SELECT payload FROM user_notifications WHERE room_id = ${room.id} LIMIT 1`
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.payload).not.toHaveProperty('discordLink')
+    expect(JSON.stringify(rows[0]?.payload)).not.toContain(DISCORD_INVITE)
+  })
+
+  it('resolves the invite at read time and hides it once retention passed', async () => {
+    const { room } = await fillRoom()
+
+    expect((await listNotifications(member))[0]?.payload.discordLink).toBe(DISCORD_INVITE)
+
+    await markRoomReady(server, room.id, 61)
+
+    const expired = await listNotifications(member)
+    expect(expired).toHaveLength(1)
+    expect(expired[0]?.payload.discordLink).toBeNull()
+  })
+
+  it('keeps the notification when the best-effort realtime push fails', async () => {
+    server.app.broadcaster.broadcastNotification = () => {
+      throw new Error('push unavailable')
+    }
+
+    const { room } = await fillRoom()
+
+    // The fill succeeded: the failed push was caught after commit.
+    for (const user of [host, member]) {
+      const notifications = await listNotifications(user)
+      expect(notifications).toHaveLength(1)
+      expect(notifications[0]?.payload.roomId).toBe(room.id)
+    }
+  })
+
+  it('rolls the join back when the notification transaction fails, then resumes cleanly', async () => {
+    const game = await insertGame(server)
+    const room = await createRoom(server, host, { gameId: game.id, maxPlayers: 2 })
+
+    await server.app.db.execute(sql`
+      CREATE OR REPLACE FUNCTION fail_room_ready_notification() RETURNS trigger AS $$
+      BEGIN RAISE EXCEPTION 'notification persistence failed'; END;
+      $$ LANGUAGE plpgsql
+    `)
+    await server.app.db.execute(sql`
+      CREATE TRIGGER fail_room_ready_notification
+      BEFORE INSERT ON user_notifications
+      FOR EACH ROW EXECUTE FUNCTION fail_room_ready_notification()
+    `)
+
+    const failed = await roomAction(server, member, room.code, 'join')
+
+    expect(failed.statusCode).toBe(500)
+    // The whole transaction rolled back: no Membership, no readiness, no notification.
+    expect(await countMembers(server, room.id)).toBe(1)
+    expect((await findRoomRow(server, room.id))?.readyAt).toBeNull()
+    expect(await listNotifications(member)).toEqual([])
+
+    await server.app.db.execute(
+      sql`DROP TRIGGER fail_room_ready_notification ON user_notifications`
+    )
+    await server.app.db.execute(sql`DROP FUNCTION fail_room_ready_notification()`)
+
+    const retried = await roomAction(server, member, room.code, 'join')
+
+    expect(retried.statusCode).toBe(200)
+    expect(await countMembers(server, room.id)).toBe(2)
+    expect((await findRoomRow(server, room.id))?.readyAt).toBeInstanceOf(Date)
+    expect(await listNotifications(member)).toHaveLength(1)
+    expect(await listNotifications(host)).toHaveLength(1)
   })
 })
