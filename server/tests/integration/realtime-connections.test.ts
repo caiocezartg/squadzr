@@ -1,11 +1,7 @@
 /**
- * Characterization of the current `/ws` protocol: connection identity (session vs guest),
- * the catalog ("lobby") subscription and the room channel. Sockets are in-memory
- * (`app.injectWS`), so nothing here depends on ports, the network or wall-clock waits.
- *
- * Regression-sensitive behavior recorded here is what the client relies on today.
- * Assertions tagged `REPLACED BY CCC-37` document behavior the realtime module rewrite
- * (snapshots, Presence by member/session) is expected to change, not preserve.
+ * CCC-33 characterizations updated for CCC-37's protocol v2: authoritative room
+ * snapshots, Membership events after commit and member-based Presence. Identity,
+ * catalog privacy and retention checks remain covered through in-memory sockets.
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { signIn, signInMany } from '@test/harness/auth'
@@ -26,6 +22,7 @@ import {
   type RealtimeSession,
 } from '@test/harness/realtime'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
+import { DISCORD_INVITE } from '@test/harness/rooms'
 
 let server: TestServer
 const sessions: RealtimeSession[] = []
@@ -50,6 +47,11 @@ describe('connection identity', () => {
   it('accepts a guest without a session and answers ping with pong', async () => {
     await setup()
     const guest = await open(server)
+    expect(guest.protocol).toEqual({
+      type: 'protocol',
+      timestamp: expect.any(Number),
+      payload: { version: 2 },
+    })
 
     guest.send({ type: 'ping' })
 
@@ -99,9 +101,16 @@ describe('connection identity', () => {
     const joined = await joinRoomChannel(socket, room.code)
 
     expect(joined.payload).toEqual({
-      roomId: room.id,
-      roomCode: room.code,
+      room: expect.objectContaining({
+        id: room.id,
+        code: room.code,
+        discordLink: DISCORD_INVITE,
+        memberCount: 1,
+      }),
       players: [{ id: host.id, name: 'Host', image: host.image, isHost: true }],
+      readyAt: null,
+      expiresAt: expect.any(String),
+      presence: [{ playerId: host.id, online: true }],
     })
   })
 
@@ -160,10 +169,13 @@ describe('connection identity', () => {
     })
 
     // A member still subscribes to the room during retention.
-    await joinRoomChannel(memberSocket, room.code)
+    const snapshot = await joinRoomChannel(memberSocket, room.code)
+    expect(snapshot.payload).toMatchObject({
+      readyAt: expect.any(String),
+      players: expect.arrayContaining([expect.objectContaining({ id: member!.id })]),
+    })
     expect(subscriptionState(server).roomSockets(room.code)).toBe(1)
-    // Subscribing to the full room re-emits room_ready to its sockets.
-    expect((await memberSocket.next()).type).toBe('room_ready')
+    expect(await memberSocket.drain()).toEqual([])
 
     // Past retention the Ready Room is gone for everyone, member included.
     await markRoomReady(server, room.id, 61)
@@ -241,15 +253,15 @@ describe('room channel subscription', () => {
     const room = await createRoom(server, host, { gameId: game.id })
     const socket = await open(server, host)
 
-    await joinRoomChannel(socket, room.code)
+    await joinRoomChannel(socket, room.code.toLowerCase())
     expect(subscriptionState(server).roomSockets(room.code)).toBe(1)
 
-    socket.send({ type: 'leave_room', payload: { roomCode: room.code } })
+    socket.send({ type: 'leave_room', payload: { roomCode: room.code.toLowerCase() } })
     expect(await socket.drain()).toEqual([])
     expect(subscriptionState(server).trackedRooms()).toBe(0)
   })
 
-  it('announces a (re)joining socket to the other sockets of the room as player_joined', async () => {
+  it('announces Presence once across multiple sessions of the same member', async () => {
     await setup()
     const [host, member] = await signInMany(server, 2)
     const game = await insertGame(server)
@@ -263,14 +275,18 @@ describe('room channel subscription', () => {
     const secondTab = await open(server, member!)
     await joinRoomChannel(secondTab, room.code)
 
-    // REPLACED BY CCC-37: every socket (a second tab, a reconnect) re-announces the same
-    // Membership as `player_joined`. Presence must count one online member per user.
     const announced = await hostSocket.drain()
-    expect(announced.map((message) => message.type)).toEqual(['player_joined', 'player_joined'])
+    expect(announced).toEqual([
+      {
+        type: 'presence_updated',
+        timestamp: expect.any(Number),
+        payload: { roomCode: room.code, playerId: member!.id, online: true },
+      },
+    ])
     expect(subscriptionState(server).roomSockets(room.code)).toBe(3)
   })
 
-  it('does not tell room sockets about Membership changes made over HTTP', async () => {
+  it('publishes the complete committed Membership roster after HTTP joins', async () => {
     await setup()
     const [host, member] = await signInMany(server, 2)
     const game = await insertGame(server)
@@ -280,12 +296,24 @@ describe('room channel subscription', () => {
 
     await joinAll(server, room.code, [member!])
 
-    // REPLACED BY CCC-37: the durable join is invisible to the room until the new member
-    // opens their own socket (Membership roster is driven by socket Presence today).
-    expect(await hostSocket.drain()).toEqual([])
+    expect(await hostSocket.drain()).toEqual([
+      expect.objectContaining({
+        type: 'room_snapshot',
+        payload: expect.objectContaining({
+          players: expect.arrayContaining([
+            expect.objectContaining({ id: host!.id }),
+            expect.objectContaining({ id: member!.id }),
+          ]),
+          presence: [
+            { playerId: host!.id, online: true },
+            { playerId: member!.id, online: false },
+          ],
+        }),
+      }),
+    ])
   })
 
-  it('re-emits room_ready to the whole room on every join_room of a full room', async () => {
+  it('includes readiness in every snapshot without repeating a readiness event on subscribe', async () => {
     await setup()
     const [host, member] = await signInMany(server, 2)
     const game = await insertGame(server, 2)
@@ -294,16 +322,13 @@ describe('room channel subscription', () => {
     const hostSocket = await open(server, host!)
     const memberSocket = await open(server, member!)
 
-    await joinRoomChannel(hostSocket, room.code)
-    expect((await hostSocket.next()).type).toBe('room_ready')
+    const hostSnapshot = await joinRoomChannel(hostSocket, room.code)
+    expect(hostSnapshot.payload).toMatchObject({ readyAt: expect.any(String) })
 
-    await joinRoomChannel(memberSocket, room.code)
-
-    // REPLACED BY CCC-37: readiness is re-broadcast as an event per join instead of being
-    // part of an authoritative snapshot.
-    expect((await hostSocket.next()).type).toBe('player_joined')
-    expect((await hostSocket.next()).type).toBe('room_ready')
-    expect((await memberSocket.next()).type).toBe('room_ready')
+    const memberSnapshot = await joinRoomChannel(memberSocket, room.code)
+    expect(memberSnapshot.payload).toMatchObject({ readyAt: expect.any(String) })
+    expect((await hostSocket.next()).type).toBe('presence_updated')
+    expect(await memberSocket.drain()).toEqual([])
     expect(await hostSocket.drain()).toEqual([])
   })
 
@@ -326,6 +351,6 @@ describe('room channel subscription', () => {
       payload: { roomId: room.id, roomCode: room.code },
     }
     expect(await memberSocket.drain()).toEqual([deleted])
-    expect(await catalog.drain()).toEqual([deleted])
+    expect(await catalog.drain()).toEqual([{ ...deleted, type: 'room_removed' }])
   })
 })

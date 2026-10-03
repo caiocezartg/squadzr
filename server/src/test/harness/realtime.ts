@@ -1,6 +1,7 @@
 import type { Duplex } from 'node:stream'
 import type { WebSocket } from '@fastify/websocket'
 import { z } from 'zod'
+import { protocolMessageSchema } from '@squadzr/schemas/ws'
 import type { WsConnectionManager } from '@infrastructure/websocket/ws-connection-manager'
 import type { WsRoomBroadcaster } from '@infrastructure/websocket/room-broadcaster.service'
 import type { TestUser } from './auth'
@@ -25,6 +26,7 @@ export interface CloseInfo {
  * `/ws` route, whose `close` event is what triggers the plugin's cleanup.
  */
 export interface RealtimeSession {
+  protocol: z.infer<typeof protocolMessageSchema>
   client: WebSocket
   server: WebSocket
   send: (message: unknown) => void
@@ -33,10 +35,9 @@ export interface RealtimeSession {
   next: () => Promise<ServerMessage>
   /**
    * Sends a `ping` and returns every message that arrived before its `pong`. Only
-   * replies from synchronous handlers are guaranteed to precede the `pong`: a handler
-   * that awaits (e.g. a database call in `join_room`) may answer after it, so an empty
-   * result proves nothing is pending only for synchronous work. Await DB-backed replies
-   * message by message instead (see docs/testing/test-inventory.md).
+   * replies and queued post-commit publications precede the `pong`: the realtime
+   * module orders database-backed subscriptions and publications with incoming
+   * messages on the same connection.
    */
   drain: () => Promise<ServerMessage[]>
   /** Resolves once the server-side socket has closed and the plugin has cleaned up. */
@@ -102,9 +103,21 @@ export async function connect(
   headers: Record<string, string> = user?.headers ?? {}
 ): Promise<RealtimeSession> {
   const before = new Set(server.app.websocketServer.clients as Set<WebSocket>)
-  const client = await server.app.injectWS('/ws', { headers })
+  let next!: () => Promise<ServerMessage>
+  const client = await server.app.injectWS(
+    '/ws',
+    { headers },
+    {
+      onInit: (socket) => {
+        next = createInbox(socket)
+        // injectWS constructs ws with address=null and omits autoPong. Real browsers
+        // answer control pings automatically; reproduce that transport behavior.
+        socket.on('ping', (data: Buffer) => socket.pong(data))
+      },
+    }
+  )
   const serverSocket = newServerSocket(server, before)
-  const next = createInbox(client)
+  const protocol = protocolMessageSchema.parse(await next())
   const send = (message: unknown) => client.send(JSON.stringify(message))
 
   const drain = async () => {
@@ -117,6 +130,7 @@ export async function connect(
   }
 
   return {
+    protocol,
     client,
     server: serverSocket,
     send,
@@ -128,15 +142,15 @@ export async function connect(
   }
 }
 
-/** Sends `join_room` and waits for the `room_joined` answer (fails on any other reply). */
+/** Sends `join_room` and waits for the authoritative snapshot (fails on any other reply). */
 export async function joinRoomChannel(
   session: RealtimeSession,
   roomCode: string
 ): Promise<ServerMessage> {
   session.send({ type: 'join_room', payload: { roomCode } })
   const reply = await session.next()
-  if (reply.type !== 'room_joined') {
-    throw new Error(`Expected room_joined, got ${JSON.stringify(reply)}`)
+  if (reply.type !== 'room_snapshot') {
+    throw new Error(`Expected room_snapshot, got ${JSON.stringify(reply)}`)
   }
   return reply
 }
@@ -152,7 +166,7 @@ export async function subscribeCatalog(session: RealtimeSession): Promise<void> 
 /**
  * Read-only view of the plugin's in-memory subscription state. The connection
  * manager is private to the WebSocket plugin, so this reaches it through the
- * decorated broadcaster. CCC-37 replaces both; update this probe with them.
+ * decorated broadcaster. Presence sweeps use the injected clock without sleeping.
  */
 export function subscriptionState(server: TestServer) {
   const broadcaster = server.app.broadcaster as WsRoomBroadcaster
@@ -162,5 +176,6 @@ export function subscriptionState(server: TestServer) {
     catalogSubscribers: () => manager['lobbySubscribers'].size,
     roomSockets: (roomCode: string) => manager.getRoomSockets(roomCode)?.size ?? 0,
     trackedRooms: () => manager['rooms'].size,
+    sweepPresence: () => broadcaster['operations'].run(() => broadcaster['presence'].sweep()),
   }
 }

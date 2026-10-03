@@ -202,13 +202,13 @@ describe('realtime', () => {
     ]
 
     expect(received.map((message) => message.type)).toEqual([
-      'room_joined',
+      'room_snapshot',
       'room_created',
-      'room_updated',
+      'room_removed',
       'error',
+      'room_snapshot',
       'notification',
-      'player_joined',
-      'room_ready',
+      'presence_updated',
     ])
     for (const message of received) {
       expect(wsServerMessageSchema.safeParse(message).success, message.type).toBe(true)

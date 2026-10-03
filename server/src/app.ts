@@ -7,6 +7,7 @@ import Fastify, {
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import websocket from '@fastify/websocket'
+import { WS_MAX_PAYLOAD_BYTES } from '@squadzr/schemas/ws'
 import type { Env } from '@config/env'
 import type { Clock } from '@domain/services/clock.interface'
 import { SystemClock } from '@infrastructure/services/system-clock'
@@ -17,6 +18,7 @@ import swaggerPlugin from '@infrastructure/plugins/swagger.plugin'
 import wsPlugin from '@infrastructure/websocket/ws.plugin'
 import roomCleanupPlugin from '@infrastructure/plugins/room-cleanup.plugin'
 import { registerRoutes } from '@interface/routes'
+import { createRealtime } from '@interface/factories/realtime.factory'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -100,14 +102,16 @@ export async function buildApp({ env, logger, clock }: BuildAppOptions): Promise
 
   await fastify.register(websocket, {
     options: {
-      maxPayload: 1048576,
+      maxPayload: WS_MAX_PAYLOAD_BYTES,
     },
   })
 
   await fastify.register(swaggerPlugin)
   await fastify.register(databasePlugin, { connectionString: env.DATABASE_URL })
   await fastify.register(authPlugin, { config: env })
-  await fastify.register(wsPlugin)
+  await fastify.register(wsPlugin, {
+    realtime: createRealtime(fastify.db, fastify.clock, fastify.log),
+  })
   await fastify.register(roomCleanupPlugin)
   await registerRoutes(fastify)
 
