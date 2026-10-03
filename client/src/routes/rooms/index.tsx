@@ -20,7 +20,12 @@ import { AlertBox } from '@/components/ui/alert-box'
 import { Plus } from 'lucide-react'
 import { roomsSearchSchema } from '@/lib/rooms-search'
 import { WS_URL } from '@/env'
-import type { RoomsResponse, GamesResponse, CreateRoomResponse, Game } from '@/types'
+import {
+  createRoomResponseSchema,
+  gamesResponseSchema,
+  roomsResponseSchema,
+} from '@squadzr/schemas'
+import type { Game } from '@/types'
 
 export const Route = createFileRoute('/rooms/')({
   component: RoomsPage,
@@ -85,7 +90,7 @@ function RoomsPage() {
     isError: roomsError,
   } = useQuery({
     queryKey: ['rooms'],
-    queryFn: () => api.get<RoomsResponse>('/api/rooms'),
+    queryFn: () => api.get('/api/rooms', roomsResponseSchema),
     refetchOnWindowFocus: true,
   })
 
@@ -96,7 +101,7 @@ function RoomsPage() {
     isError: gamesError,
   } = useQuery({
     queryKey: ['games'],
-    queryFn: () => api.get<GamesResponse>('/api/games'),
+    queryFn: () => api.get('/api/games', gamesResponseSchema),
     staleTime: 60_000,
   })
 
@@ -109,7 +114,7 @@ function RoomsPage() {
       discordLink: string
       tags: string[]
       language: 'en' | 'pt-br'
-    }) => api.post<CreateRoomResponse>('/api/rooms', body),
+    }) => api.post('/api/rooms', body, createRoomResponseSchema),
     onSuccess: (result) => {
       setModalOpen(false)
       navigate({ to: '/rooms/$code', params: { code: result.room.code } })

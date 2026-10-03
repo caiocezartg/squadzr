@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import type { Game, Room } from '@/types'
+import type { Game, PublicRoom } from '@/types'
 
 const DEFAULTS = {
   search: '',
@@ -35,7 +35,7 @@ interface UseRoomFiltersReturn {
   page: number
   setPage: (v: number) => void
   hasActiveFilters: boolean
-  applyFilters: (rooms: Room[]) => Room[]
+  applyFilters: (rooms: PublicRoom[]) => PublicRoom[]
 }
 
 export function useRoomFilters(
@@ -120,7 +120,7 @@ export function useRoomFilters(
     currentLanguage !== 'all' ||
     localTag.trim().length > 0
 
-  function applyFilters(rooms: Room[]): Room[] {
+  function applyFilters(rooms: PublicRoom[]): PublicRoom[] {
     let result = [...rooms]
 
     if (currentSearch.trim()) {

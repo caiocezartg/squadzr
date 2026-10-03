@@ -1,3 +1,5 @@
+import type { WsServerMessage } from '@squadzr/schemas/ws'
+
 // Re-export all WS schemas and types from shared package
 export * from '@squadzr/schemas/ws'
 
@@ -8,5 +10,5 @@ export interface WsClient {
   userImage: string | null
   roomCode: string | null
   isInLobby: boolean
-  send: (message: unknown) => void
+  send: (message: WsServerMessage) => void
 }

@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { IGameRepository } from '@domain/repositories/game.repository'
 import type { gameIdParamSchema } from '@application/dtos'
+import { toGameDto } from '@application/projections'
 import type { z } from 'zod'
 
 export interface GameControllerDeps {
@@ -13,7 +14,7 @@ export class GameController {
   async list(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const games = await this.deps.gameRepository.findAll()
 
-    await reply.send({ games })
+    await reply.send({ games: games.map(toGameDto) })
   }
 
   async getById(
@@ -27,6 +28,6 @@ export class GameController {
       return
     }
 
-    await reply.send({ game })
+    await reply.send({ game: toGameDto(game) })
   }
 }

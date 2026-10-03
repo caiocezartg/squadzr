@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { signIn, useSession } from '@/lib/auth-client'
 import { api } from '@/lib/api'
 import * as motion from 'motion/react-client'
-import type { GamesResponse } from '@/types'
+import { gamesResponseSchema } from '@squadzr/schemas'
 import { Search } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
 import { useTranslation, Trans } from 'react-i18next'
@@ -17,7 +17,7 @@ export function HeroSection() {
 
   const { data: gamesData } = useQuery({
     queryKey: ['games'],
-    queryFn: () => api.get<GamesResponse>('/api/games'),
+    queryFn: () => api.get('/api/games', gamesResponseSchema),
     staleTime: 60_000,
   })
 

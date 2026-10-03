@@ -1,23 +1,21 @@
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
-import { z } from 'zod'
 import { requireAuth } from '@interface/hooks/auth.hook'
 import { createRoomController } from '@interface/factories/room.factory'
 import { createGameController } from '@interface/factories/game.factory'
 import {
-  gameSchema,
-  roomSchema,
-  roomMemberSchema,
-  playerSchema,
   createRoomInputSchema,
+  createRoomResponseSchema,
+  errorResponseSchema as errorResponse,
+  gameResponseSchema,
+  gamesResponseSchema,
+  joinRoomResponseSchema,
+  leaveRoomResponseSchema,
+  myRoomsResponseSchema,
+  roomResponseSchema,
+  roomsResponseSchema,
 } from '@squadzr/schemas'
 import { roomCodeParamSchema, gameIdParamSchema } from '@application/dtos'
-
-const errorResponse = z.object({
-  error: z.string(),
-  message: z.string(),
-  details: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
-})
 
 export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
@@ -31,7 +29,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       summary: 'List all games',
       description: 'Returns the catalog of all supported games.',
       response: {
-        200: z.object({ games: z.array(gameSchema) }),
+        200: gamesResponseSchema,
       },
     },
     handler: gameController.list.bind(gameController),
@@ -44,7 +42,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       description: 'Returns a single game by its UUID.',
       params: gameIdParamSchema,
       response: {
-        200: z.object({ game: gameSchema }),
+        200: gameResponseSchema,
         404: errorResponse,
       },
     },
@@ -56,9 +54,10 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
     schema: {
       tags: ['Rooms'],
       summary: 'List available rooms',
-      description: 'Returns all rooms with "waiting" status that can be joined.',
+      description:
+        'Returns all rooms with "waiting" status that can be joined, as the public projection: no Discord invite and no roster.',
       response: {
-        200: z.object({ rooms: z.array(roomSchema) }),
+        200: roomsResponseSchema,
       },
     },
     handler: roomController.list.bind(roomController),
@@ -72,10 +71,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
         'Returns rooms created by or joined by the authenticated user, grouped into hosted and joined.',
       security: [{ session: [] }],
       response: {
-        200: z.object({
-          hosted: z.array(roomSchema),
-          joined: z.array(roomSchema),
-        }),
+        200: myRoomsResponseSchema,
         401: errorResponse,
       },
     },
@@ -87,10 +83,11 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
     schema: {
       tags: ['Rooms'],
       summary: 'Get room by code',
-      description: 'Returns a specific room by its 6-character code.',
+      description:
+        'Returns a specific room by its 6-character code. Authenticated members of the room also get its Discord invite and roster; everyone else gets the public projection.',
       params: roomCodeParamSchema,
       response: {
-        200: z.object({ room: roomSchema, players: z.array(playerSchema) }),
+        200: roomResponseSchema,
         404: errorResponse,
       },
     },
@@ -106,7 +103,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       security: [{ session: [] }],
       body: createRoomInputSchema,
       response: {
-        201: z.object({ room: roomSchema }),
+        201: createRoomResponseSchema,
         400: errorResponse,
         401: errorResponse,
       },
@@ -124,10 +121,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       security: [{ session: [] }],
       params: roomCodeParamSchema,
       response: {
-        200: z.object({
-          message: z.string(),
-          roomMember: roomMemberSchema,
-        }),
+        200: joinRoomResponseSchema,
         401: errorResponse,
         404: errorResponse,
         422: errorResponse,
@@ -146,10 +140,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       security: [{ session: [] }],
       params: roomCodeParamSchema,
       response: {
-        200: z.object({
-          message: z.string(),
-          success: z.boolean(),
-        }),
+        200: leaveRoomResponseSchema,
         401: errorResponse,
         404: errorResponse,
         422: errorResponse,

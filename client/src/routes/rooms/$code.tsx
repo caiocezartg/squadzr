@@ -13,17 +13,11 @@ import { PlayerSlot } from '@/components/rooms/player-slot'
 import { RoomNotFound } from '@/components/rooms/room-not-found'
 import { DiscordLinkCard } from '@/components/rooms/discord-link-card'
 import { AlertBox } from '@/components/ui/alert-box'
-import { parseWsPayload } from '@/lib/ws-validators'
-import {
-  roomJoinedPayloadSchema,
-  playerJoinedPayloadSchema,
-  playerLeftPayloadSchema,
-  errorPayloadSchema,
-  roomDeletedPayloadSchema,
-} from '@squadzr/schemas/ws'
+import { onServerEvent } from '@/lib/ws-validators'
+import { gameResponseSchema, isRoomLobbyResponse, roomResponseSchema } from '@squadzr/schemas'
 import { ArrowLeft, Copy, LogOut } from 'lucide-react'
 import { WS_URL } from '@/env'
-import type { RoomResponse, GameResponse, Player } from '@/types'
+import type { Player } from '@/types'
 
 export const Route = createFileRoute('/rooms/$code')({
   component: RoomLobbyPage,
@@ -57,25 +51,29 @@ function RoomLobbyPage() {
     error: roomError,
   } = useQuery({
     queryKey: ['room', code],
-    queryFn: () => api.get<RoomResponse>(`/api/rooms/${code}`),
+    queryFn: () => api.get(`/api/rooms/${code}`, roomResponseSchema),
   })
 
   const room = roomData?.room ?? null
+  // Lobby details (roster and Discord invite) only come back for members of the room
+  const lobby = roomData && isRoomLobbyResponse(roomData) ? roomData : null
+  const lobbyPlayers = lobby?.players
+  const discordLink = lobby?.room.discordLink
 
   // Initialize players from HTTP response (before WS is ready)
   useEffect(() => {
-    if (roomData?.players && !playersInitialized) {
-      setPlayers(roomData.players)
+    if (lobbyPlayers && !playersInitialized) {
+      setPlayers(lobbyPlayers)
       setPlayersInitialized(true)
     }
-  }, [roomData?.players, playersInitialized])
+  }, [lobbyPlayers, playersInitialized])
 
   const timeAgo = useTimeAgo(room?.createdAt)
 
   // Fetch game for cover image
   const { data: gameData } = useQuery({
     queryKey: ['game', room?.gameId],
-    queryFn: () => api.get<GameResponse>(`/api/games/${room?.gameId}`),
+    queryFn: () => api.get(`/api/games/${room?.gameId}`, gameResponseSchema),
     enabled: !!room?.gameId,
     staleTime: 60_000,
   })
@@ -90,40 +88,30 @@ function RoomLobbyPage() {
 
   // WebSocket event handlers
   useEffect(() => {
-    const unsubscribeJoined = on('room_joined', (raw) => {
-      const data = parseWsPayload(roomJoinedPayloadSchema, raw)
-      if (!data) return
+    const unsubscribeJoined = onServerEvent(on, 'room_joined', (data) => {
       setPlayers(data.players)
     })
 
-    const unsubscribePlayerJoined = on('player_joined', (raw) => {
-      const data = parseWsPayload(playerJoinedPayloadSchema, raw)
-      if (!data) return
+    const unsubscribePlayerJoined = onServerEvent(on, 'player_joined', (data) => {
       setPlayers((prev) => {
         if (prev.some((p) => p.id === data.player.id)) return prev
         return [...prev, data.player]
       })
     })
 
-    const unsubscribePlayerLeft = on('player_left', (raw) => {
-      const data = parseWsPayload(playerLeftPayloadSchema, raw)
-      if (!data) return
+    const unsubscribePlayerLeft = onServerEvent(on, 'player_left', (data) => {
       setPlayers((prev) => prev.filter((p) => p.id !== data.playerId))
     })
 
-    const unsubscribeRoomReady = on('room_ready', () => {
+    const unsubscribeRoomReady = onServerEvent(on, 'room_ready', () => {
       setIsRoomReady(true)
     })
 
-    const unsubscribeError = on('error', (raw) => {
-      const data = parseWsPayload(errorPayloadSchema, raw)
-      if (!data) return
+    const unsubscribeError = onServerEvent(on, 'error', (data) => {
       setError(data.message)
     })
 
-    const unsubscribeRoomDeleted = on('room_deleted', (raw) => {
-      const data = parseWsPayload(roomDeletedPayloadSchema, raw)
-      if (!data) return
+    const unsubscribeRoomDeleted = onServerEvent(on, 'room_deleted', (data) => {
       removeRoom(data.roomId)
       navigate({ to: '/rooms', search: {} })
     })
@@ -300,9 +288,9 @@ function RoomLobbyPage() {
       )}
 
       {/* Discord invite — full-width, prominent */}
-      {isRoomReady && room?.discordLink && (
+      {isRoomReady && discordLink && (
         <div className="mb-6">
-          <DiscordLinkCard discordLink={room.discordLink} isRoomReady={isRoomReady} />
+          <DiscordLinkCard discordLink={discordLink} isRoomReady={isRoomReady} />
         </div>
       )}
 

@@ -14,9 +14,10 @@ import type {
   RoomsResponse,
 } from '@/types'
 
-function hoursAgo(hours: number): Date {
+/** ISO 8601 string, as transport dates travel in JSON. */
+function hoursAgo(hours: number): string {
   // Two extra minutes of margin keep the rendered label exactly "Xh ago".
-  return new Date(Date.now() - hours * 3_600_000 - 120_000)
+  return new Date(Date.now() - hours * 3_600_000 - 120_000).toISOString()
 }
 
 export const gameLol: Game = {

@@ -1,11 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRoomsCache } from './use-rooms-cache'
-import { parseWsPayload } from '@/lib/ws-validators'
-import {
-  roomCreatedPayloadSchema,
-  roomUpdatedPayloadSchema,
-  roomDeletedPayloadSchema,
-} from '@squadzr/schemas/ws'
+import { onServerEvent } from '@/lib/ws-validators'
 import type { WebSocketEventHandler } from '@/lib/ws-client'
 
 interface UseLobbyEventsOptions {
@@ -29,25 +24,19 @@ export function useLobbyEvents({
   useEffect(() => {
     if (!isConnected) return
 
-    const unsubscribeLobbySubscribed = on('lobby_subscribed', () => {
+    const unsubscribeLobbySubscribed = onServerEvent(on, 'lobby_subscribed', () => {
       setIsSubscribed(true)
     })
 
-    const unsubscribeCreated = on('room_created', (raw) => {
-      const data = parseWsPayload(roomCreatedPayloadSchema, raw)
-      if (!data) return
+    const unsubscribeCreated = onServerEvent(on, 'room_created', (data) => {
       addRoom(data.room)
     })
 
-    const unsubscribeUpdated = on('room_updated', (raw) => {
-      const data = parseWsPayload(roomUpdatedPayloadSchema, raw)
-      if (!data) return
+    const unsubscribeUpdated = onServerEvent(on, 'room_updated', (data) => {
       updateRoom(data.roomId, { memberCount: data.memberCount })
     })
 
-    const unsubscribeDeleted = on('room_deleted', (raw) => {
-      const data = parseWsPayload(roomDeletedPayloadSchema, raw)
-      if (!data) return
+    const unsubscribeDeleted = onServerEvent(on, 'room_deleted', (data) => {
       removeRoom(data.roomId)
     })
 
