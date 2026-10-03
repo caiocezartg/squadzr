@@ -11,10 +11,11 @@ export type DatabaseTransaction = Parameters<Parameters<Database['transaction']>
  * The global lock order is: existing room rows first, then the user row.
  * `joinOpenRoom` locks the room and then the user; `create` has no existing
  * room row to lock, takes the user row first and only inserts brand-new room
- * and Membership rows. No transaction waits for an existing room while holding
- * the user lock, so concurrent joins by one user into different rooms and
- * concurrent creations by one host cannot form a lock cycle.
+ * and Membership rows. Neither limit transaction waits for an existing room
+ * while holding the user lock. NO KEY UPDATE serializes these counts without
+ * conflicting with KEY SHARE from user foreign keys: crossed final joins
+ * can insert notifications for each other's hosts without a lock cycle.
  */
 export async function lockUserRow(tx: DatabaseTransaction, userId: string): Promise<void> {
-  await tx.select({ id: user.id }).from(user).where(eq(user.id, userId)).for('update')
+  await tx.select({ id: user.id }).from(user).where(eq(user.id, userId)).for('no key update')
 }

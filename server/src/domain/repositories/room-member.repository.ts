@@ -56,15 +56,16 @@ export interface IRoomMemberRepository {
    * and capacity, inserts the Membership, advances Room Activity and, when the
    * last seat is taken, sets readiness and persists every member's `room_ready`
    * notification in the same transaction. The lifecycle instant is read from
-   * the injected clock only after the room lock is held, so concurrent joins
-   * never write a timestamp older than the state they replaced.
+   * the injected clock only after both room and user locks are held, so lock
+   * waits cannot leave expiration checks or lifecycle timestamps stale.
    *
    * The per-user limit of valid Open Room Memberships is decided in the same
    * transaction: after the room row, the user row is locked, then the count and
    * the insert happen under that lock. Concurrent joins by one user into
    * different rooms therefore serialize on the user lock, and the limit cannot
    * be exceeded. The room-then-user order is global to this repository and to
-   * `IRoomRepository.create`, so no cycle is possible.
+   * `IRoomRepository.create`; the user lock must allow KEY SHARE from foreign
+   * keys, including notifications to other users in crossed final joins.
    */
   joinOpenRoom(input: JoinOpenRoomInput): Promise<JoinOpenRoomOutcome>
   /**

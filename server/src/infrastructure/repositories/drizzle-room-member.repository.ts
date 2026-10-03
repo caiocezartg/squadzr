@@ -74,9 +74,12 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
       const roomRow = roomRows[0]
       if (!roomRow) return { status: 'not_found' }
 
-      // The lifecycle instant is read only now, with the lock held: concurrent
-      // joins get distinct, increasing instants in lock order, so Room Activity
-      // never moves backwards and expiration is checked against current time.
+      // Serialize this user's count and insert after locking the room. The
+      // weaker user lock also allows notification FKs to other joining users.
+      await lockUserRow(tx, input.userId)
+
+      // Read once after both lock waits, so expiration and every lifecycle
+      // timestamp use the current instant and Room Activity never regresses.
       const now = this.clock.now()
 
       const room = mapRoomRowToEntity(roomRow)
@@ -104,11 +107,6 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
           notifications: [],
         }
       }
-
-      // Per-user limit: the user row is locked before the count and the insert,
-      // so two joins by this user into different rooms cannot both read a count
-      // below the limit. Lock order is room first, user second; see `lockUserRow`.
-      await lockUserRow(tx, input.userId)
 
       // Valid Open Rooms only: a Ready Room is done and an Open Room past its
       // activity window is gone even before the scheduler deletes it.
