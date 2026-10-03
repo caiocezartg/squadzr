@@ -117,6 +117,88 @@ describe('rooms schema after the lifecycle migration', () => {
   })
 })
 
+describe('lifecycle CHECK constraints', () => {
+  it('declares the three invariants on rooms', async () => {
+    const constraints = await server.app.db.execute<{ conname: string }>(sql`
+      SELECT conname
+      FROM pg_constraint
+      WHERE conrelid = 'public.rooms'::regclass AND contype = 'c'
+      ORDER BY conname
+    `)
+
+    expect(constraints.rows.map((row) => row.conname)).toEqual([
+      'rooms_last_activity_after_created',
+      'rooms_ready_after_created',
+      'rooms_ready_after_last_activity',
+    ])
+  })
+
+  it('rejects last_activity_at before created_at with 23514', async () => {
+    await expect(
+      server.app.db.execute(sql`
+        INSERT INTO "rooms" (code, name, host_id, game_id, last_activity_at, created_at)
+        VALUES ('CHK001', 'Constraint room', ${host.id}, ${gameId}, now() - interval '1 second', now())
+      `)
+    ).rejects.toMatchObject({ code: '23514' })
+  })
+
+  it('rejects ready_at before created_at with 23514', async () => {
+    await expect(
+      server.app.db.execute(sql`
+        INSERT INTO "rooms" (code, name, host_id, game_id, ready_at, last_activity_at, created_at)
+        VALUES (
+          'CHK002', 'Constraint room', ${host.id}, ${gameId},
+          now() - interval '1 second', now() - interval '1 second', now()
+        )
+      `)
+    ).rejects.toMatchObject({ code: '23514' })
+  })
+
+  it('rejects ready_at before last_activity_at with 23514', async () => {
+    await expect(
+      server.app.db.execute(sql`
+        INSERT INTO "rooms" (code, name, host_id, game_id, ready_at, last_activity_at, created_at)
+        VALUES (
+          'CHK003', 'Constraint room', ${host.id}, ${gameId},
+          now() - interval '90 seconds', now() - interval '1 minute', now() - interval '2 minutes'
+        )
+      `)
+    ).rejects.toMatchObject({ code: '23514' })
+  })
+
+  it('accepts the exact boundary ready_at = last_activity_at = created_at', async () => {
+    await server.app.db.execute(sql`
+      INSERT INTO "rooms" (code, name, host_id, game_id, ready_at, last_activity_at, created_at)
+      VALUES ('CHK004', 'Constraint room', ${host.id}, ${gameId}, now(), now(), now())
+    `)
+
+    const { rows } = await server.app.db.execute<{ ready_at: Date; created_at: Date }>(sql`
+      SELECT ready_at, created_at FROM "rooms" WHERE code = 'CHK004'
+    `)
+    expect(rows[0]?.ready_at).toEqual(rows[0]?.created_at)
+  })
+
+  it('rejects an update that moves last_activity_at before created_at with 23514', async () => {
+    const room = await createRoom(server, host, { gameId })
+
+    await expect(
+      server.app.db.execute(sql`
+        UPDATE "rooms" SET last_activity_at = created_at - interval '1 second' WHERE id = ${room.id}
+      `)
+    ).rejects.toMatchObject({ code: '23514' })
+  })
+
+  it('rejects an update that moves ready_at before last_activity_at with 23514', async () => {
+    const room = await createRoom(server, host, { gameId })
+
+    await expect(
+      server.app.db.execute(sql`
+        UPDATE "rooms" SET ready_at = last_activity_at - interval '1 second' WHERE id = ${room.id}
+      `)
+    ).rejects.toMatchObject({ code: '23514' })
+  })
+})
+
 describe('lifecycle columns', () => {
   it('stamps last_activity_at on creation and leaves ready_at null', async () => {
     const room = await createRoom(server, host, { gameId })

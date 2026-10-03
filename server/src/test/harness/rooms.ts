@@ -112,8 +112,14 @@ export async function markRoomReady(
   roomId: string,
   minutesAgo = 0
 ): Promise<void> {
+  // Creation and activity move with readiness: the room CHECK constraints
+  // require ready_at >= created_at and ready_at >= last_activity_at.
   await server.app.db
     .update(rooms)
-    .set({ readyAt: sql`now() - make_interval(mins => ${minutesAgo})` })
+    .set({
+      createdAt: sql`now() - make_interval(mins => ${minutesAgo})`,
+      lastActivityAt: sql`now() - make_interval(mins => ${minutesAgo})`,
+      readyAt: sql`now() - make_interval(mins => ${minutesAgo})`,
+    })
     .where(eq(rooms.id, roomId))
 }

@@ -99,9 +99,13 @@ DELETE FROM "user_notifications" WHERE type = 'room_ready';
 
 Users, accounts, sessions, and notification history of any other type are untouched. The same file
 then renames `completed_at` to `ready_at`, adds non-null `last_activity_at` (default `now()`),
-drops `ready_notified_at` and `status`, drops the `room_status` type, and adds
+drops `ready_notified_at` and `status`, drops the `room_status` type, adds
 `user_notifications.room_id` with the unique index
-`user_notifications_room_user_type_unique (room_id, user_id, type)`.
+`user_notifications_room_user_type_unique (room_id, user_id, type)`, and adds the explicit CHECK
+constraints `rooms_ready_after_created` (`ready_at IS NULL OR ready_at >= created_at`),
+`rooms_last_activity_after_created` (`last_activity_at >= created_at`), and
+`rooms_ready_after_last_activity` (`ready_at IS NULL OR ready_at >= last_activity_at`). The
+constraints are added after the cleanup, so they validate against an empty `rooms` table.
 
 ## 4. Server deploy (operator)
 
@@ -135,10 +139,15 @@ Rollback limits, in order of preference:
    `pg_restore --clean --if-exists --dbname "$DATABASE_URL" <dump>`, then redeploy the previous
    server and client revisions.
 2. **Schema-only reverse** (room/membership/room_ready notification rows stay deleted — they are
-   disposable by product decision; user and auth data is intact). Stop the new server, redeploy the
-   previous server revision, and run:
+   disposable by product decision; user and auth data is intact). Stop the new server, run the
+   reverse SQL below **before** redeploying the previous server revision (that revision expects
+   `status`, `completed_at`, and `ready_notified_at`), then redeploy the previous server and
+   client revisions:
 
 ```sql
+ALTER TABLE "rooms" DROP CONSTRAINT "rooms_ready_after_created";
+ALTER TABLE "rooms" DROP CONSTRAINT "rooms_last_activity_after_created";
+ALTER TABLE "rooms" DROP CONSTRAINT "rooms_ready_after_last_activity";
 CREATE TYPE "public"."room_status" AS ENUM('waiting', 'playing', 'finished');
 ALTER TABLE "rooms" ADD COLUMN "status" "room_status" DEFAULT 'waiting' NOT NULL;
 ALTER TABLE "rooms" RENAME COLUMN "ready_at" TO "completed_at";
@@ -154,9 +163,8 @@ After a reverse, remove the migration bookkeeping row so a future `db:migrate` c
 DELETE FROM drizzle.__drizzle_migrations WHERE created_at = 1790993426164; -- 0003 folderMillis
 ```
 
-Order matters: the previous server expects `status`, `completed_at`, and `ready_notified_at`, so
-the reverse schema must exist before it starts. Never run the reverse against a database still
-serving the new server.
+Order matters: the reverse SQL (including dropping the CHECK constraints) must run before the
+previous server starts; never run the reverse against a database still serving the new server.
 
 ## Production cleanup
 

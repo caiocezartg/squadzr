@@ -383,7 +383,20 @@
           ]
         }
       },
-      "checkConstraints": {}
+      "checkConstraints": {
+        "rooms_ready_after_created": {
+          "name": "rooms_ready_after_created",
+          "value": "\"rooms\".\"ready_at\" IS NULL OR \"rooms\".\"ready_at\" >= \"rooms\".\"created_at\""
+        },
+        "rooms_last_activity_after_created": {
+          "name": "rooms_last_activity_after_created",
+          "value": "\"rooms\".\"last_activity_at\" >= \"rooms\".\"created_at\""
+        },
+        "rooms_ready_after_last_activity": {
+          "name": "rooms_ready_after_last_activity",
+          "value": "\"rooms\".\"ready_at\" IS NULL OR \"rooms\".\"ready_at\" >= \"rooms\".\"last_activity_at\""
+        }
+      }
     },
     "public.session": {
       "name": "session",
