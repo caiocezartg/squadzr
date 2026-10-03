@@ -62,10 +62,13 @@ async function wsPlugin(fastify: FastifyInstance): Promise<void> {
     }
 
     connectionManager.setClientData(socket, client)
+    if (client.userId) {
+      connectionManager.addUserSocket(client.userId, socket)
+    }
 
     const db = fastify.db
     const roomRepository = new DrizzleRoomRepository(db)
-    const roomMemberRepository = new DrizzleRoomMemberRepository(db)
+    const roomMemberRepository = new DrizzleRoomMemberRepository(db, fastify.clock)
     const userRepository = new DrizzleUserRepository(db)
 
     socket.on('message', async (rawData: Buffer | ArrayBuffer | Buffer[]) => {
@@ -87,7 +90,8 @@ async function wsPlugin(fastify: FastifyInstance): Promise<void> {
               connectionManager,
               roomRepository,
               roomMemberRepository,
-              userRepository
+              userRepository,
+              fastify.clock
             )
             break
           case 'leave_room':
@@ -114,13 +118,19 @@ async function wsPlugin(fastify: FastifyInstance): Promise<void> {
       }
     })
 
-    socket.on('close', () => {
+    const cleanup = () => {
+      const clientData = connectionManager.getClientData(socket)
+      if (clientData?.userId) {
+        connectionManager.removeUserSocket(clientData.userId, socket)
+      }
       handleDisconnect(socket, connectionManager)
-    })
+    }
+
+    socket.on('close', cleanup)
 
     socket.on('error', (error: Error) => {
       fastify.log.error(error, 'WebSocket error')
-      handleDisconnect(socket, connectionManager)
+      cleanup()
     })
   })
 }

@@ -1,5 +1,6 @@
+import { z } from 'zod'
 import { and, desc, eq, isNull } from 'drizzle-orm'
-import { userNotificationPayloadSchema, userNotificationTypeSchema } from '@squadzr/schemas'
+import { userNotificationTypeSchema } from '@squadzr/schemas'
 import type {
   CreateUserNotificationInput,
   UserNotification,
@@ -9,21 +10,41 @@ import type { IUserNotificationRepository } from '@domain/repositories/user-noti
 import type { Database } from '@infrastructure/database/drizzle'
 import {
   userNotifications,
+  type NewUserNotificationRow,
   type UserNotificationRow,
 } from '@infrastructure/database/schema/user-notifications'
 
-function payloadToRecord(payload: UserNotificationPayload): Record<string, unknown> {
+// Persisted payload: never carries the Discord invite. Unknown keys are
+// stripped so legacy rows that still stored the link do not leak it.
+const persistedUserNotificationPayloadSchema = z.object({
+  roomId: z.uuid(),
+  roomCode: z.string().length(6),
+  roomName: z.string(),
+  gameName: z.string(),
+  players: z.array(z.object({ name: z.string(), image: z.string().nullable() })),
+})
+
+export function notificationInputToRow(input: CreateUserNotificationInput): NewUserNotificationRow {
   return {
-    roomId: payload.roomId,
-    roomCode: payload.roomCode,
-    roomName: payload.roomName,
-    gameName: payload.gameName,
-    players: payload.players,
-    discordLink: payload.discordLink,
+    userId: input.userId,
+    roomId: input.roomId,
+    type: input.type,
+    title: input.title,
+    message: input.message,
+    payload: {
+      roomId: input.payload.roomId,
+      roomCode: input.payload.roomCode,
+      roomName: input.payload.roomName,
+      gameName: input.payload.gameName,
+      players: input.payload.players.map((player) => ({
+        name: player.name,
+        image: player.image,
+      })),
+    },
   }
 }
 
-function mapRowToEntity(row: UserNotificationRow): UserNotification {
+export function mapUserNotificationRow(row: UserNotificationRow): UserNotification {
   return {
     id: row.id,
     userId: row.userId,
@@ -31,7 +52,7 @@ function mapRowToEntity(row: UserNotificationRow): UserNotification {
     type: userNotificationTypeSchema.parse(row.type),
     title: row.title,
     message: row.message,
-    payload: userNotificationPayloadSchema.parse(row.payload),
+    payload: persistedUserNotificationPayloadSchema.parse(row.payload) as UserNotificationPayload,
     readAt: row.readAt,
     createdAt: row.createdAt,
   }
@@ -48,20 +69,13 @@ export class DrizzleUserNotificationRepository implements IUserNotificationRepos
       .orderBy(desc(userNotifications.createdAt))
       .limit(limit)
 
-    return result.map(mapRowToEntity)
+    return result.map(mapUserNotificationRow)
   }
 
   async create(input: CreateUserNotificationInput): Promise<UserNotification> {
     const result = await this.db
       .insert(userNotifications)
-      .values({
-        userId: input.userId,
-        roomId: input.roomId,
-        type: input.type,
-        title: input.title,
-        message: input.message,
-        payload: payloadToRecord(input.payload),
-      })
+      .values(notificationInputToRow(input))
       .returning()
 
     const row = result[0]
@@ -69,7 +83,7 @@ export class DrizzleUserNotificationRepository implements IUserNotificationRepos
       throw new Error('Failed to create user notification')
     }
 
-    return mapRowToEntity(row)
+    return mapUserNotificationRow(row)
   }
 
   async markAsRead(id: string, userId: string): Promise<boolean> {

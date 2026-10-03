@@ -9,6 +9,7 @@ import {
   get,
   insertGame,
   joinAll,
+  markRoomActivity,
   markRoomReady,
   postRoom,
   roomAction,
@@ -16,8 +17,7 @@ import {
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
 // Characterizes the room HTTP API through Fastify injection against a real
-// PostgreSQL 16 database. Behavior tagged "replaced in CCC-3x" is the current
-// contract only until that ticket lands; do not treat it as permanent.
+// PostgreSQL 16 database.
 
 let server: TestServer
 let host: TestUser
@@ -32,6 +32,14 @@ beforeEach(async () => {
 afterEach(async () => {
   await server.close()
 })
+
+/** Creates a room for `owner` and fills every free seat with fresh users. */
+async function createFullRoom(owner: TestUser, maxPlayers = 2) {
+  const room = await createRoom(server, owner, { gameId, maxPlayers })
+  const members = await signInMany(server, maxPlayers - 1)
+  await joinAll(server, room.code, members)
+  return { room, members }
+}
 
 const UNAUTHORIZED = { error: 'UNAUTHORIZED', message: 'Authentication required' }
 
@@ -177,13 +185,14 @@ describe('GET /api/rooms', () => {
     expect(asOutsider.json()).toMatchObject({ rooms: [{ id: room.id, isMember: false }] })
   })
 
-  it('excludes ready rooms from the catalog once the grace window has elapsed', async () => {
+  it('excludes ready rooms from the catalog immediately, before deletion', async () => {
     const room = await createRoom(server, host, { gameId })
-    await markRoomReady(server, room.id, 6)
+    await markRoomReady(server, room.id, 0)
 
     const response = await get(server, '/api/rooms')
 
     expect(response.json()).toEqual({ rooms: [] })
+    expect(await findRoomRow(server, room.id)).not.toBeNull()
   })
 })
 
@@ -207,9 +216,7 @@ describe('GET /api/rooms/:code', () => {
     expect(body.players).toHaveLength(2)
   })
 
-  // CCC-34 closed the invite leak: non-members get the public projection.
-  // Replaced in CCC-36: a Ready Room answers 404 to non-members.
-  it('[replaced in CCC-36] answers anonymous callers with the public projection, without invite or roster', async () => {
+  it('answers anonymous callers with the public projection, without invite or roster', async () => {
     const room = await createRoom(server, host, { gameId })
 
     const response = await get(server, `/api/rooms/${room.code}`)
@@ -220,6 +227,53 @@ describe('GET /api/rooms/:code', () => {
     expect(body.room).not.toHaveProperty('discordLink')
     expect(body).not.toHaveProperty('players')
     expect(response.body).not.toContain(DISCORD_INVITE)
+  })
+
+  it('answers 404 to non-members of a Ready Room, even with the code', async () => {
+    const { room } = await createFullRoom(host)
+
+    const anonymous = await get(server, `/api/rooms/${room.code}`)
+    const [outsider] = await signInMany(server, 1)
+    const asOutsider = await get(server, `/api/rooms/${room.code}`, outsider)
+
+    expect(anonymous.statusCode).toBe(404)
+    expect(anonymous.json()).toMatchObject({ error: 'ROOM_NOT_FOUND' })
+    expect(asOutsider.statusCode).toBe(404)
+    expect(asOutsider.json()).toMatchObject({ error: 'ROOM_NOT_FOUND' })
+  })
+
+  it('serves the lobby to a member of a Ready Room during retention', async () => {
+    const { room } = await createFullRoom(host)
+
+    const response = await get(server, `/api/rooms/${room.code}`, host)
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json<{ room: { discordLink: string }; players: unknown[] }>()
+    expect(body.room.discordLink).toBe(DISCORD_INVITE)
+    expect(body.players).toHaveLength(2)
+  })
+
+  it('answers 404 for an Open Room past lastActivityAt + 24h, before deletion', async () => {
+    const room = await createRoom(server, host, { gameId })
+    await markRoomActivity(server, room.id, 25 * 60)
+
+    const asMember = await get(server, `/api/rooms/${room.code}`, host)
+
+    expect(asMember.statusCode).toBe(404)
+    expect(asMember.json()).toMatchObject({ error: 'ROOM_NOT_FOUND' })
+    // The scheduler has not deleted the row yet.
+    expect(await findRoomRow(server, room.id)).not.toBeNull()
+  })
+
+  it('answers 404 for a Ready Room past readyAt + 60min, before deletion', async () => {
+    const { room } = await createFullRoom(host)
+    await markRoomReady(server, room.id, 61)
+
+    const asMember = await get(server, `/api/rooms/${room.code}`, host)
+
+    expect(asMember.statusCode).toBe(404)
+    expect(asMember.json()).toMatchObject({ error: 'ROOM_NOT_FOUND' })
+    expect(await findRoomRow(server, room.id)).not.toBeNull()
   })
 
   it('answers 404 ROOM_NOT_FOUND for an unknown code', async () => {

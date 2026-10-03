@@ -5,6 +5,7 @@ export class WsConnectionManager {
   private readonly rooms: Map<string, Set<WebSocket>> = new Map()
   private readonly clientData: WeakMap<WebSocket, WsClient> = new WeakMap()
   private readonly lobbySubscribers: Set<WebSocket> = new Set()
+  private readonly userSockets: Map<string, Set<WebSocket>> = new Map()
 
   setClientData(socket: WebSocket, data: WsClient): void {
     this.clientData.set(socket, data)
@@ -12,6 +13,26 @@ export class WsConnectionManager {
 
   getClientData(socket: WebSocket): WsClient | undefined {
     return this.clientData.get(socket)
+  }
+
+  /** Indexes an authenticated socket so user-targeted pushes (notifications) can reach it. */
+  addUserSocket(userId: string, socket: WebSocket): void {
+    let sockets = this.userSockets.get(userId)
+    if (!sockets) {
+      sockets = new Set()
+      this.userSockets.set(userId, sockets)
+    }
+    sockets.add(socket)
+  }
+
+  removeUserSocket(userId: string, socket: WebSocket): void {
+    const sockets = this.userSockets.get(userId)
+    if (!sockets) return
+
+    sockets.delete(socket)
+    if (sockets.size === 0) {
+      this.userSockets.delete(userId)
+    }
   }
 
   addToRoom(roomCode: string, socket: WebSocket): void {
@@ -70,6 +91,16 @@ export class WsConnectionManager {
   broadcastToRoomAndLobby(roomCode: string, message: WsServerMessage): void {
     this.broadcastToLobby(message)
     this.broadcastToRoom(roomCode, message)
+  }
+
+  /** Best-effort push to every open socket of one authenticated user. */
+  broadcastToUser(userId: string, message: WsServerMessage): void {
+    const sockets = this.userSockets.get(userId)
+    if (!sockets) return
+
+    for (const socket of sockets) {
+      this.sendToSocket(socket, message)
+    }
   }
 
   private sendToSocket(socket: WebSocket, message: WsServerMessage): void {

@@ -8,6 +8,8 @@ import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import websocket from '@fastify/websocket'
 import type { Env } from '@config/env'
+import type { Clock } from '@domain/services/clock.interface'
+import { SystemClock } from '@infrastructure/services/system-clock'
 import errorHandlerPlugin from '@infrastructure/plugins/error-handler.plugin'
 import databasePlugin from '@infrastructure/plugins/database.plugin'
 import authPlugin from '@infrastructure/plugins/auth.plugin'
@@ -16,10 +18,19 @@ import wsPlugin from '@infrastructure/websocket/ws.plugin'
 import roomCleanupPlugin from '@infrastructure/plugins/room-cleanup.plugin'
 import { registerRoutes } from '@interface/routes'
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    /** Injected lifecycle clock: every expiration/limit decision reads it. */
+    clock: Clock
+  }
+}
+
 export interface BuildAppOptions {
   env: Env
   /** Overrides the environment-derived logger (tests pass `false`). */
   logger?: FastifyServerOptions['logger']
+  /** Overrides the system clock; tests inject a fixed clock for exact instants. */
+  clock?: Clock
 }
 
 /**
@@ -68,11 +79,13 @@ export function defaultLogger(env: Env): FastifyLoggerOptions {
  * Every instance owns its database pool, WebSocket server and timers, and
  * releases all of them on `app.close()`.
  */
-export async function buildApp({ env, logger }: BuildAppOptions): Promise<FastifyInstance> {
+export async function buildApp({ env, logger, clock }: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
     trustProxy: true,
     logger: logger ?? defaultLogger(env),
   })
+
+  fastify.decorate('clock', clock ?? new SystemClock())
 
   await fastify.register(errorHandlerPlugin)
 

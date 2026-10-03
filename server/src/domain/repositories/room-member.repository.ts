@@ -1,22 +1,70 @@
-import type { CreateRoomMemberInput, RoomMember } from '@domain/entities/room-member.entity'
+import type {
+  CreateUserNotificationInput,
+  UserNotification,
+} from '@domain/entities/user-notification.entity'
+import type { RoomMember } from '@domain/entities/room-member.entity'
+import type { User } from '@domain/entities/user.entity'
+
+export interface JoinOpenRoomInput {
+  readonly roomId: string
+  readonly userId: string
+  /**
+   * Pure builder called with the authoritative members and player profiles read
+   * through the join transaction, after the room lock. It must not perform I/O
+   * or acquire another pool connection while the transaction holds the lock.
+   * A failure to persist notifications rolls the whole Membership change back.
+   */
+  readonly buildReadyNotifications?: (
+    members: readonly RoomMember[],
+    users: readonly Pick<User, 'id' | 'name' | 'avatarUrl'>[]
+  ) => readonly CreateUserNotificationInput[]
+}
+
+export type JoinOpenRoomOutcome =
+  | {
+      readonly status: 'joined'
+      readonly member: RoomMember
+      readonly memberCount: number
+      readonly becameReady: boolean
+      /** Notifications actually inserted by this join, for the post-commit push. */
+      readonly notifications: readonly UserNotification[]
+    }
+  | { readonly status: 'ready' }
+  | { readonly status: 'full'; readonly memberCount: number }
+  | { readonly status: 'expired' }
+  | { readonly status: 'not_found' }
+
+export interface LeaveOpenRoomInput {
+  readonly roomId: string
+  readonly userId: string
+}
+
+export type LeaveOpenRoomOutcome =
+  | { readonly status: 'left'; readonly wasHost: boolean; readonly memberCount: number }
+  | { readonly status: 'ready' }
+  | { readonly status: 'not_member' }
+  | { readonly status: 'not_found' }
 
 export interface IRoomMemberRepository {
   findByRoomId(roomId: string): Promise<RoomMember[]>
   findByUserId(userId: string): Promise<RoomMember[]>
   findByRoomAndUser(roomId: string, userId: string): Promise<RoomMember | null>
-  create(input: CreateRoomMemberInput): Promise<RoomMember>
-  delete(roomId: string, userId: string): Promise<boolean>
-  deleteByRoomId(roomId: string): Promise<boolean>
   countByRoomId(roomId: string): Promise<number>
-  /** Counts memberships where the room is still open (readyAt null). */
-  countActiveByUserId(userId: string): Promise<number>
+  /** Valid Open Rooms only: Ready Rooms and expired Open Rooms never count. */
+  countActiveByUserId(userId: string, now: Date): Promise<number>
   /**
-   * Atomically checks room capacity and inserts the member if space is available.
-   * Uses a SELECT FOR UPDATE on the room row to prevent concurrent overfill.
-   * Returns the new member or null if the room is at/over maxPlayers.
+   * Atomic join: locks the room, verifies existence, expiration, readiness and
+   * capacity, inserts the Membership, advances Room Activity and, when the last
+   * seat is taken, sets readiness and persists every member's `room_ready`
+   * notification in the same transaction. The lifecycle instant is read from
+   * the injected clock only after the room lock is held, so concurrent joins
+   * never write a timestamp older than the state they replaced.
    */
-  createIfCapacityAvailable(
-    input: CreateRoomMemberInput,
-    maxPlayers: number
-  ): Promise<{ member: RoomMember | null; memberCount: number }>
+  joinOpenRoom(input: JoinOpenRoomInput): Promise<JoinOpenRoomOutcome>
+  /**
+   * Atomic leave: locks the room, rejects readiness, removes the Membership (or
+   * deletes the room and its memberships when the host leaves) and advances Room
+   * Activity in the same transaction, reading the clock after the room lock.
+   */
+  leaveOpenRoom(input: LeaveOpenRoomInput): Promise<LeaveOpenRoomOutcome>
 }

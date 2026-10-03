@@ -19,7 +19,7 @@ import { roomCodeParamSchema, gameIdParamSchema } from '@application/dtos'
 
 export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
-  const roomController = createRoomController(fastify.db, fastify.broadcaster)
+  const roomController = createRoomController(fastify.db, fastify.broadcaster, fastify.clock)
   const gameController = createGameController(fastify.db)
 
   // Games
@@ -55,7 +55,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       tags: ['Rooms'],
       summary: 'List available rooms',
       description:
-        'Returns all open rooms that can be joined, as the public projection: no Discord invite and no roster.',
+        'Returns the Open Rooms that can still be joined, as the public projection: no Discord invite and no roster. Ready Rooms and expired Open Rooms are absent.',
       response: {
         200: roomsResponseSchema,
       },
@@ -84,7 +84,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       tags: ['Rooms'],
       summary: 'Get room by code',
       description:
-        'Returns a specific room by its 6-character code. Authenticated members of the room also get its Discord invite and roster; everyone else gets the public projection.',
+        'Returns a specific room by its 6-character code. Authenticated members get the Discord invite and roster; everyone else gets the public projection for an Open Room. Ready Rooms answer only to their members during retention; expired rooms answer 404 to everyone.',
       params: roomCodeParamSchema,
       response: {
         200: roomResponseSchema,
@@ -117,7 +117,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       tags: ['Rooms'],
       summary: 'Join a room',
       description:
-        'Joins an existing open room by its code. A room that is already ready or full rejects the join. Requires authentication.',
+        'Joins an existing Open Room by its code. The join verifies expiration, readiness and capacity in one transaction; a Ready Room rejects every Membership change. Requires authentication.',
       security: [{ session: [] }],
       params: roomCodeParamSchema,
       response: {

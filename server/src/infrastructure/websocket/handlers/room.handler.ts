@@ -5,6 +5,9 @@ import type { User } from '@domain/entities/user.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
+import type { Clock } from '@domain/services/clock.interface'
+import { isRoomExpired } from '@domain/services/room-lifecycle'
+import { ROOM } from '@config/constants'
 import type {
   JoinRoomMessage,
   LeaveRoomMessage,
@@ -70,7 +73,8 @@ export async function handleJoinRoom(
   connectionManager: WsConnectionManager,
   roomRepository: IRoomRepository,
   roomMemberRepository: IRoomMemberRepository,
-  userRepository: IUserRepository
+  userRepository: IUserRepository,
+  clock: Clock
 ): Promise<void> {
   const { roomCode } = message.payload
   const client = connectionManager.getClientData(socket)
@@ -90,8 +94,20 @@ export async function handleJoinRoom(
     return
   }
 
+  // An expired room is gone for reads and subscriptions even before deletion.
+  if (isRoomExpired(room, clock.now(), ROOM)) {
+    sendError(socket, 'ROOM_NOT_FOUND', `Room "${roomCode}" not found`)
+    return
+  }
+
   const membership = await roomMemberRepository.findByRoomAndUser(room.id, client.userId)
   if (!membership) {
+    // A Ready Room answers to non-members exactly like a missing room, matching
+    // the HTTP 404 and never leaking that the room exists.
+    if (room.readyAt) {
+      sendError(socket, 'ROOM_NOT_FOUND', `Room "${roomCode}" not found`)
+      return
+    }
     sendError(socket, 'NOT_ROOM_MEMBER', 'You are not a member of this room')
     return
   }

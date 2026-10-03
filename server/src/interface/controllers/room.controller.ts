@@ -4,10 +4,9 @@ import type { IGetAvailableRoomsUseCase } from '@application/use-cases/room/get-
 import type { IGetRoomByCodeUseCase } from '@application/use-cases/room/get-room-by-code.use-case'
 import type { IJoinRoomUseCase } from '@application/use-cases/room/join-room.use-case'
 import type { ILeaveRoomUseCase } from '@application/use-cases/room/leave-room.use-case'
-import type { INotifyRoomReadyUseCase } from '@application/use-cases/room/notify-room-ready.use-case'
 import type { IGetMyRoomsUseCase } from '@application/use-cases/room/get-my-rooms.use-case'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
-import { RoomNotFoundError, NotRoomMemberError } from '@application/errors'
+import { AppError, RoomNotFoundError, NotRoomMemberError } from '@application/errors'
 import { createRoomRequestSchema, roomCodeParamSchema } from '@application/dtos'
 import { toMemberRoom, toPublicRoom, toRoomMemberDto } from '@application/projections'
 
@@ -17,7 +16,6 @@ export interface RoomControllerDeps {
   readonly getRoomByCodeUseCase: IGetRoomByCodeUseCase
   readonly joinRoomUseCase: IJoinRoomUseCase
   readonly leaveRoomUseCase: ILeaveRoomUseCase
-  readonly notifyRoomReadyUseCase: INotifyRoomReadyUseCase
   readonly getMyRoomsUseCase: IGetMyRoomsUseCase
   readonly broadcaster: IRoomBroadcaster
 }
@@ -66,6 +64,12 @@ export class RoomController {
       language: body.language,
     })
 
+    request.server.log.info(
+      { roomId: result.room.id, roomCode: result.room.code, hostId: userId },
+      'Room created'
+    )
+
+    // After commit: the room row and its host Membership already exist.
     this.deps.broadcaster.broadcastRoomCreated(result.room)
 
     await reply.status(201).send({ room: toMemberRoom(result.room) })
@@ -75,40 +79,63 @@ export class RoomController {
     const userId = request.userId
     const params = roomCodeParamSchema.parse(request.params)
 
-    const { room } = await this.deps.getRoomByCodeUseCase.execute({ code: params.code })
-    if (!room) {
-      throw new RoomNotFoundError(params.code)
+    let result
+    try {
+      result = await this.deps.joinRoomUseCase.execute({
+        code: params.code,
+        userId,
+      })
+    } catch (error) {
+      // A transaction failure rolls back Membership, Room Activity, readiness
+      // and notifications together; the room stays open and untouched.
+      if (!(error instanceof AppError)) {
+        request.server.log.error(
+          { err: error, roomCode: params.code, userId },
+          'Room join failed — activity, readiness and notifications rolled back'
+        )
+      }
+      throw error
     }
 
-    const result = await this.deps.joinRoomUseCase.execute({
-      roomId: room.id,
-      userId,
-    })
+    const { room } = result
 
+    request.server.log.info(
+      {
+        roomId: room.id,
+        roomCode: room.code,
+        userId,
+        memberCount: result.memberCount,
+        becameReady: result.isRoomNowFull,
+      },
+      'Room joined'
+    )
+
+    // After commit: the catalog hint reflects the durable Membership change.
     this.deps.broadcaster.broadcastRoomUpdated(room.id, room.code, result.memberCount)
 
     if (result.isRoomNowFull) {
-      try {
-        const notificationResult = await this.deps.notifyRoomReadyUseCase.execute({
-          roomId: room.id,
-        })
-        request.server.log.info(
-          {
-            roomId: room.id,
-            roomCode: room.code,
-            ...notificationResult,
-          },
-          'Room ready notifications processed'
-        )
-      } catch (error) {
-        request.server.log.error(
-          {
-            roomId: room.id,
-            roomCode: room.code,
-            error,
-          },
-          'Failed to process room ready notifications'
-        )
+      request.server.log.info(
+        { roomId: room.id, roomCode: room.code, memberCount: result.memberCount },
+        'Room ready'
+      )
+
+      // Best-effort realtime push: the notifications are already persisted, so
+      // a failed push never loses them (the next fetch returns them).
+      for (const notification of result.createdNotifications) {
+        try {
+          this.deps.broadcaster.broadcastNotification(notification, room.discordLink)
+        } catch (error) {
+          request.server.log.error(
+            {
+              err: error,
+              roomId: room.id,
+              roomCode: room.code,
+              notificationId: notification.id,
+              userId: notification.userId,
+            },
+            'Room ready notification push failed'
+          )
+        }
       }
     }
 
@@ -122,7 +149,10 @@ export class RoomController {
     const userId = request.userId
     const params = roomCodeParamSchema.parse(request.params)
 
-    const { room } = await this.deps.getRoomByCodeUseCase.execute({ code: params.code })
+    const { room } = await this.deps.getRoomByCodeUseCase.execute({
+      code: params.code,
+      viewerId: userId,
+    })
     if (!room) {
       throw new RoomNotFoundError(params.code)
     }
@@ -136,9 +166,18 @@ export class RoomController {
       throw new NotRoomMemberError(userId, room.id)
     }
 
+    // After commit: the deletion or the new member count is durable.
     if (result.wasHostLeave) {
+      request.server.log.info(
+        { roomId: room.id, roomCode: room.code, userId },
+        'Room deleted (host left)'
+      )
       this.deps.broadcaster.broadcastRoomDeleted(room.id, room.code)
     } else {
+      request.server.log.info(
+        { roomId: room.id, roomCode: room.code, userId, memberCount: result.memberCount },
+        'Room left'
+      )
       this.deps.broadcaster.broadcastRoomUpdated(room.id, room.code, result.memberCount)
     }
 

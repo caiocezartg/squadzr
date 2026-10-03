@@ -1,12 +1,17 @@
 export type UserNotificationType = 'room_ready'
 
+/**
+ * Persisted payload of a `room_ready` notification. It deliberately never
+ * stores the Discord invite: the link is resolved at read time through the
+ * authorized room while the room is retained, so an expired notification can
+ * outlive the room without revealing anything.
+ */
 export interface UserNotificationPayload {
   readonly roomId: string
   readonly roomCode: string
   readonly roomName: string
   readonly gameName: string
   readonly players: ReadonlyArray<{ readonly name: string; readonly image: string | null }>
-  readonly discordLink: string | null
 }
 
 export interface UserNotification {

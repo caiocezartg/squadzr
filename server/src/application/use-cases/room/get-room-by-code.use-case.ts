@@ -2,6 +2,9 @@ import type { Room } from '@domain/entities/room.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
+import type { Clock } from '@domain/services/clock.interface'
+import { isRoomExpired } from '@domain/services/room-lifecycle'
+import { ROOM } from '@config/constants'
 
 export interface RoomPlayer {
   readonly id: string
@@ -17,6 +20,7 @@ export interface GetRoomByCodeInput {
 }
 
 export interface GetRoomByCodeOutput {
+  /** Null when the room does not exist, expired, or is a Ready Room read by a non-member. */
   readonly room: Room | null
   /** True when `viewerId` holds a Membership in the room: only then may private details be shown. */
   readonly isMember: boolean
@@ -31,7 +35,8 @@ export class GetRoomByCodeUseCase implements IGetRoomByCodeUseCase {
   constructor(
     private readonly roomRepository: IRoomRepository,
     private readonly roomMemberRepository: IRoomMemberRepository,
-    private readonly userRepository: IUserRepository
+    private readonly userRepository: IUserRepository,
+    private readonly clock: Clock
   ) {}
 
   async execute(input: GetRoomByCodeInput): Promise<GetRoomByCodeOutput> {
@@ -40,7 +45,19 @@ export class GetRoomByCodeUseCase implements IGetRoomByCodeUseCase {
       return { room: null, isMember: false, players: [] }
     }
 
-    if (!(await this.isMember(room.id, input.viewerId))) {
+    const isMember = await this.isMember(room.id, input.viewerId)
+
+    // Expiration is decided by the injected clock, never by the scheduler row.
+    if (isRoomExpired(room, this.clock.now(), ROOM)) {
+      return { room: null, isMember: false, players: [] }
+    }
+
+    // A Ready Room is accessible only to its members, during retention.
+    if (room.readyAt && !isMember) {
+      return { room: null, isMember: false, players: [] }
+    }
+
+    if (!isMember) {
       return { room, isMember: false, players: [] }
     }
 

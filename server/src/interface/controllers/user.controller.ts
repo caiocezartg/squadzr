@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { IUserNotificationRepository } from '@domain/repositories/user-notification.repository'
 import type { IGetUserUseCase } from '@application/use-cases/user/get-user.use-case'
+import type { IListNotificationsUseCase } from '@application/use-cases/notification/list-notifications.use-case'
 import { UserNotFoundError, UnauthorizedError } from '@application/errors'
 import { listNotificationsQuerySchema, notificationIdParamSchema } from '@application/dtos'
 import { toUserDto, toUserNotificationDto } from '@application/projections'
@@ -15,6 +16,7 @@ function getUserId(request: FastifyRequest): string {
 export interface UserControllerDeps {
   readonly getUserUseCase: IGetUserUseCase
   readonly userNotificationRepository: IUserNotificationRepository
+  readonly listNotificationsUseCase: IListNotificationsUseCase
 }
 
 export class UserController {
@@ -36,9 +38,13 @@ export class UserController {
     const query = listNotificationsQuerySchema.parse(request.query)
     const limit = query.limit ?? 20
 
-    const notifications = await this.deps.userNotificationRepository.findByUserId(userId, limit)
+    const result = await this.deps.listNotificationsUseCase.execute({ userId, limit })
 
-    await reply.send({ notifications: notifications.map(toUserNotificationDto) })
+    await reply.send({
+      notifications: result.notifications.map(({ notification, discordLink }) =>
+        toUserNotificationDto(notification, discordLink)
+      ),
+    })
   }
 
   async markNotificationAsRead(request: FastifyRequest, reply: FastifyReply): Promise<void> {

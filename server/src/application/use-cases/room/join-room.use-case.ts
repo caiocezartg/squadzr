@@ -1,18 +1,33 @@
+import type { Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
+import type { UserNotification } from '@domain/entities/user-notification.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
-import { RoomNotFoundError, RoomFullError, RoomJoinLimitReachedError } from '@application/errors'
+import type { IGameRepository } from '@domain/repositories/game.repository'
+import type { Clock } from '@domain/services/clock.interface'
+import { isRoomExpired } from '@domain/services/room-lifecycle'
+import {
+  RoomNotFoundError,
+  RoomFullError,
+  RoomJoinLimitReachedError,
+  RoomReadyError,
+} from '@application/errors'
+import { buildRoomReadyNotifications } from './room-ready-notifications'
 import { ROOM } from '@config/constants'
 
 export interface JoinRoomInput {
-  readonly roomId: string
+  readonly code: string
   readonly userId: string
 }
 
 export interface JoinRoomOutput {
+  readonly room: Room
   readonly roomMember: RoomMember
   readonly memberCount: number
+  /** True when this join produced the single transition to Ready. */
   readonly isRoomNowFull: boolean
+  /** Persisted by the join transaction; pushed best-effort after commit. */
+  readonly createdNotifications: readonly UserNotification[]
 }
 
 export interface IJoinRoomUseCase {
@@ -22,53 +37,76 @@ export interface IJoinRoomUseCase {
 export class JoinRoomUseCase implements IJoinRoomUseCase {
   constructor(
     private readonly roomRepository: IRoomRepository,
-    private readonly roomMemberRepository: IRoomMemberRepository
+    private readonly roomMemberRepository: IRoomMemberRepository,
+    private readonly gameRepository: IGameRepository,
+    private readonly clock: Clock
   ) {}
 
   async execute(input: JoinRoomInput): Promise<JoinRoomOutput> {
-    const room = await this.roomRepository.findById(input.roomId)
-    if (!room) {
-      throw new RoomNotFoundError(input.roomId)
+    const now = this.clock.now()
+
+    const room = await this.roomRepository.findByCode(input.code)
+    if (!room || isRoomExpired(room, now, ROOM)) {
+      throw new RoomNotFoundError(input.code)
     }
 
-    // Readiness (readyAt) is not checked here: CCC-36 owns the rule that a
-    // Ready Room rejects every Membership change. Capacity is still enforced
-    // atomically below, so a full room rejects the join with ROOM_FULL.
-    // If user is already a member, return their existing membership (idempotent)
-    const existingMember = await this.roomMemberRepository.findByRoomAndUser(
-      input.roomId,
-      input.userId
-    )
+    // Idempotent for an existing member; no Membership change, no activity change.
+    const existingMember = await this.roomMemberRepository.findByRoomAndUser(room.id, input.userId)
     if (existingMember) {
-      const memberCount = await this.roomMemberRepository.countByRoomId(input.roomId)
-      return { roomMember: existingMember, memberCount, isRoomNowFull: false }
+      const memberCount = await this.roomMemberRepository.countByRoomId(room.id)
+      return {
+        room,
+        roomMember: existingMember,
+        memberCount,
+        isRoomNowFull: false,
+        createdNotifications: [],
+      }
     }
 
-    // Enforce membership limit: max 5 active rooms
-    const activeMembershipCount = await this.roomMemberRepository.countActiveByUserId(input.userId)
+    // Enforce membership limit: max 5 valid rooms.
+    const activeMembershipCount = await this.roomMemberRepository.countActiveByUserId(
+      input.userId,
+      now
+    )
     if (activeMembershipCount >= ROOM.JOIN_LIMIT) {
       throw new RoomJoinLimitReachedError(ROOM.JOIN_LIMIT)
     }
 
-    // Atomically check capacity and insert — prevents concurrent overfill via SELECT FOR UPDATE
-    const { member: roomMember, memberCount: newMemberCount } =
-      await this.roomMemberRepository.createIfCapacityAvailable(
-        { roomId: input.roomId, userId: input.userId },
-        room.maxPlayers
-      )
+    // The game name is stable and read before acquiring a transaction connection.
+    // The repository reads the authoritative roster and profiles through tx.
+    const game = await this.gameRepository.findById(room.gameId)
+    const gameName = game?.name ?? 'Unknown game'
 
-    if (!roomMember) {
-      throw new RoomFullError(input.roomId)
+    const outcome = await this.roomMemberRepository.joinOpenRoom({
+      roomId: room.id,
+      userId: input.userId,
+      buildReadyNotifications: (authoritativeMembers, users) =>
+        buildRoomReadyNotifications({
+          room,
+          members: authoritativeMembers,
+          users,
+          gameName,
+        }),
+    })
+
+    switch (outcome.status) {
+      case 'joined':
+        return {
+          room,
+          roomMember: outcome.member,
+          memberCount: outcome.memberCount,
+          isRoomNowFull: outcome.becameReady,
+          createdNotifications: outcome.notifications,
+        }
+      case 'full':
+        // Capacity is decided before readiness so the seat race loser keeps the
+        // established ROOM_FULL answer, exactly as before readiness existed.
+        throw new RoomFullError(room.id)
+      case 'ready':
+        throw new RoomReadyError(room.id, 'join')
+      case 'expired':
+      case 'not_found':
+        throw new RoomNotFoundError(input.code)
     }
-
-    const isRoomNowFull = newMemberCount >= room.maxPlayers
-
-    if (isRoomNowFull) {
-      await this.roomRepository.update(input.roomId, {
-        readyAt: new Date(),
-      })
-    }
-
-    return { roomMember, memberCount: newMemberCount, isRoomNowFull }
   }
 }

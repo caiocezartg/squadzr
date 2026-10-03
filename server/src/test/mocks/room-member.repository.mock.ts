@@ -1,8 +1,12 @@
 import { vi, type Mock } from 'vitest'
-import type { RoomMember, CreateRoomMemberInput } from '@domain/entities/room-member.entity'
-import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
-
-type CreateIfCapacityAvailableResult = { member: RoomMember | null; memberCount: number }
+import type { RoomMember } from '@domain/entities/room-member.entity'
+import type {
+  IRoomMemberRepository,
+  JoinOpenRoomInput,
+  JoinOpenRoomOutcome,
+  LeaveOpenRoomInput,
+  LeaveOpenRoomOutcome,
+} from '@domain/repositories/room-member.repository'
 
 export function createMockRoomMember(overrides?: Partial<RoomMember>): RoomMember {
   return {
@@ -25,32 +29,23 @@ export function createMockRoomMemberRepository(): MockRoomMemberRepository {
     findByRoomAndUser: vi
       .fn<(roomId: string, userId: string) => Promise<RoomMember | null>>()
       .mockResolvedValue(null),
-    create: vi
-      .fn<(input: CreateRoomMemberInput) => Promise<RoomMember>>()
-      .mockImplementation((input) =>
-        Promise.resolve(
-          createMockRoomMember({
-            roomId: input.roomId,
-            userId: input.userId,
-          })
-        )
-      ),
-    delete: vi.fn<(roomId: string, userId: string) => Promise<boolean>>().mockResolvedValue(false),
-    deleteByRoomId: vi.fn<(roomId: string) => Promise<boolean>>().mockResolvedValue(false),
     countByRoomId: vi.fn<(roomId: string) => Promise<number>>().mockResolvedValue(0),
-    countActiveByUserId: vi.fn<(userId: string) => Promise<number>>().mockResolvedValue(0),
-    createIfCapacityAvailable: vi
-      .fn<
-        (
-          input: CreateRoomMemberInput,
-          maxPlayers: number
-        ) => Promise<CreateIfCapacityAvailableResult>
-      >()
+    countActiveByUserId: vi
+      .fn<(userId: string, now: Date) => Promise<number>>()
+      .mockResolvedValue(0),
+    joinOpenRoom: vi
+      .fn<(input: JoinOpenRoomInput) => Promise<JoinOpenRoomOutcome>>()
       .mockImplementation((input) =>
         Promise.resolve({
+          status: 'joined',
           member: createMockRoomMember({ roomId: input.roomId, userId: input.userId }),
           memberCount: 1,
+          becameReady: false,
+          notifications: [],
         })
       ),
+    leaveOpenRoom: vi
+      .fn<(input: LeaveOpenRoomInput) => Promise<LeaveOpenRoomOutcome>>()
+      .mockResolvedValue({ status: 'not_member' }),
   }
 }
