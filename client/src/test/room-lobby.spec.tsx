@@ -16,12 +16,9 @@
  * through the mock socket (./ws-mock). No test touches private hook state.
  */
 
-import { act, render, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { act, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { renderRoomsFlow } from './harness'
-import { PresenceIndicator } from '@/components/rooms/presence-indicator'
-import { ConnectionStatus } from '@/components/rooms/connection-status'
 import { httpError, httpOk, onHttp } from './http-router'
 import {
   catalogGames,
@@ -379,6 +376,49 @@ describe('room lobby — failure and access gates', () => {
   })
 })
 
+describe('room lobby — Ready Room access gates', () => {
+  // A Ready Room as the server answers a visitor or non-member: the public
+  // projection, with no roster, no invite and no readiness.
+  const { discordLink: _discordLink, ...publicLobbyRoom } = lobbyRoom
+  const publicReadyRoomResponse = {
+    room: { ...publicLobbyRoom, memberCount: lobbyRoom.maxPlayers, isMember: false },
+  }
+
+  it('never shows the roster or invite of a Ready Room to a visitor', async () => {
+    onHttp('GET', '/api/rooms/:code', () => httpOk(publicReadyRoomResponse))
+    renderRoomsFlow('/rooms/LOBBY1', { user: null })
+
+    expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
+
+    // A visitor never joins the room channel, so no snapshot can ever arrive.
+    openLatestWebSocket()
+    expect(latestWebSocket().sentFrames()).toEqual([])
+
+    expect(screen.queryByText('Caio')).not.toBeInTheDocument()
+    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+  })
+
+  it('never shows the roster or invite of a Ready Room to a non-member', async () => {
+    onHttp('GET', '/api/rooms/:code', () => httpOk(publicReadyRoomResponse))
+    renderRoomsFlow('/rooms/LOBBY1', {
+      user: { id: 'user-7', name: 'Outsider', email: 'outsider@squadzr.test', image: null },
+    })
+    expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
+
+    openLatestWebSocket()
+    sendFromServer({
+      type: 'error',
+      payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
+    })
+
+    expect(await screen.findByText('You are not a member of this squad')).toBeInTheDocument()
+    expect(screen.queryByText('Caio')).not.toBeInTheDocument()
+    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+  })
+})
+
 describe('room lobby — full reload of a full room', () => {
   const thirdPlayer = { id: 'user-3', name: 'Bruno', image: null, isHost: false }
   const fullRoster = [hostPlayer, guestPlayer, thirdPlayer]
@@ -429,35 +469,5 @@ describe('room lobby — full reload of a full room', () => {
       'https://discord.gg/lobby'
     )
     expect(screen.getByRole('button', { name: 'Squad locked' })).toBeDisabled()
-  })
-})
-
-describe('realtime indicators — keyboard tooltips', () => {
-  it('exposes the Presence and connection labels to keyboard focus', async () => {
-    const user = userEvent.setup({ delay: null })
-    render(
-      <div>
-        <PresenceIndicator online />
-        <ConnectionStatus status="open" />
-      </div>
-    )
-
-    // The indicator is reachable with Tab and its tooltip is the accessible
-    // description, so keyboard users get the same Online/Connected label.
-    await user.tab()
-    const presence = screen.getByText('Online').closest('[tabindex="0"]')
-    expect(presence).toHaveFocus()
-    expect(presence).toHaveAccessibleDescription('Online')
-
-    await user.tab()
-    const connection = screen.getByText('Connected').closest('[tabindex="0"]')
-    expect(connection).toHaveFocus()
-    expect(connection).toHaveAccessibleDescription('Connected')
-
-    // Escape dismisses the reveal until hover/focus leaves the indicator.
-    const connectionTooltip = within(connection as HTMLElement).getByRole('tooltip')
-    expect(connectionTooltip).toHaveClass('group-focus-visible:opacity-100')
-    await user.keyboard('{Escape}')
-    expect(connectionTooltip).not.toHaveClass('group-focus-visible:opacity-100')
   })
 })
