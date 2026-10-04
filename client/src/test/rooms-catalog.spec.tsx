@@ -166,8 +166,10 @@ describe('rooms catalog — pagination', () => {
   })
 })
 
-describe('rooms catalog — lobby WebSocket cache updates', () => {
-  it('subscribes to the lobby and applies created/updated/removed events idempotently', async () => {
+describe('rooms catalog — realtime refetch updates', () => {
+  it('refetches on created/updated/removed events and renders each room once', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
     const { queryClient } = renderRoomsFlow('/rooms')
     await screen.findByText('Ranked grind')
 
@@ -178,13 +180,24 @@ describe('rooms catalog — lobby WebSocket cache updates', () => {
       )
     )
 
+    // The server creates a room; the event refetches the authoritative list.
+    // Duplicate events stay idempotent: the room renders and caches once.
+    const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
+    serverRooms.rooms = [...serverRooms.rooms, extraRoom]
     sendFromServer({ type: 'room_created', payload: { room: extraRoom } })
     sendFromServer({ type: 'room_created', payload: { room: extraRoom } })
     expect(await screen.findByText('Extra room')).toBeInTheDocument()
     expect(screen.getAllByText('Extra room')).toHaveLength(1)
+    await waitFor(() =>
+      expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeCreate)
+    )
     const cachedAfterCreate = queryClient.getQueryData<RoomsResponse>(['rooms'])
     expect(cachedAfterCreate?.rooms.filter((room) => room.id === extraRoom.id)).toHaveLength(1)
 
+    // A Membership change refetches the new count instead of patching it in.
+    serverRooms.rooms = serverRooms.rooms.map((room) =>
+      room.id === openRoom.id ? { ...room, memberCount: 3 } : room
+    )
     sendFromServer({
       type: 'room_updated',
       payload: { roomId: openRoom.id, roomCode: openRoom.code, memberCount: 3 },
@@ -200,7 +213,9 @@ describe('rooms catalog — lobby WebSocket cache updates', () => {
       expect(within(openCard as HTMLElement).getByText('3', { exact: true })).toBeInTheDocument()
     )
 
-    // A Ready/expired room is removed from the catalog immediately.
+    // A Ready/expired room leaves the server list; the event refetches the
+    // catalog until the room is gone.
+    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== fullRoom.id)
     sendFromServer({
       type: 'room_removed',
       payload: { roomId: fullRoom.id, roomCode: fullRoom.code },
@@ -212,6 +227,36 @@ describe('rooms catalog — lobby WebSocket cache updates', () => {
     await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
     const cachedAfterDelete = queryClient.getQueryData<RoomsResponse>(['rooms'])
     expect(cachedAfterDelete?.rooms.some((room) => room.id === fullRoom.id)).toBe(false)
+  })
+
+  it('drops a Ready room through authoritative state and never resurrects it from a late event', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    renderRoomsFlow('/rooms')
+    await screen.findByText('Full lobby')
+
+    openLatestWebSocket()
+
+    // The room becomes Ready: the server drops it from the catalog list and
+    // announces room_removed without waiting for any polling.
+    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== fullRoom.id)
+    sendFromServer({
+      type: 'room_removed',
+      payload: { roomId: fullRoom.id, roomCode: fullRoom.code },
+    })
+    await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
+    const fetchesAfterRemoval = countHttpCalls('GET', '/api/rooms')
+
+    // An older event for the same room must not patch it back into the cache:
+    // the affected query refetches the authoritative list, where it is gone.
+    sendFromServer({
+      type: 'room_updated',
+      payload: { roomId: fullRoom.id, roomCode: fullRoom.code, memberCount: 2 },
+    })
+    await waitFor(() =>
+      expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesAfterRemoval)
+    )
+    expect(screen.queryByText('Full lobby')).not.toBeInTheDocument()
   })
 
   it('applies a pushed notification to the notifications cache without duplicating it', async () => {

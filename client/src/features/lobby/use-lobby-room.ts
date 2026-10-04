@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useCatalogCommands } from '@/features/catalog'
 import { useSession } from '@/lib/auth-client'
 import type { RealtimeStatus } from '@/lib/ws-client'
 import type { Game, Player, PublicRoom } from '@/types'
 import { rosterFromSnapshot, type PresenceState } from './room-snapshot'
-import { useCatalogCache } from './use-catalog-cache'
 import { useRoomChannel } from './use-room-channel'
 import { useRoomData } from './use-room-data'
 import { useRoomMembership } from './use-room-membership'
@@ -37,7 +37,7 @@ export interface LobbyRoomView {
 export function useLobbyRoom(roomCode: string): LobbyRoomView {
   const { data: session, isPending: sessionPending } = useSession()
   const navigate = useNavigate()
-  const catalog = useCatalogCache()
+  const catalog = useCatalogCommands()
   const roomData = useRoomData(roomCode)
   const userId = session?.user?.id
 

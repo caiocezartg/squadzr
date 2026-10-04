@@ -1,17 +1,17 @@
 import { useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
+import type { CatalogCommands } from '@/features/catalog'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import type { PublicRoom } from '@/types'
-import type { CatalogCache } from './use-catalog-cache'
 
 interface UseRoomMembershipOptions {
   roomCode: string
   /** Metadata of the room whose Membership is being left. */
   room: PublicRoom | null
   userId: string | undefined
-  catalog: CatalogCache
+  catalog: CatalogCommands
   /** Releases this tab's channel for the room. */
   notifyRoomLeave: (roomCode: string) => void
 }

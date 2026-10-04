@@ -75,6 +75,8 @@ describe('catalog', () => {
   })
 
   it('ignores a room_created event that breaks the contract and applies the next valid one', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
     const { queryClient } = renderRoomsFlow('/rooms', { user: null })
     await screen.findByText(openRoom.name)
     openLatestWebSocket()
@@ -82,6 +84,8 @@ describe('catalog', () => {
     sendFromServer({ type: 'room_created', payload: { room: { ...newRoom, maxPlayers: 'many' } } })
     sendFromServer({ type: 'room_updated', payload: { roomId: openRoom.id, memberCount: 'many' } })
 
+    // Contract-breaking events never reach the page, so no refetch runs and
+    // the cache keeps the authoritative list it already had.
     expect(screen.queryByText(newRoom.name)).not.toBeInTheDocument()
     expect(queryClient.getQueryData<RoomsResponse>(['rooms'])?.rooms).toHaveLength(
       catalogRooms.rooms.length
@@ -91,6 +95,8 @@ describe('catalog', () => {
       issues: [{ path: 'room.maxPlayers', code: 'invalid_type' }],
     })
 
+    // The next valid event refetches the catalog, which now carries the room.
+    serverRooms.rooms = [...serverRooms.rooms, newRoom]
     sendFromServer({ type: 'room_created', payload: { room: newRoom } })
 
     expect(await screen.findByText(newRoom.name)).toBeInTheDocument()

@@ -97,11 +97,14 @@ describe('realtime protocol handshake', () => {
 
   it('keeps the matching build running without a notice or reload', async () => {
     const reload = stubReload()
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
     renderRoomsFlow('/rooms')
     await screen.findByText(openRoom.name)
 
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 2 } })
+    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== openRoom.id)
     sendFromServer({
       type: 'room_removed',
       payload: { roomId: openRoom.id, roomCode: openRoom.code },
