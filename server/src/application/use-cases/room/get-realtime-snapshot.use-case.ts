@@ -3,23 +3,16 @@ import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { Clock } from '@domain/services/clock.interface'
-import { roomExpiresAt } from '@domain/services/room-lifecycle'
+import { isRoomExpired, roomExpiresAt } from '@domain/services/room-lifecycle'
 import { ROOM } from '@config/constants'
-import { RoomNotFoundError, UnauthorizedError, AppError } from '@application/errors'
+import { RoomNotFoundError, UnauthorizedError, NotRoomMemberError } from '@application/errors'
 import { GetRoomByCodeUseCase, type RoomPlayer } from './get-room-by-code.use-case'
+import { findRoomPlayers } from './find-room-players'
 
 export interface RealtimeSnapshot {
   readonly room: Room
   readonly players: RoomPlayer[]
   readonly expiresAt: Date
-}
-
-class RealtimeMembershipRequiredError extends AppError {
-  readonly statusCode = 403
-  readonly code = 'NOT_ROOM_MEMBER'
-  constructor() {
-    super('You are not a member of this room')
-  }
 }
 
 export interface IGetRealtimeSnapshotUseCase {
@@ -33,9 +26,9 @@ export class GetRealtimeSnapshotUseCase implements IGetRealtimeSnapshotUseCase {
 
   constructor(
     private readonly rooms: IRoomRepository,
-    members: IRoomMemberRepository,
-    users: IUserRepository,
-    clock: Clock
+    private readonly members: IRoomMemberRepository,
+    private readonly users: IUserRepository,
+    private readonly clock: Clock
   ) {
     this.getRoom = new GetRoomByCodeUseCase(rooms, members, users, clock)
   }
@@ -47,15 +40,14 @@ export class GetRealtimeSnapshotUseCase implements IGetRealtimeSnapshotUseCase {
     if (!userId) throw new UnauthorizedError()
     const result = await this.getRoom.execute({ code, viewerId: userId })
     if (!result.room) throw new RoomNotFoundError(code)
-    if (!result.isMember) throw new RealtimeMembershipRequiredError()
+    if (!result.isMember) throw new NotRoomMemberError(userId, result.room.id)
     return { ...this.snapshot(result.room, result.players), userId }
   }
 
   async read(code: string): Promise<RealtimeSnapshot | null> {
     const room = await this.rooms.findByCode(code)
-    if (!room) return null
-    const result = await this.getRoom.execute({ code, viewerId: room.hostId })
-    return result.room && result.isMember ? this.snapshot(result.room, result.players) : null
+    if (!room || isRoomExpired(room, this.clock.now(), ROOM)) return null
+    return this.snapshot(room, await findRoomPlayers(room, this.members, this.users))
   }
 
   private snapshot(room: Room, players: RoomPlayer[]): RealtimeSnapshot {

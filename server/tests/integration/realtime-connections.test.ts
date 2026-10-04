@@ -130,7 +130,7 @@ describe('connection identity', () => {
     socket.send({ type: 'join_room', payload: { roomCode: room.code } })
     expect((await socket.next()).payload).toEqual({
       code: 'NOT_ROOM_MEMBER',
-      message: 'You are not a member of this room',
+      message: `User "${outsider!.id}" is not a member of room "${room.id}"`,
     })
     expect(subscriptionState(server).roomSockets(room.code)).toBe(0)
   })

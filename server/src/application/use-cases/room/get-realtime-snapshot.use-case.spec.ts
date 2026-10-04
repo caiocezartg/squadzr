@@ -9,6 +9,8 @@ import {
   createMockUserRepository,
 } from '@test/mocks'
 import { FakeClock } from '@test/harness/clock'
+import { NotRoomMemberError, RoomNotFoundError } from '@application/errors'
+import { ROOM } from '@config/constants'
 
 const NOW = new Date('2026-01-01T00:00:00Z')
 
@@ -42,11 +44,16 @@ describe('realtime snapshot access', () => {
   })
 
   it('rejects Open Room non-members without resolving the roster', async () => {
-    const { useCase, members, users } = setup()
+    const { useCase, members, users, room } = setup()
     members.findByRoomAndUser.mockResolvedValue(null)
-    await expect(useCase.subscribe('ABC123', 'outsider')).rejects.toMatchObject({
+    const subscription = useCase.subscribe('ABC123', 'outsider')
+    await expect(subscription).rejects.toBeInstanceOf(NotRoomMemberError)
+    await expect(subscription).rejects.toMatchObject({
       code: 'NOT_ROOM_MEMBER',
+      statusCode: 422,
+      message: `User "outsider" is not a member of room "${room.id}"`,
     })
+    expect(members.findByRoomId).not.toHaveBeenCalled()
     expect(users.findByIds).not.toHaveBeenCalled()
   })
 
@@ -54,9 +61,12 @@ describe('realtime snapshot access', () => {
     const { useCase, rooms, members, room, users } = setup()
     rooms.findByCode.mockResolvedValue({ ...room, readyAt: NOW })
     members.findByRoomAndUser.mockResolvedValue(null)
-    await expect(useCase.subscribe('ABC123', 'outsider')).rejects.toMatchObject({
+    const subscription = useCase.subscribe('ABC123', 'outsider')
+    await expect(subscription).rejects.toBeInstanceOf(RoomNotFoundError)
+    await expect(subscription).rejects.toMatchObject({
       code: 'ROOM_NOT_FOUND',
     })
+    expect(members.findByRoomId).not.toHaveBeenCalled()
     expect(users.findByIds).not.toHaveBeenCalled()
   })
 
@@ -77,12 +87,69 @@ describe('realtime snapshot access', () => {
   })
 
   it('reads the durable roster for post-commit publications and ignores deleted rooms', async () => {
-    const { useCase, room, rooms } = setup()
+    const { useCase, room, rooms, members, users } = setup()
+    members.findByRoomId.mockResolvedValue([
+      createMockRoomMember({ roomId: room.id, userId: room.hostId }),
+      createMockRoomMember({ roomId: room.id, userId: 'member' }),
+      createMockRoomMember({ roomId: room.id, userId: 'missing-user' }),
+    ])
+    users.findByIds.mockResolvedValue([
+      createMockUser({ id: 'member', name: 'Member', avatarUrl: 'https://cdn.test/member.png' }),
+      createMockUser({ id: room.hostId, name: 'Host' }),
+    ])
     expect(await useCase.read('ABC123')).toMatchObject({
       room,
-      players: [expect.objectContaining({ id: room.hostId })],
+      players: [
+        { id: room.hostId, name: 'Host', image: null, isHost: true },
+        { id: 'member', name: 'Member', image: 'https://cdn.test/member.png', isHost: false },
+      ],
     })
+    expect(rooms.findByCode).toHaveBeenCalledTimes(1)
+    expect(members.findByRoomAndUser).not.toHaveBeenCalled()
     rooms.findByCode.mockResolvedValue(null)
     expect(await useCase.read('ABC123')).toBeNull()
   })
+
+  it.each([
+    { state: 'Open', readyAt: null },
+    { state: 'Ready', readyAt: NOW },
+  ])('reads a $state Room roster without using host Membership as access', async ({ readyAt }) => {
+    const { useCase, room, rooms, members, users } = setup()
+    const publicationRoom = { ...room, readyAt }
+    rooms.findByCode.mockResolvedValue(publicationRoom)
+    members.findByRoomAndUser.mockResolvedValue(null)
+    members.findByRoomId.mockResolvedValue([
+      createMockRoomMember({ roomId: room.id, userId: 'member' }),
+    ])
+    users.findByIds.mockResolvedValue([createMockUser({ id: 'member', name: 'Member' })])
+
+    expect(await useCase.read('ABC123')).toEqual({
+      room: publicationRoom,
+      players: [{ id: 'member', name: 'Member', image: null, isHost: false }],
+      expiresAt: new Date(
+        NOW.getTime() + (readyAt ? ROOM.READY_ROOM_RETENTION_MS : ROOM.OPEN_ROOM_TTL_MS)
+      ),
+    })
+    expect(members.findByRoomAndUser).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { state: 'Open', readyAt: null, retention: ROOM.OPEN_ROOM_TTL_MS },
+    { state: 'Ready', readyAt: NOW, retention: ROOM.READY_ROOM_RETENTION_MS },
+  ])(
+    'stops reading a $state Room roster at its exact expiration',
+    async ({ readyAt, retention }) => {
+      const { useCase, room, rooms, members, users, clock } = setup()
+      rooms.findByCode.mockResolvedValue({ ...room, readyAt })
+      clock.advance(retention - 1)
+      expect(await useCase.read('ABC123')).not.toBeNull()
+      members.findByRoomId.mockClear()
+      users.findByIds.mockClear()
+
+      clock.advance(1)
+      expect(await useCase.read('ABC123')).toBeNull()
+      expect(members.findByRoomId).not.toHaveBeenCalled()
+      expect(users.findByIds).not.toHaveBeenCalled()
+    }
+  )
 })
