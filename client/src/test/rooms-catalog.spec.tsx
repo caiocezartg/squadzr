@@ -242,6 +242,43 @@ describe('rooms catalog — lobby WebSocket cache updates', () => {
         ?.notifications
     ).toHaveLength(1)
   })
+
+  it('clips the pushed notification to the limit of each notifications query', async () => {
+    const olderNotification = {
+      ...roomReadyNotification,
+      id: '9b2f7a1e-4c3d-4e5f-8a6b-1c2d3e4f5a6c',
+      title: 'Older notification',
+    }
+    const pushedNotification = {
+      ...roomReadyNotification,
+      id: '9b2f7a1e-4c3d-4e5f-8a6b-1c2d3e4f5a6d',
+      title: 'Pushed notification',
+    }
+    const queryClient = createTestQueryClient()
+    queryClient.setQueryData(['notifications', { limit: 2 }], {
+      notifications: [roomReadyNotification, olderNotification],
+    })
+    renderRoomsFlow('/rooms', { queryClient })
+    await screen.findByText('Ranked grind')
+
+    openLatestWebSocket()
+    sendFromServer({
+      type: 'notification',
+      payload: { notification: pushedNotification },
+    })
+
+    // The newest push stays first and the list never grows past the query's
+    // limit; the oldest notification falls off before the next poll.
+    await waitFor(() =>
+      expect(
+        queryClient.getQueryData<{ notifications: unknown[] }>(['notifications', { limit: 2 }])
+          ?.notifications
+      ).toEqual([
+        expect.objectContaining({ id: pushedNotification.id }),
+        expect.objectContaining({ id: roomReadyNotification.id }),
+      ])
+    )
+  })
 })
 
 describe('rooms catalog — join flows', () => {

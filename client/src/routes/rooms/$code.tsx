@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -102,6 +102,14 @@ function RoomLobbyPage() {
   // The code this page last asked the server to join. When it changes, the
   // socket must release the previous room channel before joining the new one.
   const joinedCodeRef = useRef<string | null>(null)
+  // The `:code` currently rendered. It updates in the commit phase, before the
+  // transport can hand another frame to the previous room's handlers, so a
+  // late error from a room this page has already left sees a mismatch below.
+  const activeCodeRef = useRef(code)
+
+  useLayoutEffect(() => {
+    activeCodeRef.current = code
+  }, [code])
 
   useEffect(() => {
     // A different room code must never show the previous room's live state.
@@ -127,6 +135,10 @@ function RoomLobbyPage() {
           if (!matchesRoomCode(payload.room.code, code)) return
           setSnapshot(payload)
           setPresence(presenceFromSnapshot(payload))
+          // The authoritative snapshot of this room supersedes any error a
+          // previous join left behind (e.g. a late NOT_ROOM_MEMBER).
+          setError(null)
+          setMembershipRevoked(false)
         },
         presence_updated: (payload) => {
           if (!matchesRoomCode(payload.roomCode, code)) return
@@ -138,6 +150,10 @@ function RoomLobbyPage() {
           navigate({ to: '/rooms', search: {} })
         },
         error: (payload) => {
+          // Error payloads carry no roomCode, so the join order is the only
+          // evidence: a handler from a room the page has already left must not
+          // poison the new room with a delayed error.
+          if (activeCodeRef.current !== code) return
           setError(payload.message)
           if (payload.code === 'NOT_ROOM_MEMBER') {
             // Membership was revoked: the last snapshot is no longer

@@ -16,9 +16,12 @@
  * through the mock socket (./ws-mock). No test touches private hook state.
  */
 
-import { screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { renderRoomsFlow } from './harness'
+import { PresenceIndicator } from '@/components/rooms/presence-indicator'
+import { ConnectionStatus } from '@/components/rooms/connection-status'
 import { httpError, httpOk, onHttp } from './http-router'
 import {
   catalogGames,
@@ -124,18 +127,18 @@ describe('room lobby — snapshot handshake', () => {
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     expect(await screen.findByText('Ana')).toBeInTheDocument()
 
-    // Presence never relies on color alone: each member has a title and an
-    // accessible Online/Offline label.
-    expect(screen.getAllByTitle('Online')).toHaveLength(1)
-    expect(screen.getAllByTitle('Offline')).toHaveLength(1)
-    expect(screen.getByText('Online')).toBeInTheDocument()
-    expect(screen.getByText('Offline')).toBeInTheDocument()
+    // Presence never relies on color alone: each member has an accessible
+    // Online/Offline tooltip and the overall connection state has its own.
+    expect(screen.getAllByRole('tooltip')).toHaveLength(3)
+    expect(screen.getAllByText('Online')).toHaveLength(1)
+    expect(screen.getAllByText('Offline')).toHaveLength(1)
+    expect(screen.getAllByText('Connected')).toHaveLength(1)
 
     sendFromServer({
       type: 'presence_updated',
       payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true },
     })
-    await waitFor(() => expect(screen.getAllByTitle('Online')).toHaveLength(2))
+    await waitFor(() => expect(screen.getAllByText('Online')).toHaveLength(2))
 
     // The server owns the aggregation (multiple sessions, grace window): the
     // client applies the boolean it receives in both directions.
@@ -143,8 +146,8 @@ describe('room lobby — snapshot handshake', () => {
       type: 'presence_updated',
       payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false },
     })
-    await waitFor(() => expect(screen.getAllByTitle('Offline')).toHaveLength(1))
-    expect(screen.getAllByTitle('Online')).toHaveLength(1)
+    await waitFor(() => expect(screen.getAllByText('Offline')).toHaveLength(1))
+    expect(screen.getAllByText('Online')).toHaveLength(1)
 
     // A duplicate transition and a transition for a non-member are both
     // idempotent: Presence never adds or removes a Membership.
@@ -156,8 +159,8 @@ describe('room lobby — snapshot handshake', () => {
       type: 'presence_updated',
       payload: { roomCode: 'LOBBY1', playerId: 'user-ghost', online: true },
     })
-    expect(screen.getAllByTitle('Offline')).toHaveLength(1)
-    expect(screen.getAllByTitle('Online')).toHaveLength(1)
+    expect(screen.getAllByText('Offline')).toHaveLength(1)
+    expect(screen.getAllByText('Online')).toHaveLength(1)
     expect(screen.getByText('2/3 players')).toBeInTheDocument()
     expect(screen.getAllByText('Ana')).toHaveLength(1)
   })
@@ -296,6 +299,56 @@ describe('room lobby — server-driven errors and redirects', () => {
     expect(screen.getByRole('link', { name: 'Back to squads' })).toBeInTheDocument()
   })
 
+  it('recovers the new room from a delayed error of the previous room', async () => {
+    const nextRoom = {
+      ...lobbyRoom,
+      id: 'aaaaaaaa-0000-4000-8000-000000000007',
+      code: 'NEXT01',
+      name: 'Next squad',
+    }
+    onHttp('GET', '/api/rooms/:code', (req) => {
+      if (req.params.code === nextRoom.code) {
+        return httpOk({ room: nextRoom, players: [hostPlayer] })
+      }
+      return httpOk(lobbyRoomResponse)
+    })
+
+    const { router } = renderRoomsFlow('/rooms/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+
+    await act(() => router.navigate({ to: '/rooms/$code', params: { code: nextRoom.code } }))
+    await waitFor(() =>
+      expect(serverSentFrames()).toEqual(
+        expect.arrayContaining([
+          { type: 'leave_room', payload: { roomCode: 'LOBBY1' } },
+          { type: 'join_room', payload: { roomCode: nextRoom.code } },
+        ])
+      )
+    )
+
+    // A delayed NOT_ROOM_MEMBER from the previous join arrives with no
+    // roomCode to filter on: the authoritative snapshot of the new room must
+    // supersede it instead of leaving the page stuck in the error state.
+    sendFromServer({
+      type: 'error',
+      payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
+    })
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        room: { ...nextRoom, memberCount: 2, isMember: true },
+        players: [hostPlayer, guestPlayer],
+      }),
+    })
+
+    expect(await screen.findByText('Next squad')).toBeInTheDocument()
+    expect(screen.getByText('2/3 players')).toBeInTheDocument()
+    expect(screen.queryByText('You are not a member of this squad')).not.toBeInTheDocument()
+  })
+
   it('navigates back to the catalog when the room is deleted', async () => {
     const { router } = renderRoomsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
@@ -376,5 +429,35 @@ describe('room lobby — full reload of a full room', () => {
       'https://discord.gg/lobby'
     )
     expect(screen.getByRole('button', { name: 'Squad locked' })).toBeDisabled()
+  })
+})
+
+describe('realtime indicators — keyboard tooltips', () => {
+  it('exposes the Presence and connection labels to keyboard focus', async () => {
+    const user = userEvent.setup({ delay: null })
+    render(
+      <div>
+        <PresenceIndicator online />
+        <ConnectionStatus status="open" />
+      </div>
+    )
+
+    // The indicator is reachable with Tab and its tooltip is the accessible
+    // description, so keyboard users get the same Online/Connected label.
+    await user.tab()
+    const presence = screen.getByText('Online').closest('[tabindex="0"]')
+    expect(presence).toHaveFocus()
+    expect(presence).toHaveAccessibleDescription('Online')
+
+    await user.tab()
+    const connection = screen.getByText('Connected').closest('[tabindex="0"]')
+    expect(connection).toHaveFocus()
+    expect(connection).toHaveAccessibleDescription('Connected')
+
+    // Escape dismisses the reveal until hover/focus leaves the indicator.
+    const connectionTooltip = within(connection as HTMLElement).getByRole('tooltip')
+    expect(connectionTooltip).toHaveClass('group-focus-visible:opacity-100')
+    await user.keyboard('{Escape}')
+    expect(connectionTooltip).not.toHaveClass('group-focus-visible:opacity-100')
   })
 })

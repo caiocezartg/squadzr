@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Tooltip } from '@/components/ui/tooltip'
 import type { RealtimeStatus } from '@/lib/ws-client'
 
 interface ConnectionStatusProps {
@@ -19,15 +20,14 @@ const DOT_CLASSES: Record<RealtimeStatus, string> = {
   closed: 'bg-danger',
 }
 
-/** Overall realtime connection state: color, accessible text and tooltip. */
+/** Overall realtime connection state: color plus an accessible status tooltip. */
 export function ConnectionStatus({ status }: ConnectionStatusProps) {
   const { t } = useTranslation()
   const label = t(LABEL_KEYS[status])
 
   return (
-    <span className="inline-flex items-center" title={label}>
+    <Tooltip label={label}>
       <span aria-hidden="true" className={`size-2 rounded-full ${DOT_CLASSES[status]}`} />
-      <span className="sr-only">{label}</span>
-    </span>
+    </Tooltip>
   )
 }
