@@ -1,9 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import pg from 'pg'
 import { and, count, eq } from 'drizzle-orm'
 import { ROOM } from '@config/constants'
 import { roomMembers, rooms, userNotifications } from '@infrastructure/database/schema'
-import { validOpenRoomCondition } from '@infrastructure/repositories/drizzle-room.repository'
+import {
+  DrizzleRoomRepository,
+  validOpenRoomCondition,
+} from '@infrastructure/repositories/drizzle-room.repository'
 import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzle-room-member.repository'
 import { signIn, signInMany } from '@test/harness/auth'
 import { FakeClock } from '@test/harness/clock'
@@ -155,6 +158,7 @@ describe('active room limits under a concurrent race', () => {
       FOR EACH ROW EXECUTE FUNCTION pause_ready_notifications();
     `)
     await control.query('BEGIN')
+    let transactionOpen = true
     await control.query('SELECT pg_advisory_xact_lock(53)')
     const pending = Promise.all([
       roomAction(server, second!, firstRoom.code, 'join'),
@@ -163,6 +167,7 @@ describe('active room limits under a concurrent race', () => {
     try {
       await waitForLockedSessions(2, ['insert into "user_notifications"%'])
       await control.query('COMMIT')
+      transactionOpen = false
       const responses = await withinDeadline(pending, 'Crossed final joins')
 
       for (const response of responses) expect(response.statusCode, response.body).toBe(200)
@@ -190,7 +195,7 @@ describe('active room limits under a concurrent race', () => {
         for (const notification of notifications) expect(notification.type).toBe('room_ready')
       }
     } finally {
-      await control.query('ROLLBACK')
+      if (transactionOpen) await control.query('ROLLBACK')
       await pending.catch(() => undefined)
     }
   })
@@ -208,6 +213,7 @@ describe('active room limits under a concurrent race', () => {
     expect(await activeMemberships(player!.id)).toBe(ROOM.JOIN_LIMIT - 1)
 
     await control.query('BEGIN')
+    let transactionOpen = true
     await control.query('SELECT id FROM rooms WHERE id = ANY($1::uuid[]) FOR UPDATE', [
       targets.map((room) => room.id),
     ])
@@ -217,6 +223,7 @@ describe('active room limits under a concurrent race', () => {
     try {
       await waitForLockedSessions(targets.length)
       await control.query('COMMIT')
+      transactionOpen = false
       const responses = await withinDeadline(pending, 'Concurrent joins')
 
       expect(responses.filter((response) => response.statusCode === 200)).toHaveLength(1)
@@ -225,7 +232,7 @@ describe('active room limits under a concurrent race', () => {
       expect(rejected[0]!.json()).toMatchObject({ error: 'ROOM_JOIN_LIMIT_REACHED' })
       expect(await activeMemberships(player!.id)).toBe(ROOM.JOIN_LIMIT)
     } finally {
-      await control.query('ROLLBACK')
+      if (transactionOpen) await control.query('ROLLBACK')
       await pending.catch(() => undefined)
     }
   })
@@ -248,15 +255,24 @@ describe('active room limits under a concurrent race', () => {
       const target = targets.at(-1)!
       const create = () => postRoom(server, player, { gameId: game.id })
       const join = () => roomAction(server, player, target.code, 'join')
+      // SHARE pauses the first operation's room write after its user lock.
+      // Old code also reaches INSERT/UPDATE after its stale counts, so create
+      // first fails through the response/count assertions rather than a timeout.
       await control.query('BEGIN')
-      await control.query('SELECT id FROM "user" WHERE id = $1 FOR NO KEY UPDATE', [player.id])
+      let transactionOpen = true
+      await control.query('LOCK TABLE rooms IN SHARE MODE')
       const firstPending = first === 'create' ? create() : join()
       let secondPending: ReturnType<typeof create> | undefined
       try {
-        await waitForLockedSessions(1)
+        await waitForLockedSessions(1, ['insert into "rooms"%', 'update "rooms"%'])
         secondPending = first === 'create' ? join() : create()
-        await waitForLockedSessions(2)
+        await waitForLockedSessions(2, [
+          '%for no key update',
+          'insert into "rooms"%',
+          'update "rooms"%',
+        ])
         await control.query('COMMIT')
+        transactionOpen = false
         const responses = await withinDeadline(
           Promise.all([firstPending, secondPending]),
           'Concurrent create and join'
@@ -273,12 +289,13 @@ describe('active room limits under a concurrent race', () => {
         }
         // Creation has always enforced only the host limit. If join goes first,
         // the subsequent create is allowed to add a sixth active Membership.
+        // Join-first therefore passes even without the user lock.
         expect(await activeMemberships(player.id)).toBe(
           ROOM.JOIN_LIMIT + (first === 'join' ? 1 : 0)
         )
         expect(await hostedRooms(player.id)).toBe(ROOM.CREATE_LIMIT)
       } finally {
-        await control.query('ROLLBACK')
+        if (transactionOpen) await control.query('ROLLBACK')
         await Promise.allSettled([firstPending, secondPending])
       }
     }
@@ -312,13 +329,18 @@ describe('active room limits under a concurrent race', () => {
     }
     const target = targets.at(-1)!
     const repository = new DrizzleRoomMemberRepository(server.app.db, clock)
+    // FOR UPDATE also blocks the old INSERT's user FK after its clock read.
+    // Both implementations reach the barrier; stale cutoff/timestamps then
+    // fail the assertions, while production still uses NO KEY UPDATE.
     await control.query('BEGIN')
-    await control.query('SELECT id FROM "user" WHERE id = $1 FOR NO KEY UPDATE', [player.id])
+    let transactionOpen = true
+    await control.query('SELECT id FROM "user" WHERE id = $1 FOR UPDATE', [player.id])
     const pending = repository.joinOpenRoom({ roomId: target.id, userId: player.id })
     try {
-      await waitForLockedSessions(1)
+      await waitForLockedSessions(1, ['%for no key update', 'insert into "room_members"%'])
       clock.advance(2)
       await control.query('COMMIT')
+      transactionOpen = false
       const outcome = await withinDeadline(pending, 'Join waiting for the user lock')
 
       expect(outcome.status).toBe('joined')
@@ -330,7 +352,63 @@ describe('active room limits under a concurrent race', () => {
       expect(row!.lastActivityAt).toEqual(clock.now())
       expect(row!.updatedAt).toEqual(clock.now())
     } finally {
-      await control.query('ROLLBACK')
+      if (transactionOpen) await control.query('ROLLBACK')
+      await pending.catch(() => undefined)
+    }
+  })
+
+  it('reads the creation clock once after waiting for the user lock', async () => {
+    const host = await signIn(server, 'Host')
+    const game = await insertGame(server)
+    const seeded = []
+    for (let i = 0; i < ROOM.CREATE_LIMIT; i++) {
+      seeded.push(await createRoom(server, host, { gameId: game.id }))
+    }
+    const beforeWait = new Date()
+    const clock = new FakeClock(beforeWait)
+    await setRoomLifecycle(server, seeded[0]!.id, {
+      createdAt: beforeWait,
+      lastActivityAt: new Date(beforeWait.getTime() - ROOM.OPEN_ROOM_TTL_MS + 1),
+      readyAt: null,
+    })
+    const readClock = vi.spyOn(clock, 'now')
+    const repository = new DrizzleRoomRepository(server.app.db, clock)
+    await control.query('BEGIN')
+    let transactionOpen = true
+    await control.query('SELECT id FROM "user" WHERE id = $1 FOR NO KEY UPDATE', [host.id])
+    const pending = repository.create({
+      name: 'Room after the wait',
+      hostId: host.id,
+      gameId: game.id,
+      maxPlayers: game.maxPlayers,
+      discordLink: 'https://discord.gg/test',
+    })
+    try {
+      await waitForLockedSessions(1)
+      clock.advance(2)
+      await control.query('COMMIT')
+      transactionOpen = false
+      const outcome = await withinDeadline(pending, 'Create waiting for the user lock')
+
+      expect(outcome.status).toBe('created')
+      if (outcome.status !== 'created') throw new Error('Create did not use the current cutoff')
+      expect(readClock).toHaveBeenCalledOnce()
+      const afterWait = new Date(beforeWait.getTime() + 2)
+      expect(outcome.room.createdAt).toEqual(afterWait)
+      expect(outcome.room.lastActivityAt).toEqual(afterWait)
+      expect(outcome.room.updatedAt).toEqual(afterWait)
+      expect(outcome.hostMember.joinedAt).toEqual(afterWait)
+      const row = await findRoomRow(server, outcome.room.id)
+      expect(row!.createdAt).toEqual(afterWait)
+      expect(row!.lastActivityAt).toEqual(afterWait)
+      expect(row!.updatedAt).toEqual(afterWait)
+      const [member] = await server.app.db
+        .select()
+        .from(roomMembers)
+        .where(eq(roomMembers.roomId, outcome.room.id))
+      expect(member!.joinedAt).toEqual(afterWait)
+    } finally {
+      if (transactionOpen) await control.query('ROLLBACK')
       await pending.catch(() => undefined)
     }
   })
@@ -347,6 +425,7 @@ describe('active room limits under a concurrent race', () => {
     // Old code parks both INSERTs after stale counts; serialized code parks
     // one INSERT and one user lock. Both reach this barrier without a timeout.
     await control.query('BEGIN')
+    let transactionOpen = true
     await control.query('LOCK TABLE rooms IN SHARE MODE')
     const pending = Promise.all([
       postRoom(server, host, { gameId: game.id }),
@@ -355,6 +434,7 @@ describe('active room limits under a concurrent race', () => {
     try {
       await waitForLockedSessions(2, ['%for update', '%for no key update', 'insert into "rooms"%'])
       await control.query('COMMIT')
+      transactionOpen = false
       const responses = await withinDeadline(pending, 'Concurrent creations')
 
       expect(responses.filter((response) => response.statusCode === 201)).toHaveLength(1)
@@ -366,7 +446,7 @@ describe('active room limits under a concurrent race', () => {
       })
       expect(await hostedRooms(host.id)).toBe(ROOM.CREATE_LIMIT)
     } finally {
-      await control.query('ROLLBACK')
+      if (transactionOpen) await control.query('ROLLBACK')
       await pending.catch(() => undefined)
     }
   })

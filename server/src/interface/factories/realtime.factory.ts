@@ -17,7 +17,7 @@ import type { Realtime } from '@infrastructure/websocket/types'
 export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogger): Realtime {
   const operations = new OrderedOperations()
   const snapshots = new GetRealtimeSnapshotUseCase(
-    new DrizzleRoomRepository(db),
+    new DrizzleRoomRepository(db, clock),
     new DrizzleRoomMemberRepository(db, clock),
     new DrizzleUserRepository(db),
     clock

@@ -31,7 +31,7 @@ beforeEach(async () => {
   })
   const db = drizzle(pool, { schema })
   join = new JoinRoomUseCase(
-    new DrizzleRoomRepository(db),
+    new DrizzleRoomRepository(db, server.app.clock),
     new DrizzleRoomMemberRepository(db, server.app.clock),
     new DrizzleGameRepository(db),
     server.app.clock

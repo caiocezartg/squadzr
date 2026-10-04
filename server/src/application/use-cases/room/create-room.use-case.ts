@@ -2,7 +2,6 @@ import type { Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
-import type { Clock } from '@domain/services/clock.interface'
 import { InvalidGameError, RoomCreateLimitReachedError } from '@application/errors'
 import { ROOM } from '@config/constants'
 
@@ -28,8 +27,7 @@ export interface ICreateRoomUseCase {
 export class CreateRoomUseCase implements ICreateRoomUseCase {
   constructor(
     private readonly roomRepository: IRoomRepository,
-    private readonly gameRepository: IGameRepository,
-    private readonly clock: Clock
+    private readonly gameRepository: IGameRepository
   ) {}
 
   async execute(input: CreateRoomInput): Promise<CreateRoomOutput> {
@@ -38,25 +36,20 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       throw new InvalidGameError(input.gameId)
     }
 
-    const now = this.clock.now()
-
     const maxPlayers = input.maxPlayers ?? game.maxPlayers
 
     // Room and host Membership are one transaction, with Room Activity stamped
-    // by the injected clock in the same statement as the room itself. The host
-    // limit is decided in that same transaction, under the user row lock.
-    const outcome = await this.roomRepository.create(
-      {
-        name: input.name,
-        hostId: input.hostId,
-        gameId: input.gameId,
-        maxPlayers,
-        discordLink: input.discordLink,
-        tags: input.tags,
-        language: input.language,
-      },
-      now
-    )
+    // by the repository's clock after the user row lock. The host limit uses
+    // that same instant inside the transaction.
+    const outcome = await this.roomRepository.create({
+      name: input.name,
+      hostId: input.hostId,
+      gameId: input.gameId,
+      maxPlayers,
+      discordLink: input.discordLink,
+      tags: input.tags,
+      language: input.language,
+    })
 
     if (outcome.status === 'limit_reached') {
       throw new RoomCreateLimitReachedError(ROOM.CREATE_LIMIT)

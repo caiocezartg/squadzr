@@ -174,7 +174,7 @@ describe('authoritative snapshots and ordered events', () => {
     })
     await runRoomCleanup(
       server.app.log,
-      new DeleteExpiredRoomsUseCase(new DrizzleRoomRepository(server.app.db), clock),
+      new DeleteExpiredRoomsUseCase(new DrizzleRoomRepository(server.app.db, clock), clock),
       server.app.broadcaster
     )
     expect((await channel.drain()).map((message) => message.type)).toEqual(['room_deleted'])

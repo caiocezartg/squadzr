@@ -10,7 +10,7 @@ import { UserController } from '@interface/controllers/user.controller'
 export function createUserController(db: Database, clock: Clock) {
   const userRepository = new DrizzleUserRepository(db)
   const userNotificationRepository = new DrizzleUserNotificationRepository(db)
-  const roomRepository = new DrizzleRoomRepository(db)
+  const roomRepository = new DrizzleRoomRepository(db, clock)
 
   const getUserUseCase = new GetUserUseCase(userRepository)
   const listNotificationsUseCase = new ListNotificationsUseCase(

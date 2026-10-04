@@ -14,12 +14,12 @@ import { GetMyRoomsUseCase } from '@application/use-cases/room/get-my-rooms.use-
 import { RoomController } from '@interface/controllers/room.controller'
 
 export function createRoomController(db: Database, broadcaster: IRoomBroadcaster, clock: Clock) {
-  const roomRepository = new DrizzleRoomRepository(db)
+  const roomRepository = new DrizzleRoomRepository(db, clock)
   const roomMemberRepository = new DrizzleRoomMemberRepository(db, clock)
   const gameRepository = new DrizzleGameRepository(db)
   const userRepository = new DrizzleUserRepository(db)
 
-  const createRoomUseCase = new CreateRoomUseCase(roomRepository, gameRepository, clock)
+  const createRoomUseCase = new CreateRoomUseCase(roomRepository, gameRepository)
   const getAvailableRoomsUseCase = new GetAvailableRoomsUseCase(
     roomRepository,
     roomMemberRepository,

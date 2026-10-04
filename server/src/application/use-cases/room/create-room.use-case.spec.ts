@@ -2,26 +2,22 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { CreateRoomUseCase } from './create-room.use-case'
 import { InvalidGameError, RoomCreateLimitReachedError } from '@application/errors'
 import {
-  createMockClock,
   createMockRoom,
   createMockRoomRepository,
   createMockRoomMember,
   createMockGameRepository,
   createMockGame,
-  FIXED_NOW,
 } from '@test/mocks'
 
 describe('CreateRoomUseCase', () => {
   let useCase: CreateRoomUseCase
   let mockRoomRepository: ReturnType<typeof createMockRoomRepository>
   let mockGameRepository: ReturnType<typeof createMockGameRepository>
-  let clock: ReturnType<typeof createMockClock>
 
   beforeEach(() => {
     mockRoomRepository = createMockRoomRepository()
     mockGameRepository = createMockGameRepository()
-    clock = createMockClock()
-    useCase = new CreateRoomUseCase(mockRoomRepository, mockGameRepository, clock)
+    useCase = new CreateRoomUseCase(mockRoomRepository, mockGameRepository)
   })
 
   describe('execute', () => {
@@ -53,16 +49,13 @@ describe('CreateRoomUseCase', () => {
       expect(result.room.hostId).toBe('host-123')
       expect(result.room.gameId).toBe('game-123')
       expect(result.room.maxPlayers).toBe(5)
-      expect(mockRoomRepository.create).toHaveBeenCalledWith(
-        {
-          name: 'My Room',
-          hostId: 'host-123',
-          gameId: 'game-123',
-          maxPlayers: 5,
-          discordLink: 'https://discord.gg/test',
-        },
-        FIXED_NOW
-      )
+      expect(mockRoomRepository.create).toHaveBeenCalledWith({
+        name: 'My Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        maxPlayers: 5,
+        discordLink: 'https://discord.gg/test',
+      })
       expect(mockRoomRepository.create).toHaveBeenCalledOnce()
     })
 
@@ -134,8 +127,7 @@ describe('CreateRoomUseCase', () => {
       expect(mockRoomRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           maxPlayers: 10,
-        }),
-        FIXED_NOW
+        })
       )
     })
 
@@ -161,8 +153,7 @@ describe('CreateRoomUseCase', () => {
         expect.objectContaining({
           maxPlayers: 10,
           discordLink: 'https://discord.gg/test',
-        }),
-        FIXED_NOW
+        })
       )
     })
 
