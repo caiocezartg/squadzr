@@ -6,6 +6,7 @@ export const RECONNECT_GRACE_MS = 10_000
 interface OnlineMember {
   sockets: Set<WebSocket>
   offlineAt: number | null
+  joinToken: object
 }
 
 /** Presence owns no Membership writes; one member may have many transport sessions. */
@@ -28,9 +29,10 @@ export class Presence {
     if (member) {
       member.sockets.add(socket)
       member.offlineAt = null
+      member.joinToken = {}
       return false
     }
-    room.set(userId, { sockets: new Set([socket]), offlineAt: null })
+    room.set(userId, { sockets: new Set([socket]), offlineAt: null, joinToken: {} })
     return true
   }
 
@@ -44,10 +46,22 @@ export class Presence {
     return this.rooms.get(roomCode)?.has(userId) ?? false
   }
 
-  retainMembers(roomCode: string, userIds: Set<string>): void {
+  /** Local join identities observed before a roster read, independent of clock resolution. */
+  captureMembers(roomCode: string): ReadonlyMap<string, object> {
+    return new Map(
+      [...(this.rooms.get(roomCode) ?? [])].map(([userId, member]) => [userId, member.joinToken])
+    )
+  }
+
+  retainMembers(
+    roomCode: string,
+    userIds: Set<string>,
+    observed: ReadonlyMap<string, object>
+  ): void {
     const room = this.rooms.get(roomCode)
     if (!room) return
-    for (const userId of room.keys()) if (!userIds.has(userId)) room.delete(userId)
+    for (const [userId, member] of room)
+      if (!userIds.has(userId) && observed.get(userId) === member.joinToken) room.delete(userId)
     if (room.size === 0) this.rooms.delete(roomCode)
   }
 
