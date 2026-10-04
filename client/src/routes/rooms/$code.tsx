@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -8,20 +8,32 @@ import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { useWebSocket } from '@/hooks/use-websocket'
 import { useRoomsCache } from '@/hooks/use-rooms-cache'
+import { useNotificationEvents } from '@/hooks/use-notification-events'
 import { useTimeAgo } from '@/hooks/use-time-ago'
+import {
+  applyPresence,
+  presenceFromSnapshot,
+  rosterFromSnapshot,
+  type PresenceState,
+  type RoomSnapshot,
+} from '@/lib/lobby-snapshot'
 import { PlayerSlot } from '@/components/rooms/player-slot'
+import { ConnectionStatus } from '@/components/rooms/connection-status'
 import { RoomNotFound } from '@/components/rooms/room-not-found'
 import { DiscordLinkCard } from '@/components/rooms/discord-link-card'
 import { AlertBox } from '@/components/ui/alert-box'
-import { onServerEvent } from '@/lib/ws-validators'
 import { gameResponseSchema, isRoomLobbyResponse, roomResponseSchema } from '@squadzr/schemas'
 import { ArrowLeft, Copy, LogOut } from 'lucide-react'
 import { WS_URL } from '@/env'
-import type { Player } from '@/types'
 
 export const Route = createFileRoute('/rooms/$code')({
   component: RoomLobbyPage,
 })
+
+/** Room codes travel uppercased by contract; URLs may still arrive lowercase. */
+function matchesRoomCode(eventCode: string, code: string): boolean {
+  return eventCode.toUpperCase() === code.toUpperCase()
+}
 
 function RoomLobbyPage() {
   const { t } = useTranslation()
@@ -31,10 +43,13 @@ function RoomLobbyPage() {
   const { removeRoom } = useRoomsCache()
   const queryClient = useQueryClient()
 
-  const [players, setPlayers] = useState<Player[]>([])
-  const [playersInitialized, setPlayersInitialized] = useState(false)
+  // Live lobby state: the room snapshot is the only source for roster,
+  // readiness, Presence and the authorized Discord link. The HTTP response
+  // supplies room metadata before the first snapshot and never overwrites it.
+  const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null)
+  const [presence, setPresence] = useState<PresenceState>({})
   const [error, setError] = useState<string | null>(null)
-  const [isRoomReady, setIsRoomReady] = useState(false)
+  const [membershipRevoked, setMembershipRevoked] = useState(false)
   const [codeCopied, setCodeCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -54,19 +69,12 @@ function RoomLobbyPage() {
     queryFn: () => api.get(`/api/rooms/${code}`, roomResponseSchema),
   })
 
-  const room = roomData?.room ?? null
-  // Lobby details (roster and Discord invite) only come back for members of the room
+  const room = snapshot?.room ?? roomData?.room ?? null
+  // Lobby details (Discord invite) only come back for members of the room
   const lobby = roomData && isRoomLobbyResponse(roomData) ? roomData : null
-  const lobbyPlayers = lobby?.players
-  const discordLink = lobby?.room.discordLink
-
-  // Initialize players from HTTP response (before WS is ready)
-  useEffect(() => {
-    if (lobbyPlayers && !playersInitialized) {
-      setPlayers(lobbyPlayers)
-      setPlayersInitialized(true)
-    }
-  }, [lobbyPlayers, playersInitialized])
+  const discordLink = snapshot?.room.discordLink ?? lobby?.room.discordLink ?? null
+  const isRoomReady = snapshot?.readyAt != null
+  const players = useMemo(() => (snapshot ? rosterFromSnapshot(snapshot) : []), [snapshot])
 
   const timeAgo = useTimeAgo(room?.createdAt)
 
@@ -81,62 +89,88 @@ function RoomLobbyPage() {
   const game = gameData?.game ?? null
 
   // WebSocket connection
-  const { isConnected, send, on } = useWebSocket({
+  const { status, send, on, subscribe } = useWebSocket({
     url: WS_URL,
     autoConnect: true,
   })
 
-  // WebSocket event handlers
+  useNotificationEvents({ on })
+
+  // Subscribe to the room channel. The transport replays this subscription
+  // after every reconnect and the fresh snapshot replaces all live state.
+  const userId = session?.user?.id
+  // The code this page last asked the server to join. When it changes, the
+  // socket must release the previous room channel before joining the new one.
+  const joinedCodeRef = useRef<string | null>(null)
+  // The `:code` currently rendered. It updates in the commit phase, before the
+  // transport can hand another frame to the previous room's handlers, so a
+  // late error from a room this page has already left sees a mismatch below.
+  const activeCodeRef = useRef(code)
+
+  useLayoutEffect(() => {
+    activeCodeRef.current = code
+  }, [code])
+
   useEffect(() => {
-    const unsubscribeJoined = onServerEvent(on, 'room_joined', (data) => {
-      setPlayers(data.players)
-    })
+    // A different room code must never show the previous room's live state.
+    setSnapshot(null)
+    setPresence({})
+    setError(null)
+    setMembershipRevoked(false)
 
-    const unsubscribePlayerJoined = onServerEvent(on, 'player_joined', (data) => {
-      setPlayers((prev) => {
-        if (prev.some((p) => p.id === data.player.id)) return prev
-        return [...prev, data.player]
-      })
-    })
+    const previousCode = joinedCodeRef.current
+    joinedCodeRef.current = userId ? code : null
+    if (!userId) return
 
-    const unsubscribePlayerLeft = onServerEvent(on, 'player_left', (data) => {
-      setPlayers((prev) => prev.filter((p) => p.id !== data.playerId))
-    })
-
-    const unsubscribeRoomReady = onServerEvent(on, 'room_ready', () => {
-      setIsRoomReady(true)
-    })
-
-    const unsubscribeError = onServerEvent(on, 'error', (data) => {
-      setError(data.message)
-    })
-
-    const unsubscribeRoomDeleted = onServerEvent(on, 'room_deleted', (data) => {
-      removeRoom(data.roomId)
-      navigate({ to: '/rooms', search: {} })
-    })
-
-    return () => {
-      unsubscribeJoined()
-      unsubscribePlayerJoined()
-      unsubscribePlayerLeft()
-      unsubscribeRoomReady()
-      unsubscribeError()
-      unsubscribeRoomDeleted()
+    if (previousCode && previousCode !== code) {
+      send({ type: 'leave_room', payload: { roomCode: previousCode } })
     }
-  }, [on, removeRoom, navigate])
 
-  // Join room via WebSocket when connected
-  useEffect(() => {
-    if (isConnected && room) {
-      send('join_room', { roomCode: code })
-    }
-  }, [isConnected, room, code, send])
+    return subscribe(
+      { type: 'join_room', payload: { roomCode: code } },
+      {
+        room_snapshot: (payload) => {
+          // Events for the previous room may still be in flight while the
+          // server processes the switch; they must never touch this page.
+          if (!matchesRoomCode(payload.room.code, code)) return
+          setSnapshot(payload)
+          setPresence(presenceFromSnapshot(payload))
+          // The authoritative snapshot of this room supersedes any error a
+          // previous join left behind (e.g. a late NOT_ROOM_MEMBER).
+          setError(null)
+          setMembershipRevoked(false)
+        },
+        presence_updated: (payload) => {
+          if (!matchesRoomCode(payload.roomCode, code)) return
+          setPresence((current) => applyPresence(current, payload.playerId, payload.online))
+        },
+        room_deleted: (payload) => {
+          if (!matchesRoomCode(payload.roomCode, code)) return
+          removeRoom(payload.roomId)
+          navigate({ to: '/rooms', search: {} })
+        },
+        error: (payload) => {
+          // Error payloads carry no roomCode, so the join order is the only
+          // evidence: a handler from a room the page has already left must not
+          // poison the new room with a delayed error.
+          if (activeCodeRef.current !== code) return
+          setError(payload.message)
+          if (payload.code === 'NOT_ROOM_MEMBER') {
+            // Membership was revoked: the last snapshot is no longer
+            // authorized, so the page falls back to the error alone.
+            setSnapshot(null)
+            setPresence({})
+            setMembershipRevoked(true)
+          }
+        },
+      }
+    )
+  }, [subscribe, send, userId, code, navigate, removeRoom])
 
   const handleLeaveRoom = async () => {
     try {
       const isHost = room?.hostId === session?.user?.id
-      send('leave_room', { roomCode: code })
+      send({ type: 'leave_room', payload: { roomCode: code } })
       await api.post(`/api/rooms/${code}/leave`, {})
       if (isHost && room) {
         removeRoom(room.id)
@@ -156,7 +190,7 @@ function RoomLobbyPage() {
   }
 
   // Build empty slots
-  const maxPlayers = room?.maxPlayers ?? 5
+  const maxPlayers = snapshot?.room.maxPlayers ?? roomData?.room.maxPlayers ?? 5
   const emptySlots = Math.max(0, maxPlayers - players.length)
 
   if (sessionPending || roomLoading) {
@@ -182,6 +216,23 @@ function RoomLobbyPage() {
 
   if (roomError) {
     return <RoomNotFound code={code} />
+  }
+
+  // Revoked membership: only the error state remains, never the last snapshot.
+  if (membershipRevoked) {
+    return (
+      <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-12 sm:px-6 lg:px-8">
+        <Link
+          to="/rooms"
+          search={{}}
+          className="flex w-fit items-center gap-2 rounded-lg border border-border-light bg-surface px-4 py-2 text-sm text-muted hover:border-muted/30 hover:bg-surface-hover hover:text-offwhite transition-all"
+        >
+          <ArrowLeft className="size-4" />
+          {t('rooms.lobby.backToRooms')}
+        </Link>
+        <AlertBox type="error" message={error ?? t('errors.NOT_ROOM_MEMBER')} />
+      </div>
+    )
   }
 
   return (
@@ -235,9 +286,7 @@ function RoomLobbyPage() {
                   </span>
                 )}
                 <span className="badge-muted text-[10px]">{timeAgo}</span>
-                <span
-                  className={`size-2 rounded-full ${isConnected ? 'bg-accent' : 'bg-danger'}`}
-                />
+                <ConnectionStatus status={status} />
               </div>
               {room?.tags && room.tags.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 mb-2">
@@ -301,7 +350,7 @@ function RoomLobbyPage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {players.map((player, i) => (
-            <PlayerSlot key={player.id} player={player} index={i} />
+            <PlayerSlot key={player.id} player={player} index={i} online={presence[player.id]} />
           ))}
           {Array.from({ length: emptySlots }).map((_, i) => (
             <PlayerSlot key={`empty-${i}`} index={players.length + i} />

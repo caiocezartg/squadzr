@@ -4,9 +4,11 @@ import {
   type WsServerEventPayload,
   type WsServerEventType,
 } from '@squadzr/schemas/ws'
-import type { WebSocketEventHandler } from './ws-client'
 
-type Subscribe = (event: string, handler: WebSocketEventHandler) => () => void
+type Subscribe = <T extends WsServerEventType>(
+  type: T,
+  handler: (payload: WsServerEventPayload<T>) => void
+) => () => void
 
 /**
  * Parses the payload of a server event against its contract in @squadzr/schemas.
@@ -28,17 +30,14 @@ export function parseServerEvent<T extends WsServerEventType>(
 }
 
 /**
- * Subscribes to a server event through the transport's `on`, handing the
- * handler a validated, typed payload. Invalid payloads are dropped before they
- * reach the handler.
+ * Subscribes to a server event through the transport's typed `on`. The
+ * transport validated the payload before dispatch; this seam keeps each call
+ * site explicit about the contract it consumes.
  */
 export function onServerEvent<T extends WsServerEventType>(
   on: Subscribe,
   type: T,
   handler: (payload: WsServerEventPayload<T>) => void
 ): () => void {
-  return on(type, (raw) => {
-    const payload = parseServerEvent(type, raw)
-    if (payload) handler(payload)
-  })
+  return on(type, handler)
 }

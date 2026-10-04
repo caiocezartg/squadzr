@@ -1,28 +1,27 @@
 /**
- * Characterization tests for the room lobby page (`/rooms/$code`).
+ * Characterization tests for the room lobby page (`/rooms/$code`) after the
+ * typed realtime client (CCC-38).
  *
- * Covers the roster initialization from HTTP, the WebSocket join handshake
- * and roster events, the Discord invite disclosure gated by `room_ready`,
- * the leave flow (member and host), deletion/redirect events, error
- * presentation (inline AlertBox, room-not-found) and the signed-out gate.
+ * The roster, readiness, Presence and the authorized Discord link come only
+ * from the WebSocket room snapshot and the events that follow it. HTTP room
+ * data supplies static metadata and never overwrites live state, so the old
+ * HTTP/WS race (`playersInitialized`) is gone.
  *
- * The last test characterizes a FULL reload of a full room, reproducing the
- * real server flow: HTTP serves the room already full but with NO ready
- * indicator, the WS handshake replays `room_joined` with the complete roster,
- * and the server re-emits `room_ready` (broadcastRoomReadyIfFull) on every
- * `join_room` of a full room. The ready UI after reload therefore exists ONLY
- * because of that event re-emission — not because the client derives
- * readiness from authoritative state (HTTP/snapshot). Recorded for CCC-32 as
- * behavior to fix in CCC-39 (migrate the lobby into a capability module),
- * NOT as a future invariant.
+ * Covers the snapshot handshake, duplicate snapshots, Presence, the Discord
+ * invite disclosure gated by snapshot readiness, the leave flow (member and
+ * host), deletion/redirect events, error presentation (inline AlertBox,
+ * room-not-found) and the signed-out gate.
  *
  * HTTP runs through the deterministic adapter (./http-router) and WebSocket
  * through the mock socket (./ws-mock). No test touches private hook state.
  */
 
-import { screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { renderRoomsFlow } from './harness'
+import { PresenceIndicator } from '@/components/rooms/presence-indicator'
+import { ConnectionStatus } from '@/components/rooms/connection-status'
 import { httpError, httpOk, onHttp } from './http-router'
 import {
   catalogGames,
@@ -34,6 +33,8 @@ import {
   invalidDiscordRoomResponse,
   lobbyRoom,
   lobbyRoomResponse,
+  lobbySnapshot,
+  readyLobbySnapshot,
 } from './fixtures'
 import { openLatestWebSocket, sendFromServer, serverSentFrames } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
@@ -57,14 +58,14 @@ beforeEach(() => {
   registerLobbyRoutes()
 })
 
-describe('room lobby — roster initialization and WS handshake', () => {
-  it('renders the roster from HTTP and joins the room over WebSocket', async () => {
+describe('room lobby — snapshot handshake', () => {
+  it('joins the room over WebSocket and renders the roster from the snapshot', async () => {
     renderRoomsFlow('/rooms/LOBBY1')
 
     expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
-    expect(screen.getByText('Caio')).toBeInTheDocument()
-    expect(screen.getByText('1/3 players')).toBeInTheDocument()
-    expect(screen.getAllByText('Waiting for player...')).toHaveLength(2)
+    // HTTP alone does not seed the live roster: it is empty until the snapshot.
+    expect(screen.getByText('0/3 players')).toBeInTheDocument()
+    expect(screen.getAllByText('Waiting for player...')).toHaveLength(3)
     expect(screen.getByRole('button', { name: 'Leave squad' })).toBeInTheDocument()
 
     openLatestWebSocket()
@@ -79,51 +80,116 @@ describe('room lobby — roster initialization and WS handshake', () => {
         ])
       )
     )
+
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+
+    expect(await screen.findByText('Caio')).toBeInTheDocument()
+    expect(screen.getByText('Ana')).toBeInTheDocument()
+    expect(screen.getByText('2/3 players')).toBeInTheDocument()
   })
 
-  it('applies roster events: room_joined, player_joined (deduped) and player_left', async () => {
+  it('replaces the roster from every snapshot and never duplicates members', async () => {
     renderRoomsFlow('/rooms/LOBBY1')
-    await screen.findByText('Caio')
-
+    await screen.findByText('Squad ready check')
     openLatestWebSocket()
+
+    // A repeated player in the snapshot payload is collapsed.
     sendFromServer({
-      type: 'room_joined',
-      payload: {
-        roomId: lobbyRoom.id,
-        roomCode: 'LOBBY1',
-        players: [hostPlayer, guestPlayer],
-      },
+      type: 'room_snapshot',
+      payload: lobbySnapshot({ players: [hostPlayer, guestPlayer, guestPlayer] }),
     })
     expect(await screen.findByText('Ana')).toBeInTheDocument()
-    expect(screen.getByText('2/3 players')).toBeInTheDocument()
-
-    sendFromServer({ type: 'player_joined', payload: { player: guestPlayer } })
     expect(screen.getAllByText('Ana')).toHaveLength(1)
-
-    const third = { id: 'user-3', name: 'Bruno', image: null, isHost: false }
-    sendFromServer({ type: 'player_joined', payload: { player: third } })
-    expect(await screen.findByText('Bruno')).toBeInTheDocument()
-    expect(screen.getByText('3/3 players')).toBeInTheDocument()
-
-    sendFromServer({ type: 'player_left', payload: { playerId: guestPlayer.id } })
-    await waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument())
     expect(screen.getByText('2/3 players')).toBeInTheDocument()
-  })
-})
 
-describe('room lobby — Discord disclosure on room_ready', () => {
-  it('reveals the invite only after the room becomes ready and locks leaving', async () => {
+    // A duplicate snapshot is harmless.
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(screen.getAllByText('Ana')).toHaveLength(1)
+    expect(screen.getByText('2/3 players')).toBeInTheDocument()
+
+    // A fresh snapshot replaces stale state: a member who left is gone.
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        players: [hostPlayer],
+        presence: [{ playerId: hostPlayer.id, online: true }],
+      }),
+    })
+    await waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument())
+    expect(screen.getByText('1/3 players')).toBeInTheDocument()
+  })
+
+  it('renders Presence from the snapshot and applies presence_updated without adding members', async () => {
+    renderRoomsFlow('/rooms/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+
+    // Presence never relies on color alone: each member has an accessible
+    // Online/Offline tooltip and the overall connection state has its own.
+    expect(screen.getAllByRole('tooltip')).toHaveLength(3)
+    expect(screen.getAllByText('Online')).toHaveLength(1)
+    expect(screen.getAllByText('Offline')).toHaveLength(1)
+    expect(screen.getAllByText('Connected')).toHaveLength(1)
+
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true },
+    })
+    await waitFor(() => expect(screen.getAllByText('Online')).toHaveLength(2))
+
+    // The server owns the aggregation (multiple sessions, grace window): the
+    // client applies the boolean it receives in both directions.
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false },
+    })
+    await waitFor(() => expect(screen.getAllByText('Offline')).toHaveLength(1))
+    expect(screen.getAllByText('Online')).toHaveLength(1)
+
+    // A duplicate transition and a transition for a non-member are both
+    // idempotent: Presence never adds or removes a Membership.
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false },
+    })
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: 'user-ghost', online: true },
+    })
+    expect(screen.getAllByText('Offline')).toHaveLength(1)
+    expect(screen.getAllByText('Online')).toHaveLength(1)
+    expect(screen.getByText('2/3 players')).toBeInTheDocument()
+    expect(screen.getAllByText('Ana')).toHaveLength(1)
+  })
+
+  it('shows the overall connection state with accessible text', async () => {
     renderRoomsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
 
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(screen.getByText('Connecting…')).toBeInTheDocument()
 
     openLatestWebSocket()
-    sendFromServer({
-      type: 'room_ready',
-      payload: { roomId: lobbyRoom.id, roomCode: 'LOBBY1', message: 'ready' },
-    })
+    expect(screen.getByText('Connected')).toBeInTheDocument()
+  })
+})
+
+describe('room lobby — readiness from the snapshot', () => {
+  it('reveals the invite only when the snapshot carries readiness and locks leaving', async () => {
+    renderRoomsFlow('/rooms/LOBBY1')
+    await screen.findByText('Squad ready check')
+
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    await screen.findByText('Ana')
+
+    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Leave squad' })).toBeEnabled()
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
 
     expect(await screen.findByText('Your squad is ready!')).toBeInTheDocument()
     const joinLink = screen.getByRole('link', { name: 'Join Discord' })
@@ -139,12 +205,10 @@ describe('room lobby — Discord disclosure on room_ready', () => {
 
     openLatestWebSocket()
     sendFromServer({
-      type: 'room_ready',
-      payload: {
-        roomId: invalidDiscordRoom.id,
-        roomCode: 'BADLNK',
-        message: 'ready',
-      },
+      type: 'room_snapshot',
+      payload: readyLobbySnapshot({
+        room: { ...invalidDiscordRoom, memberCount: 2, isMember: true },
+      }),
     })
 
     expect(await screen.findByText('Squad locked')).toBeInTheDocument()
@@ -199,7 +263,7 @@ describe('room lobby — leave flow', () => {
 describe('room lobby — server-driven errors and redirects', () => {
   it('shows WS error payloads in a dismissible alert box', async () => {
     const { user } = renderRoomsFlow('/rooms/LOBBY1')
-    await screen.findByText('Caio')
+    await screen.findByText('Squad ready check')
 
     openLatestWebSocket()
     sendFromServer({
@@ -215,9 +279,79 @@ describe('room lobby — server-driven errors and redirects', () => {
     )
   })
 
+  it('clears the stale lobby state when membership is revoked', async () => {
+    renderRoomsFlow('/rooms/LOBBY1')
+    await screen.findByText('Squad ready check')
+
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+
+    sendFromServer({
+      type: 'error',
+      payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
+    })
+
+    expect(await screen.findByText('You are not a member of this squad')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument())
+    expect(screen.queryByText('Caio')).not.toBeInTheDocument()
+    expect(screen.queryByText('2/3 players')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to squads' })).toBeInTheDocument()
+  })
+
+  it('recovers the new room from a delayed error of the previous room', async () => {
+    const nextRoom = {
+      ...lobbyRoom,
+      id: 'aaaaaaaa-0000-4000-8000-000000000007',
+      code: 'NEXT01',
+      name: 'Next squad',
+    }
+    onHttp('GET', '/api/rooms/:code', (req) => {
+      if (req.params.code === nextRoom.code) {
+        return httpOk({ room: nextRoom, players: [hostPlayer] })
+      }
+      return httpOk(lobbyRoomResponse)
+    })
+
+    const { router } = renderRoomsFlow('/rooms/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+
+    await act(() => router.navigate({ to: '/rooms/$code', params: { code: nextRoom.code } }))
+    await waitFor(() =>
+      expect(serverSentFrames()).toEqual(
+        expect.arrayContaining([
+          { type: 'leave_room', payload: { roomCode: 'LOBBY1' } },
+          { type: 'join_room', payload: { roomCode: nextRoom.code } },
+        ])
+      )
+    )
+
+    // A delayed NOT_ROOM_MEMBER from the previous join arrives with no
+    // roomCode to filter on: the authoritative snapshot of the new room must
+    // supersede it instead of leaving the page stuck in the error state.
+    sendFromServer({
+      type: 'error',
+      payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
+    })
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        room: { ...nextRoom, memberCount: 2, isMember: true },
+        players: [hostPlayer, guestPlayer],
+      }),
+    })
+
+    expect(await screen.findByText('Next squad')).toBeInTheDocument()
+    expect(screen.getByText('2/3 players')).toBeInTheDocument()
+    expect(screen.queryByText('You are not a member of this squad')).not.toBeInTheDocument()
+  })
+
   it('navigates back to the catalog when the room is deleted', async () => {
     const { router } = renderRoomsFlow('/rooms/LOBBY1')
-    await screen.findByText('Caio')
+    await screen.findByText('Squad ready check')
 
     openLatestWebSocket()
     sendFromServer({
@@ -245,18 +379,7 @@ describe('room lobby — failure and access gates', () => {
   })
 })
 
-describe('room lobby — full reload after room_ready (recorded for CCC-39)', () => {
-  // Server truth (characterized here, read-only): on EVERY `join_room` the
-  // server re-emits `room_ready` when the room is full
-  // (server/src/infrastructure/websocket/handlers/room.handler.ts →
-  // broadcastRoomReadyIfFull). A real reload of a full room is therefore:
-  // HTTP returns the full room (with NO ready indicator the client can
-  // rehydrate from), the WS handshake replays `room_joined` with the complete
-  // roster from the DB, and the server re-emits `room_ready`. The ready UI
-  // after reload exists ONLY because of that re-emission — not because the
-  // client derives readiness from authoritative state (HTTP/snapshot). That
-  // gap is the behavior to fix in CCC-39 (lobby capability module); this test
-  // records it, it does not endorse it.
+describe('room lobby — full reload of a full room', () => {
   const thirdPlayer = { id: 'user-3', name: 'Bruno', image: null, isHost: false }
   const fullRoster = [hostPlayer, guestPlayer, thirdPlayer]
 
@@ -267,16 +390,17 @@ describe('room lobby — full reload after room_ready (recorded for CCC-39)', ()
       if (req.params.code !== lobbyRoom.code) {
         return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
       }
+      // HTTP still carries no ready indicator at all.
       return httpOk({ room: lobbyRoom, players: fullRoster })
     })
     onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
   }
 
-  it('full reload of a full room regains Discord access only via the re-emitted room_ready (CCC-39)', async () => {
+  it('derives readiness and the authorized link from the snapshot alone', async () => {
     registerFullRoomRoutes()
 
-    // Reload: a fresh mount of the lobby — the authoritative HTTP state still
-    // carries the room as full, but contains no ready indicator at all.
+    // Reload: a fresh mount of the lobby; the authoritative HTTP state carries
+    // the room as full but no readiness the client could rehydrate from.
     renderRoomsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
 
@@ -286,31 +410,54 @@ describe('room lobby — full reload after room_ready (recorded for CCC-39)', ()
       expect(reloadedSocket.sentFrames().some((frame) => frame.type === 'join_room')).toBe(true)
     )
 
-    // Server replays `room_joined` with the complete roster from the DB.
+    // The server answers the subscription with the complete snapshot: roster,
+    // readyAt and the Discord invite in one authoritative message.
     sendFromServer({
-      type: 'room_joined',
-      payload: { roomId: lobbyRoom.id, roomCode: 'LOBBY1', players: fullRoster },
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        room: { ...lobbyRoom, memberCount: fullRoster.length, isMember: true },
+        players: fullRoster,
+        readyAt: new Date().toISOString(),
+        presence: fullRoster.map((player) => ({ playerId: player.id, online: true })),
+      }),
     })
+
     expect(await screen.findByText('3/3 players')).toBeInTheDocument()
-
-    // Transient gap (transitory, recorded): between `room_joined` and the
-    // re-emitted `room_ready` the invite is hidden and leaving is still
-    // possible — readiness is pure local WS state at this point.
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Leave squad' })).toBeEnabled()
-
-    // Server re-emits `room_ready` because the room is full
-    // (broadcastRoomReadyIfFull) — the invite reappears ONLY thanks to this
-    // re-emission, not from the HTTP snapshot. CCC-39 owns the fix.
-    sendFromServer({
-      type: 'room_ready',
-      payload: {
-        roomId: lobbyRoom.id,
-        roomCode: 'LOBBY1',
-        message: 'Room is full! Time to play!',
-      },
-    })
-    expect(await screen.findByText('Your squad is ready!')).toBeInTheDocument()
+    expect(screen.getByText('Your squad is ready!')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Join Discord' })).toHaveAttribute(
+      'href',
+      'https://discord.gg/lobby'
+    )
     expect(screen.getByRole('button', { name: 'Squad locked' })).toBeDisabled()
+  })
+})
+
+describe('realtime indicators — keyboard tooltips', () => {
+  it('exposes the Presence and connection labels to keyboard focus', async () => {
+    const user = userEvent.setup({ delay: null })
+    render(
+      <div>
+        <PresenceIndicator online />
+        <ConnectionStatus status="open" />
+      </div>
+    )
+
+    // The indicator is reachable with Tab and its tooltip is the accessible
+    // description, so keyboard users get the same Online/Connected label.
+    await user.tab()
+    const presence = screen.getByText('Online').closest('[tabindex="0"]')
+    expect(presence).toHaveFocus()
+    expect(presence).toHaveAccessibleDescription('Online')
+
+    await user.tab()
+    const connection = screen.getByText('Connected').closest('[tabindex="0"]')
+    expect(connection).toHaveFocus()
+    expect(connection).toHaveAccessibleDescription('Connected')
+
+    // Escape dismisses the reveal until hover/focus leaves the indicator.
+    const connectionTooltip = within(connection as HTMLElement).getByRole('tooltip')
+    expect(connectionTooltip).toHaveClass('group-focus-visible:opacity-100')
+    await user.keyboard('{Escape}')
+    expect(connectionTooltip).not.toHaveClass('group-focus-visible:opacity-100')
   })
 })

@@ -1,14 +1,17 @@
 import * as motion from 'motion/react-client'
 import { User } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { PresenceIndicator } from '@/components/rooms/presence-indicator'
 import type { Player } from '@/types'
 
 interface PlayerSlotProps {
   player?: Player
   index: number
+  /** Authoritative Presence from the room snapshot; unknown members read offline. */
+  online?: boolean
 }
 
-export function PlayerSlot({ player, index }: PlayerSlotProps) {
+export function PlayerSlot({ player, index, online = false }: PlayerSlotProps) {
   const { t } = useTranslation()
 
   if (!player) {
@@ -43,6 +46,7 @@ export function PlayerSlot({ player, index }: PlayerSlotProps) {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-offwhite truncate">{player.name}</p>
       </div>
+      <PresenceIndicator online={online} />
       {player.isHost && <span className="badge-accent text-[10px] shrink-0">Host</span>}
     </motion.div>
   )

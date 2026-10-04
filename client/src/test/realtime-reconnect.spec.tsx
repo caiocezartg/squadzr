@@ -1,19 +1,20 @@
 /**
- * Characterization of reconnect, resubscribe and subscription cleanup as seen from the
- * real catalog (`/rooms`) and lobby (`/rooms/$code`) pages.
+ * Characterization of the typed realtime client (CCC-38) as seen from the real
+ * catalog (`/rooms`) and lobby (`/rooms/$code`) pages: reconnection with
+ * backoff, resubscription owned by the transport, snapshot replacement of
+ * stale state, duplicate-event idempotency and the HTTP/WebSocket state
+ * ownership that removed the old `playersInitialized` race.
  *
- * Pages render with real timers; the socket drop and the reconnect delay then run under
- * fake timers, so the 3 s backoff is advanced deterministically instead of awaited.
- * Resubscription today is a side effect of `isConnected` flipping back to true: the
- * catalog re-sends `subscribe_lobby` and the lobby re-sends `join_room`, whose server
- * reply (`room_joined`) replaces the roster. Assertions tagged `REPLACED BY CCC-38`
- * record behavior the typed realtime client (snapshots + Presence) will change.
+ * Pages render with real timers; the socket drop and the reconnect delay then
+ * run under fake timers. `Math.random` is pinned to 0 so the jittered backoff
+ * is deterministic (3000 ms on the first attempt).
  */
 
 import { act, cleanup, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderRoomsFlow } from './harness'
-import { httpOk, onHttp } from './http-router'
+import { countHttpCalls, httpOk, onHttp } from './http-router'
+import type { MockHttpResponse } from './http-router'
 import {
   catalogGames,
   catalogRooms,
@@ -22,6 +23,7 @@ import {
   hostPlayer,
   lobbyRoom,
   lobbyRoomResponse,
+  lobbySnapshot,
   openRoom,
 } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
@@ -58,6 +60,7 @@ function frameTypes(socket: MockWebSocket): string[] {
 
 beforeEach(() => {
   registerRoutes()
+  vi.spyOn(Math, 'random').mockReturnValue(0)
   vi.spyOn(console, 'log').mockImplementation(() => undefined)
 })
 
@@ -67,7 +70,7 @@ afterEach(() => {
 })
 
 describe('catalog subscription', () => {
-  it('re-sends subscribe_lobby on the new socket and applies its events', async () => {
+  it('re-sends subscribe_lobby on the new socket and applies its events idempotently', async () => {
     renderRoomsFlow('/rooms', { user: null })
     await screen.findByText(openRoom.name)
     openLatestWebSocket()
@@ -77,10 +80,36 @@ describe('catalog subscription', () => {
 
     expect(frameTypes(reconnected)).toEqual(['subscribe_lobby'])
     sendFromServer({
-      type: 'room_deleted',
+      type: 'room_removed',
+      payload: { roomId: openRoom.id, roomCode: openRoom.code },
+    })
+    sendFromServer({
+      type: 'room_removed',
       payload: { roomId: openRoom.id, roomCode: openRoom.code },
     })
     await vi.waitFor(() => expect(screen.queryByText(openRoom.name)).not.toBeInTheDocument())
+  })
+
+  it('refetches the catalog when the subscription is restored after a reconnect', async () => {
+    renderRoomsFlow('/rooms', { user: null })
+    await screen.findByText(openRoom.name)
+    openLatestWebSocket()
+    sendFromServer({
+      type: 'lobby_subscribed',
+      payload: { message: 'Subscribed to room list updates' },
+    })
+    const initialFetches = countHttpCalls('GET', '/api/rooms')
+
+    dropAndReconnect()
+    sendFromServer({
+      type: 'lobby_subscribed',
+      payload: { message: 'Subscribed to room list updates' },
+    })
+
+    // Events missed while the socket was down are repaired by the refetch.
+    await vi.waitFor(() =>
+      expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(initialFetches)
+    )
   })
 
   it('closes the socket on unmount without unsubscribe_lobby and never reconnects', async () => {
@@ -101,7 +130,7 @@ describe('catalog subscription', () => {
 })
 
 describe('room channel subscription', () => {
-  it('re-sends join_room after reconnecting and replaces the roster from room_joined', async () => {
+  it('re-sends join_room after reconnecting and replaces the roster from a fresh snapshot', async () => {
     renderRoomsFlow('/rooms/LOBBY1')
     await screen.findByText(lobbyRoom.name)
     openLatestWebSocket()
@@ -109,55 +138,91 @@ describe('room channel subscription', () => {
       { type: 'join_room', payload: { roomCode: 'LOBBY1' } },
     ])
 
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+
     const reconnected = dropAndReconnect()
 
     expect(reconnected.sentFrames()).toEqual([
       { type: 'join_room', payload: { roomCode: 'LOBBY1' } },
     ])
+    // The member who left while the socket was down is gone after the snapshot.
     sendFromServer({
-      type: 'room_joined',
-      payload: { roomId: lobbyRoom.id, roomCode: 'LOBBY1', players: [hostPlayer, guestPlayer] },
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        players: [hostPlayer],
+        presence: [{ playerId: hostPlayer.id, online: true }],
+      }),
     })
-    expect(await screen.findByText(guestPlayer.name)).toBeInTheDocument()
+    await vi.waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument())
+    expect(screen.getByText('1/3 players')).toBeInTheDocument()
+  })
+
+  it('leaves the previous room on a code switch and ignores its late events', async () => {
+    const nextRoom = {
+      ...lobbyRoom,
+      id: 'aaaaaaaa-0000-4000-8000-000000000007',
+      code: 'NEXT01',
+      name: 'Next squad',
+    }
+    onHttp('GET', '/api/rooms/:code', (req) => {
+      if (req.params.code === nextRoom.code)
+        return httpOk({ room: nextRoom, players: [hostPlayer] })
+      return httpOk(lobbyRoomResponse)
+    })
+
+    const { router } = renderRoomsFlow('/rooms/LOBBY1')
+    await screen.findByText(lobbyRoom.name)
+    openLatestWebSocket()
+    const socket = latestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+
+    await act(() => router.navigate({ to: '/rooms/$code', params: { code: nextRoom.code } }))
+
+    // The same socket releases the previous room channel before joining the new one.
+    await vi.waitFor(() =>
+      expect(socket.sentFrames()).toEqual([
+        { type: 'join_room', payload: { roomCode: 'LOBBY1' } },
+        { type: 'leave_room', payload: { roomCode: 'LOBBY1' } },
+        { type: 'join_room', payload: { roomCode: nextRoom.code } },
+      ])
+    )
+
+    // Events from the previous room, already in flight, never touch this page.
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true },
+    })
+    expect(screen.queryByText('Ana')).not.toBeInTheDocument()
+
+    // The new room's snapshot is applied.
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        room: { ...nextRoom, memberCount: 2, isMember: true },
+        players: [hostPlayer, guestPlayer],
+      }),
+    })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
     expect(screen.getByText('2/3 players')).toBeInTheDocument()
   })
 
-  it('keeps the last roster while disconnected', async () => {
+  it('keeps the last roster and Presence frozen while disconnected', async () => {
     renderRoomsFlow('/rooms/LOBBY1')
     await screen.findByText(lobbyRoom.name)
     openLatestWebSocket()
-    sendFromServer({
-      type: 'room_joined',
-      payload: { roomId: lobbyRoom.id, roomCode: 'LOBBY1', players: [hostPlayer, guestPlayer] },
-    })
-    await screen.findByText(guestPlayer.name)
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    await screen.findByText('Ana')
 
     vi.useFakeTimers()
     act(() => latestWebSocket().close(DROPPED))
 
-    // REPLACED BY CCC-38: no offline state per member; the roster is simply frozen.
-    expect(screen.getByText(guestPlayer.name)).toBeInTheDocument()
+    // No offline transition is invented locally; the next snapshot converges.
+    expect(screen.getByText('Ana')).toBeInTheDocument()
     expect(screen.getByText('2/3 players')).toBeInTheDocument()
-  })
-
-  it('ignores viewer_left, so a disconnected member still looks present', async () => {
-    renderRoomsFlow('/rooms/LOBBY1')
-    await screen.findByText(lobbyRoom.name)
-    openLatestWebSocket()
-    sendFromServer({
-      type: 'room_joined',
-      payload: { roomId: lobbyRoom.id, roomCode: 'LOBBY1', players: [hostPlayer, guestPlayer] },
-    })
-    await screen.findByText(guestPlayer.name)
-
-    sendFromServer({
-      type: 'viewer_left',
-      payload: { playerId: guestPlayer.id, roomCode: 'LOBBY1' },
-    })
-
-    // REPLACED BY CCC-38: the server's socket-level Presence signal has no consumer.
-    expect(screen.getByText(guestPlayer.name)).toBeInTheDocument()
-    expect(screen.getByText('2/3 players')).toBeInTheDocument()
+    expect(screen.getByText('Reconnecting…')).toBeInTheDocument()
   })
 
   it('leaves the room channel by closing the socket, without leave_room, on navigation', async () => {
@@ -173,5 +238,33 @@ describe('room channel subscription', () => {
     expect(lobbySocket.readyState).toBe(MockWebSocket.CLOSED)
     expect(frameTypes(lobbySocket)).toEqual(['join_room'])
     expect(latestWebSocket()).not.toBe(lobbySocket)
+  })
+})
+
+describe('live state ownership', () => {
+  it('never lets a late HTTP response overwrite the roster from the snapshot', async () => {
+    let releaseRoomResponse: (() => void) | undefined
+    onHttp(
+      'GET',
+      '/api/rooms/:code',
+      () =>
+        new Promise<MockHttpResponse>((resolve) => {
+          releaseRoomResponse = () => resolve(httpOk(lobbyRoomResponse))
+        })
+    )
+
+    renderRoomsFlow('/rooms/LOBBY1')
+    // The page is still loading while the HTTP response is held back, so wait
+    // for the route to mount and open its socket.
+    await vi.waitFor(() => expect(MockWebSocket.instances.length).toBeGreaterThan(0))
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+
+    releaseRoomResponse?.()
+    expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
+
+    // HTTP returns only the host, but the live roster comes from the snapshot.
+    expect(screen.getByText('Ana')).toBeInTheDocument()
+    expect(screen.getByText('2/3 players')).toBeInTheDocument()
   })
 })

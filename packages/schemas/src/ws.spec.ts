@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import type { PlayerDto, PublicRoomDto } from './index'
 import {
+  protocolAnnouncementSchema,
   roomCreatedMessageSchema,
   wsIncomingMessageSchema,
   wsServerEnvelopeSchema,
@@ -168,5 +169,20 @@ describe('wsServerEnvelopeSchema', () => {
     })
     expect(wsServerEnvelopeSchema.safeParse({ payload: {} }).success).toBe(false)
     expect(wsServerEnvelopeSchema.safeParse(42).success).toBe(false)
+  })
+})
+
+describe('protocolAnnouncementSchema', () => {
+  it('accepts any positive version so a mismatched build can react before its own contract', () => {
+    expect(protocolAnnouncementSchema.parse({ version: 2 })).toEqual({ version: 2 })
+    expect(protocolAnnouncementSchema.parse({ version: 3 })).toEqual({ version: 3 })
+  })
+
+  it.each([
+    ['a non-numeric version', { version: 'two' }],
+    ['a fractional version', { version: 2.5 }],
+    ['a missing version', {}],
+  ])('rejects %s', (_label, payload) => {
+    expect(protocolAnnouncementSchema.safeParse(payload).success).toBe(false)
   })
 })
