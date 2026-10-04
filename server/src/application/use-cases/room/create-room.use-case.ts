@@ -40,17 +40,12 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
     const now = this.clock.now()
 
-    // Enforce host limit: max 3 valid rooms (ready and expired rooms do not count).
-    const activeRoomCount = await this.roomRepository.countActiveByHostId(input.hostId, now)
-    if (activeRoomCount >= ROOM.CREATE_LIMIT) {
-      throw new RoomCreateLimitReachedError(ROOM.CREATE_LIMIT)
-    }
-
     const maxPlayers = input.maxPlayers ?? game.maxPlayers
 
     // Room and host Membership are one transaction, with Room Activity stamped
-    // by the injected clock in the same statement as the room itself.
-    return this.roomRepository.create(
+    // by the injected clock in the same statement as the room itself. The host
+    // limit is decided in that same transaction, under the user row lock.
+    const outcome = await this.roomRepository.create(
       {
         name: input.name,
         hostId: input.hostId,
@@ -62,5 +57,11 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       },
       now
     )
+
+    if (outcome.status === 'limit_reached') {
+      throw new RoomCreateLimitReachedError(ROOM.CREATE_LIMIT)
+    }
+
+    return { room: outcome.room, hostMember: outcome.hostMember }
   }
 }

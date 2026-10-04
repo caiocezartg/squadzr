@@ -1,6 +1,6 @@
 import { vi, type Mock } from 'vitest'
 import type { Room, CreateRoomInput, UpdateRoomInput } from '@domain/entities/room.entity'
-import type { CreatedRoom, IRoomRepository } from '@domain/repositories/room.repository'
+import type { CreateRoomOutcome, IRoomRepository } from '@domain/repositories/room.repository'
 
 export function createMockRoom(overrides?: Partial<Room>): Room {
   return {
@@ -33,16 +33,14 @@ export function createMockRoomRepository(): MockRoomRepository {
     findByHostId: vi.fn<(hostId: string) => Promise<Room[]>>().mockResolvedValue([]),
     findAll: vi.fn<() => Promise<Room[]>>().mockResolvedValue([]),
     findAvailable: vi.fn<(now: Date) => Promise<Room[]>>().mockResolvedValue([]),
-    countActiveByHostId: vi
-      .fn<(hostId: string, now: Date) => Promise<number>>()
-      .mockResolvedValue(0),
     findMyRooms: vi
       .fn<(userId: string, now: Date) => Promise<{ hosted: Room[]; joined: Room[] }>>()
       .mockResolvedValue({ hosted: [], joined: [] }),
     create: vi
-      .fn<(input: CreateRoomInput, now: Date) => Promise<CreatedRoom>>()
+      .fn<(input: CreateRoomInput, now: Date) => Promise<CreateRoomOutcome>>()
       .mockImplementation((input, now) =>
         Promise.resolve({
+          status: 'created',
           room: createMockRoom({
             name: input.name,
             hostId: input.hostId,

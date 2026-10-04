@@ -297,22 +297,18 @@ describe('JoinRoomUseCase', () => {
       expect(JSON.stringify(result.createdNotifications)).not.toContain('Unknown')
     })
 
-    it('should throw RoomJoinLimitReachedError when user is already in 5 valid rooms', async () => {
+    it('should throw RoomJoinLimitReachedError when the transaction reports the limit', async () => {
       const room = openRoom({ maxPlayers: 5 })
 
       mockRoomRepository.findByCode.mockResolvedValue(room)
       mockRoomMemberRepository.findByRoomAndUser.mockResolvedValue(null)
-      mockRoomMemberRepository.countActiveByUserId.mockResolvedValue(5)
+      mockRoomMemberRepository.joinOpenRoom.mockResolvedValue({ status: 'limit_reached' })
 
       await expect(useCase.execute({ code: 'ABC123', userId: 'user-id' })).rejects.toThrow(
         RoomJoinLimitReachedError
       )
 
-      expect(mockRoomMemberRepository.countActiveByUserId).toHaveBeenCalledWith(
-        'user-id',
-        FIXED_NOW
-      )
-      expect(mockRoomMemberRepository.joinOpenRoom).not.toHaveBeenCalled()
+      expect(mockRoomMemberRepository.joinOpenRoom).toHaveBeenCalledOnce()
     })
 
     it('should allow joining when user is in 4 valid rooms (below limit)', async () => {
@@ -321,7 +317,6 @@ describe('JoinRoomUseCase', () => {
 
       mockRoomRepository.findByCode.mockResolvedValue(room)
       mockRoomMemberRepository.findByRoomAndUser.mockResolvedValue(null)
-      mockRoomMemberRepository.countActiveByUserId.mockResolvedValue(4)
       mockRoomMemberRepository.joinOpenRoom.mockResolvedValue({
         status: 'joined',
         member: expectedMember,

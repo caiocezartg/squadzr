@@ -1,0 +1,15 @@
+---
+status: accepted
+---
+
+# Serialize per-user room limits with a user row lock
+
+The 5-Membership and 3-hosted-Room limits are decided inside the transaction that writes the row, under `SELECT ... FOR NO KEY UPDATE` on the user row, so concurrent joins by one user into different rooms and concurrent creations by one host serialize instead of both passing the count. The pre-transaction count methods are removed so each limit has a single enforcement point. Creation still enforces only the host limit: when a join commits first at five Memberships, a subsequent creation may add a sixth.
+
+The lock mode must remain compatible with `KEY SHARE` acquired by the `user_notifications.user_id`, `room_members.user_id` and `rooms.host_id` foreign keys. With `FOR UPDATE`, crossed final joins (U enters V's room while V enters U's room) each hold their own user row and then wait for the other's row while inserting `room_ready` notifications, forming a deadlock. `NO KEY UPDATE` conflicts with itself but allows those FK checks; it protects the limit without changing any user key. See the [PostgreSQL 16 row-lock conflict table](https://www.postgresql.org/docs/16/explicit-locking.html#LOCKING-ROWS).
+
+The global acquisition order is existing room rows first, then the user row. `joinOpenRoom` locks its room and then its user, reads the clock after both waits, and uses that one instant for expiration, the active-Membership cutoff, `joined_at`, `last_activity_at`, `ready_at` and `updated_at`. `create` locks its user and only inserts a brand-new room, never waiting for an existing room. All queries under these locks use the transaction connection, including roster/profile reads and notification inserts.
+
+The room paths were audited: regular leave locks only its room before deleting a Membership; host leave, host deletion and `deleteExpired` lock/delete only the affected room and cascade to its Memberships, without acquiring a user row lock. The `room_members.room_id` FK checks the same room already held by its own join transaction (or the new room inserted by create), never another existing room. Notifications have no room FK and distinct room IDs keep their unique keys separate across crossed joins. These paths therefore introduce no reverse user-to-existing-room edge. User profile updates touch only one user and do not change keys; the unused `DrizzleUserRepository.delete` method would acquire a user lock before cascades to rooms, so enabling account deletion requires a separate lock-order design (there is no application caller and Better Auth account deletion is not enabled).
+
+Integration tests use explicit 5s deadlines for same-user joins, creations and create/join in both orders. A test-only notification trigger pauses both crossed final joins before their FK checks, after their room and user locks are held, so the incompatible mode reliably fails with a deadlock/HTTP 500. The already-saturated Membership case is a boundary check that also passes with the old pre-transaction guard; the one-free-slot join and creation cases prove the oversubscription regression through responses and durable counts, not barrier timeouts.
