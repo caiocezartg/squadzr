@@ -21,6 +21,7 @@ import { Plus } from 'lucide-react'
 import type { Game } from '@/types'
 import { EmptyState } from './components/empty-state'
 import { useAutoJoin } from './use-auto-join'
+import { useCatalogCommands } from './use-catalog-commands'
 import { useCatalogData } from './use-catalog-data'
 import { useCatalogEvents } from './use-catalog-events'
 import { usePagination } from './use-pagination'
@@ -49,8 +50,8 @@ export function CatalogPage() {
   useCatalogEvents({ subscribe })
   useNotificationEvents({ on })
 
-  const { rooms, roomsLoading, roomsError, games, gamesLoading, gamesError, refreshRooms } =
-    useCatalogData()
+  const { rooms, roomsLoading, roomsError, games, gamesLoading, gamesError } = useCatalogData()
+  const { refreshRooms } = useCatalogCommands()
 
   // Create room mutation
   const createRoomMutation = useMutation({

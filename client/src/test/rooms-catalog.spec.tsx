@@ -11,8 +11,8 @@
  * generated route details.
  */
 
-import { screen, waitFor, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act, screen, waitFor, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestQueryClient, renderRoomsFlow } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import {
@@ -229,10 +229,10 @@ describe('rooms catalog — realtime refetch updates', () => {
     expect(cachedAfterDelete?.rooms.some((room) => room.id === fullRoom.id)).toBe(false)
   })
 
-  it('drops a Ready room through authoritative state and never resurrects it from a late event', async () => {
+  it('drops a Ready room through authoritative state and never resurrects it from a late room_created', async () => {
     const serverRooms = { rooms: [...catalogRooms.rooms] }
     onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
-    renderRoomsFlow('/rooms')
+    const { queryClient } = renderRoomsFlow('/rooms')
     await screen.findByText('Full lobby')
 
     openLatestWebSocket()
@@ -247,16 +247,19 @@ describe('rooms catalog — realtime refetch updates', () => {
     await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
     const fetchesAfterRemoval = countHttpCalls('GET', '/api/rooms')
 
-    // An older event for the same room must not patch it back into the cache:
-    // the affected query refetches the authoritative list, where it is gone.
-    sendFromServer({
-      type: 'room_updated',
-      payload: { roomId: fullRoom.id, roomCode: fullRoom.code, memberCount: 2 },
-    })
+    // A late room_created for the same room must not patch it back into the
+    // cache: the event schedules the authoritative refetch, and the server
+    // list no longer has the room.
+    const cachedRoomIds = () =>
+      queryClient.getQueryData<RoomsResponse>(['rooms'])?.rooms.map((room) => room.id) ?? []
+    sendFromServer({ type: 'room_created', payload: { room: fullRoom } })
+    expect(cachedRoomIds()).not.toContain(fullRoom.id)
+
     await waitFor(() =>
       expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesAfterRemoval)
     )
-    expect(screen.queryByText('Full lobby')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
+    expect(cachedRoomIds()).not.toContain(fullRoom.id)
   })
 
   it('applies a pushed notification to the notifications cache without duplicating it', async () => {
@@ -323,6 +326,103 @@ describe('rooms catalog — realtime refetch updates', () => {
         expect.objectContaining({ id: roomReadyNotification.id }),
       ])
     )
+  })
+})
+
+describe('rooms catalog — coalesced realtime refetch', () => {
+  it('collapses a burst of events into one refetch and drops a removed room before it', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    const { queryClient } = renderRoomsFlow('/rooms')
+    await screen.findByText('Full lobby')
+    openLatestWebSocket()
+
+    const fetchesBeforeBurst = countHttpCalls('GET', '/api/rooms')
+
+    vi.useFakeTimers()
+    try {
+      // Three events inside the debounce window share a single refetch...
+      for (const memberCount of [2, 3, 4]) {
+        sendFromServer({
+          type: 'room_updated',
+          payload: { roomId: openRoom.id, roomCode: openRoom.code, memberCount },
+        })
+      }
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(299)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 1)
+
+      // ...while a removed room leaves the screen on the event itself, before
+      // the coalesced refetch lands.
+      serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== fullRoom.id)
+      sendFromServer({
+        type: 'room_removed',
+        payload: { roomId: fullRoom.id, roomCode: fullRoom.code },
+      })
+      // Flush the React notification, not the 300 ms refetch timer.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(screen.queryByText('Full lobby')).not.toBeInTheDocument()
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 1)
+
+      // The coalesced refetch then converges with the authoritative list.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 2)
+      expect(
+        queryClient
+          .getQueryData<RoomsResponse>(['rooms'])
+          ?.rooms.some((room) => room.id === fullRoom.id)
+      ).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps refetching while a burst of events outlives maxWait', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    renderRoomsFlow('/rooms')
+    await screen.findByText('Ranked grind')
+    openLatestWebSocket()
+
+    const fetchesBeforeBurst = countHttpCalls('GET', '/api/rooms')
+
+    vi.useFakeTimers()
+    try {
+      // An event every 100 ms for two seconds: the debounce never expires and
+      // only maxWait can make progress.
+      for (let elapsed = 0; elapsed <= 2_000; elapsed += 100) {
+        sendFromServer({
+          type: 'room_updated',
+          payload: { roomId: openRoom.id, roomCode: openRoom.code, memberCount: 2 },
+        })
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(100)
+        })
+      }
+
+      // maxWait fired at 1000 ms and 2000 ms even though the burst continued.
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 2)
+
+      // Once the events stop, the trailing debounce adds one more refetch.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 3)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 
