@@ -30,9 +30,6 @@ export function createMockRoomMemberRepository(): MockRoomMemberRepository {
       .fn<(roomId: string, userId: string) => Promise<RoomMember | null>>()
       .mockResolvedValue(null),
     countByRoomId: vi.fn<(roomId: string) => Promise<number>>().mockResolvedValue(0),
-    countActiveByUserId: vi
-      .fn<(userId: string, now: Date) => Promise<number>>()
-      .mockResolvedValue(0),
     joinOpenRoom: vi
       .fn<(input: JoinOpenRoomInput) => Promise<JoinOpenRoomOutcome>>()
       .mockImplementation((input) =>

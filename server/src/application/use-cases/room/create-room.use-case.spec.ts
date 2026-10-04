@@ -36,6 +36,7 @@ describe('CreateRoomUseCase', () => {
         maxPlayers: 5,
       })
       mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
         room: expectedRoom,
         hostMember: createMockRoomMember({ roomId: expectedRoom.id, userId: 'host-123' }),
       })
@@ -75,6 +76,7 @@ describe('CreateRoomUseCase', () => {
         userId: 'host-123',
       })
       mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
         room: expectedRoom,
         hostMember: expectedMember,
       })
@@ -97,6 +99,7 @@ describe('CreateRoomUseCase', () => {
 
       const expectedRoom = createMockRoom({ code: 'ABC123' })
       mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
         room: expectedRoom,
         hostMember: createMockRoomMember(),
       })
@@ -116,6 +119,7 @@ describe('CreateRoomUseCase', () => {
       mockGameRepository.findById.mockResolvedValue(game)
 
       mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
         room: createMockRoom({ maxPlayers: 10 }),
         hostMember: createMockRoomMember(),
       })
@@ -140,6 +144,7 @@ describe('CreateRoomUseCase', () => {
       mockGameRepository.findById.mockResolvedValue(game)
 
       mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
         room: createMockRoom({ maxPlayers: 10 }),
         hostMember: createMockRoomMember(),
       })
@@ -176,10 +181,10 @@ describe('CreateRoomUseCase', () => {
       expect(mockRoomRepository.create).not.toHaveBeenCalled()
     })
 
-    it('should throw RoomCreateLimitReachedError when user already hosts 3 valid rooms', async () => {
+    it('should throw RoomCreateLimitReachedError when the transaction reports the host limit', async () => {
       const game = createMockGame({ id: 'game-123' })
       mockGameRepository.findById.mockResolvedValue(game)
-      mockRoomRepository.countActiveByHostId.mockResolvedValue(3)
+      mockRoomRepository.create.mockResolvedValue({ status: 'limit_reached' })
 
       await expect(
         useCase.execute({
@@ -190,14 +195,12 @@ describe('CreateRoomUseCase', () => {
         })
       ).rejects.toThrow(RoomCreateLimitReachedError)
 
-      expect(mockRoomRepository.countActiveByHostId).toHaveBeenCalledWith('host-123', FIXED_NOW)
-      expect(mockRoomRepository.create).not.toHaveBeenCalled()
+      expect(mockRoomRepository.create).toHaveBeenCalledOnce()
     })
 
     it('should allow room creation when user hosts 2 valid rooms (below limit)', async () => {
       const game = createMockGame({ id: 'game-123', maxPlayers: 5 })
       mockGameRepository.findById.mockResolvedValue(game)
-      mockRoomRepository.countActiveByHostId.mockResolvedValue(2)
 
       const expectedRoom = createMockRoom({
         name: 'My Room',
@@ -206,6 +209,7 @@ describe('CreateRoomUseCase', () => {
         maxPlayers: 5,
       })
       mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
         room: expectedRoom,
         hostMember: createMockRoomMember({ roomId: expectedRoom.id, userId: 'host-123' }),
       })
