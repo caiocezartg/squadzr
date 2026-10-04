@@ -1,4 +1,6 @@
 import * as motion from 'motion/react-client'
+import { useState } from 'react'
+import type { SyntheticEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTimeAgo } from '@/hooks/use-time-ago'
 import { Check, Users } from 'lucide-react'
@@ -41,6 +43,22 @@ export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: Room
   const isFull = members >= room.maxPlayers
   const isDisabled = isLoading || (isFull && !room.isMember)
   const roomTags = room.tags ?? []
+  const coverUrl = game?.coverUrl ? game.coverUrl : null
+  const [readyCover, setReadyCover] = useState<string | null>(null)
+  // The entrance fade waits for the cover: the image is part of the card from
+  // its first painted frame, instead of popping in after the fade when the
+  // request resolves late.
+  const coverReady = coverUrl === null || readyCover === coverUrl
+
+  const handleCoverLoad = (event: SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget
+    const markReady = () => setReadyCover(coverUrl)
+    if (typeof image.decode === 'function') {
+      image.decode().then(markReady, markReady)
+    } else {
+      markReady()
+    }
+  }
 
   const MAX_DOTS = 8
   const visibleSlots = Math.min(room.maxPlayers, MAX_DOTS)
@@ -60,20 +78,22 @@ export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: Room
           : 'cursor-pointer border-border hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-[0_6px_32px_rgba(0,255,162,0.07)]'
       }`}
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      animate={{ opacity: coverReady ? 1 : 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5, ease: 'easeInOut' }}
     >
       <div className="relative h-40 overflow-hidden bg-surface-light">
-        {game?.coverUrl ? (
+        {coverUrl ? (
           <img
-            src={game.coverUrl}
-            alt={game.name}
+            src={coverUrl}
+            alt={game?.name ?? ''}
             className="h-full w-full object-cover"
             style={{
-              objectPosition: `center ${game.slug ? (COVER_POSITION_Y[game.slug] ?? '20%') : '20%'}`,
+              objectPosition: `center ${game?.slug ? (COVER_POSITION_Y[game.slug] ?? '20%') : '20%'}`,
             }}
             loading="lazy"
+            onLoad={handleCoverLoad}
+            onError={() => setReadyCover(coverUrl)}
           />
         ) : (
           <div className="h-full w-full bg-surface-light" />
