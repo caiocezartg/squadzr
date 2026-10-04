@@ -346,4 +346,63 @@ describe('realtime isolation under subscription load', () => {
     expect(broadcaster['subscriptions'].size).toBe(0)
     expect(broadcaster['presence'].isOnline(room.code, host.id)).toBe(false)
   })
+
+  it('preserves a new member Presence when an older roster read finishes after their subscription', async () => {
+    const { host, member, room, broadcaster } = await setup()
+    const observer = await open(host)
+    await joinRoomChannel(observer, room.code)
+    const snapshots = broadcaster['snapshots']
+    const read = snapshots.read.bind(snapshots)
+    const gate = deferred()
+    const started = deferred()
+    vi.spyOn(snapshots, 'read').mockImplementationOnce(async (code) => {
+      const stale = await read(code)
+      started.resolve()
+      await gate.promise
+      return stale
+    })
+    try {
+      broadcaster.broadcastRoomUpdated(room.id, room.code, 1)
+      await started.promise
+      await joinAll(server, room.code, [member])
+      const newcomer = await open(member)
+      const snapshot = roomSnapshotMessageSchema.parse(
+        await withinBound(joinRoomChannel(newcomer, room.code))
+      )
+      expect(snapshot.payload.presence).toContainEqual({ playerId: member.id, online: true })
+      expect(broadcaster['presence'].isOnline(room.code, member.id)).toBe(true)
+    } finally {
+      gate.resolve()
+    }
+    const published = (await observer.drain()).filter((message) => message.type === 'room_snapshot')
+    expect(published).toHaveLength(2)
+    expect(roomSnapshotMessageSchema.parse(published[0]).payload.players).toHaveLength(1)
+    expect(roomSnapshotMessageSchema.parse(published[1]).payload.presence).toContainEqual({
+      playerId: member.id,
+      online: true,
+    })
+    expect(broadcaster['presence'].isOnline(room.code, member.id)).toBe(true)
+  })
+
+  it('orders created before updated catalog events for a member socket with another channel pending', async () => {
+    const { host, room, broadcaster } = await setup()
+    const channel = await open(host)
+    await joinRoomChannel(channel, room.code)
+    await subscribeCatalog(channel)
+    const snapshot = await broadcaster['snapshots'].read(room.code)
+    if (!snapshot) throw new Error('Expected room snapshot')
+    const gate = deferred()
+    const pending = broadcaster['operations'].run(() => gate.promise, channel.server, room.code)
+    try {
+      broadcaster.broadcastRoomCreated(snapshot.room)
+      broadcaster.broadcastRoomUpdated(room.id, room.code, 1)
+      expect((await withinBound(channel.next())).type).toBe('room_created')
+      expect((await withinBound(channel.next())).type).toBe('room_snapshot')
+      expect((await withinBound(channel.next())).type).toBe('room_updated')
+    } finally {
+      gate.resolve()
+      await pending
+    }
+    expect(await channel.drain()).toEqual([])
+  })
 })

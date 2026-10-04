@@ -58,7 +58,7 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
               payload: { room: toPublicRoom(room) },
             })
         },
-        room.code
+        this.catalogChannel(socket, room.code)
       )
   }
 
@@ -67,10 +67,15 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
     const pending = this.operations
       .run(async () => {
         if (this.stopped) return
+        const observedPresence = this.presence.captureMembers(roomCode)
         const snapshot = await this.snapshots.read(roomCode)
         if (this.stopped) return
         if (!snapshot) return null
-        this.presence.retainMembers(roomCode, new Set(snapshot.players.map((player) => player.id)))
+        this.presence.retainMembers(
+          roomCode,
+          new Set(snapshot.players.map((player) => player.id)),
+          observedPresence
+        )
         this.log.info(
           {
             category: 'membership',
