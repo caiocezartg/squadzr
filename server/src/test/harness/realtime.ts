@@ -34,10 +34,8 @@ export interface RealtimeSession {
   /** Resolves with the next unread server message, strictly in arrival order. */
   next: () => Promise<ServerMessage>
   /**
-   * Sends a `ping` and returns every message that arrived before its `pong`. Only
-   * replies and queued post-commit publications precede the `pong`: the realtime
-   * module orders database-backed subscriptions and publications with incoming
-   * messages on the same connection.
+   * Waits for all scoped queues, then uses a ping/pong to flush the transport.
+   * Application pongs bypass room work and cannot serve as queue completion signals.
    */
   drain: () => Promise<ServerMessage[]>
   /** Resolves once the server-side socket has closed and the plugin has cleaned up. */
@@ -121,6 +119,10 @@ export async function connect(
   const send = (message: unknown) => client.send(JSON.stringify(message))
 
   const drain = async () => {
+    // Let frames sent through the in-memory stream reach the server first.
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    const broadcaster = server.app.broadcaster as WsRoomBroadcaster
+    await broadcaster['operations'].drain()
     send({ type: 'ping' })
     const received: ServerMessage[] = []
     for (let message = await next(); message.type !== 'pong'; message = await next()) {

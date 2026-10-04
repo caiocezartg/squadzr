@@ -108,6 +108,10 @@ export class WsConnectionManager {
     this.lobbySubscribers.delete(socket)
   }
 
+  getLobbySockets(): ReadonlySet<WebSocket> {
+    return this.lobbySubscribers
+  }
+
   broadcastToRoom(roomCode: string, message: WsServerMessage, excludeSocket?: WebSocket): void {
     const roomSockets = this.rooms.get(roomCode)
     if (!roomSockets) return

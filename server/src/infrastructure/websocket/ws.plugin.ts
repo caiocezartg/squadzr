@@ -20,6 +20,8 @@ declare module 'fastify' {
   }
 }
 
+export const SOCKET_OPERATION_LIMIT = 8
+
 async function wsPlugin(
   fastify: FastifyInstance,
   { realtime }: { realtime: Realtime }
@@ -65,6 +67,7 @@ async function wsPlugin(
       payload: { version: REALTIME_PROTOCOL_VERSION },
     })
     const invalid = new InvalidMessages(fastify.clock)
+    let inFlight = 0
 
     function dispatch(message: WsIncomingMessage): void | Promise<void> {
       switch (message.type) {
@@ -105,7 +108,34 @@ async function wsPlugin(
         if (invalidCount >= INVALID_MESSAGE_LIMIT) socket.close(1008, 'Too many invalid messages')
         return
       }
-      void operations.run(async () => {
+      if (parsed.message.type === 'ping') {
+        dispatch(parsed.message)
+        return
+      }
+      if (inFlight >= SOCKET_OPERATION_LIMIT) {
+        fastify.log.warn(
+          {
+            category: 'transport',
+            event: 'operation_limit',
+            code: 'TOO_MANY_REQUESTS',
+            connectionId: request.id,
+            messageType: parsed.message.type,
+            inFlight,
+            limit: SOCKET_OPERATION_LIMIT,
+          },
+          'WebSocket operation limit exceeded'
+        )
+        sendError(
+          socket,
+          'TOO_MANY_REQUESTS',
+          'Too many pending operations',
+          manager,
+          fastify.clock
+        )
+        return
+      }
+      inFlight += 1
+      const operation = async () => {
         if (
           realtime.isStopped() ||
           !manager.isConnected(socket) ||
@@ -129,6 +159,13 @@ async function wsPlugin(
             sendError(socket, 'INTERNAL_ERROR', 'Failed to handle message', manager, fastify.clock)
           }
         }
+      }
+      const pending =
+        parsed.message.type === 'join_room'
+          ? broadcaster.scheduleSubscription(socket, parsed.message.payload.roomCode, operation)
+          : operations.run(operation, socket)
+      void pending.finally(() => {
+        inFlight -= 1
       })
     })
     socket.on('pong', () => heartbeat.pong(socket))
