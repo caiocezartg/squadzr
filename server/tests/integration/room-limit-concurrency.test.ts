@@ -289,6 +289,7 @@ describe('active room limits under a concurrent race', () => {
         }
         // Creation has always enforced only the host limit. If join goes first,
         // the subsequent create is allowed to add a sixth active Membership.
+        // Join-first therefore passes even without the user lock.
         expect(await activeMemberships(player.id)).toBe(
           ROOM.JOIN_LIMIT + (first === 'join' ? 1 : 0)
         )
