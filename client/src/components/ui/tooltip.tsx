@@ -13,7 +13,11 @@ interface TooltipProps {
  * focusable, the content is linked through `aria-describedby`, revealed on
  * hover and `:focus-visible`, kept visible while the pointer is over the
  * content (WCAG 1.4.13 Hoverable), and dismissed with Escape from anywhere
- * until hover/focus leaves the trigger.
+ * until both hover and focus leave the trigger.
+ *
+ * Hover and focus are tracked separately so Escape keeps working while either
+ * one still reveals the content: concealment by one trigger cannot drop the
+ * listener the other one needs. A dismissal resets only once neither is left.
  *
  * The hidden content is `invisible`, not just transparent, so it never
  * intercepts the pointer where it would appear. A transparent bridge covers
@@ -23,10 +27,13 @@ interface TooltipProps {
 export function Tooltip({ label, children }: TooltipProps) {
   const id = useId()
   const [dismissed, setDismissed] = useState(false)
-  const [revealed, setRevealed] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+
+  const active = hovered || focused
 
   useEffect(() => {
-    if (!revealed || dismissed) return
+    if (!active || dismissed) return
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setDismissed(true)
@@ -34,23 +41,21 @@ export function Tooltip({ label, children }: TooltipProps) {
 
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [revealed, dismissed])
+  }, [active, dismissed])
 
-  const reveal = () => setRevealed(true)
-  const conceal = () => {
-    setRevealed(false)
-    setDismissed(false)
-  }
+  useEffect(() => {
+    if (!active) setDismissed(false)
+  }, [active])
 
   return (
     <span
       tabIndex={0}
       aria-describedby={id}
       className="group relative inline-flex items-center"
-      onFocus={reveal}
-      onBlur={conceal}
-      onMouseEnter={reveal}
-      onMouseLeave={conceal}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {children}
       <span

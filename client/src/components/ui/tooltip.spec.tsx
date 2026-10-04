@@ -71,4 +71,56 @@ describe('tooltip', () => {
     await user.hover(trigger)
     expect(tooltip).toHaveClass('group-hover:opacity-100')
   })
+
+  it('keeps Escape working when hover leaves while focus-visible still reveals it', async () => {
+    const user = userEvent.setup({ delay: null })
+    render(
+      <Tooltip label="Online">
+        <span data-testid="trigger" />
+      </Tooltip>
+    )
+
+    const trigger = screen.getByTestId('trigger')
+    const tooltip = screen.getByRole('tooltip')
+
+    // Keyboard focus first, then a hover that leaves again: the tooltip stays
+    // revealed by `:focus-visible` alone.
+    await user.tab()
+    expect(trigger.closest('[tabindex="0"]')).toHaveFocus()
+    await user.hover(trigger)
+    await user.unhover(trigger)
+    expect(tooltip).toHaveClass('group-focus-visible:opacity-100')
+
+    // Escape must still dismiss it: focus is a live trigger on its own.
+    await user.keyboard('{Escape}')
+    expect(tooltip).not.toHaveClass('group-focus-visible:opacity-100')
+  })
+
+  it('keeps Escape working when focus leaves while hover still reveals it', async () => {
+    const user = userEvent.setup({ delay: null })
+    render(
+      <div>
+        <Tooltip label="Online">
+          <span data-testid="trigger" />
+        </Tooltip>
+        <button type="button">Next</button>
+      </div>
+    )
+
+    const trigger = screen.getByTestId('trigger')
+    const tooltip = screen.getByRole('tooltip')
+
+    // Hover first, then Tab reaches the trigger and leaves it again: the
+    // pointer is still over the trigger, so `:hover` keeps it revealed.
+    await user.hover(trigger)
+    await user.tab()
+    expect(trigger.closest('[tabindex="0"]')).toHaveFocus()
+    await user.tab()
+    expect(trigger.closest('[tabindex="0"]')).not.toHaveFocus()
+    expect(tooltip).toHaveClass('group-hover:opacity-100')
+
+    // Escape must still dismiss it: hover is a live trigger on its own.
+    await user.keyboard('{Escape}')
+    expect(tooltip).not.toHaveClass('group-hover:opacity-100')
+  })
 })

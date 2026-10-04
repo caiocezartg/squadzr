@@ -131,6 +131,15 @@ describe('room lobby — snapshot handshake', () => {
     expect(screen.getAllByText('Offline')).toHaveLength(1)
     expect(screen.getAllByText('Connected')).toHaveLength(1)
 
+    // The indicators are keyboard stops whose tooltips are the accessible
+    // descriptions, exercised end to end through the `/rooms/$code` flow.
+    const presenceOnline = screen.getByText('Online').closest('[tabindex="0"]')
+    const presenceOffline = screen.getByText('Offline').closest('[tabindex="0"]')
+    const connection = screen.getByText('Connected').closest('[tabindex="0"]')
+    expect(presenceOnline).toHaveAccessibleDescription('Online')
+    expect(presenceOffline).toHaveAccessibleDescription('Offline')
+    expect(connection).toHaveAccessibleDescription('Connected')
+
     sendFromServer({
       type: 'presence_updated',
       payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true },

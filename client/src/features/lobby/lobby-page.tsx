@@ -188,7 +188,7 @@ export function LobbyPage({ roomCode }: LobbyPageProps) {
       {/* Discord invite — full-width, prominent */}
       {lobby.isReadyRoom && lobby.discordLink && (
         <div className="mb-6">
-          <DiscordLinkCard discordLink={lobby.discordLink} isRoomReady={lobby.isReadyRoom} />
+          <DiscordLinkCard discordLink={lobby.discordLink} isReadyRoom={lobby.isReadyRoom} />
         </div>
       )}
 
