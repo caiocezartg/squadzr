@@ -276,6 +276,26 @@ describe('room lobby — server-driven errors and redirects', () => {
     )
   })
 
+  it('clears the stale lobby state when membership is revoked', async () => {
+    renderRoomsFlow('/rooms/LOBBY1')
+    await screen.findByText('Squad ready check')
+
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+
+    sendFromServer({
+      type: 'error',
+      payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
+    })
+
+    expect(await screen.findByText('You are not a member of this squad')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument())
+    expect(screen.queryByText('Caio')).not.toBeInTheDocument()
+    expect(screen.queryByText('2/3 players')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to squads' })).toBeInTheDocument()
+  })
+
   it('navigates back to the catalog when the room is deleted', async () => {
     const { router } = renderRoomsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')

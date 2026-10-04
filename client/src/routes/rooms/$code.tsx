@@ -30,6 +30,11 @@ export const Route = createFileRoute('/rooms/$code')({
   component: RoomLobbyPage,
 })
 
+/** Room codes travel uppercased by contract; URLs may still arrive lowercase. */
+function matchesRoomCode(eventCode: string, code: string): boolean {
+  return eventCode.toUpperCase() === code.toUpperCase()
+}
+
 function RoomLobbyPage() {
   const { t } = useTranslation()
   const { code } = Route.useParams()
@@ -44,6 +49,7 @@ function RoomLobbyPage() {
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null)
   const [presence, setPresence] = useState<PresenceState>({})
   const [error, setError] = useState<string | null>(null)
+  const [membershipRevoked, setMembershipRevoked] = useState(false)
   const [codeCopied, setCodeCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -93,34 +99,57 @@ function RoomLobbyPage() {
   // Subscribe to the room channel. The transport replays this subscription
   // after every reconnect and the fresh snapshot replaces all live state.
   const userId = session?.user?.id
+  // The code this page last asked the server to join. When it changes, the
+  // socket must release the previous room channel before joining the new one.
+  const joinedCodeRef = useRef<string | null>(null)
+
   useEffect(() => {
     // A different room code must never show the previous room's live state.
     setSnapshot(null)
     setPresence({})
     setError(null)
+    setMembershipRevoked(false)
 
+    const previousCode = joinedCodeRef.current
+    joinedCodeRef.current = userId ? code : null
     if (!userId) return
+
+    if (previousCode && previousCode !== code) {
+      send({ type: 'leave_room', payload: { roomCode: previousCode } })
+    }
 
     return subscribe(
       { type: 'join_room', payload: { roomCode: code } },
       {
         room_snapshot: (payload) => {
+          // Events for the previous room may still be in flight while the
+          // server processes the switch; they must never touch this page.
+          if (!matchesRoomCode(payload.room.code, code)) return
           setSnapshot(payload)
           setPresence(presenceFromSnapshot(payload))
         },
         presence_updated: (payload) => {
+          if (!matchesRoomCode(payload.roomCode, code)) return
           setPresence((current) => applyPresence(current, payload.playerId, payload.online))
         },
         room_deleted: (payload) => {
+          if (!matchesRoomCode(payload.roomCode, code)) return
           removeRoom(payload.roomId)
           navigate({ to: '/rooms', search: {} })
         },
         error: (payload) => {
           setError(payload.message)
+          if (payload.code === 'NOT_ROOM_MEMBER') {
+            // Membership was revoked: the last snapshot is no longer
+            // authorized, so the page falls back to the error alone.
+            setSnapshot(null)
+            setPresence({})
+            setMembershipRevoked(true)
+          }
         },
       }
     )
-  }, [subscribe, userId, code, navigate, removeRoom])
+  }, [subscribe, send, userId, code, navigate, removeRoom])
 
   const handleLeaveRoom = async () => {
     try {
@@ -171,6 +200,23 @@ function RoomLobbyPage() {
 
   if (roomError) {
     return <RoomNotFound code={code} />
+  }
+
+  // Revoked membership: only the error state remains, never the last snapshot.
+  if (membershipRevoked) {
+    return (
+      <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-12 sm:px-6 lg:px-8">
+        <Link
+          to="/rooms"
+          search={{}}
+          className="flex w-fit items-center gap-2 rounded-lg border border-border-light bg-surface px-4 py-2 text-sm text-muted hover:border-muted/30 hover:bg-surface-hover hover:text-offwhite transition-all"
+        >
+          <ArrowLeft className="size-4" />
+          {t('rooms.lobby.backToRooms')}
+        </Link>
+        <AlertBox type="error" message={error ?? t('errors.NOT_ROOM_MEMBER')} />
+      </div>
+    )
   }
 
   return (

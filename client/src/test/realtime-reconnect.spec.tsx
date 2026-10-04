@@ -19,6 +19,7 @@ import {
   catalogGames,
   catalogRooms,
   gameLol,
+  guestPlayer,
   hostPlayer,
   lobbyRoom,
   lobbyRoomResponse,
@@ -155,6 +156,57 @@ describe('room channel subscription', () => {
     })
     await vi.waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument())
     expect(screen.getByText('1/3 players')).toBeInTheDocument()
+  })
+
+  it('leaves the previous room on a code switch and ignores its late events', async () => {
+    const nextRoom = {
+      ...lobbyRoom,
+      id: 'aaaaaaaa-0000-4000-8000-000000000007',
+      code: 'NEXT01',
+      name: 'Next squad',
+    }
+    onHttp('GET', '/api/rooms/:code', (req) => {
+      if (req.params.code === nextRoom.code)
+        return httpOk({ room: nextRoom, players: [hostPlayer] })
+      return httpOk(lobbyRoomResponse)
+    })
+
+    const { router } = renderRoomsFlow('/rooms/LOBBY1')
+    await screen.findByText(lobbyRoom.name)
+    openLatestWebSocket()
+    const socket = latestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+
+    await act(() => router.navigate({ to: '/rooms/$code', params: { code: nextRoom.code } }))
+
+    // The same socket releases the previous room channel before joining the new one.
+    await vi.waitFor(() =>
+      expect(socket.sentFrames()).toEqual([
+        { type: 'join_room', payload: { roomCode: 'LOBBY1' } },
+        { type: 'leave_room', payload: { roomCode: 'LOBBY1' } },
+        { type: 'join_room', payload: { roomCode: nextRoom.code } },
+      ])
+    )
+
+    // Events from the previous room, already in flight, never touch this page.
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true },
+    })
+    expect(screen.queryByText('Ana')).not.toBeInTheDocument()
+
+    // The new room's snapshot is applied.
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        room: { ...nextRoom, memberCount: 2, isMember: true },
+        players: [hostPlayer, guestPlayer],
+      }),
+    })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+    expect(screen.getByText('2/3 players')).toBeInTheDocument()
   })
 
   it('keeps the last roster and Presence frozen while disconnected', async () => {

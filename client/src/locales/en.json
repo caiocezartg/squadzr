@@ -220,6 +220,8 @@
   },
   "realtime": {
     "updating": "A new version is available. Reloading…",
+    "updateRequired": "A new version is available. Reload the page to update.",
+    "reload": "Reload",
     "connected": "Connected",
     "connecting": "Connecting…",
     "reconnecting": "Reconnecting…",
