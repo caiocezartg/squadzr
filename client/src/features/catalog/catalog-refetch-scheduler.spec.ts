@@ -54,9 +54,33 @@ describe('catalog refetch scheduler', () => {
     const scheduler = createCatalogRefetchScheduler({ refetch })
 
     scheduler.schedule()
-    scheduler.cancel()
+    const wasPending = scheduler.cancel()
+
     vi.advanceTimersByTime(CATALOG_REFETCH_MAX_WAIT_MS * 2)
 
+    expect(wasPending).toBe(true)
+    expect(refetch).not.toHaveBeenCalled()
+  })
+
+  it('reports no pending refetch once the scheduled refetch has run', () => {
+    const refetch = vi.fn()
+    const scheduler = createCatalogRefetchScheduler({ refetch })
+
+    scheduler.schedule()
+    vi.advanceTimersByTime(CATALOG_REFETCH_DEBOUNCE_MS)
+    expect(refetch).toHaveBeenCalledTimes(1)
+
+    // Nothing to drop: the refetch already ran, so unmounting must not look
+    // like a lost refetch.
+    expect(scheduler.cancel()).toBe(false)
+  })
+
+  it('reports no pending refetch when none was ever scheduled', () => {
+    const refetch = vi.fn()
+    const scheduler = createCatalogRefetchScheduler({ refetch })
+
+    expect(scheduler.cancel()).toBe(false)
+    vi.advanceTimersByTime(CATALOG_REFETCH_MAX_WAIT_MS * 2)
     expect(refetch).not.toHaveBeenCalled()
   })
 })

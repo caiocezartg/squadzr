@@ -67,6 +67,8 @@ export interface RoomsFlow {
   user: UserEvent
   queryClient: QueryClient
   router: Router<AnyRoute>
+  /** Unmounts the tree; remount by rendering again with the same queryClient. */
+  unmount: () => void
 }
 
 export interface RenderRoomsFlowOptions {
@@ -89,11 +91,16 @@ export function renderRoomsFlow(url: string, options: RenderRoomsFlowOptions = {
     history: createMemoryHistory({ initialEntries: [url] }),
   })
 
-  render(
+  const view = render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>
   )
 
-  return { user: userEvent.setup({ delay: null }), queryClient, router }
+  return {
+    user: userEvent.setup({ delay: null }),
+    queryClient,
+    router,
+    unmount: () => view.unmount(),
+  }
 }

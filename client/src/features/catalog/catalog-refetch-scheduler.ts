@@ -24,8 +24,12 @@ export interface CatalogRefetchSchedulerOptions {
 export interface CatalogRefetchScheduler {
   /** Requests a refetch, replacing any refetch already waiting. */
   schedule: () => void
-  /** Drops the pending refetch; used when the consumer unmounts. */
-  cancel: () => void
+  /**
+   * Drops the pending refetch; used when the consumer unmounts. Returns
+   * whether a refetch was waiting, so the caller can preserve the intent
+   * (the refetch never runs once it is dropped).
+   */
+  cancel: () => boolean
 }
 
 export function createCatalogRefetchScheduler({
@@ -47,6 +51,8 @@ export function createCatalogRefetchScheduler({
     }
   }
 
+  const hasPendingRefetch = (): boolean => debounceTimer !== null || maxWaitTimer !== null
+
   const runRefetch = (): void => {
     clearTimers()
     void refetch()
@@ -58,6 +64,10 @@ export function createCatalogRefetchScheduler({
       debounceTimer = setTimeout(runRefetch, debounceMs)
       if (maxWaitTimer === null) maxWaitTimer = setTimeout(runRefetch, maxWaitMs)
     },
-    cancel: clearTimers,
+    cancel: () => {
+      const wasPending = hasPendingRefetch()
+      clearTimers()
+      return wasPending
+    },
   }
 }

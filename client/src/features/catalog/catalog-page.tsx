@@ -65,6 +65,11 @@ export function CatalogPage() {
     }) => api.post('/api/rooms', body, createRoomResponseSchema),
     onSuccess: (result) => {
       setModalOpen(false)
+      // The creating tab may miss its own `room_created` (the event can arrive
+      // after this page unmounts), so the new room is requested explicitly,
+      // like the join flow does. The navigate follows immediately; the
+      // in-flight refresh survives the unmount.
+      void refreshRooms()
       navigate({ to: '/rooms/$code', params: { code: result.room.code } })
     },
   })

@@ -553,6 +553,47 @@ describe('rooms catalog — in-flight fetch after removal', () => {
   })
 })
 
+describe('rooms catalog — pending refetch across unmount', () => {
+  it('marks the catalog stale instead of dropping the refetch, so the next mount fetches', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    const queryClient = createTestQueryClient()
+    const first = renderRoomsFlow('/rooms', { queryClient })
+    await screen.findByText('Ranked grind')
+    openLatestWebSocket()
+
+    const fetchesBefore = countHttpCalls('GET', '/api/rooms')
+
+    vi.useFakeTimers()
+    try {
+      // A realtime event asks for a refetch that is still waiting when the
+      // user navigates away.
+      serverRooms.rooms = [...serverRooms.rooms, extraRoom]
+      sendFromServer({ type: 'room_created', payload: { room: extraRoom } })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBefore)
+
+      first.unmount()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1_000)
+      })
+
+      // The dropped refetch must not fire after the unmount, but the catalog
+      // cannot stay fresh: the event it described is gone with the page.
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBefore)
+      expect(queryClient.getQueryState(['rooms'])?.isInvalidated).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+
+    renderRoomsFlow('/rooms', { queryClient })
+    expect(await screen.findByText('Extra room')).toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBefore + 1)
+  })
+})
+
 describe('rooms catalog — join flows', () => {
   it('requires sign-in before a guest can join and defers to Discord', async () => {
     const { user } = renderRoomsFlow('/rooms', { user: null })
