@@ -107,8 +107,11 @@ describe('diagnostics', () => {
     expect(handler).not.toHaveBeenCalled()
     expect(vi.mocked(console.error).mock.calls).toEqual([
       ['Invalid WebSocket message:', { issues: [{ path: '', code: 'invalid_json' }] }],
+      ['Realtime protocol failure:', { reason: 'unparseable_frame', expectedVersion: 2 }],
     ])
-    expect(client.isConnected).toBe(true)
+    // A frame that cannot be parsed is a protocol failure: the connection
+    // closes so the app can reload into the matching build.
+    expect(client.status).toBe('closed')
   })
 
   it('reports a throwing handler by event type only and keeps the connection', () => {
@@ -147,7 +150,7 @@ describe('diagnostics', () => {
   it('drops a frame without a string type before any handler runs', () => {
     const { client, socket } = connectedClient()
     const handler = vi.fn()
-    client.on('undefined', handler)
+    client.on('room_created', handler)
 
     socket.onmessage?.(
       new MessageEvent('message', { data: JSON.stringify({ payload: { room: SECRET_INVITE } }) })
@@ -155,9 +158,15 @@ describe('diagnostics', () => {
     socket.onmessage?.(new MessageEvent('message', { data: '42' }))
 
     expect(handler).not.toHaveBeenCalled()
+    // The first frame is already a protocol failure, so it closes the
+    // connection; the second never reaches the parser.
     expect(console.error).toHaveBeenCalledTimes(2)
     expect(console.error).toHaveBeenCalledWith('Invalid WebSocket message:', {
       issues: [{ path: 'type', code: 'invalid_type' }],
+    })
+    expect(console.error).toHaveBeenCalledWith('Realtime protocol failure:', {
+      reason: 'unparseable_frame',
+      expectedVersion: 2,
     })
     expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(SECRET_INVITE)
   })

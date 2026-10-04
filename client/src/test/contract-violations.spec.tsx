@@ -8,11 +8,19 @@
  * through the mock socket (./ws-mock).
  */
 
-import { screen, waitFor } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderRoomsFlow } from './harness'
 import { httpOk, onHttp } from './http-router'
-import { catalogGames, catalogRooms, gameLol, lobbyRoom, openRoom } from './fixtures'
+import {
+  catalogGames,
+  catalogRooms,
+  gameLol,
+  lobbyRoom,
+  lobbyRoomResponse,
+  lobbySnapshot,
+  openRoom,
+} from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import type { PublicRoom, RoomsResponse } from '@/types'
 
@@ -110,35 +118,32 @@ describe('lobby', () => {
     expect(screen.getByText('0/3 players')).toBeInTheDocument()
     expect(screen.getAllByText('Waiting for player...')).toHaveLength(3)
 
-    openLatestWebSocket()
-    sendFromServer({
-      type: 'room_ready',
-      payload: { roomId: lobbyRoom.id, roomCode: 'LOBBY1', message: 'ready' },
-    })
-
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Squad locked' })).toBeDisabled())
+    // Readiness comes only from a member snapshot, which a non-member never
+    // receives, so nothing can unlock the invite or lock the leave button.
     expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Leave squad' })).toBeEnabled()
   })
 
-  it('ignores a roster event that breaks the contract', async () => {
-    onHttp('GET', '/api/rooms/:code', () =>
-      httpOk({
-        room: lobbyRoom,
-        players: [{ id: 'user-1', name: 'Caio', image: null, isHost: true }],
-      })
-    )
+  it('ignores a room snapshot and a presence event that break the contract', async () => {
+    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
     renderRoomsFlow('/rooms/LOBBY1')
-    await screen.findByText('Caio')
+    await screen.findByText(lobbyRoom.name)
     openLatestWebSocket()
 
-    sendFromServer({
-      type: 'room_joined',
-      payload: { roomId: lobbyRoom.id, roomCode: 'LOBBY1', players: [{ id: 'user-2' }] },
-    })
-    sendFromServer({ type: 'player_joined', payload: { player: { name: 'Ghost' } } })
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+    expect(screen.getByText('2/3 players')).toBeInTheDocument()
 
-    expect(screen.getByText('Caio')).toBeInTheDocument()
-    expect(screen.getByText('1/3 players')).toBeInTheDocument()
-    expect(screen.queryByText('Ghost')).not.toBeInTheDocument()
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: { ...lobbySnapshot(), players: [{ id: 'user-2' }] },
+    })
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: 'user-2', online: 'yes' },
+    })
+
+    expect(screen.getByText('Ana')).toBeInTheDocument()
+    expect(screen.getByText('2/3 players')).toBeInTheDocument()
   })
 })

@@ -31,7 +31,9 @@ export interface MockHttpResponse {
   body?: unknown
 }
 
-export type MockHttpHandler = (request: MockHttpRequest) => MockHttpResponse
+export type MockHttpHandler = (
+  request: MockHttpRequest
+) => MockHttpResponse | Promise<MockHttpResponse>
 
 interface RegisteredRoute {
   method: string
@@ -115,7 +117,7 @@ const httpAdapter: AxiosAdapter = async (config) => {
   }
 
   const { route, params } = match
-  const result = route.handler({ ...request, params })
+  const result = await route.handler({ ...request, params })
   const status = result.status ?? 200
 
   if (status >= 400) {

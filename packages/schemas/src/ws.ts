@@ -178,6 +178,15 @@ export const protocolMessageSchema = baseWsMessageSchema.extend({
   payload: z.object({ version: z.literal(REALTIME_PROTOCOL_VERSION) }),
 })
 
+// Version-agnostic announcement: a client parses it before the version-specific
+// contract so a mismatched build can be detected and reloaded instead of being
+// rejected as an invalid payload.
+export const protocolAnnouncementSchema = z.object({
+  version: z.number().int().positive(),
+})
+
+export type ProtocolAnnouncement = z.infer<typeof protocolAnnouncementSchema>
+
 export const memberPresenceSchema = z.object({ playerId: z.string(), online: z.boolean() })
 
 // Replaces the live roster in its entirety; applying it twice has the same effect.
@@ -276,6 +285,8 @@ export type WsServerEventPayload<T extends WsServerEventType> = z.infer<
 
 // Inferred types
 export type WsIncomingMessage = z.infer<typeof wsIncomingMessageSchema>
+/** Frame as callers build it, before defaults and transforms are applied. */
+export type WsIncomingMessageInput = z.input<typeof wsIncomingMessageSchema>
 export type WsServerMessage = z.infer<typeof wsServerMessageSchema>
 export type WsServerEnvelope = z.infer<typeof wsServerEnvelopeSchema>
 export type JoinRoomMessage = z.infer<typeof joinRoomMessageSchema>

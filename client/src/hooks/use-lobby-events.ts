@@ -1,56 +1,45 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useRoomsCache } from './use-rooms-cache'
-import { onServerEvent } from '@/lib/ws-validators'
-import type { WebSocketEventHandler } from '@/lib/ws-client'
+import type { RealtimeChannelHandlers, RealtimeSubscription } from '@/lib/ws-client'
 
 interface UseLobbyEventsOptions {
-  isConnected: boolean
-  send: (type: string, data: unknown) => void
-  on: (event: string, handler: WebSocketEventHandler) => () => void
+  subscribe: (subscription: RealtimeSubscription, handlers: RealtimeChannelHandlers) => () => void
 }
 
-interface UseLobbyEventsReturn {
-  isSubscribed: boolean
-}
-
-export function useLobbyEvents({
-  isConnected,
-  send,
-  on,
-}: UseLobbyEventsOptions): UseLobbyEventsReturn {
-  const [isSubscribed, setIsSubscribed] = useState(false)
+/**
+ * Keeps the catalog cache in sync with the lobby stream. The transport owns
+ * resubscription, so the handlers are registered once and replay after every
+ * reconnect. Incremental hints are idempotent, so duplicate events are
+ * harmless; a restored subscription (reconnect) also refetches the catalog so
+ * events missed while the socket was down cannot leave stale cards behind.
+ */
+export function useLobbyEvents({ subscribe }: UseLobbyEventsOptions): void {
   const { addRoom, updateRoom, removeRoom } = useRoomsCache()
+  const queryClient = useQueryClient()
+  const hasSubscribedRef = useRef(false)
 
   useEffect(() => {
-    if (!isConnected) return
-
-    const unsubscribeLobbySubscribed = onServerEvent(on, 'lobby_subscribed', () => {
-      setIsSubscribed(true)
-    })
-
-    const unsubscribeCreated = onServerEvent(on, 'room_created', (data) => {
-      addRoom(data.room)
-    })
-
-    const unsubscribeUpdated = onServerEvent(on, 'room_updated', (data) => {
-      updateRoom(data.roomId, { memberCount: data.memberCount })
-    })
-
-    const unsubscribeDeleted = onServerEvent(on, 'room_deleted', (data) => {
-      removeRoom(data.roomId)
-    })
-
-    // Subscribe to lobby AFTER handlers are registered
-    send('subscribe_lobby', {})
-
-    return () => {
-      unsubscribeLobbySubscribed()
-      unsubscribeCreated()
-      unsubscribeUpdated()
-      unsubscribeDeleted()
-      setIsSubscribed(false)
-    }
-  }, [isConnected, on, send, addRoom, updateRoom, removeRoom])
-
-  return { isSubscribed }
+    return subscribe(
+      { type: 'subscribe_lobby' },
+      {
+        lobby_subscribed: () => {
+          if (!hasSubscribedRef.current) {
+            hasSubscribedRef.current = true
+            return
+          }
+          void queryClient.invalidateQueries({ queryKey: ['rooms'] })
+        },
+        room_created: (payload) => {
+          addRoom(payload.room)
+        },
+        room_updated: (payload) => {
+          updateRoom(payload.roomId, { memberCount: payload.memberCount })
+        },
+        room_removed: (payload) => {
+          removeRoom(payload.roomId)
+        },
+      }
+    )
+  }, [subscribe, addRoom, updateRoom, removeRoom, queryClient])
 }
