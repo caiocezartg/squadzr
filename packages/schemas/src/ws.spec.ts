@@ -45,6 +45,19 @@ const notification = {
 }
 
 const serverMessages = [
+  { type: 'protocol', payload: { version: 2 } },
+  {
+    type: 'room_snapshot',
+    payload: {
+      room: { ...publicRoom, discordLink: INVITE },
+      players: [player],
+      readyAt: null,
+      expiresAt: publicRoom.updatedAt,
+      presence: [{ playerId: player.id, online: true }],
+    },
+  },
+  { type: 'presence_updated', payload: { roomCode: 'ABC123', playerId: player.id, online: false } },
+  { type: 'room_removed', payload: { roomId: ROOM_ID, roomCode: 'ABC123' } },
   { type: 'room_joined', payload: { roomId: ROOM_ID, roomCode: 'ABC123', players: [player] } },
   { type: 'player_joined', payload: { player } },
   { type: 'player_left', payload: { playerId: 'user-1' } },
