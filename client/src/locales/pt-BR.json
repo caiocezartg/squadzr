@@ -218,6 +218,15 @@
     "showing_one": "Mostrando última {{count}} notificação",
     "showing_other": "Mostrando últimas {{count}} notificações"
   },
+  "realtime": {
+    "updating": "Uma nova versão está disponível. Recarregando…",
+    "connected": "Conectado",
+    "connecting": "Conectando…",
+    "reconnecting": "Reconectando…",
+    "disconnected": "Desconectado",
+    "online": "Online",
+    "offline": "Offline"
+  },
   "errors": {
     "ROOM_NOT_FOUND": "Este squad não existe mais ou o código é inválido.",
     "ROOM_FULL": "Este squad já está cheio.",

@@ -218,6 +218,15 @@
     "showing_one": "Showing last {{count}} notification",
     "showing_other": "Showing last {{count}} notifications"
   },
+  "realtime": {
+    "updating": "A new version is available. Reloading…",
+    "connected": "Connected",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "disconnected": "Disconnected",
+    "online": "Online",
+    "offline": "Offline"
+  },
   "errors": {
     "ROOM_NOT_FOUND": "This squad no longer exists or the code is invalid.",
     "ROOM_FULL": "This squad is already full.",

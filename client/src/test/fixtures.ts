@@ -12,7 +12,9 @@ import type {
   Room,
   RoomResponse,
   RoomsResponse,
+  UserNotification,
 } from '@/types'
+import type { WsServerEventPayload } from '@squadzr/schemas/ws'
 
 /** ISO 8601 string, as transport dates travel in JSON. */
 function hoursAgo(hours: number): string {
@@ -187,4 +189,55 @@ export const createdRoom: Room = {
 
 export const createRoomResponse: CreateRoomResponse = {
   room: createdRoom,
+}
+
+export type LobbySnapshot = WsServerEventPayload<'room_snapshot'>
+
+/**
+ * Authoritative room snapshot as the server sends it after every subscribe or
+ * resubscribe: member room projection, complete roster, readiness, expiration
+ * and per-member Presence.
+ */
+export function lobbySnapshot(overrides: Partial<LobbySnapshot> = {}): LobbySnapshot {
+  return {
+    room: { ...lobbyRoom, memberCount: 2, isMember: true },
+    players: [hostPlayer, guestPlayer],
+    readyAt: null,
+    expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+    presence: [
+      { playerId: hostPlayer.id, online: true },
+      { playerId: guestPlayer.id, online: false },
+    ],
+    ...overrides,
+  }
+}
+
+/** Snapshot of a full room whose last Membership made it ready. */
+export function readyLobbySnapshot(overrides: Partial<LobbySnapshot> = {}): LobbySnapshot {
+  return lobbySnapshot({
+    readyAt: new Date().toISOString(),
+    presence: [
+      { playerId: hostPlayer.id, online: true },
+      { playerId: guestPlayer.id, online: true },
+    ],
+    ...overrides,
+  })
+}
+
+export const roomReadyNotification: UserNotification = {
+  id: '9b2f7a1e-4c3d-4e5f-8a6b-1c2d3e4f5a6b',
+  userId: 'user-1',
+  type: 'room_ready',
+  title: 'Your squad is ready',
+  message: 'Squad ready check is full. The Discord invite is available.',
+  payload: {
+    roomId: lobbyRoom.id,
+    roomCode: lobbyRoom.code,
+    roomName: lobbyRoom.name,
+    gameName: gameLol.name,
+    players: [{ name: hostPlayer.name, image: hostPlayer.image }],
+    discordLink: lobbyRoom.discordLink,
+  },
+  readAt: null,
+  createdAt: hoursAgo(0),
 }

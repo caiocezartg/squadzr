@@ -13,7 +13,7 @@
 
 import { screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { renderRoomsFlow } from './harness'
+import { createTestQueryClient, renderRoomsFlow } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import {
   catalogGames,
@@ -25,6 +25,7 @@ import {
   lobbyRoomResponse,
   memberRoom,
   openRoom,
+  roomReadyNotification,
   roomsForPagination,
 } from './fixtures'
 import { authStore, toastStore } from './stubs'
@@ -166,7 +167,7 @@ describe('rooms catalog — pagination', () => {
 })
 
 describe('rooms catalog — lobby WebSocket cache updates', () => {
-  it('subscribes to the lobby and applies created/updated/deleted events', async () => {
+  it('subscribes to the lobby and applies created/updated/removed events idempotently', async () => {
     const { queryClient } = renderRoomsFlow('/rooms')
     await screen.findByText('Ranked grind')
 
@@ -178,10 +179,16 @@ describe('rooms catalog — lobby WebSocket cache updates', () => {
     )
 
     sendFromServer({ type: 'room_created', payload: { room: extraRoom } })
+    sendFromServer({ type: 'room_created', payload: { room: extraRoom } })
     expect(await screen.findByText('Extra room')).toBeInTheDocument()
+    expect(screen.getAllByText('Extra room')).toHaveLength(1)
     const cachedAfterCreate = queryClient.getQueryData<RoomsResponse>(['rooms'])
-    expect(cachedAfterCreate?.rooms.some((room) => room.id === extraRoom.id)).toBe(true)
+    expect(cachedAfterCreate?.rooms.filter((room) => room.id === extraRoom.id)).toHaveLength(1)
 
+    sendFromServer({
+      type: 'room_updated',
+      payload: { roomId: openRoom.id, roomCode: openRoom.code, memberCount: 3 },
+    })
     sendFromServer({
       type: 'room_updated',
       payload: { roomId: openRoom.id, roomCode: openRoom.code, memberCount: 3 },
@@ -193,13 +200,47 @@ describe('rooms catalog — lobby WebSocket cache updates', () => {
       expect(within(openCard as HTMLElement).getByText('3', { exact: true })).toBeInTheDocument()
     )
 
+    // A Ready/expired room is removed from the catalog immediately.
     sendFromServer({
-      type: 'room_deleted',
+      type: 'room_removed',
+      payload: { roomId: fullRoom.id, roomCode: fullRoom.code },
+    })
+    sendFromServer({
+      type: 'room_removed',
       payload: { roomId: fullRoom.id, roomCode: fullRoom.code },
     })
     await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
     const cachedAfterDelete = queryClient.getQueryData<RoomsResponse>(['rooms'])
     expect(cachedAfterDelete?.rooms.some((room) => room.id === fullRoom.id)).toBe(false)
+  })
+
+  it('applies a pushed notification to the notifications cache without duplicating it', async () => {
+    const queryClient = createTestQueryClient()
+    queryClient.setQueryData(['notifications', { limit: 10 }], { notifications: [] })
+    renderRoomsFlow('/rooms', { queryClient })
+    await screen.findByText('Ranked grind')
+
+    openLatestWebSocket()
+    sendFromServer({
+      type: 'notification',
+      payload: { notification: roomReadyNotification },
+    })
+
+    await waitFor(() =>
+      expect(
+        queryClient.getQueryData<{ notifications: unknown[] }>(['notifications', { limit: 10 }])
+          ?.notifications
+      ).toHaveLength(1)
+    )
+
+    sendFromServer({
+      type: 'notification',
+      payload: { notification: roomReadyNotification },
+    })
+    expect(
+      queryClient.getQueryData<{ notifications: unknown[] }>(['notifications', { limit: 10 }])
+        ?.notifications
+    ).toHaveLength(1)
   })
 })
 

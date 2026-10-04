@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { useWebSocket } from '@/hooks/use-websocket'
 import { useLobbyEvents } from '@/hooks/use-lobby-events'
+import { useNotificationEvents } from '@/hooks/use-notification-events'
 import { useRoomFilters } from '@/hooks/use-room-filters'
 import { RoomCard } from '@/components/rooms/room-card'
 import { RoomFilters } from '@/components/rooms/room-filters'
@@ -76,12 +77,13 @@ function RoomsPage() {
   const queryClient = useQueryClient()
 
   // WebSocket for real-time room list updates
-  const { isConnected, send, on } = useWebSocket({
+  const { on, subscribe } = useWebSocket({
     url: WS_URL,
     autoConnect: true,
   })
 
-  useLobbyEvents({ isConnected, send, on })
+  useLobbyEvents({ subscribe })
+  useNotificationEvents({ on })
 
   // Fetch rooms
   const {
