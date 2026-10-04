@@ -1,7 +1,7 @@
 import * as motion from 'motion/react-client'
 import { User } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { PresenceIndicator } from '@/components/rooms/presence-indicator'
+import { PresenceIndicator } from './presence-indicator'
 import type { Player } from '@/types'
 
 interface PlayerSlotProps {
