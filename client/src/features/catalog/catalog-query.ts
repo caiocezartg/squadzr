@@ -15,8 +15,19 @@ export function invalidateCatalogRooms(queryClient: QueryClient): Promise<void> 
 
 /** Drops a room this tab knows no longer exists, before the refetch lands. */
 export function removeCatalogRoom(queryClient: QueryClient, roomId: string): void {
+  // A fetch already in flight resolves with the server list from before the
+  // removal and would put the room back on screen until the coalesced refetch
+  // lands, so cancel it before dropping the room. On a cold catalog there is
+  // nothing to drop: the first fetch is the authoritative response itself.
+  const hasCachedRooms = queryClient.getQueryData<RoomsResponse>(catalogRoomsQueryKey) !== undefined
+  if (hasCachedRooms) {
+    void queryClient.cancelQueries({ queryKey: catalogRoomsQueryKey })
+  }
+
   queryClient.setQueryData<RoomsResponse>(catalogRoomsQueryKey, (old) => {
-    if (!old) return { rooms: [] }
+    // Never fabricate an empty catalog: without cached rooms the query must
+    // stay pending so the mount fetch (or the coalesced refetch) loads it.
+    if (!old) return old
     return { rooms: old.rooms.filter((room) => room.id !== roomId) }
   })
 }

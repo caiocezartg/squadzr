@@ -34,7 +34,11 @@ import type { FakeSessionUser } from './stubs'
 export function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
+      // The app caches query data for a minute (src/lib/query-client.ts); the
+      // tests keep the same freshness so a freshly written cache entry looks
+      // as fresh here as it would in production. Retries stay off so failures
+      // surface deterministically.
+      queries: { retry: false, staleTime: 60_000 },
       mutations: { retry: false },
     },
   })
