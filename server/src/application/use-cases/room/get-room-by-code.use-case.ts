@@ -5,6 +5,7 @@ import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import { isRoomExpired } from '@domain/services/room-lifecycle'
 import { ROOM } from '@config/constants'
+import { findRoomPlayers } from './find-room-players'
 
 export interface RoomPlayer {
   readonly id: string
@@ -61,32 +62,16 @@ export class GetRoomByCodeUseCase implements IGetRoomByCodeUseCase {
       return { room, isMember: false, players: [] }
     }
 
-    return { room, isMember: true, players: await this.findPlayers(room) }
+    return {
+      room,
+      isMember: true,
+      players: await findRoomPlayers(room, this.roomMemberRepository, this.userRepository),
+    }
   }
 
   private async isMember(roomId: string, viewerId: string | undefined): Promise<boolean> {
     if (!viewerId) return false
     const membership = await this.roomMemberRepository.findByRoomAndUser(roomId, viewerId)
     return membership !== null
-  }
-
-  private async findPlayers(room: Room): Promise<RoomPlayer[]> {
-    const members = await this.roomMemberRepository.findByRoomId(room.id)
-    const userIds = members.map((m) => m.userId)
-    const users = await this.userRepository.findByIds(userIds)
-    const userMap = new Map(users.map((u) => [u.id, u]))
-
-    return members
-      .map((m) => {
-        const user = userMap.get(m.userId)
-        if (!user) return null
-        return {
-          id: user.id,
-          name: user.name,
-          image: user.avatarUrl,
-          isHost: user.id === room.hostId,
-        }
-      })
-      .filter((p): p is RoomPlayer => p !== null)
   }
 }

@@ -1,18 +1,14 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify'
-import type { WebSocket } from '@fastify/websocket'
+import type { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
+import { REALTIME_PROTOCOL_VERSION } from '@squadzr/schemas/ws'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
-import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
-import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzle-room-member.repository'
-import { DrizzleUserRepository } from '@infrastructure/repositories/drizzle-user.repository'
-import { WsConnectionManager } from './ws-connection-manager'
-import { WsRoomBroadcaster } from './room-broadcaster.service'
+import { AppError } from '@application/errors'
 import { parseIncomingMessage } from './incoming-message'
-import type { PongMessage, WsClient, WsServerMessage } from './types'
+import { InvalidMessages, INVALID_MESSAGE_LIMIT } from './invalid-messages'
+import type { Realtime, WsClient, WsIncomingMessage } from './types'
 import {
   handleJoinRoom,
   handleLeaveRoom,
-  handleDisconnect,
   handleSubscribeLobby,
   handleUnsubscribeLobby,
   sendError,
@@ -24,113 +20,125 @@ declare module 'fastify' {
   }
 }
 
-async function wsPlugin(fastify: FastifyInstance): Promise<void> {
-  const connectionManager = new WsConnectionManager()
-  const broadcaster = new WsRoomBroadcaster(connectionManager)
-
+async function wsPlugin(
+  fastify: FastifyInstance,
+  { realtime }: { realtime: Realtime }
+): Promise<void> {
+  const { manager, heartbeat, operations, presence, broadcaster, snapshots } = realtime
   fastify.decorate('broadcaster', broadcaster)
 
-  fastify.get('/ws', { websocket: true }, async (socket: WebSocket, request: FastifyRequest) => {
-    fastify.log.info(
-      {
-        hasSession: !!request.session,
-        sessionUser: request.session?.user?.id,
-      },
-      'WebSocket connection attempt'
-    )
+  const maintenance = setInterval(() => {
+    void realtime
+      .sweep()
+      .catch(() =>
+        fastify.log.error(
+          { category: 'transport', event: 'maintenance_failed' },
+          'Realtime maintenance failed'
+        )
+      )
+  }, 1_000)
+  maintenance.unref()
+  fastify.addHook('preClose', async () => {
+    clearInterval(maintenance)
+    await realtime.shutdown()
+  })
 
-    // Session is already populated by auth.plugin.ts preHandler hook
-    const session = request.session
-
-    if (!session?.user?.id) {
-      fastify.log.info('WebSocket connected as guest (lobby-only)')
-    } else {
-      fastify.log.info({ userId: session.user.id }, 'WebSocket authenticated')
-    }
-
+  fastify.get('/ws', { websocket: true }, (socket, request) => {
     const client: WsClient = {
-      userId: session?.user?.id ?? null,
-      userName: session?.user?.name ?? null,
-      userImage: session?.user?.image ?? null,
+      userId: request.session?.user?.id ?? null,
+      userName: null,
+      userImage: null,
       roomCode: null,
       isInLobby: false,
-      send: (message: WsServerMessage) => {
-        if (socket.readyState === socket.OPEN) {
-          socket.send(JSON.stringify(message))
-        }
-      },
+      send: (message) => manager.sendToSocket(socket, message),
+    }
+    manager.setClientData(socket, client)
+    if (client.userId) manager.addUserSocket(client.userId, socket)
+    heartbeat.add(socket)
+    fastify.log.info(
+      { category: 'transport', event: 'connected', connectionCount: manager.connectionCount },
+      'WebSocket connected'
+    )
+    client.send({
+      type: 'protocol',
+      timestamp: fastify.clock.now().getTime(),
+      payload: { version: REALTIME_PROTOCOL_VERSION },
+    })
+    const invalid = new InvalidMessages(fastify.clock)
+
+    function dispatch(message: WsIncomingMessage): void | Promise<void> {
+      switch (message.type) {
+        case 'join_room':
+          return handleJoinRoom(socket, message, manager, snapshots, presence, broadcaster)
+        case 'leave_room':
+          if (!client.userId) {
+            sendError(socket, 'UNAUTHORIZED', 'Authentication required', manager, fastify.clock)
+            return
+          }
+          return handleLeaveRoom(socket, message, manager, presence)
+        case 'subscribe_lobby':
+          return handleSubscribeLobby(socket, manager, fastify.clock)
+        case 'unsubscribe_lobby':
+          return handleUnsubscribeLobby(socket, manager)
+        case 'ping':
+          client.send({ type: 'pong', timestamp: fastify.clock.now().getTime() })
+      }
     }
 
-    connectionManager.setClientData(socket, client)
-    if (client.userId) {
-      connectionManager.addUserSocket(client.userId, socket)
-    }
-
-    const db = fastify.db
-    const roomRepository = new DrizzleRoomRepository(db, fastify.clock)
-    const roomMemberRepository = new DrizzleRoomMemberRepository(db, fastify.clock)
-    const userRepository = new DrizzleUserRepository(db)
-
-    socket.on('message', async (rawData: Buffer | ArrayBuffer | Buffer[]) => {
+    socket.on('message', (rawData: Buffer | ArrayBuffer | Buffer[]) => {
+      if (socket.readyState !== socket.OPEN) return
+      // Validate immediately so even a busy subscription cannot postpone enforcement.
       const parsed = parseIncomingMessage(rawData)
       if (!parsed.ok) {
-        fastify.log.warn({ code: parsed.code, issues: parsed.issues }, 'Invalid WebSocket message')
-        sendError(socket, parsed.code, parsed.reason)
+        const invalidCount = invalid.record()
+        fastify.log.warn(
+          {
+            category: 'transport',
+            event: 'invalid_message',
+            code: parsed.code,
+            issues: parsed.issues,
+            invalidCount,
+          },
+          'Invalid WebSocket message'
+        )
+        sendError(socket, parsed.code, parsed.reason, manager, fastify.clock)
+        if (invalidCount >= INVALID_MESSAGE_LIMIT) socket.close(1008, 'Too many invalid messages')
         return
       }
-
-      const { message } = parsed
-
-      try {
-        switch (message.type) {
-          case 'join_room':
-            await handleJoinRoom(
-              socket,
-              message,
-              connectionManager,
-              roomRepository,
-              roomMemberRepository,
-              userRepository,
-              fastify.clock
+      void operations.run(async () => {
+        if (
+          realtime.isStopped() ||
+          !manager.isConnected(socket) ||
+          socket.readyState !== socket.OPEN
+        )
+          return
+        try {
+          await dispatch(parsed.message)
+        } catch (error) {
+          if (error instanceof AppError) {
+            fastify.log.info(
+              { category: 'membership', event: 'subscription_rejected', code: error.code },
+              'WebSocket subscription rejected'
             )
-            break
-          case 'leave_room':
-            await handleLeaveRoom(socket, message, connectionManager)
-            break
-          case 'subscribe_lobby':
-            handleSubscribeLobby(socket, connectionManager)
-            break
-          case 'unsubscribe_lobby':
-            handleUnsubscribeLobby(socket, connectionManager)
-            break
-          case 'ping': {
-            const pongMessage: PongMessage = {
-              type: 'pong',
-              timestamp: Date.now(),
-            }
-            client.send(pongMessage)
-            break
+            sendError(socket, error.code, error.message, manager, fastify.clock)
+          } else {
+            fastify.log.error(
+              { category: 'transport', event: 'handler_failed' },
+              'WebSocket message handling error'
+            )
+            sendError(socket, 'INTERNAL_ERROR', 'Failed to handle message', manager, fastify.clock)
           }
         }
-      } catch (error) {
-        fastify.log.error(error, 'WebSocket message handling error')
-        sendError(socket, 'PARSE_ERROR', 'Failed to parse message')
-      }
+      })
     })
-
-    const cleanup = () => {
-      const clientData = connectionManager.getClientData(socket)
-      if (clientData?.userId) {
-        connectionManager.removeUserSocket(clientData.userId, socket)
-      }
-      handleDisconnect(socket, connectionManager)
-    }
-
-    socket.on('close', cleanup)
-
-    socket.on('error', (error: Error) => {
-      fastify.log.error(error, 'WebSocket error')
-      cleanup()
+    socket.on('pong', () => heartbeat.pong(socket))
+    socket.on('close', () => realtime.disconnect(socket))
+    socket.on('error', () => {
+      fastify.log.warn(
+        { category: 'transport', event: 'socket_error' },
+        'WebSocket transport error'
+      )
+      realtime.disconnect(socket)
     })
   })
 }

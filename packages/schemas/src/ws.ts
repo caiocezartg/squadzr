@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { playerSchema, publicRoomSchema } from './room'
+import { playerSchema, publicRoomSchema, roomSchema } from './room'
+import { isoDateTimeSchema } from './date'
 import { userNotificationSchema } from './notification'
 
 export const wsMessageTypeSchema = z.enum([
@@ -27,7 +28,14 @@ export const wsMessageTypeSchema = z.enum([
   'room_deleted',
   // User-targeted notification push
   'notification',
+  'protocol',
+  'room_snapshot',
+  'presence_updated',
+  'room_removed',
 ])
+
+export const REALTIME_PROTOCOL_VERSION = 2
+export const WS_MAX_PAYLOAD_BYTES = 16 * 1024
 
 export type WsMessageType = z.infer<typeof wsMessageTypeSchema>
 
@@ -43,14 +51,20 @@ export const wsPlayerSchema = playerSchema
 export const joinRoomMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('join_room'),
   payload: z.object({
-    roomCode: z.string().length(6),
+    roomCode: z
+      .string()
+      .length(6)
+      .transform((code) => code.toUpperCase()),
   }),
 })
 
 export const leaveRoomMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('leave_room'),
   payload: z.object({
-    roomCode: z.string().length(6),
+    roomCode: z
+      .string()
+      .length(6)
+      .transform((code) => code.toUpperCase()),
   }),
 })
 
@@ -159,6 +173,37 @@ export const notificationMessageSchema = baseWsMessageSchema.extend({
   }),
 })
 
+export const protocolMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('protocol'),
+  payload: z.object({ version: z.literal(REALTIME_PROTOCOL_VERSION) }),
+})
+
+export const memberPresenceSchema = z.object({ playerId: z.string(), online: z.boolean() })
+
+// Replaces the live roster in its entirety; applying it twice has the same effect.
+export const roomSnapshotMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('room_snapshot'),
+  payload: z.object({
+    room: roomSchema,
+    players: z.array(playerSchema),
+    readyAt: isoDateTimeSchema.nullable(),
+    expiresAt: isoDateTimeSchema,
+    presence: z.array(memberPresenceSchema),
+  }),
+})
+
+// Presence assigns a boolean; it never adds or removes a Membership.
+export const presenceUpdatedMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('presence_updated'),
+  payload: memberPresenceSchema.extend({ roomCode: z.string().length(6) }),
+})
+
+// Catalog-only hint, including Ready Rooms that retain their member channel.
+export const roomRemovedMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('room_removed'),
+  payload: z.object({ roomId: z.uuid(), roomCode: z.string().length(6) }),
+})
+
 export const wsIncomingMessageSchema = z.discriminatedUnion('type', [
   joinRoomMessageSchema,
   leaveRoomMessageSchema,
@@ -180,6 +225,10 @@ export const wsServerMessageSchema = z.discriminatedUnion('type', [
   roomUpdatedMessageSchema,
   roomDeletedMessageSchema,
   notificationMessageSchema,
+  protocolMessageSchema,
+  roomSnapshotMessageSchema,
+  presenceUpdatedMessageSchema,
+  roomRemovedMessageSchema,
 ])
 
 // Frame envelope every server message shares, before its payload is checked per event
@@ -214,6 +263,10 @@ export const wsServerEventPayloadSchemas = {
   room_updated: roomUpdatedPayloadSchema,
   room_deleted: roomDeletedPayloadSchema,
   notification: notificationPayloadSchema,
+  protocol: protocolMessageSchema.shape.payload,
+  room_snapshot: roomSnapshotMessageSchema.shape.payload,
+  presence_updated: presenceUpdatedMessageSchema.shape.payload,
+  room_removed: roomRemovedMessageSchema.shape.payload,
 } as const
 
 export type WsServerEventType = keyof typeof wsServerEventPayloadSchemas
@@ -242,3 +295,6 @@ export type RoomCreatedMessage = z.infer<typeof roomCreatedMessageSchema>
 export type RoomUpdatedMessage = z.infer<typeof roomUpdatedMessageSchema>
 export type RoomDeletedMessage = z.infer<typeof roomDeletedMessageSchema>
 export type NotificationMessage = z.infer<typeof notificationMessageSchema>
+export type RoomSnapshotMessage = z.infer<typeof roomSnapshotMessageSchema>
+export type PresenceUpdatedMessage = z.infer<typeof presenceUpdatedMessageSchema>
+export type RoomRemovedMessage = z.infer<typeof roomRemovedMessageSchema>

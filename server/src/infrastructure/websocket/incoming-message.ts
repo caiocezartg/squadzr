@@ -22,7 +22,12 @@ export function parseIncomingMessage(
 ): IncomingMessageResult {
   let data: unknown
   try {
-    data = JSON.parse(rawData.toString())
+    const buffer = Array.isArray(rawData)
+      ? Buffer.concat(rawData)
+      : rawData instanceof ArrayBuffer
+        ? Buffer.from(rawData)
+        : rawData
+    data = JSON.parse(buffer.toString('utf8'))
   } catch {
     return {
       ok: false,

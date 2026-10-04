@@ -1,10 +1,7 @@
 /**
- * Characterization of how `/ws` treats invalid input and oversized frames today.
- *
- * REPLACED BY CCC-37: the whole contract below (1 MiB `maxPayload`, `INVALID_MESSAGE` for
- * schema-invalid messages, `PARSE_ERROR` for malformed JSON, and no limit on repeated invalid
- * messages) is recorded as current behavior for the realtime module rewrite, not as a
- * requirement to preserve.
+ * CCC-37 intentionally replaces the CCC-33 framing characterization: 16 KiB
+ * maxPayload, typed validation errors, and close 1008 for three invalid frames
+ * within 60 seconds. The exact size boundary and one byte above remain tested.
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { signInMany } from '@test/harness/auth'
@@ -17,8 +14,9 @@ import {
   type RealtimeSession,
 } from '@test/harness/realtime'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
+import { FakeClock } from '@test/harness/clock'
 
-const MAX_PAYLOAD_BYTES = 1_048_576
+const MAX_PAYLOAD_BYTES = 16_384
 const MESSAGE_TOO_BIG = 1009
 
 const invalidMessage = {
@@ -91,24 +89,44 @@ describe('invalid messages', () => {
     expect((await socket.next()).type).toBe('pong')
   })
 
-  it('answers every repeated invalid message without throttling or closing', async () => {
+  it('answers three repeated malformed frames with typed errors then closes with 1008', async () => {
     server = await buildTestServer()
     const socket = await open(server)
-    const attempts = 200
+    const attempts = 3
 
     for (let i = 0; i < attempts; i++) {
       socket.sendRaw(i % 2 === 0 ? 'not json' : JSON.stringify({ type: 'nope' }))
     }
 
-    expect(await socket.drain()).toEqual(
-      Array.from({ length: attempts }, (_, i) => (i % 2 === 0 ? parseError : invalidMessage))
-    )
+    const replies = []
+    for (let i = 0; i < attempts; i++) replies.push(await socket.next())
+    expect(replies).toEqual([parseError, invalidMessage, parseError])
+    expect((await socket.clientClosed).code).toBe(1008)
+    await socket.serverClosed
+    expect(socket.client.readyState).toBe(socket.client.CLOSED)
+  })
+
+  it('forgets invalid messages older than 60 seconds without letting valid pings reset the window', async () => {
+    const clock = new FakeClock(new Date())
+    server = await buildTestServer({}, { clock })
+    const socket = await open(server)
+    socket.sendRaw('not json')
+    expect(await socket.drain()).toEqual([parseError])
+    clock.advance(60_001)
+    socket.send({ type: 'nope' })
+    expect(await socket.drain()).toEqual([invalidMessage])
+    socket.sendRaw('not json')
+    expect(await socket.drain()).toEqual([parseError])
     expect(socket.client.readyState).toBe(socket.client.OPEN)
+    socket.send({ type: 'nope' })
+    expect(await socket.next()).toEqual(invalidMessage)
+    expect((await socket.clientClosed).code).toBe(1008)
+    await socket.serverClosed
   })
 })
 
-describe('1 MiB maxPayload', () => {
-  it('processes a frame of exactly 1 MiB', async () => {
+describe('16 KiB maxPayload', () => {
+  it('processes a frame of exactly 16 KiB', async () => {
     server = await buildTestServer()
     const socket = await open(server)
     const frame = paddedJsonFrame(MAX_PAYLOAD_BYTES)
@@ -135,7 +153,8 @@ describe('1 MiB maxPayload', () => {
   })
 
   it('cleans catalog and room subscriptions after an oversized-frame close, keeping Membership', async () => {
-    server = await buildTestServer()
+    const clock = new FakeClock(new Date())
+    server = await buildTestServer({}, { clock })
     const [host, member] = await signInMany(server, 2)
     const game = await insertGame(server)
     const room = await createRoom(server, host!, { gameId: game.id })
@@ -145,7 +164,7 @@ describe('1 MiB maxPayload', () => {
     const offender = await open(server, member!)
     await subscribeCatalog(offender)
     await joinRoomChannel(offender, room.code)
-    expect((await hostSocket.next()).type).toBe('player_joined')
+    expect((await hostSocket.next()).type).toBe('presence_updated')
 
     offender.sendRaw(paddedJsonFrame(MAX_PAYLOAD_BYTES + 1))
     await offender.serverClosed
@@ -155,13 +174,15 @@ describe('1 MiB maxPayload', () => {
     expect(state.roomSockets(room.code)).toBe(1)
     expect(await countMembers(server, room.id)).toBe(2)
 
-    // The oversized frame fires both the `error` and the `close` listeners; disconnect is
-    // idempotent, so the room hears viewer_left exactly once.
+    expect(await hostSocket.drain()).toEqual([])
+    clock.advance(10_000)
+    await subscriptionState(server).sweepPresence()
+    // The error and close listeners schedule one member transition after grace.
     expect(await hostSocket.drain()).toEqual([
       {
-        type: 'viewer_left',
+        type: 'presence_updated',
         timestamp: expect.any(Number),
-        payload: { playerId: member!.id, roomCode: room.code },
+        payload: { playerId: member!.id, roomCode: room.code, online: false },
       },
     ])
   })

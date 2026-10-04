@@ -1,251 +1,99 @@
 import type { WebSocket } from '@fastify/websocket'
-import type { PlayerDto } from '@squadzr/schemas'
-import type { RoomMember } from '@domain/entities/room-member.entity'
-import type { User } from '@domain/entities/user.entity'
-import type { IRoomRepository } from '@domain/repositories/room.repository'
-import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
-import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { Clock } from '@domain/services/clock.interface'
-import { isRoomExpired } from '@domain/services/room-lifecycle'
-import { ROOM } from '@config/constants'
-import type {
-  JoinRoomMessage,
-  LeaveRoomMessage,
-  WsClient,
-  RoomJoinedMessage,
-  PlayerJoinedMessage,
-  PlayerLeftMessage,
-  ViewerLeftMessage,
-  RoomReadyMessage,
-  ErrorMessage,
-  LobbySubscribedMessage,
-  WsServerMessage,
-} from '../types'
+import type { IGetRealtimeSnapshotUseCase } from '@application/use-cases/room/get-realtime-snapshot.use-case'
+import type { JoinRoomMessage, LeaveRoomMessage } from '../types'
 import type { WsConnectionManager } from '../ws-connection-manager'
+import type { WsRoomBroadcaster } from '../room-broadcaster.service'
+import type { Presence } from '../presence'
 
-function sendToSocket(socket: WebSocket, message: WsServerMessage): void {
-  if (socket.readyState === socket.OPEN) {
-    socket.send(JSON.stringify(message))
-  }
-}
-
-export function sendError(socket: WebSocket, code: string, message: string): void {
-  const errorMessage: ErrorMessage = {
-    type: 'error',
-    timestamp: Date.now(),
-    payload: { code, message },
-  }
-  sendToSocket(socket, errorMessage)
-}
-
-function buildPlayerList(members: RoomMember[], users: User[], hostId: string): PlayerDto[] {
-  const usersById = new Map(users.map((u) => [u.id, u]))
-  return members.map((member) => {
-    const u = usersById.get(member.userId)
-    return {
-      id: member.userId,
-      name: u?.name ?? 'Unknown',
-      image: u?.avatarUrl ?? null,
-      isHost: member.userId === hostId,
-    }
-  })
-}
-
-function broadcastRoomReadyIfFull(
-  roomCode: string,
-  roomId: string,
-  memberCount: number,
-  maxPlayers: number,
-  connectionManager: WsConnectionManager
+export function sendError(
+  socket: WebSocket,
+  code: string,
+  message: string,
+  manager: WsConnectionManager,
+  clock: Clock
 ): void {
-  if (memberCount < maxPlayers) return
-  const msg: RoomReadyMessage = {
-    type: 'room_ready',
-    timestamp: Date.now(),
-    payload: { roomId, roomCode, message: 'Room is full! Time to play!' },
-  }
-  connectionManager.broadcastToRoom(roomCode, msg)
+  manager.sendToSocket(socket, {
+    type: 'error',
+    timestamp: clock.now().getTime(),
+    payload: { code, message },
+  })
 }
 
 export async function handleJoinRoom(
   socket: WebSocket,
   message: JoinRoomMessage,
-  connectionManager: WsConnectionManager,
-  roomRepository: IRoomRepository,
-  roomMemberRepository: IRoomMemberRepository,
-  userRepository: IUserRepository,
-  clock: Clock
+  manager: WsConnectionManager,
+  snapshots: IGetRealtimeSnapshotUseCase,
+  presence: Presence,
+  broadcaster: WsRoomBroadcaster
 ): Promise<void> {
-  const { roomCode } = message.payload
-  const client = connectionManager.getClientData(socket)
-
-  if (!client) {
-    sendError(socket, 'INVALID_CLIENT', 'Client not initialized')
-    return
+  const client = manager.getClientData(socket)
+  if (!client || !manager.isConnected(socket)) return
+  const snapshot = await snapshots.subscribe(message.payload.roomCode, client.userId)
+  const { userId } = snapshot
+  // A disconnect during the query must never resurrect a subscription.
+  if (!manager.isConnected(socket) || socket.readyState !== socket.OPEN) return
+  if (client.roomCode && client.roomCode !== snapshot.room.code) {
+    handleLeaveRoom(
+      socket,
+      { type: 'leave_room', timestamp: 0, payload: { roomCode: client.roomCode } },
+      manager,
+      presence
+    )
   }
-  if (!client.userId) {
-    sendError(socket, 'UNAUTHORIZED', 'Authentication required')
-    return
-  }
-
-  const room = await roomRepository.findByCode(roomCode)
-  if (!room) {
-    sendError(socket, 'ROOM_NOT_FOUND', `Room "${roomCode}" not found`)
-    return
-  }
-
-  // An expired room is gone for reads and subscriptions even before deletion.
-  if (isRoomExpired(room, clock.now(), ROOM)) {
-    sendError(socket, 'ROOM_NOT_FOUND', `Room "${roomCode}" not found`)
-    return
-  }
-
-  const membership = await roomMemberRepository.findByRoomAndUser(room.id, client.userId)
-  if (!membership) {
-    // A Ready Room answers to non-members exactly like a missing room, matching
-    // the HTTP 404 and never leaking that the room exists.
-    if (room.readyAt) {
-      sendError(socket, 'ROOM_NOT_FOUND', `Room "${roomCode}" not found`)
-      return
-    }
-    sendError(socket, 'NOT_ROOM_MEMBER', 'You are not a member of this room')
-    return
-  }
-
-  connectionManager.addToRoom(roomCode, socket)
-  client.roomCode = roomCode
-
-  const members = await roomMemberRepository.findByRoomId(room.id)
-  const users = await userRepository.findByIds(members.map((m) => m.userId))
-  const players = buildPlayerList(members, users, room.hostId)
-
-  const joinedMessage: RoomJoinedMessage = {
-    type: 'room_joined',
-    timestamp: Date.now(),
-    payload: { roomId: room.id, roomCode: room.code, players },
-  }
-  sendToSocket(socket, joinedMessage)
-
-  const playerJoinedMessage: PlayerJoinedMessage = {
-    type: 'player_joined',
-    timestamp: Date.now(),
-    payload: {
-      player: {
-        id: client.userId,
-        name: client.userName ?? 'Unknown',
-        image: client.userImage,
-        isHost: client.userId === room.hostId,
-      },
-    },
-  }
-  connectionManager.broadcastToRoom(roomCode, playerJoinedMessage, socket)
-
-  const memberCount = await roomMemberRepository.countByRoomId(room.id)
-  broadcastRoomReadyIfFull(roomCode, room.id, memberCount, room.maxPlayers, connectionManager)
+  // Expired grace transitions belong to existing subscribers, before this socket's snapshot.
+  const becameOnline = presence.join(snapshot.room.code, userId, socket)
+  client.roomCode = snapshot.room.code
+  manager.addToRoom(client.roomCode, socket)
+  broadcaster.sendSnapshot(socket, snapshot)
+  if (becameOnline) broadcaster.broadcastPresence(client.roomCode, userId, true, socket)
 }
 
-export async function handleLeaveRoom(
+export function handleLeaveRoom(
   socket: WebSocket,
   message: LeaveRoomMessage,
-  connectionManager: WsConnectionManager
-): Promise<void> {
-  const { roomCode } = message.payload
-  const client = connectionManager.getClientData(socket)
-
-  if (!client) {
-    sendError(socket, 'INVALID_CLIENT', 'Client not initialized')
-    return
-  }
-
-  if (!client.userId) {
-    sendError(socket, 'UNAUTHORIZED', 'Authentication required')
-    return
-  }
-
-  const hadSockets = connectionManager.removeFromRoom(roomCode, socket)
-
-  if (hadSockets) {
-    const roomSockets = connectionManager.getRoomSockets(roomCode)
-    if (roomSockets && roomSockets.size > 0) {
-      // Broadcast player_left to remaining clients
-      const playerLeftMessage: PlayerLeftMessage = {
-        type: 'player_left',
-        timestamp: Date.now(),
-        payload: { playerId: client.userId },
-      }
-      connectionManager.broadcastToRoom(roomCode, playerLeftMessage)
-    }
-  }
-
+  manager: WsConnectionManager,
+  presence: Presence
+): void {
+  const client = manager.getClientData(socket)
+  if (!client?.roomCode || client.roomCode !== message.payload.roomCode) return
+  manager.removeFromRoom(client.roomCode, socket)
+  if (client.userId) presence.leave(client.roomCode, client.userId, socket)
   client.roomCode = null
 }
 
-export function handleDisconnect(socket: WebSocket, connectionManager: WsConnectionManager): void {
-  const client = connectionManager.getClientData(socket)
-
-  // Remove from lobby subscribers
-  if (client?.isInLobby) {
-    connectionManager.unsubscribeLobby(socket)
-    client.isInLobby = false
-  }
-
-  if (!client?.roomCode) return
-  if (!client.userId) return
-
-  // Cleared up front so a second call (both `error` and `close` fire) is a no-op
-  const roomCode = client.roomCode
-  client.roomCode = null
-  connectionManager.removeFromRoom(roomCode, socket)
-
-  const roomSockets = connectionManager.getRoomSockets(roomCode)
-  if (roomSockets && roomSockets.size > 0) {
-    const viewerLeftMessage: ViewerLeftMessage = {
-      type: 'viewer_left',
-      timestamp: Date.now(),
-      payload: { playerId: client.userId, roomCode },
-    }
-    connectionManager.broadcastToRoom(roomCode, viewerLeftMessage)
-  }
+export function handleDisconnect(
+  socket: WebSocket,
+  manager: WsConnectionManager,
+  presence: Presence
+): boolean {
+  const client = manager.getClientData(socket)
+  const roomCode = client?.roomCode
+  const userId = client?.userId
+  if (!manager.disconnect(socket)) return false
+  if (roomCode && userId) presence.leave(roomCode, userId, socket)
+  return true
 }
 
-// Lobby subscription handlers
 export function handleSubscribeLobby(
   socket: WebSocket,
-  connectionManager: WsConnectionManager
+  manager: WsConnectionManager,
+  clock: Clock
 ): void {
-  const client = connectionManager.getClientData(socket)
-  if (!client) {
-    sendError(socket, 'INVALID_CLIENT', 'Client not initialized')
-    return
-  }
-
-  connectionManager.subscribeLobby(socket)
+  const client = manager.getClientData(socket)
+  if (!client || !manager.isConnected(socket)) return
+  manager.subscribeLobby(socket)
   client.isInLobby = true
-
-  const message: LobbySubscribedMessage = {
+  manager.sendToSocket(socket, {
     type: 'lobby_subscribed',
-    timestamp: Date.now(),
+    timestamp: clock.now().getTime(),
     payload: { message: 'Subscribed to room list updates' },
-  }
-  sendToSocket(socket, message)
+  })
 }
 
-export function handleUnsubscribeLobby(
-  socket: WebSocket,
-  connectionManager: WsConnectionManager
-): void {
-  const client = connectionManager.getClientData(socket)
-  if (!client) return
-
-  connectionManager.unsubscribeLobby(socket)
-  client.isInLobby = false
-}
-
-// Keep setClientData as a convenience wrapper
-export function setClientData(
-  socket: WebSocket,
-  data: WsClient,
-  connectionManager: WsConnectionManager
-): void {
-  connectionManager.setClientData(socket, data)
+export function handleUnsubscribeLobby(socket: WebSocket, manager: WsConnectionManager): void {
+  manager.unsubscribeLobby(socket)
+  const client = manager.getClientData(socket)
+  if (client) client.isInLobby = false
 }

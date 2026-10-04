@@ -15,6 +15,16 @@ describe('parseIncomingMessage', () => {
     })
   })
 
+  it('reads ArrayBuffer and chunked buffers as UTF-8 JSON', () => {
+    const raw = Buffer.from('{"type":"ping"}')
+    const arrayBuffer = Uint8Array.from(raw).buffer
+    expect(parseIncomingMessage(arrayBuffer)).toMatchObject({ ok: true, message: { type: 'ping' } })
+    expect(parseIncomingMessage([raw.subarray(0, 7), raw.subarray(7)])).toMatchObject({
+      ok: true,
+      message: { type: 'ping' },
+    })
+  })
+
   it.each([
     ['a bare identifier', SECRET],
     ['truncated JSON', `{"type":"join_room","payload":{"sessionToken":"${SECRET}`],

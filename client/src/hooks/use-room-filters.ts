@@ -76,14 +76,16 @@ export function useRoomFilters(
 
   // Debounce: sync local text → URL after 300ms of inactivity
   useEffect(() => {
+    if (localSearch === urlSearch) return
     const timer = setTimeout(() => setParams({ search: localSearch, page: 1 }), 300)
     return () => clearTimeout(timer)
-  }, [localSearch, setParams])
+  }, [localSearch, urlSearch, setParams])
 
   useEffect(() => {
+    if (localTag === urlTag) return
     const timer = setTimeout(() => setParams({ tag: localTag, page: 1 }), 300)
     return () => clearTimeout(timer)
-  }, [localTag, setParams])
+  }, [localTag, urlTag, setParams])
 
   // Reverse sync: URL → local state (back/forward navigation or shared links)
   useEffect(() => {

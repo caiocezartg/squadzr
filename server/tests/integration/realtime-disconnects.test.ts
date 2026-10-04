@@ -1,9 +1,7 @@
 /**
- * Characterization of graceful and abnormal disconnects, and of how the current event
- * stream conflates durable Membership (PostgreSQL `room_members`) with transport Presence
- * (open sockets). Every `REPLACED BY CCC-37` assertion records a conflation that the
- * realtime module rewrite must remove; new Presence tests should be written against the
- * roadmap rules (one online member per user, 10 s grace, heartbeat), not against these.
+ * CCC-33 disconnect characterizations updated for CCC-37: durable Membership
+ * survives transport loss, sessions share one Presence, and offline waits for
+ * the reconnect grace window. HTTP Membership removal revokes the channel.
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { signInMany, type TestUser } from '@test/harness/auth'
@@ -16,6 +14,7 @@ import {
   type RealtimeSession,
 } from '@test/harness/realtime'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
+import { FakeClock } from '@test/harness/clock'
 
 const NORMAL_CLOSURE = 1000
 const ABNORMAL_CLOSURE = 1006
@@ -23,6 +22,7 @@ const NO_STATUS_RECEIVED = 1005
 
 let server: TestServer
 const sessions: RealtimeSession[] = []
+let clock: FakeClock
 
 async function open(user: TestUser | null): Promise<RealtimeSession> {
   const session = await connect(server, user)
@@ -45,7 +45,8 @@ interface TwoMemberRoom {
 
 /** Host and member hold Membership; only the host is connected to the room channel. */
 async function twoMemberRoom(): Promise<TwoMemberRoom> {
-  server = await buildTestServer()
+  clock = new FakeClock(new Date())
+  server = await buildTestServer({}, { clock })
   const [host, member] = await signInMany(server, 2)
   const game = await insertGame(server)
   const room = await createRoom(server, host!, { gameId: game.id })
@@ -58,20 +59,22 @@ async function twoMemberRoom(): Promise<TwoMemberRoom> {
 async function openMemberTab(room: TwoMemberRoom): Promise<RealtimeSession> {
   const tab = await open(room.member)
   await joinRoomChannel(tab, room.roomCode)
-  expect((await room.hostSocket.next()).type).toBe('player_joined')
+  expect((await room.hostSocket.drain()).map((message) => message.type)).toEqual([
+    'presence_updated',
+  ])
   return tab
 }
 
 function viewerLeft(room: TwoMemberRoom) {
   return {
-    type: 'viewer_left',
+    type: 'presence_updated',
     timestamp: expect.any(Number),
-    payload: { playerId: room.member.id, roomCode: room.roomCode },
+    payload: { playerId: room.member.id, roomCode: room.roomCode, online: false },
   }
 }
 
 describe('graceful disconnect', () => {
-  it('closes with 1000, unregisters the socket and emits viewer_left once', async () => {
+  it('closes with 1000, unregisters the socket and emits offline once after 10 seconds', async () => {
     const room = await twoMemberRoom()
     const tab = await openMemberTab(room)
     await subscribeCatalog(tab)
@@ -81,6 +84,12 @@ describe('graceful disconnect', () => {
     expect((await tab.serverClosed).code).toBe(NORMAL_CLOSURE)
     expect(subscriptionState(server).roomSockets(room.roomCode)).toBe(1)
     expect(subscriptionState(server).catalogSubscribers()).toBe(0)
+    expect(await room.hostSocket.drain()).toEqual([])
+    clock.advance(9_999)
+    await subscriptionState(server).sweepPresence()
+    expect(await room.hostSocket.drain()).toEqual([])
+    clock.advance(1)
+    await subscriptionState(server).sweepPresence()
     expect(await room.hostSocket.drain()).toEqual([viewerLeft(room)])
     expect(await countMembers(server, room.roomId)).toBe(2)
   })
@@ -117,6 +126,9 @@ describe('abnormal disconnect', () => {
     expect((await tab.serverClosed).code).toBe(ABNORMAL_CLOSURE)
     expect(subscriptionState(server).roomSockets(room.roomCode)).toBe(1)
     expect(subscriptionState(server).catalogSubscribers()).toBe(0)
+    expect(await room.hostSocket.drain()).toEqual([])
+    clock.advance(10_000)
+    await subscriptionState(server).sweepPresence()
     expect(await room.hostSocket.drain()).toEqual([viewerLeft(room)])
     expect(await countMembers(server, room.roomId)).toBe(2)
   })
@@ -133,33 +145,33 @@ describe('abnormal disconnect', () => {
   })
 })
 
-describe('Membership / Presence conflation', () => {
-  it('emits viewer_left when one of several tabs of the same member closes', async () => {
+describe('Membership and multi-session Presence', () => {
+  it('does not emit offline when one of several tabs of the same member closes', async () => {
     const room = await twoMemberRoom()
     const firstTab = await openMemberTab(room)
-    await openMemberTab(room)
+    const secondTab = await open(room.member)
+    await joinRoomChannel(secondTab, room.roomCode)
 
     firstTab.client.close(NORMAL_CLOSURE)
     await firstTab.serverClosed
 
-    // REPLACED BY CCC-37: Presence is per socket, so the member looks gone while another
-    // tab is still connected. Closing one of multiple tabs must not emit offline.
-    expect(await room.hostSocket.drain()).toEqual([viewerLeft(room)])
+    clock.advance(10_000)
+    await subscriptionState(server).sweepPresence()
+    expect(await room.hostSocket.drain()).toEqual([])
     expect(subscriptionState(server).roomSockets(room.roomCode)).toBe(2)
   })
 
-  it('announces a WS leave_room as player_left although Membership is untouched', async () => {
+  it('changes only Presence when leaving the WS channel, keeping Membership', async () => {
     const room = await twoMemberRoom()
     const tab = await openMemberTab(room)
 
     tab.send({ type: 'leave_room', payload: { roomCode: room.roomCode } })
     expect(await tab.drain()).toEqual([])
 
-    // REPLACED BY CCC-37: `player_left` reads as a Membership change, but leaving the
-    // room channel only affects Presence; the durable Membership is still there.
-    expect(await room.hostSocket.drain()).toEqual([
-      { type: 'player_left', timestamp: expect.any(Number), payload: { playerId: room.member.id } },
-    ])
+    expect(await room.hostSocket.drain()).toEqual([])
+    clock.advance(10_000)
+    await subscriptionState(server).sweepPresence()
+    expect(await room.hostSocket.drain()).toEqual([viewerLeft(room)])
     expect(await countMembers(server, room.roomId)).toBe(2)
 
     tab.client.close(NORMAL_CLOSURE)
@@ -167,21 +179,35 @@ describe('Membership / Presence conflation', () => {
     expect(await room.hostSocket.drain()).toEqual([])
   })
 
-  it('keeps a socket subscribed to the room after its Membership is removed over HTTP', async () => {
+  it('publishes Membership removal and revokes the former member channel after commit', async () => {
     const room = await twoMemberRoom()
     const tab = await openMemberTab(room)
 
     const response = await roomAction(server, room.member, room.roomCode, 'leave')
     expect(response.statusCode).toBe(200)
 
-    // REPLACED BY CCC-37: the durable leave is not announced to the room channel and the
-    // former member keeps receiving room events until their socket goes away.
     expect(await countMembers(server, room.roomId)).toBe(1)
-    expect(await room.hostSocket.drain()).toEqual([])
-    expect(subscriptionState(server).roomSockets(room.roomCode)).toBe(2)
+    expect(await room.hostSocket.drain()).toEqual([
+      expect.objectContaining({
+        type: 'room_snapshot',
+        payload: expect.objectContaining({
+          players: [expect.objectContaining({ id: room.host.id })],
+          presence: [{ playerId: room.host.id, online: true }],
+        }),
+      }),
+    ])
+    expect(subscriptionState(server).roomSockets(room.roomCode)).toBe(1)
+    expect(await tab.drain()).toEqual([
+      expect.objectContaining({
+        type: 'error',
+        payload: expect.objectContaining({ code: 'NOT_ROOM_MEMBER' }),
+      }),
+    ])
 
     tab.client.close(NORMAL_CLOSURE)
     await tab.serverClosed
-    expect(await room.hostSocket.drain()).toEqual([viewerLeft(room)])
+    clock.advance(10_000)
+    await subscriptionState(server).sweepPresence()
+    expect(await room.hostSocket.drain()).toEqual([])
   })
 })
