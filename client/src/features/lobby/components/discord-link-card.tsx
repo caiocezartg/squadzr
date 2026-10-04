@@ -6,10 +6,10 @@ import { DiscordIcon } from '@/components/ui/icons'
 
 interface DiscordLinkCardProps {
   discordLink: string
-  isRoomReady: boolean
+  isReadyRoom: boolean
 }
 
-export function DiscordLinkCard({ discordLink, isRoomReady }: DiscordLinkCardProps) {
+export function DiscordLinkCard({ discordLink, isReadyRoom }: DiscordLinkCardProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
@@ -23,7 +23,7 @@ export function DiscordLinkCard({ discordLink, isRoomReady }: DiscordLinkCardPro
     discordLink.startsWith('https://discord.gg/') ||
     discordLink.startsWith('https://discord.com/invite/')
 
-  if (!isRoomReady || !isValidDiscordLink) return null
+  if (!isReadyRoom || !isValidDiscordLink) return null
 
   return (
     <motion.div
