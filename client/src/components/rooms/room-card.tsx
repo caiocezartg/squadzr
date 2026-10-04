@@ -51,7 +51,10 @@ export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: Room
       type="button"
       onClick={() => onJoin?.(room.code)}
       disabled={isDisabled}
-      className={`group relative w-full overflow-hidden rounded-xl border bg-surface text-left transition-all duration-300 ${
+      // `opacity` stays out of the CSS transition on purpose: motion animates
+      // it on mount (WAAPI) and a CSS transition replays the fade when the
+      // animation finishes. Hover and disabled visuals keep transitioning.
+      className={`group relative w-full overflow-hidden rounded-xl border bg-surface text-left transition-[transform,border-color,box-shadow,filter] duration-300 ease-in-out ${
         isDisabled
           ? 'cursor-not-allowed border-border grayscale opacity-50'
           : 'cursor-pointer border-border hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-[0_6px_32px_rgba(0,255,162,0.07)]'
