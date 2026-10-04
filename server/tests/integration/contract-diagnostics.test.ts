@@ -167,7 +167,7 @@ describe('lifecycle logs', () => {
     const room = await createRoom(server, host, { gameId: game.id })
     await markRoomActivity(server, room.id, 25 * 60)
 
-    const repository = new DrizzleRoomRepository(server.app.db)
+    const repository = new DrizzleRoomRepository(server.app.db, server.app.clock)
     const useCase = new DeleteExpiredRoomsUseCase(repository, server.app.clock)
     await runRoomCleanup(server.app.log, useCase, server.app.broadcaster)
 

@@ -1,6 +1,7 @@
 import { vi, type Mock } from 'vitest'
 import type { Room, CreateRoomInput, UpdateRoomInput } from '@domain/entities/room.entity'
 import type { CreateRoomOutcome, IRoomRepository } from '@domain/repositories/room.repository'
+import { FIXED_NOW } from './clock.mock'
 
 export function createMockRoom(overrides?: Partial<Room>): Room {
   return {
@@ -37,8 +38,8 @@ export function createMockRoomRepository(): MockRoomRepository {
       .fn<(userId: string, now: Date) => Promise<{ hosted: Room[]; joined: Room[] }>>()
       .mockResolvedValue({ hosted: [], joined: [] }),
     create: vi
-      .fn<(input: CreateRoomInput, now: Date) => Promise<CreateRoomOutcome>>()
-      .mockImplementation((input, now) =>
+      .fn<(input: CreateRoomInput) => Promise<CreateRoomOutcome>>()
+      .mockImplementation((input) =>
         Promise.resolve({
           status: 'created',
           room: createMockRoom({
@@ -49,15 +50,15 @@ export function createMockRoomRepository(): MockRoomRepository {
             discordLink: input.discordLink ?? null,
             tags: input.tags ?? [],
             language: (input.language ?? 'pt-br') as 'en' | 'pt-br',
-            lastActivityAt: now,
-            createdAt: now,
-            updatedAt: now,
+            lastActivityAt: FIXED_NOW,
+            createdAt: FIXED_NOW,
+            updatedAt: FIXED_NOW,
           }),
           hostMember: {
             id: 'room-member-uuid-1',
             roomId: 'room-uuid-1',
             userId: input.hostId,
-            joinedAt: now,
+            joinedAt: FIXED_NOW,
           },
         })
       ),

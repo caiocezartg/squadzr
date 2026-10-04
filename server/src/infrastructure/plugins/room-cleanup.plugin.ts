@@ -50,7 +50,7 @@ async function roomCleanupPlugin(fastify: FastifyInstance): Promise<void> {
       'Room cleanup scheduler started'
     )
 
-    const cleanupRepository = new DrizzleRoomRepository(fastify.db)
+    const cleanupRepository = new DrizzleRoomRepository(fastify.db, fastify.clock)
     const cleanupUseCase = new DeleteExpiredRoomsUseCase(cleanupRepository, fastify.clock)
 
     intervalId = setInterval(() => {

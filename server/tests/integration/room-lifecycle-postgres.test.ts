@@ -227,7 +227,7 @@ describe('lifecycle columns', () => {
 
 describe('ready_at filters', () => {
   it('lists only Open Rooms inside the activity window from findAvailable', async () => {
-    const repository = new DrizzleRoomRepository(server.app.db)
+    const repository = new DrizzleRoomRepository(server.app.db, server.app.clock)
     const open = await createRoom(server, host, { gameId })
     const stale = await createRoom(server, host, { gameId })
     await setRoomLifecycle(server, stale.id, {
@@ -242,7 +242,7 @@ describe('ready_at filters', () => {
   })
 
   it('expires an Open Room at exactly lastActivityAt + 24h', async () => {
-    const repository = new DrizzleRoomRepository(server.app.db)
+    const repository = new DrizzleRoomRepository(server.app.db, server.app.clock)
     const room = await createRoom(server, host, { gameId })
     await setRoomLifecycle(server, room.id, {
       createdAt: FIXED_NOW,
@@ -258,7 +258,7 @@ describe('ready_at filters', () => {
   })
 
   it('expires a Ready Room at exactly readyAt + 60min', async () => {
-    const repository = new DrizzleRoomRepository(server.app.db)
+    const repository = new DrizzleRoomRepository(server.app.db, server.app.clock)
     const [member] = await signInMany(server, 1)
     const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
     await joinAll(server, room.code, [member!])
@@ -275,7 +275,7 @@ describe('ready_at filters', () => {
   })
 
   it('keeps a Ready Room one millisecond before readyAt + 60min', async () => {
-    const repository = new DrizzleRoomRepository(server.app.db)
+    const repository = new DrizzleRoomRepository(server.app.db, server.app.clock)
     const [member] = await signInMany(server, 1)
     const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
     await joinAll(server, room.code, [member!])
@@ -291,7 +291,7 @@ describe('ready_at filters', () => {
   })
 
   it('does not delete a room whose activity advanced after the scheduler listed it', async () => {
-    const repository = new DrizzleRoomRepository(server.app.db)
+    const repository = new DrizzleRoomRepository(server.app.db, server.app.clock)
     const room = await createRoom(server, host, { gameId })
     await setRoomLifecycle(server, room.id, {
       createdAt: FIXED_NOW,
@@ -608,7 +608,7 @@ describe('join and leave transactions', () => {
 describe('expiration cleanup use case', () => {
   it('deletes both expired Open Rooms and expired Ready Rooms, reporting the reason', async () => {
     const [member] = await signInMany(server, 1)
-    const repository = new DrizzleRoomRepository(server.app.db)
+    const repository = new DrizzleRoomRepository(server.app.db, server.app.clock)
     const useCase = new DeleteExpiredRoomsUseCase(repository, clock)
     const openExpired = await createRoom(server, host, { gameId })
     await setRoomLifecycle(server, openExpired.id, {
@@ -686,7 +686,7 @@ describe('user_notifications idempotency key', () => {
 
   it('preserves the notification history after the room is deleted', async () => {
     const repository = new DrizzleUserNotificationRepository(server.app.db)
-    const roomRepository = new DrizzleRoomRepository(server.app.db)
+    const roomRepository = new DrizzleRoomRepository(server.app.db, server.app.clock)
     const room = await createRoom(server, host, { gameId })
     await repository.create(notificationInput(room.id, host.id))
 

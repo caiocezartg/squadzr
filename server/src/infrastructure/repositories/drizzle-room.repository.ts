@@ -3,6 +3,7 @@ import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or } fro
 import { alias } from 'drizzle-orm/pg-core'
 import type { CreateRoomInput, Room, UpdateRoomInput } from '@domain/entities/room.entity'
 import type { CreateRoomOutcome, IRoomRepository } from '@domain/repositories/room.repository'
+import type { Clock } from '@domain/services/clock.interface'
 import type { Database } from '@infrastructure/database/drizzle'
 import { rooms, type RoomRow } from '@infrastructure/database/schema/rooms'
 import { roomMembers } from '@infrastructure/database/schema/room-members'
@@ -66,7 +67,10 @@ function mapMyRoomRow(r: MyRoomRow): Room {
 }
 
 export class DrizzleRoomRepository implements IRoomRepository {
-  constructor(private readonly db: Database) {}
+  constructor(
+    private readonly db: Database,
+    private readonly clock: Clock
+  ) {}
 
   async findById(id: string): Promise<Room | null> {
     const result = await this.db.select().from(rooms).where(eq(rooms.id, id)).limit(1)
@@ -172,7 +176,7 @@ export class DrizzleRoomRepository implements IRoomRepository {
     return result.map(mapRoomRowToEntity)
   }
 
-  async create(input: CreateRoomInput, now: Date): Promise<CreateRoomOutcome> {
+  async create(input: CreateRoomInput): Promise<CreateRoomOutcome> {
     const MAX_ATTEMPTS = 5
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
@@ -183,6 +187,10 @@ export class DrizzleRoomRepository implements IRoomRepository {
           // (never locks an existing one), so its user-first order cannot cycle
           // with the room-then-user order of `joinOpenRoom`; see `lockUserRow`.
           await lockUserRow(tx, input.hostId)
+
+          // Read once after the lock wait: the host-limit cutoff, room and host
+          // Membership all use the current instant, including on code retries.
+          const now = this.clock.now()
 
           const hostedRows = await tx
             .select({ currentCount: count() })

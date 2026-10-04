@@ -67,7 +67,7 @@ async function wsPlugin(fastify: FastifyInstance): Promise<void> {
     }
 
     const db = fastify.db
-    const roomRepository = new DrizzleRoomRepository(db)
+    const roomRepository = new DrizzleRoomRepository(db, fastify.clock)
     const roomMemberRepository = new DrizzleRoomMemberRepository(db, fastify.clock)
     const userRepository = new DrizzleUserRepository(db)
 

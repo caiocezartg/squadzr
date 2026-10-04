@@ -23,14 +23,16 @@ export interface IRoomRepository {
   findMyRooms(userId: string, now: Date): Promise<{ hosted: Room[]; joined: Room[] }>
   /**
    * Creates the room and its host Membership in one transaction, stamping Room
-   * Activity with `now`. The per-host limit of valid Open Rooms is decided in
-   * that same transaction: the user row is locked first, then the count and the
-   * insert happen under that lock, so concurrent creations by one host cannot
+   * Activity with the injected clock, read once after the user row lock. The
+   * same instant is used for the host-limit cutoff and all creation timestamps.
+   * The per-host limit of valid Open Rooms is decided in that same transaction:
+   * the user row is locked first, then the count and insert happen under that
+   * lock, so concurrent creations by one host cannot
    * both pass the limit. A creation inserts a brand-new room row and never
    * locks an existing one, so this user-first path cannot cycle with the
    * room-then-user order of `joinOpenRoom`.
    */
-  create(input: CreateRoomInput, now: Date): Promise<CreateRoomOutcome>
+  create(input: CreateRoomInput): Promise<CreateRoomOutcome>
   /** Rooms whose activity/retention window ended at or before `now`. */
   findExpiredRooms(now: Date): Promise<Room[]>
   /** Deletes the room only if it is still expired at `now`; memberships cascade. */
