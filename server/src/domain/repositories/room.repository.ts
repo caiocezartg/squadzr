@@ -7,6 +7,10 @@ export interface CreatedRoom {
   readonly hostMember: RoomMember
 }
 
+export type CreateRoomOutcome =
+  | ({ readonly status: 'created' } & CreatedRoom)
+  | { readonly status: 'limit_reached' }
+
 export interface IRoomRepository {
   findById(id: string): Promise<Room | null>
   findByCode(code: string): Promise<Room | null>
@@ -15,12 +19,18 @@ export interface IRoomRepository {
   findAll(): Promise<Room[]>
   /** Open Rooms whose Room Activity is still inside the 24h window, with memberCount. */
   findAvailable(now: Date): Promise<Room[]>
-  /** Valid Open Rooms only: Ready Rooms and expired Open Rooms never count. */
-  countActiveByHostId(hostId: string, now: Date): Promise<number>
   /** Open Rooms inside the activity window plus Ready Rooms inside their 60min retention. */
   findMyRooms(userId: string, now: Date): Promise<{ hosted: Room[]; joined: Room[] }>
-  /** Creates the room and its host Membership in one transaction, stamping Room Activity with `now`. */
-  create(input: CreateRoomInput, now: Date): Promise<CreatedRoom>
+  /**
+   * Creates the room and its host Membership in one transaction, stamping Room
+   * Activity with `now`. The per-host limit of valid Open Rooms is decided in
+   * that same transaction: the user row is locked first, then the count and the
+   * insert happen under that lock, so concurrent creations by one host cannot
+   * both pass the limit. A creation inserts a brand-new room row and never
+   * locks an existing one, so this user-first path cannot cycle with the
+   * room-then-user order of `joinOpenRoom`.
+   */
+  create(input: CreateRoomInput, now: Date): Promise<CreateRoomOutcome>
   /** Rooms whose activity/retention window ended at or before `now`. */
   findExpiredRooms(now: Date): Promise<Room[]>
   /** Deletes the room only if it is still expired at `now`; memberships cascade. */

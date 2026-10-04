@@ -2,12 +2,13 @@ import { randomInt } from 'node:crypto'
 import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import type { CreateRoomInput, Room, UpdateRoomInput } from '@domain/entities/room.entity'
-import type { CreatedRoom, IRoomRepository } from '@domain/repositories/room.repository'
+import type { CreateRoomOutcome, IRoomRepository } from '@domain/repositories/room.repository'
 import type { Database } from '@infrastructure/database/drizzle'
 import { rooms, type RoomRow } from '@infrastructure/database/schema/rooms'
 import { roomMembers } from '@infrastructure/database/schema/room-members'
 import { ROOM } from '@config/constants'
 import { mapRoomMemberRowToEntity, mapRoomRowToEntity } from './room-mapping'
+import { lockUserRow } from './user-lock'
 
 function openRoomCutoff(now: Date): Date {
   return new Date(now.getTime() - ROOM.OPEN_ROOM_TTL_MS)
@@ -115,14 +116,6 @@ export class DrizzleRoomRepository implements IRoomRepository {
     }))
   }
 
-  async countActiveByHostId(hostId: string, now: Date): Promise<number> {
-    const result = await this.db
-      .select({ count: count() })
-      .from(rooms)
-      .where(and(eq(rooms.hostId, hostId), validOpenRoomCondition(now)))
-    return result[0]?.count ?? 0
-  }
-
   async findMyRooms(userId: string, now: Date): Promise<{ hosted: Room[]; joined: Room[] }> {
     const allMembersAlias = alias(roomMembers, 'all_members')
     const userMembershipAlias = alias(roomMembers, 'user_membership')
@@ -179,11 +172,25 @@ export class DrizzleRoomRepository implements IRoomRepository {
     return result.map(mapRoomRowToEntity)
   }
 
-  async create(input: CreateRoomInput, now: Date): Promise<CreatedRoom> {
+  async create(input: CreateRoomInput, now: Date): Promise<CreateRoomOutcome> {
     const MAX_ATTEMPTS = 5
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
         return await this.db.transaction(async (tx) => {
+          // Per-host limit: the user row is locked before the count and the
+          // insert, so two concurrent creations by one host cannot both read a
+          // count below the limit. This path only inserts a brand-new room row
+          // (never locks an existing one), so its user-first order cannot cycle
+          // with the room-then-user order of `joinOpenRoom`; see `lockUserRow`.
+          await lockUserRow(tx, input.hostId)
+
+          const hostedRows = await tx
+            .select({ currentCount: count() })
+            .from(rooms)
+            .where(and(eq(rooms.hostId, input.hostId), validOpenRoomCondition(now)))
+          const hostedCount = hostedRows[0]?.currentCount ?? 0
+          if (hostedCount >= ROOM.CREATE_LIMIT) return { status: 'limit_reached' }
+
           const roomRows = await tx
             .insert(rooms)
             .values({
@@ -217,6 +224,7 @@ export class DrizzleRoomRepository implements IRoomRepository {
           if (!memberRow) throw new Error('Failed to create room host membership')
 
           return {
+            status: 'created',
             room: mapRoomRowToEntity(roomRow),
             hostMember: mapRoomMemberRowToEntity(memberRow),
           }

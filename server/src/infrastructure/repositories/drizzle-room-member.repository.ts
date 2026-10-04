@@ -20,6 +20,7 @@ import {
   mapUserNotificationRow,
   notificationInputToRow,
 } from './drizzle-user-notification.repository'
+import { lockUserRow } from './user-lock'
 
 function openRoomCutoff(now: Date): Date {
   return new Date(now.getTime() - ROOM.OPEN_ROOM_TTL_MS)
@@ -59,23 +60,6 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
     return result[0]?.count ?? 0
   }
 
-  async countActiveByUserId(userId: string, now: Date): Promise<number> {
-    // Only valid Open Rooms count: a Ready Room is done and an Open Room past
-    // its activity window is gone even before the scheduler deletes it.
-    const result = await this.db
-      .select({ count: count() })
-      .from(roomMembers)
-      .innerJoin(rooms, eq(rooms.id, roomMembers.roomId))
-      .where(
-        and(
-          eq(roomMembers.userId, userId),
-          isNull(rooms.readyAt),
-          gt(rooms.lastActivityAt, openRoomCutoff(now))
-        )
-      )
-    return result[0]?.count ?? 0
-  }
-
   async joinOpenRoom(input: JoinOpenRoomInput): Promise<JoinOpenRoomOutcome> {
     return this.db.transaction(async (tx) => {
       // Lock the room row: joins and leaves on the same room serialize here, so
@@ -90,13 +74,55 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
       const roomRow = roomRows[0]
       if (!roomRow) return { status: 'not_found' }
 
-      // The lifecycle instant is read only now, with the lock held: concurrent
-      // joins get distinct, increasing instants in lock order, so Room Activity
-      // never moves backwards and expiration is checked against current time.
+      // Serialize this user's count and insert after locking the room. The
+      // weaker user lock also allows notification FKs to other joining users.
+      await lockUserRow(tx, input.userId)
+
+      // Read once after both lock waits, so expiration and every lifecycle
+      // timestamp use the current instant and Room Activity never regresses.
       const now = this.clock.now()
 
       const room = mapRoomRowToEntity(roomRow)
       if (isRoomExpired(room, now, ROOM)) return { status: 'expired' }
+
+      // The room lock serializes every writer of this room, so this read is
+      // stable: an existing Membership is the idempotent no-op path and must
+      // never be answered with a seat or limit error.
+      const existingRows = await tx
+        .select()
+        .from(roomMembers)
+        .where(and(eq(roomMembers.roomId, input.roomId), eq(roomMembers.userId, input.userId)))
+        .limit(1)
+      const existingRow = existingRows[0]
+      if (existingRow) {
+        const memberCountRows = await tx
+          .select({ currentCount: count() })
+          .from(roomMembers)
+          .where(eq(roomMembers.roomId, input.roomId))
+        return {
+          status: 'joined',
+          member: mapRoomMemberRowToEntity(existingRow),
+          memberCount: memberCountRows[0]?.currentCount ?? 0,
+          becameReady: false,
+          notifications: [],
+        }
+      }
+
+      // Valid Open Rooms only: a Ready Room is done and an Open Room past its
+      // activity window is gone even before the scheduler deletes it.
+      const activeRows = await tx
+        .select({ currentCount: count() })
+        .from(roomMembers)
+        .innerJoin(rooms, eq(rooms.id, roomMembers.roomId))
+        .where(
+          and(
+            eq(roomMembers.userId, input.userId),
+            isNull(rooms.readyAt),
+            gt(rooms.lastActivityAt, openRoomCutoff(now))
+          )
+        )
+      const activeMembershipCount = activeRows[0]?.currentCount ?? 0
+      if (activeMembershipCount >= ROOM.JOIN_LIMIT) return { status: 'limit_reached' }
 
       const countRows = await tx
         .select({ currentCount: count() })

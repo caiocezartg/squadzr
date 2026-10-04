@@ -63,15 +63,6 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
       }
     }
 
-    // Enforce membership limit: max 5 valid rooms.
-    const activeMembershipCount = await this.roomMemberRepository.countActiveByUserId(
-      input.userId,
-      now
-    )
-    if (activeMembershipCount >= ROOM.JOIN_LIMIT) {
-      throw new RoomJoinLimitReachedError(ROOM.JOIN_LIMIT)
-    }
-
     // The game name is stable and read before acquiring a transaction connection.
     // The repository reads the authoritative roster and profiles through tx.
     const game = await this.gameRepository.findById(room.gameId)
@@ -102,6 +93,9 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
         // Capacity is decided before readiness so the seat race loser keeps the
         // established ROOM_FULL answer, exactly as before readiness existed.
         throw new RoomFullError(room.id)
+      case 'limit_reached':
+        // The count and the insert were decided together under the user lock.
+        throw new RoomJoinLimitReachedError(ROOM.JOIN_LIMIT)
       case 'ready':
         throw new RoomReadyError(room.id, 'join')
       case 'expired':

@@ -230,7 +230,7 @@ describe('full rooms and My Rooms', () => {
   })
 })
 
-describe('active-room limits (countActiveByHostId / countActiveByUserId)', () => {
+describe('active-room limits enforced by create and join transactions', () => {
   it(`rejects hosting more than ROOM.CREATE_LIMIT (${ROOM.CREATE_LIMIT}) valid rooms`, async () => {
     for (let i = 0; i < ROOM.CREATE_LIMIT; i++) await createRoom(server, host, { gameId })
 
