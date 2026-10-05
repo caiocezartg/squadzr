@@ -13,10 +13,10 @@ import { useTranslation } from 'react-i18next'
 import { createRoomInputSchema, createRoomResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
-// The commands module is the catalog's cross-capability port. Importing it
-// directly keeps the catalog barrel (which renders this dialog through the
-// catalog page) out of a cycle.
-import { useCatalogCommands } from '@/features/catalog/use-catalog-commands'
+// The commands entry point is the catalog's cross-capability port. Importing
+// it instead of the barrel keeps the catalog page (which renders this dialog)
+// out of a cycle.
+import { useCatalogCommands } from '@/features/catalog/commands'
 import type { Game, Room } from '@/types'
 import type { CreateRoomInput } from '@squadzr/schemas'
 

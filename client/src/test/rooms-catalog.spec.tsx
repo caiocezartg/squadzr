@@ -679,7 +679,7 @@ describe('rooms catalog — join flows', () => {
 
   it.each([
     ['ROOM_FULL', 'This squad is already full.'],
-    ['ROOM_READY', 'This squad is ready — members cannot leave.'],
+    ['ROOM_READY', "This squad is already full and ready — it's no longer accepting players."],
     ['ROOM_JOIN_LIMIT_REACHED', 'You have reached the maximum number of squads you can join.'],
   ])(
     'surfaces the %s lifecycle error through the typed application error',

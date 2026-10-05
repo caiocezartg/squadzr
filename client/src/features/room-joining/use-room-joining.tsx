@@ -5,11 +5,11 @@ import { toast } from 'sonner'
 import { joinRoomResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import { signIn, useSession } from '@/lib/auth-client'
+// The commands entry point is the catalog's cross-capability port. Importing
+// it instead of the barrel keeps the catalog page (which renders the join
+// flow) out of a cycle.
+import { useCatalogCommands } from '@/features/catalog/commands'
 import { getUserFriendlyError } from '@/lib/error-messages'
-// The commands module is the catalog's cross-capability port. Importing it
-// directly keeps the catalog barrel (which renders the join flow through the
-// catalog page) out of a cycle.
-import { useCatalogCommands } from '@/features/catalog/use-catalog-commands'
 import { JoinRoomAuthModal } from './join-room-auth-modal'
 import { useAutoJoin } from './use-auto-join'
 
@@ -53,7 +53,7 @@ export function useRoomJoining(): RoomJoining {
       navigate({ to: '/rooms/$code', params: { code: roomCode } })
     },
     onError: (err) => {
-      toast.error(getUserFriendlyError(err))
+      toast.error(getUserFriendlyError(err, 'join'))
       setJoiningRoomCode(null)
     },
   })
