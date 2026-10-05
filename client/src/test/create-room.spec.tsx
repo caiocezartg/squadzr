@@ -116,6 +116,36 @@ describe('create room — success flow', () => {
   })
 })
 
+describe('create room — returning to the catalog', () => {
+  it('shows the created room after the lobby and re-reads the catalog', async () => {
+    registerCreateRoutes()
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: serverRooms.rooms }))
+    const { router, user } = renderRoomsFlow('/rooms')
+    await openCreateModal(user)
+
+    await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
+    await user.click(screen.getByLabelText('Game'))
+    await user.click(await screen.findByText('League of Legends (1-5 players)'))
+    await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
+
+    // The server lists the room as soon as it exists.
+    serverRooms.rooms = [...serverRooms.rooms, createdRoom]
+    const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
+
+    await user.click(screen.getByRole('button', { name: 'Create Squad' }))
+    await waitFor(() => expect(router.history.location.pathname).toBe(`/rooms/${createdRoom.code}`))
+
+    // The create flow refreshes the catalog before it navigates to the lobby.
+    await waitFor(() =>
+      expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeCreate)
+    )
+
+    await router.navigate({ to: '/rooms', search: {} })
+    expect(await screen.findByText('Created squad')).toBeInTheDocument()
+  })
+})
+
 describe('create room — server error', () => {
   it('keeps the modal open and shows a friendly toast', async () => {
     onHttp('POST', '/api/rooms', () =>

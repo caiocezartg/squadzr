@@ -70,7 +70,9 @@ afterEach(() => {
 })
 
 describe('catalog subscription', () => {
-  it('re-sends subscribe_lobby on the new socket and applies its events idempotently', async () => {
+  it('re-sends subscribe_lobby on the new socket and refetches on its events idempotently', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
     renderRoomsFlow('/rooms', { user: null })
     await screen.findByText(openRoom.name)
     openLatestWebSocket()
@@ -79,6 +81,11 @@ describe('catalog subscription', () => {
     const reconnected = dropAndReconnect()
 
     expect(frameTypes(reconnected)).toEqual(['subscribe_lobby'])
+
+    // The authoritative server state no longer has the room; the duplicated
+    // removed events each refetch the catalog and it stays deduplicated.
+    const fetchesBeforeRemoval = countHttpCalls('GET', '/api/rooms')
+    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== openRoom.id)
     sendFromServer({
       type: 'room_removed',
       payload: { roomId: openRoom.id, roomCode: openRoom.code },
@@ -87,6 +94,9 @@ describe('catalog subscription', () => {
       type: 'room_removed',
       payload: { roomId: openRoom.id, roomCode: openRoom.code },
     })
+    await vi.waitFor(() =>
+      expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeRemoval)
+    )
     await vi.waitFor(() => expect(screen.queryByText(openRoom.name)).not.toBeInTheDocument())
   })
 

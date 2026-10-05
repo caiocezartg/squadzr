@@ -1,4 +1,4 @@
-import * as motion from 'motion/react-client'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTimeAgo } from '@/hooks/use-time-ago'
 import { Check, Users } from 'lucide-react'
@@ -34,6 +34,31 @@ const COVER_POSITION_Y: Record<string, string> = {
   dbd: '10%',
 }
 
+const ENTRANCE_FADE: KeyframeAnimationOptions = {
+  duration: 500,
+  easing: 'ease-in-out',
+  // `backwards` holds opacity 0 only until the fade starts. The fade ends on
+  // the element's own opacity (no `to` keyframe, no fill afterwards) and never
+  // writes an inline value, so the last frame can't fall back to opacity 0.
+  fill: 'backwards',
+}
+
+/** Fades the element in once on mount, unless the user asks for reduced motion. */
+function useEntranceFade<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element || typeof element.animate !== 'function') return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+
+    const fade = element.animate([{ opacity: 0, offset: 0 }], ENTRANCE_FADE)
+    return () => fade.cancel()
+  }, [])
+
+  return ref
+}
+
 export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: RoomCardProps) {
   const { t } = useTranslation()
   const timeAgo = useTimeAgo(room.createdAt)
@@ -41,36 +66,44 @@ export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: Room
   const isFull = members >= room.maxPlayers
   const isDisabled = isLoading || (isFull && !room.isMember)
   const roomTags = room.tags ?? []
+  const coverUrl = game?.coverUrl ? game.coverUrl : null
+  const cardRef = useEntranceFade<HTMLButtonElement>()
+  // The card never waits for the network: the cover fades in on its own when
+  // it loads, over the placeholder background, and stays hidden if it fails.
+  const [loadedCover, setLoadedCover] = useState<string | null>(null)
+  const coverLoaded = coverUrl !== null && loadedCover === coverUrl
 
   const MAX_DOTS = 8
   const visibleSlots = Math.min(room.maxPlayers, MAX_DOTS)
   const extraSlots = room.maxPlayers > MAX_DOTS ? room.maxPlayers - MAX_DOTS : 0
 
   return (
-    <motion.button
+    <button
+      ref={cardRef}
       type="button"
       onClick={() => onJoin?.(room.code)}
       disabled={isDisabled}
-      className={`group relative w-full overflow-hidden rounded-xl border bg-surface text-left transition-all duration-300 ${
+      // `opacity` stays out of the CSS transition on purpose: the entrance
+      // fade owns it. Hover and disabled visuals keep transitioning.
+      className={`group relative w-full overflow-hidden rounded-xl border bg-surface text-left transition-[transform,border-color,box-shadow,filter] duration-300 ease-in-out ${
         isDisabled
           ? 'cursor-not-allowed border-border grayscale opacity-50'
           : 'cursor-pointer border-border hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-[0_6px_32px_rgba(0,255,162,0.07)]'
       }`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.5, ease: 'easeInOut' }}
     >
       <div className="relative h-40 overflow-hidden bg-surface-light">
-        {game?.coverUrl ? (
+        {coverUrl ? (
           <img
-            src={game.coverUrl}
-            alt={game.name}
-            className="h-full w-full object-cover"
+            src={coverUrl}
+            alt={game?.name ?? ''}
+            className={`h-full w-full object-cover transition-opacity duration-300 ease-out ${
+              coverLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
             style={{
-              objectPosition: `center ${game.slug ? (COVER_POSITION_Y[game.slug] ?? '20%') : '20%'}`,
+              objectPosition: `center ${game?.slug ? (COVER_POSITION_Y[game.slug] ?? '20%') : '20%'}`,
             }}
             loading="lazy"
+            onLoad={() => setLoadedCover(coverUrl)}
           />
         ) : (
           <div className="h-full w-full bg-surface-light" />
@@ -152,6 +185,6 @@ export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: Room
           </span>
         </div>
       </div>
-    </motion.button>
+    </button>
   )
 }

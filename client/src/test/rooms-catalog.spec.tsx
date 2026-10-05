@@ -11,10 +11,11 @@
  * generated route details.
  */
 
-import { screen, waitFor, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act, screen, waitFor, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestQueryClient, renderRoomsFlow } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
+import type { MockHttpResponse } from './http-router'
 import {
   catalogGames,
   catalogRooms,
@@ -22,6 +23,7 @@ import {
   gameLol,
   guestPlayer,
   hostPlayer,
+  lobbyRoom,
   lobbyRoomResponse,
   memberRoom,
   openRoom,
@@ -30,6 +32,7 @@ import {
 } from './fixtures'
 import { authStore, toastStore } from './stubs'
 import { openLatestWebSocket, sendFromServer, serverSentFrames } from './ws-flows'
+import { MockWebSocket } from './ws-mock'
 import type { Room, RoomsResponse } from '@/types'
 
 const extraRoom: Room = {
@@ -166,8 +169,10 @@ describe('rooms catalog — pagination', () => {
   })
 })
 
-describe('rooms catalog — lobby WebSocket cache updates', () => {
-  it('subscribes to the lobby and applies created/updated/removed events idempotently', async () => {
+describe('rooms catalog — realtime refetch updates', () => {
+  it('refetches on created/updated/removed events and renders each room once', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
     const { queryClient } = renderRoomsFlow('/rooms')
     await screen.findByText('Ranked grind')
 
@@ -178,13 +183,24 @@ describe('rooms catalog — lobby WebSocket cache updates', () => {
       )
     )
 
+    // The server creates a room; the event refetches the authoritative list.
+    // Duplicate events stay idempotent: the room renders and caches once.
+    const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
+    serverRooms.rooms = [...serverRooms.rooms, extraRoom]
     sendFromServer({ type: 'room_created', payload: { room: extraRoom } })
     sendFromServer({ type: 'room_created', payload: { room: extraRoom } })
     expect(await screen.findByText('Extra room')).toBeInTheDocument()
     expect(screen.getAllByText('Extra room')).toHaveLength(1)
+    await waitFor(() =>
+      expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeCreate)
+    )
     const cachedAfterCreate = queryClient.getQueryData<RoomsResponse>(['rooms'])
     expect(cachedAfterCreate?.rooms.filter((room) => room.id === extraRoom.id)).toHaveLength(1)
 
+    // A Membership change refetches the new count instead of patching it in.
+    serverRooms.rooms = serverRooms.rooms.map((room) =>
+      room.id === openRoom.id ? { ...room, memberCount: 3 } : room
+    )
     sendFromServer({
       type: 'room_updated',
       payload: { roomId: openRoom.id, roomCode: openRoom.code, memberCount: 3 },
@@ -200,7 +216,9 @@ describe('rooms catalog — lobby WebSocket cache updates', () => {
       expect(within(openCard as HTMLElement).getByText('3', { exact: true })).toBeInTheDocument()
     )
 
-    // A Ready/expired room is removed from the catalog immediately.
+    // A Ready/expired room leaves the server list; the event refetches the
+    // catalog until the room is gone.
+    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== fullRoom.id)
     sendFromServer({
       type: 'room_removed',
       payload: { roomId: fullRoom.id, roomCode: fullRoom.code },
@@ -212,6 +230,39 @@ describe('rooms catalog — lobby WebSocket cache updates', () => {
     await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
     const cachedAfterDelete = queryClient.getQueryData<RoomsResponse>(['rooms'])
     expect(cachedAfterDelete?.rooms.some((room) => room.id === fullRoom.id)).toBe(false)
+  })
+
+  it('drops a Ready room through authoritative state and never resurrects it from a late room_created', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    const { queryClient } = renderRoomsFlow('/rooms')
+    await screen.findByText('Full lobby')
+
+    openLatestWebSocket()
+
+    // The room becomes Ready: the server drops it from the catalog list and
+    // announces room_removed without waiting for any polling.
+    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== fullRoom.id)
+    sendFromServer({
+      type: 'room_removed',
+      payload: { roomId: fullRoom.id, roomCode: fullRoom.code },
+    })
+    await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
+    const fetchesAfterRemoval = countHttpCalls('GET', '/api/rooms')
+
+    // A late room_created for the same room must not patch it back into the
+    // cache: the event schedules the authoritative refetch, and the server
+    // list no longer has the room.
+    const cachedRoomIds = () =>
+      queryClient.getQueryData<RoomsResponse>(['rooms'])?.rooms.map((room) => room.id) ?? []
+    sendFromServer({ type: 'room_created', payload: { room: fullRoom } })
+    expect(cachedRoomIds()).not.toContain(fullRoom.id)
+
+    await waitFor(() =>
+      expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesAfterRemoval)
+    )
+    await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
+    expect(cachedRoomIds()).not.toContain(fullRoom.id)
   })
 
   it('applies a pushed notification to the notifications cache without duplicating it', async () => {
@@ -278,6 +329,268 @@ describe('rooms catalog — lobby WebSocket cache updates', () => {
         expect.objectContaining({ id: roomReadyNotification.id }),
       ])
     )
+  })
+})
+
+describe('rooms catalog — coalesced realtime refetch', () => {
+  it('collapses a burst of events into one refetch and drops a removed room before it', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    const { queryClient } = renderRoomsFlow('/rooms')
+    await screen.findByText('Full lobby')
+    openLatestWebSocket()
+
+    const fetchesBeforeBurst = countHttpCalls('GET', '/api/rooms')
+
+    vi.useFakeTimers()
+    try {
+      // Three events inside the debounce window share a single refetch...
+      for (const memberCount of [2, 3, 4]) {
+        sendFromServer({
+          type: 'room_updated',
+          payload: { roomId: openRoom.id, roomCode: openRoom.code, memberCount },
+        })
+      }
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(299)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 1)
+
+      // ...while a removed room leaves the screen on the event itself, before
+      // the coalesced refetch lands.
+      serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== fullRoom.id)
+      sendFromServer({
+        type: 'room_removed',
+        payload: { roomId: fullRoom.id, roomCode: fullRoom.code },
+      })
+      // Flush the React notification, not the 300 ms refetch timer.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(screen.queryByText('Full lobby')).not.toBeInTheDocument()
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 1)
+
+      // The coalesced refetch then converges with the authoritative list.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 2)
+      expect(
+        queryClient
+          .getQueryData<RoomsResponse>(['rooms'])
+          ?.rooms.some((room) => room.id === fullRoom.id)
+      ).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps refetching while a burst of events outlives maxWait', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    renderRoomsFlow('/rooms')
+    await screen.findByText('Ranked grind')
+    openLatestWebSocket()
+
+    const fetchesBeforeBurst = countHttpCalls('GET', '/api/rooms')
+
+    vi.useFakeTimers()
+    try {
+      // An event every 100 ms for two seconds: the debounce never expires and
+      // only maxWait can make progress.
+      for (let elapsed = 0; elapsed <= 2_000; elapsed += 100) {
+        sendFromServer({
+          type: 'room_updated',
+          payload: { roomId: openRoom.id, roomCode: openRoom.code, memberCount: 2 },
+        })
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(100)
+        })
+      }
+
+      // maxWait fired at 1000 ms and 2000 ms even though the burst continued.
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 2)
+
+      // Once the events stop, the trailing debounce adds one more refetch.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 3)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('rooms catalog — removal without cached rooms', () => {
+  it('fetches the catalog when a directly opened lobby room is deleted', async () => {
+    const remainingRooms = catalogRooms.rooms.filter((room) => room.id !== lobbyRoom.id)
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: remainingRooms }))
+    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
+    onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
+
+    const { router } = renderRoomsFlow('/rooms/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+
+    // The room leaves the catalog while the catalog query was never loaded.
+    sendFromServer({
+      type: 'room_deleted',
+      payload: { roomId: lobbyRoom.id, roomCode: lobbyRoom.code },
+    })
+
+    await waitFor(() => expect(router.history.location.pathname).toBe('/rooms'))
+    // The catalog must fetch on mount: a fabricated fresh empty list would
+    // keep it blank for the whole staleTime window.
+    expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/rooms')).toBe(1)
+  })
+
+  it('does not flash an empty catalog when a room_removed arrives before the first response', async () => {
+    let releaseFirstResponse: (() => void) | undefined
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp(
+      'GET',
+      '/api/rooms',
+      () =>
+        new Promise<MockHttpResponse>((resolve) => {
+          releaseFirstResponse = () => resolve(httpOk(serverRooms))
+        })
+    )
+
+    renderRoomsFlow('/rooms')
+    // The catalog stays on its skeleton while the first GET is pending; the
+    // socket still opens, so the removal can arrive mid-load.
+    await waitFor(() => expect(MockWebSocket.instances.length).toBeGreaterThan(0))
+    openLatestWebSocket()
+
+    vi.useFakeTimers()
+    try {
+      sendFromServer({
+        type: 'room_removed',
+        payload: { roomId: fullRoom.id, roomCode: fullRoom.code },
+      })
+      // Flush the React notification: a fabricated empty list would render now.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(screen.queryByText('No squads yet')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+
+    // The held authoritative response still lands, without an empty flash.
+    releaseFirstResponse?.()
+    expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
+  })
+})
+
+describe('rooms catalog — in-flight fetch after removal', () => {
+  it('cancels the in-flight fetch so its response cannot bring the room back', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    let holdNextResponse = false
+    let releaseHeldResponse: (() => void) | undefined
+    onHttp('GET', '/api/rooms', () => {
+      if (!holdNextResponse) return httpOk(serverRooms)
+      // Snapshot the server list when the request is made: the response in
+      // flight still carries the room the removal will drop.
+      const staleRooms = { rooms: [...serverRooms.rooms] }
+      return new Promise<MockHttpResponse>((resolve) => {
+        releaseHeldResponse = () => resolve(httpOk(staleRooms))
+      })
+    })
+
+    const { queryClient } = renderRoomsFlow('/rooms')
+    await screen.findByText('Full lobby')
+    openLatestWebSocket()
+
+    vi.useFakeTimers()
+    try {
+      // A coalesced refetch starts while the server still lists the room; its
+      // response is held so the removal happens with that fetch in flight.
+      holdNextResponse = true
+      sendFromServer({
+        type: 'room_updated',
+        payload: { roomId: openRoom.id, roomCode: openRoom.code, memberCount: 2 },
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300)
+      })
+      expect(releaseHeldResponse).toBeDefined()
+
+      // The room leaves the catalog while the fetch is pending.
+      serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== fullRoom.id)
+      sendFromServer({
+        type: 'room_removed',
+        payload: { roomId: fullRoom.id, roomCode: fullRoom.code },
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(screen.queryByText('Full lobby')).not.toBeInTheDocument()
+
+      // The pre-removal response lands and must not resurrect the room.
+      releaseHeldResponse?.()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(screen.queryByText('Full lobby')).not.toBeInTheDocument()
+      expect(
+        queryClient
+          .getQueryData<RoomsResponse>(['rooms'])
+          ?.rooms.some((room) => room.id === fullRoom.id)
+      ).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('rooms catalog — pending refetch across unmount', () => {
+  it('marks the catalog stale instead of dropping the refetch, so the next mount fetches', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    const queryClient = createTestQueryClient()
+    const first = renderRoomsFlow('/rooms', { queryClient })
+    await screen.findByText('Ranked grind')
+    openLatestWebSocket()
+
+    const fetchesBefore = countHttpCalls('GET', '/api/rooms')
+
+    vi.useFakeTimers()
+    try {
+      // A realtime event asks for a refetch that is still waiting when the
+      // user navigates away.
+      serverRooms.rooms = [...serverRooms.rooms, extraRoom]
+      sendFromServer({ type: 'room_created', payload: { room: extraRoom } })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBefore)
+
+      first.unmount()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1_000)
+      })
+
+      // The dropped refetch must not fire after the unmount, but the catalog
+      // cannot stay fresh: the event it described is gone with the page.
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBefore)
+      expect(queryClient.getQueryState(['rooms'])?.isInvalidated).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+
+    renderRoomsFlow('/rooms', { queryClient })
+    expect(await screen.findByText('Extra room')).toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBefore + 1)
   })
 })
 

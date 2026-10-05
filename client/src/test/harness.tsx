@@ -34,7 +34,11 @@ import type { FakeSessionUser } from './stubs'
 export function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
+      // The app caches query data for a minute (src/lib/query-client.ts); the
+      // tests keep the same freshness so a freshly written cache entry looks
+      // as fresh here as it would in production. Retries stay off so failures
+      // surface deterministically.
+      queries: { retry: false, staleTime: 60_000 },
       mutations: { retry: false },
     },
   })
@@ -63,6 +67,8 @@ export interface RoomsFlow {
   user: UserEvent
   queryClient: QueryClient
   router: Router<AnyRoute>
+  /** Unmounts the tree; remount by rendering again with the same queryClient. */
+  unmount: () => void
 }
 
 export interface RenderRoomsFlowOptions {
@@ -85,11 +91,16 @@ export function renderRoomsFlow(url: string, options: RenderRoomsFlowOptions = {
     history: createMemoryHistory({ initialEntries: [url] }),
   })
 
-  render(
+  const view = render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>
   )
 
-  return { user: userEvent.setup({ delay: null }), queryClient, router }
+  return {
+    user: userEvent.setup({ delay: null }),
+    queryClient,
+    router,
+    unmount: () => view.unmount(),
+  }
 }
