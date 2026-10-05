@@ -1,11 +1,9 @@
 import { Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
 import { signIn, useSession } from '@/lib/auth-client'
-import { api } from '@/lib/api'
 import * as motion from 'motion/react-client'
-import { gamesResponseSchema } from '@squadzr/schemas'
 import { Search } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
+import { useGames } from '@/features/games'
 import { useTranslation, Trans } from 'react-i18next'
 import { BackgroundRipple } from './background-ripple'
 import { HeroRoomShowcase } from './hero-room-showcase'
@@ -15,13 +13,9 @@ export function HeroSection() {
   const lang = i18n.resolvedLanguage || i18n.language
   const { data: session } = useSession()
 
-  const { data: gamesData } = useQuery({
-    queryKey: ['games'],
-    queryFn: () => api.get('/api/games', gamesResponseSchema),
-    staleTime: 60_000,
-  })
+  const { games } = useGames()
 
-  const gameCount = gamesData?.games?.length ?? 0
+  const gameCount = games.length
 
   const handleSignIn = () => {
     signIn.social({

@@ -6,14 +6,19 @@
  * presentation internal and exposes a small public interface. This test walks
  * the real source tree and enforces two structural rules:
  *
- * - there are no import cycles between capability modules (the command-only
- *   `commands.ts` entry exists exactly to keep the module graph acyclic while
- *   the catalog page composes create/join/lobby);
- * - capabilities and TanStack routes only reach another capability through a
- *   public entry point (`index.ts`, plus the documented `commands.ts`).
+ * - there are no import cycles between capability modules. The graph is
+ *   checked per module (file), not per capability: the deliberate loop
+ *   `catalog → room-creation → catalog/commands` is allowed, because the
+ *   command-only `commands.ts` entry exists exactly to keep the module graph
+ *   acyclic while the catalog page composes create/join/lobby;
+ * - every non-test source file under `src/` (capabilities, routes, components
+ *   and the rest) only reaches another capability through a public entry point
+ *   (`index.ts`, plus the documented `commands.ts`).
  *
  * The scan is source-level on purpose: it sees every specifier, including the
- * ones TypeScript erases, without a bundler.
+ * ones TypeScript erases, without a bundler. Specs and test fixtures
+ * (`src/test/**`, `*.spec.*`, `*.test.*`) stay out of the public-entry scan so
+ * they can reach internals directly.
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
@@ -24,9 +29,11 @@ import { describe, expect, it } from 'vitest'
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const FEATURES_DIR = join(SRC_DIR, 'features')
 const ROUTES_DIR = join(SRC_DIR, 'routes')
+const TEST_DIR = join(SRC_DIR, 'test')
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx']
 const SOURCE_EXTENSION_SET = new Set(SOURCE_EXTENSIONS)
+const TEST_FILE_PATTERN = /\.(spec|test)\.[^.]+$/
 
 /** Path inside a capability that counts as its public interface. */
 const PUBLIC_ENTRY_POINTS = new Set(['', 'index', 'commands'])
@@ -43,6 +50,11 @@ function listSourceFiles(root: string): string[] {
     else if (SOURCE_EXTENSION_SET.has(path.slice(path.lastIndexOf('.')))) files.push(path)
   }
   return files
+}
+
+/** Test-only modules may import capability internals directly. */
+function isTestFile(file: string): boolean {
+  return file.startsWith(`${TEST_DIR}${sep}`) || TEST_FILE_PATTERN.test(file)
 }
 
 function importSpecifiers(source: string): string[] {
@@ -153,6 +165,7 @@ function findCycle(graph: Map<string, Set<string>>): string[] | null {
 }
 
 const featureFiles = listSourceFiles(FEATURES_DIR)
+const scannedFiles = listSourceFiles(SRC_DIR).filter((file) => !isTestFile(file))
 
 describe('capability boundaries', () => {
   it('scans the migrated capability inventory', () => {
@@ -174,6 +187,14 @@ describe('capability boundaries', () => {
   })
 
   it('has no import cycles between capability modules', () => {
+    // Cycles are checked between modules (files), not between capabilities: a
+    // capability-level loop such as `catalog → room-creation →
+    // catalog/commands` is deliberate and allowed. "No cycle" guarantees that
+    // no module can reach itself by following imports, so module evaluation
+    // order stays well-defined. The command-only `commands.ts` entry point is
+    // the foreseen exception that makes the loop safe: room creation, room
+    // joining and the lobby refresh the catalog through it without importing
+    // the barrel, which would pull `CatalogPage` back and close the cycle.
     const scopedFiles = new Set([...featureFiles, ...listSourceFiles(ROUTES_DIR)])
     const graph = new Map<string, Set<string>>()
 
@@ -195,12 +216,11 @@ describe('capability boundaries', () => {
   it('only reaches another capability through its public entry point', () => {
     const violations: string[] = []
 
-    for (const file of featureFiles) {
-      const feature = featureName(file)
-      if (!feature) continue
-      for (const { to, entry } of crossCapabilityImports(file, feature)) {
+    for (const file of scannedFiles) {
+      const from = toPosix(relative(SRC_DIR, file))
+      for (const { to, entry } of crossCapabilityImports(file, from)) {
         if (!PUBLIC_ENTRY_POINTS.has(entry)) {
-          violations.push(`${toPosix(relative(SRC_DIR, file))} imports "${to}/${entry}"`)
+          violations.push(`${from} imports "${to}/${entry}"`)
         }
       }
     }
