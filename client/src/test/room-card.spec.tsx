@@ -20,7 +20,7 @@
 import { StrictMode } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { RoomCard } from '@/components/rooms/room-card'
+import { RoomCard } from '@/features/room-list'
 import type { Game } from '@/types'
 import { gameLol, openRoom } from './fixtures'
 

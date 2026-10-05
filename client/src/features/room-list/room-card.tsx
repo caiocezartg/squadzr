@@ -4,7 +4,7 @@ import { useTimeAgo } from '@/hooks/use-time-ago'
 import { Check, Users } from 'lucide-react'
 import type { PublicRoom, Game } from '@/types'
 
-interface RoomCardProps {
+export interface RoomCardProps {
   room: PublicRoom
   game: Game | undefined
   onJoin?: (roomCode: string) => void
