@@ -1,9 +1,7 @@
 import { useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { api } from '@/lib/api'
 import * as motion from 'motion/react-client'
-import { gamesResponseSchema } from '@squadzr/schemas'
-import type { GamesResponse, Game } from '@/types'
+import type { Game } from '@/types'
+import { useGames } from '@/features/games'
 import { useTranslation } from 'react-i18next'
 
 function fisherYatesShuffle<T>(arr: T[]): T[] {
@@ -19,21 +17,17 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
 
 export function PopularGames() {
   const { t } = useTranslation()
-  const { data, isLoading } = useQuery({
-    queryKey: ['games'],
-    queryFn: () => api.get('/api/games', gamesResponseSchema),
-    staleTime: 60_000,
-  })
+  const { games, loading: isLoading } = useGames()
 
-  const prevDataRef = useRef<GamesResponse | undefined>(undefined)
+  const prevGamesRef = useRef<Game[] | undefined>(undefined)
   const shuffledRef = useRef<Game[]>([])
 
-  if (data !== prevDataRef.current) {
-    prevDataRef.current = data
-    shuffledRef.current = fisherYatesShuffle(data?.games ?? []).slice(0, 8)
+  if (games !== prevGamesRef.current) {
+    prevGamesRef.current = games
+    shuffledRef.current = fisherYatesShuffle(games).slice(0, 8)
   }
 
-  const games = shuffledRef.current
+  const shuffledGames = shuffledRef.current
 
   return (
     <section className="relative py-24 border-t border-border/50">
@@ -58,7 +52,7 @@ export function PopularGames() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {games.map((game, i) => (
+            {shuffledGames.map((game, i) => (
               <motion.div
                 key={game.id}
                 className="relative aspect-[3/4] rounded-xl overflow-hidden border border-border bg-surface cursor-default"
