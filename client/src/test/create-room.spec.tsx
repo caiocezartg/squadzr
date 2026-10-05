@@ -1,10 +1,11 @@
 /**
- * Characterization tests for the create-room flow on the rooms catalog page.
+ * Characterization tests for the create-room flow on the rooms catalog page
+ * and on My squads (`/rooms/my`).
  *
  * Covers the gating of the create button by session state, client-side
  * validation of the form, the payload posted to the API on success (including
- * navigation to the created lobby) and the error presentation when the server
- * rejects the creation.
+ * navigation to the created lobby), the catalog refresh shared by both entry
+ * points and the error presentation when the server rejects the creation.
  *
  * HTTP runs through the deterministic adapter (./http-router); auth and
  * toasts are module mocks (./stubs). No test touches private hook state.
@@ -23,6 +24,7 @@ import {
   hostPlayer,
 } from './fixtures'
 import { toastStore } from './stubs'
+import type { MyRoomsResponse } from '@/types'
 
 function registerCatalogRoutes(): void {
   onHttp('GET', '/api/rooms', () => httpOk(catalogRooms))
@@ -143,6 +145,45 @@ describe('create room — returning to the catalog', () => {
 
     await router.navigate({ to: '/rooms', search: {} })
     expect(await screen.findByText('Created squad')).toBeInTheDocument()
+  })
+})
+
+describe('create room — from my rooms', () => {
+  it('refreshes the catalog so the new room appears when returning to it', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    const myRooms: MyRoomsResponse = { hosted: [], joined: [] }
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: serverRooms.rooms }))
+    registerCreateRoutes()
+    // Registered after the lobby route so the exact segment wins over `:code`.
+    onHttp('GET', '/api/rooms/my', () => httpOk(myRooms))
+    const { router, user } = renderRoomsFlow('/rooms')
+
+    // The catalog is loaded and fresh when the user leaves for My squads.
+    await screen.findByText('Ranked grind')
+    await router.navigate({ to: '/rooms/my', search: {} })
+    await screen.findByText('My squads')
+
+    // The server lists the new room in both lists as soon as it exists.
+    serverRooms.rooms = [...serverRooms.rooms, createdRoom]
+    myRooms.hosted = [createdRoom]
+    const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
+
+    await user.click(screen.getByRole('button', { name: 'Create new squad' }))
+    await screen.findByText('Create a Squad')
+    await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
+    await user.click(screen.getByLabelText('Game'))
+    await user.click(await screen.findByText('League of Legends (1-5 players)'))
+    await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
+    await user.click(screen.getByRole('button', { name: 'Create Squad' }))
+
+    await waitFor(() => expect(router.history.location.pathname).toBe(`/rooms/${createdRoom.code}`))
+
+    // The create capability asked the catalog to refresh even though the
+    // catalog was unmounted: the next visit must re-read the authoritative
+    // list instead of trusting the cache for the whole staleTime.
+    await router.navigate({ to: '/rooms', search: {} })
+    expect(await screen.findByText('Created squad')).toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeCreate)
   })
 })
 
