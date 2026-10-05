@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { invalidateCatalogRooms, markCatalogRoomsStale, removeCatalogRoom } from './catalog-query'
+import { invalidateCatalogRooms, removeCatalogRoom } from './catalog-query'
 import { createCatalogRefetchScheduler } from './catalog-refetch-scheduler'
 import type { RealtimeChannelHandlers, RealtimeSubscription } from '@/lib/ws-client'
 
@@ -18,9 +18,9 @@ interface UseCatalogEventsOptions {
  * event itself, before the coalesced refetch lands. The transport owns
  * resubscription, so the handlers are registered once and replay after every
  * reconnect; a restored subscription also refetches, which repairs events
- * missed while the socket was down. Unmounting while a refetch is still
- * pending marks the catalog stale instead of discarding the intent, so the
- * next mount re-reads the list.
+ * missed while the socket was down. Dropping a pending refetch at unmount is
+ * safe: the rooms query re-reads on every mount (`refetchOnMount: 'always'`),
+ * so the next visit re-reads the authoritative list regardless.
  */
 export function useCatalogEvents({ subscribe }: UseCatalogEventsOptions): void {
   const queryClient = useQueryClient()
@@ -52,14 +52,9 @@ export function useCatalogEvents({ subscribe }: UseCatalogEventsOptions): void {
 
     return () => {
       unsubscribe()
-      // Dropping a pending refetch would also drop the intention to re-read
-      // the catalog: the event that asked for it is gone and the cache may
-      // still describe the old list. Marking it stale (without a request: the
-      // page is unmounting) makes the next mount fetch instead of trusting
-      // that cache.
-      if (refetcher.cancel()) {
-        markCatalogRoomsStale(queryClient)
-      }
+      // A pending refetch is dropped: no page is left to receive its
+      // response, and the next mount re-reads the catalog on its own.
+      refetcher.cancel()
     }
   }, [subscribe, queryClient])
 }

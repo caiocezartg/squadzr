@@ -34,6 +34,7 @@ import {
 import { authStore, toastStore } from './stubs'
 import { openLatestWebSocket, sendFromServer, serverSentFrames } from './ws-flows'
 import { MockWebSocket } from './ws-mock'
+import { CATALOG_REFETCH_DEBOUNCE_MS } from '@/features/catalog/catalog-refetch-scheduler'
 import type { Room, RoomsResponse } from '@/types'
 
 const extraRoom: Room = {
@@ -555,7 +556,7 @@ describe('rooms catalog — in-flight fetch after removal', () => {
 })
 
 describe('rooms catalog — pending refetch across unmount', () => {
-  it('marks the catalog stale instead of dropping the refetch, so the next mount fetches', async () => {
+  it('drops the pending refetch on unmount and fetches once on the next mount', async () => {
     const serverRooms = { rooms: [...catalogRooms.rooms] }
     onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
     const queryClient = createTestQueryClient()
@@ -581,10 +582,9 @@ describe('rooms catalog — pending refetch across unmount', () => {
         await vi.advanceTimersByTimeAsync(1_000)
       })
 
-      // The dropped refetch must not fire after the unmount, but the catalog
-      // cannot stay fresh: the event it described is gone with the page.
+      // The dropped refetch must not fire after the unmount; the guarantee
+      // moves to the mount, which always re-reads the catalog.
       expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBefore)
-      expect(queryClient.getQueryState(['rooms'])?.isInvalidated).toBe(true)
     } finally {
       vi.useRealTimers()
     }
@@ -592,6 +592,122 @@ describe('rooms catalog — pending refetch across unmount', () => {
     renderRoomsFlow('/rooms', { queryClient })
     expect(await screen.findByText('Extra room')).toBeInTheDocument()
     expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBefore + 1)
+  })
+})
+
+describe('rooms catalog — refetch on mount', () => {
+  it('re-reads on mount and surfaces a room created while the user was away', async () => {
+    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    let holdNextRoomsResponse = false
+    let releaseRoomsResponse: (() => void) | undefined
+    onHttp('GET', '/api/rooms', () => {
+      if (!holdNextRoomsResponse) return httpOk({ rooms: [...serverRooms.rooms] })
+      const responseRooms = { rooms: [...serverRooms.rooms] }
+      return new Promise<MockHttpResponse>((resolve) => {
+        releaseRoomsResponse = () => resolve(httpOk(responseRooms))
+      })
+    })
+
+    const queryClient = createTestQueryClient()
+    const firstVisit = renderRoomsFlow('/rooms', { queryClient })
+    await screen.findByText('Ranked grind')
+    firstVisit.unmount()
+
+    // While the catalog is off screen (e.g. in the lobby) its realtime
+    // channel is not subscribed, so a room another player creates never
+    // reaches this tab. The cache is younger than the 60 s staleTime, so it
+    // would look fresh without being fresh.
+    serverRooms.rooms = [...serverRooms.rooms, extraRoom]
+
+    holdNextRoomsResponse = true
+    const fetchesBeforeReturn = countHttpCalls('GET', '/api/rooms')
+    const returningVisit = renderRoomsFlow('/rooms', { queryClient })
+
+    // The cached list paints while the mount GET is still in flight: the
+    // page is not waiting on the request, so there is no skeleton and no
+    // empty state.
+    expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
+    await waitFor(() => expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeReturn + 1))
+    // The held request is still in flight while the cached rooms are on
+    // screen — the page never fell back to the skeleton.
+    expect(queryClient.getQueryState(['rooms'])?.fetchStatus).toBe('fetching')
+    expect(screen.queryByText('No squads yet')).not.toBeInTheDocument()
+
+    releaseRoomsResponse?.()
+    expect(await screen.findByText('Extra room')).toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeReturn + 1)
+
+    returningVisit.unmount()
+  })
+
+  it('issues exactly one GET per mount', async () => {
+    const queryClient = createTestQueryClient()
+    const firstVisit = renderRoomsFlow('/rooms', { queryClient })
+    await screen.findByText('Ranked grind')
+    await waitFor(() => expect(countHttpCalls('GET', '/api/rooms')).toBe(1))
+    firstVisit.unmount()
+
+    renderRoomsFlow('/rooms', { queryClient })
+    await screen.findByText('Ranked grind')
+    await waitFor(() => expect(countHttpCalls('GET', '/api/rooms')).toBe(2))
+
+    // The cached render plus the mount refetch must not fan out into another
+    // request once the response lands.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(countHttpCalls('GET', '/api/rooms')).toBe(2)
+  })
+
+  it('collapses a stale marker left before the visit into a single GET', async () => {
+    const queryClient = createTestQueryClient()
+    const firstVisit = renderRoomsFlow('/rooms', { queryClient })
+    await screen.findByText('Ranked grind')
+    firstVisit.unmount()
+    const fetchesBeforeReturn = countHttpCalls('GET', '/api/rooms')
+
+    // `refreshRooms()` marks the cache stale while no catalog is mounted (as
+    // a mutation does before navigating to the lobby); mounting must still
+    // fetch exactly once.
+    await queryClient.invalidateQueries({ queryKey: ['rooms'] })
+    renderRoomsFlow('/rooms', { queryClient })
+    await screen.findByText('Ranked grind')
+    await waitFor(() => expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeReturn + 1))
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeReturn + 1)
+  })
+
+  it('ignores the acknowledgement of its own subscription, staying at one GET', async () => {
+    renderRoomsFlow('/rooms')
+    await screen.findByText('Ranked grind')
+    openLatestWebSocket()
+
+    vi.useFakeTimers()
+    try {
+      // The first `lobby_subscribed` only confirms the subscription of the
+      // mount; the mount fetch already covers the list, so no refetch is due.
+      sendFromServer({ type: 'lobby_subscribed', payload: { message: 'Subscribed' } })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(CATALOG_REFETCH_DEBOUNCE_MS)
+      })
+      expect(countHttpCalls('GET', '/api/rooms')).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('deduplicates the mount fetch under StrictMode', async () => {
+    renderRoomsFlow('/rooms', { strictMode: true })
+    await screen.findByText('Ranked grind')
+    await waitFor(() => expect(countHttpCalls('GET', '/api/rooms')).toBe(1))
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(countHttpCalls('GET', '/api/rooms')).toBe(1)
   })
 })
 
