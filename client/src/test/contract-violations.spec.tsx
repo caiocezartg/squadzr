@@ -8,7 +8,7 @@
  * through the mock socket (./ws-mock).
  */
 
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderRoomsFlow } from './harness'
 import { httpOk, onHttp } from './http-router'
@@ -22,6 +22,7 @@ import {
   openRoom,
 } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
+import { toastStore } from './stubs'
 import type { PublicRoom, RoomsResponse } from '@/types'
 
 const { discordLink: _discordLink, ...publicLobbyRoom } = lobbyRoom
@@ -72,6 +73,28 @@ describe('catalog', () => {
     expect(cached?.rooms).toHaveLength(catalogRooms.rooms.length)
     expect(JSON.stringify(cached)).not.toContain('discordLink')
     expect(JSON.stringify(cached)).not.toContain(openRoom.discordLink)
+  })
+
+  it('rejects a join response that breaks the contract instead of entering the lobby', async () => {
+    onHttp('POST', '/api/rooms/:code/join', () => httpOk({ ok: true }))
+    const { router, user } = renderRoomsFlow('/rooms')
+    await screen.findByText(openRoom.name)
+
+    await user.click(screen.getByText(openRoom.name))
+
+    await waitFor(() =>
+      expect(console.error).toHaveBeenCalledWith('Invalid API response:', {
+        method: 'POST',
+        path: `/api/rooms/${openRoom.code}/join`,
+        status: 200,
+        issues: expect.arrayContaining([
+          { path: 'message', code: 'invalid_type' },
+          { path: 'roomMember', code: 'invalid_type' },
+        ]),
+      })
+    )
+    expect(router.history.location.pathname).toBe('/rooms')
+    expect(toastStore.errorCalls[0]).toBe('Something went wrong. Please try again.')
   })
 
   it('ignores a room_created event that breaks the contract and applies the next valid one', async () => {

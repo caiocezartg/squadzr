@@ -1,45 +1,33 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useMutation } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { createRoomResponseSchema } from '@squadzr/schemas'
-import { signIn, useSession } from '@/lib/auth-client'
-import { api } from '@/lib/api'
-import { getUserFriendlyError } from '@/lib/error-messages'
+import { useSession } from '@/lib/auth-client'
 import { WS_URL } from '@/env'
 import { useWebSocket } from '@/hooks/use-websocket'
 import { useNotificationEvents } from '@/hooks/use-notification-events'
 import { useRoomFilters } from '@/hooks/use-room-filters'
 import { RoomCard } from '@/components/rooms/room-card'
 import { RoomFilters } from '@/components/rooms/room-filters'
-import { CreateRoomModal } from '@/components/rooms/create-room-modal'
-import { JoinRoomAuthModal } from '@/components/rooms/join-room-auth-modal'
+import { CreateRoomModal } from '@/features/room-creation'
+import { useRoomJoining } from '@/features/room-joining'
 import { Pagination } from '@/components/ui/pagination'
 import { AlertBox } from '@/components/ui/alert-box'
 import { Plus } from 'lucide-react'
 import type { Game } from '@/types'
 import { EmptyState } from './components/empty-state'
-import { useAutoJoin } from './use-auto-join'
-import { useCatalogCommands } from './use-catalog-commands'
 import { useCatalogData } from './use-catalog-data'
 import { useCatalogEvents } from './use-catalog-events'
 import { usePagination } from './use-pagination'
 
 /**
  * The catalog page. It owns the public navigation state (filters, pagination
- * and the shared `?join=` link), the join/create workflows and the realtime
- * subscription; query keys, event names and cache mutations stay inside the
- * capability.
+ * and the shared `?join=` link), the room list and the realtime subscription;
+ * query keys, event names and cache mutations stay inside the capability. The
+ * create and join workflows live in their own capabilities, behind this page.
  */
 export function CatalogPage() {
   const { t } = useTranslation()
   const { data: session } = useSession()
-  const navigate = useNavigate()
   const [modalOpen, setModalOpen] = useState(false)
-  const [joinAuthModalOpen, setJoinAuthModalOpen] = useState(false)
-  const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null)
-  const [joiningRoomCode, setJoiningRoomCode] = useState<string | null>(null)
 
   // WebSocket for real-time room list updates
   const { on, subscribe } = useWebSocket({
@@ -51,52 +39,7 @@ export function CatalogPage() {
   useNotificationEvents({ on })
 
   const { rooms, roomsLoading, roomsError, games, gamesLoading, gamesError } = useCatalogData()
-  const { refreshRooms } = useCatalogCommands()
-
-  // Create room mutation
-  const createRoomMutation = useMutation({
-    mutationFn: (body: {
-      name: string
-      gameId: string
-      maxPlayers?: number
-      discordLink: string
-      tags: string[]
-      language: 'en' | 'pt-br'
-    }) => api.post('/api/rooms', body, createRoomResponseSchema),
-    onSuccess: (result) => {
-      setModalOpen(false)
-      // The creating tab may miss its own `room_created` (the event can arrive
-      // after this page unmounts), so the new room is requested explicitly,
-      // like the join flow does. The navigate follows immediately; the
-      // in-flight refresh survives the unmount.
-      void refreshRooms()
-      navigate({ to: '/rooms/$code', params: { code: result.room.code } })
-    },
-  })
-
-  // Join room mutation
-  const joinRoomMutation = useMutation({
-    mutationFn: (roomCode: string) => api.post(`/api/rooms/${roomCode}/join`, {}),
-    onSuccess: async (_, roomCode) => {
-      await refreshRooms()
-      navigate({ to: '/rooms/$code', params: { code: roomCode } })
-    },
-    onError: (err) => {
-      toast.error(getUserFriendlyError(err))
-      setJoiningRoomCode(null)
-    },
-  })
-
-  useAutoJoin({ session, mutate: joinRoomMutation.mutate })
-
-  const handleSignInToJoin = () => {
-    if (!pendingJoinCode) return
-
-    signIn.social({
-      provider: 'discord',
-      callbackURL: `${window.location.origin}/rooms?join=${encodeURIComponent(pendingJoinCode)}`,
-    })
-  }
+  const joining = useRoomJoining()
 
   const loading = roomsLoading || gamesLoading
   const roomCount = rooms.length
@@ -232,18 +175,8 @@ export function CatalogPage() {
                 key={room.id}
                 room={room}
                 game={gamesMap.get(room.gameId)}
-                onJoin={(code) => {
-                  if (room.isMember) {
-                    navigate({ to: '/rooms/$code', params: { code } })
-                  } else if (!session?.user) {
-                    setPendingJoinCode(code)
-                    setJoinAuthModalOpen(true)
-                  } else {
-                    setJoiningRoomCode(code)
-                    joinRoomMutation.mutate(code)
-                  }
-                }}
-                isLoading={!room.isMember && joiningRoomCode === room.code}
+                onJoin={() => joining.requestJoin(room)}
+                isLoading={!room.isMember && joining.joiningRoomCode === room.code}
                 currentMembers={room.memberCount}
               />
             ))}
@@ -264,26 +197,10 @@ export function CatalogPage() {
 
       {/* Create room modal */}
       {session?.user && (
-        <CreateRoomModal
-          games={games}
-          onSubmit={(data) => createRoomMutation.mutateAsync(data)}
-          isLoading={createRoomMutation.isPending}
-          open={modalOpen}
-          onOpenChange={setModalOpen}
-        />
+        <CreateRoomModal games={games} open={modalOpen} onOpenChange={setModalOpen} />
       )}
 
-      <JoinRoomAuthModal
-        open={joinAuthModalOpen}
-        roomCode={pendingJoinCode}
-        onOpenChange={(open) => {
-          setJoinAuthModalOpen(open)
-          if (!open) {
-            setPendingJoinCode(null)
-          }
-        }}
-        onSignIn={handleSignInToJoin}
-      />
+      {joining.authPrompt}
     </div>
   )
 }
