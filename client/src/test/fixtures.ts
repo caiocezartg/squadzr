@@ -14,6 +14,7 @@ import type {
   RoomsResponse,
   UserNotification,
 } from '@/types'
+import type { JoinRoomResponse } from '@squadzr/schemas'
 import type { WsServerEventPayload } from '@squadzr/schemas/ws'
 
 /** ISO 8601 string, as transport dates travel in JSON. */
@@ -189,6 +190,21 @@ export const createdRoom: Room = {
 
 export const createRoomResponse: CreateRoomResponse = {
   room: createdRoom,
+}
+
+/**
+ * Contract-valid answer for `POST /api/rooms/:code/join`; the join flow parses
+ * it with `joinRoomResponseSchema`, so an `{ ok: true }` stub is not a valid
+ * substitute.
+ */
+export const joinRoomResponse: JoinRoomResponse = {
+  message: 'Joined squad',
+  roomMember: {
+    id: 'bbbbbbbb-0000-4000-8000-000000000001',
+    roomId: openRoom.id,
+    userId: 'user-1',
+    joinedAt: hoursAgo(0),
+  },
 }
 
 export type LobbySnapshot = WsServerEventPayload<'room_snapshot'>

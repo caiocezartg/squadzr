@@ -2,23 +2,17 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { roomsSearchSchema } from '@/lib/rooms-search'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Tabs } from '@base-ui-components/react'
-import { toast } from 'sonner'
 import { useSession } from '@/lib/auth-client'
 import { api } from '@/lib/api'
-import { getUserFriendlyError } from '@/lib/error-messages'
 import { useRoomFilters } from '@/hooks/use-room-filters'
 import { RoomCard } from '@/components/rooms/room-card'
 import { RoomFilters } from '@/components/rooms/room-filters'
-import { CreateRoomModal } from '@/components/rooms/create-room-modal'
+import { CreateRoomModal } from '@/features/room-creation'
 import { AlertBox } from '@/components/ui/alert-box'
 import { Plus } from 'lucide-react'
-import {
-  createRoomResponseSchema,
-  gamesResponseSchema,
-  myRoomsResponseSchema,
-} from '@squadzr/schemas'
+import { gamesResponseSchema, myRoomsResponseSchema } from '@squadzr/schemas'
 import type { Game } from '@/types'
 
 export const Route = createFileRoute('/rooms/my')({
@@ -59,26 +53,6 @@ function MyRoomsPage() {
     queryFn: () => api.get('/api/games', gamesResponseSchema),
     staleTime: 60_000,
     enabled: !!session?.user,
-  })
-
-  // Create room mutation
-  const createRoomMutation = useMutation({
-    mutationFn: (body: {
-      name: string
-      gameId: string
-      maxPlayers?: number
-      discordLink: string
-      tags: string[]
-      language: 'en' | 'pt-br'
-    }) => api.post('/api/rooms', body, createRoomResponseSchema),
-    onSuccess: (result) => {
-      setModalOpen(false)
-      queryClient.invalidateQueries({ queryKey: ['my-rooms'] })
-      navigate({ to: '/rooms/$code', params: { code: result.room.code } })
-    },
-    onError: (err) => {
-      toast.error(getUserFriendlyError(err))
-    },
   })
 
   const loading = sessionLoading || myRoomsLoading || gamesLoading
@@ -234,10 +208,11 @@ function MyRoomsPage() {
       {/* Create room modal */}
       <CreateRoomModal
         games={gamesData?.games ?? []}
-        onSubmit={(data) => createRoomMutation.mutateAsync(data)}
-        isLoading={createRoomMutation.isPending}
         open={modalOpen}
         onOpenChange={setModalOpen}
+        onCreated={() => {
+          void queryClient.invalidateQueries({ queryKey: ['my-rooms'] })
+        }}
       />
     </div>
   )

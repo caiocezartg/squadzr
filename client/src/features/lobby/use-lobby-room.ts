@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useCatalogCommands } from '@/features/catalog'
+import { useCatalogCommands } from '@/features/catalog/commands'
 import { useSession } from '@/lib/auth-client'
 import type { RealtimeStatus } from '@/lib/ws-client'
 import type { Game, Player, PublicRoom } from '@/types'

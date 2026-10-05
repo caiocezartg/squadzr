@@ -4,10 +4,10 @@
  * Composes a TanStack Router tree using only the library's public code-based
  * API (`createRootRoute` + `createRoute` + `addChildren`). The tree mounts the
  * REAL page components and search validation, taken from the public `options`
- * of the imported route files (`/rooms/` index and `/rooms/$code` lobby), so
- * the tests exercise the actual route implementations without any generated
- * internals (`_addFileChildren`, `_addFileTypes`, `update` re-parenting) or
- * details of `routeTree.gen.ts`.
+ * of the imported route files (`/rooms/` index, `/rooms/$code` lobby and
+ * `/rooms/my`), so the tests exercise the actual route implementations without
+ * any generated internals (`_addFileChildren`, `_addFileTypes`, `update`
+ * re-parenting) or details of `routeTree.gen.ts`.
  *
  * The tree is mounted inside a fresh TanStack Query client so cache updates
  * are observable through public query APIs.
@@ -28,6 +28,7 @@ import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
 import { Route as RoomsIndexRoute } from '@/routes/rooms/index'
 import { Route as RoomsCodeRoute } from '@/routes/rooms/$code'
+import { Route as RoomsMyRoute } from '@/routes/rooms/my'
 import { signInAsFakeUser, signOutFakeUser } from './stubs'
 import type { FakeSessionUser } from './stubs'
 
@@ -60,7 +61,14 @@ function buildRoomsRouteTree(): AnyRoute {
     component: RoomsCodeRoute.options.component,
   })
 
-  return rootRoute.addChildren([roomsIndexRoute, roomsCodeRoute]) as AnyRoute
+  const roomsMyRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/rooms/my',
+    validateSearch: RoomsMyRoute.options.validateSearch,
+    component: RoomsMyRoute.options.component,
+  })
+
+  return rootRoute.addChildren([roomsIndexRoute, roomsCodeRoute, roomsMyRoute]) as AnyRoute
 }
 
 export interface RoomsFlow {

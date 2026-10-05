@@ -23,6 +23,7 @@ import {
   gameLol,
   guestPlayer,
   hostPlayer,
+  joinRoomResponse,
   lobbyRoom,
   lobbyRoomResponse,
   memberRoom,
@@ -65,7 +66,7 @@ function registerLobbyRoutes(): void {
     return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
   })
   onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
-  onHttp('POST', '/api/rooms/:code/join', () => httpOk({ ok: true }))
+  onHttp('POST', '/api/rooms/:code/join', () => httpOk(joinRoomResponse))
 }
 
 beforeEach(() => {
@@ -675,4 +676,23 @@ describe('rooms catalog — join flows', () => {
     expect(router.history.location.pathname).toBe('/rooms')
     expect(screen.getByText('Ranked grind')).toBeInTheDocument()
   })
+
+  it.each([
+    ['ROOM_FULL', 'This squad is already full.'],
+    ['ROOM_READY', "This squad is already full and ready — it's no longer accepting players."],
+    ['ROOM_JOIN_LIMIT_REACHED', 'You have reached the maximum number of squads you can join.'],
+  ])(
+    'surfaces the %s lifecycle error through the typed application error',
+    async (errorCode, message) => {
+      onHttp('POST', '/api/rooms/:code/join', () =>
+        httpError(409, { message: 'join refused', error: errorCode })
+      )
+      const { router, user } = renderRoomsFlow('/rooms')
+
+      await user.click(await screen.findByText('Ranked grind'))
+
+      await waitFor(() => expect(toastStore.errorCalls[0]).toBe(message))
+      expect(router.history.location.pathname).toBe('/rooms')
+    }
+  )
 })
