@@ -13,6 +13,7 @@
  * are observable through public query APIs.
  */
 
+import { StrictMode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   Outlet,
@@ -76,6 +77,8 @@ export interface RenderRoomsFlowOptions {
   user?: FakeSessionUser | null
   /** Bring your own client to seed or inspect the query cache. */
   queryClient?: QueryClient
+  /** Mirrors the app entry, which mounts the tree inside React.StrictMode. */
+  strictMode?: boolean
 }
 
 export function renderRoomsFlow(url: string, options: RenderRoomsFlowOptions = {}): RoomsFlow {
@@ -91,11 +94,13 @@ export function renderRoomsFlow(url: string, options: RenderRoomsFlowOptions = {
     history: createMemoryHistory({ initialEntries: [url] }),
   })
 
-  const view = render(
+  const tree = (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>
   )
+
+  const view = render(options.strictMode ? <StrictMode>{tree}</StrictMode> : tree)
 
   return {
     user: userEvent.setup({ delay: null }),

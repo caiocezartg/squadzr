@@ -54,15 +54,28 @@ describe('catalog refetch scheduler', () => {
     const scheduler = createCatalogRefetchScheduler({ refetch })
 
     scheduler.schedule()
-    const wasPending = scheduler.cancel()
+    scheduler.cancel()
 
     vi.advanceTimersByTime(CATALOG_REFETCH_MAX_WAIT_MS * 2)
 
-    expect(wasPending).toBe(true)
     expect(refetch).not.toHaveBeenCalled()
   })
 
-  it('reports no pending refetch once the scheduled refetch has run', () => {
+  it('cancels a burst that was still resetting the debounce', () => {
+    const refetch = vi.fn()
+    const scheduler = createCatalogRefetchScheduler({ refetch })
+
+    scheduler.schedule()
+    vi.advanceTimersByTime(100)
+    scheduler.schedule()
+    scheduler.cancel()
+
+    vi.advanceTimersByTime(CATALOG_REFETCH_MAX_WAIT_MS * 2)
+
+    expect(refetch).not.toHaveBeenCalled()
+  })
+
+  it('is a no-op once the scheduled refetch already ran', () => {
     const refetch = vi.fn()
     const scheduler = createCatalogRefetchScheduler({ refetch })
 
@@ -70,16 +83,18 @@ describe('catalog refetch scheduler', () => {
     vi.advanceTimersByTime(CATALOG_REFETCH_DEBOUNCE_MS)
     expect(refetch).toHaveBeenCalledTimes(1)
 
-    // Nothing to drop: the refetch already ran, so unmounting must not look
-    // like a lost refetch.
-    expect(scheduler.cancel()).toBe(false)
+    // Nothing to drop: the refetch already ran, so unmounting must not fire
+    // a second one.
+    scheduler.cancel()
+    vi.advanceTimersByTime(CATALOG_REFETCH_MAX_WAIT_MS * 2)
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 
-  it('reports no pending refetch when none was ever scheduled', () => {
+  it('is a no-op when no refetch was ever scheduled', () => {
     const refetch = vi.fn()
     const scheduler = createCatalogRefetchScheduler({ refetch })
 
-    expect(scheduler.cancel()).toBe(false)
+    scheduler.cancel()
     vi.advanceTimersByTime(CATALOG_REFETCH_MAX_WAIT_MS * 2)
     expect(refetch).not.toHaveBeenCalled()
   })

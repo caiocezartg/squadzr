@@ -22,11 +22,18 @@ export interface CatalogData {
  * invite, no roster); the query key stays here, so the page only sees rooms
  * and games. Refreshes after a local mutation are a command of the capability
  * (`useCatalogCommands`), so the page never owns a duplicate.
+ *
+ * The rooms list always re-reads on mount: outside the catalog its realtime
+ * channel is not subscribed, so events from other people are missed and a
+ * cache younger than the global staleTime would look fresh without being
+ * fresh. The cached list still paints immediately while the single GET of the
+ * visit lands.
  */
 export function useCatalogData(): CatalogData {
   const roomsQuery = useQuery({
     queryKey: catalogRoomsQueryKey,
     queryFn: () => api.get('/api/rooms', roomsResponseSchema),
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
 
