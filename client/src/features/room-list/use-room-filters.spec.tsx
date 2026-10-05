@@ -8,7 +8,7 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { roomsSearchSchema } from '@/lib/rooms-search'
+import { roomsSearchSchema } from './rooms-search'
 import { useRoomFilters } from './use-room-filters'
 
 async function renderFilters(url = '/rooms') {

@@ -1,5 +1,5 @@
 import * as motion from 'motion/react-client'
-import { RoomCard } from '@/components/rooms/room-card'
+import { RoomCard } from '@/features/room-list'
 import type { Room, Game } from '@/types'
 
 type ShowcaseItem = {
