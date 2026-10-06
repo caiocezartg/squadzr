@@ -17,9 +17,16 @@ export const authStore = {
   signInSocialCalls: [] as Array<{ provider?: string; callbackURL?: string }>,
 }
 
+export interface FakeToastCall {
+  message: unknown
+  id?: string
+}
+
 export const toastStore = {
   /** Messages passed to `toast.error`, in order. */
   errorCalls: [] as unknown[],
+  /** Every `toast.error` call with the options Sonner received, in order. */
+  errorToasts: [] as FakeToastCall[],
 }
 
 const defaultFakeUser: FakeSessionUser = {
@@ -41,4 +48,5 @@ export function resetStubs(): void {
   authStore.user = null
   authStore.signInSocialCalls = []
   toastStore.errorCalls = []
+  toastStore.errorToasts = []
 }

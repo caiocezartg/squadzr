@@ -9,6 +9,8 @@ import { useRoomJoining } from '@/features/room-joining'
 import { Pagination } from '@/components/ui/pagination'
 import { AlertBox } from '@/components/ui/alert-box'
 import { ModalLoading } from '@/components/ui/modal-loading'
+import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
+import { notifyError } from '@/lib/notify'
 import { Plus } from 'lucide-react'
 import type { Game } from '@/types'
 import { EmptyState } from './components/empty-state'
@@ -201,9 +203,14 @@ export function CatalogPage() {
 
       {/* Create room modal */}
       {session?.user && modalOpen && (
-        <Suspense fallback={<ModalLoading />}>
-          <LazyCreateRoomModal games={games} open={modalOpen} onOpenChange={setModalOpen} />
-        </Suspense>
+        <LazyIslandBoundary
+          fallback={null}
+          onError={() => void notifyError(t('errors.DIALOG_LOAD_FAILED'))}
+        >
+          <Suspense fallback={<ModalLoading />}>
+            <LazyCreateRoomModal games={games} open={modalOpen} onOpenChange={setModalOpen} />
+          </Suspense>
+        </LazyIslandBoundary>
       )}
 
       {joining.authPrompt}

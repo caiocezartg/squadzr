@@ -6,6 +6,8 @@ import { Plus } from 'lucide-react'
 import { useSession } from '@/lib/auth-client'
 import { AlertBox } from '@/components/ui/alert-box'
 import { ModalLoading } from '@/components/ui/modal-loading'
+import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
+import { notifyError } from '@/lib/notify'
 import { RoomCard, RoomFilters, useRoomFilters } from '@/features/room-list'
 import { useGames } from '@/features/games'
 import type { Game } from '@/types'
@@ -200,16 +202,21 @@ export function MyRoomsPage() {
 
       {/* Create room modal */}
       {modalOpen && (
-        <Suspense fallback={<ModalLoading />}>
-          <LazyCreateRoomModal
-            games={games}
-            open={modalOpen}
-            onOpenChange={setModalOpen}
-            onCreated={() => {
-              void refetchMyRooms()
-            }}
-          />
-        </Suspense>
+        <LazyIslandBoundary
+          fallback={null}
+          onError={() => void notifyError(t('errors.DIALOG_LOAD_FAILED'))}
+        >
+          <Suspense fallback={<ModalLoading />}>
+            <LazyCreateRoomModal
+              games={games}
+              open={modalOpen}
+              onOpenChange={setModalOpen}
+              onCreated={() => {
+                void refetchMyRooms()
+              }}
+            />
+          </Suspense>
+        </LazyIslandBoundary>
       )}
     </div>
   )

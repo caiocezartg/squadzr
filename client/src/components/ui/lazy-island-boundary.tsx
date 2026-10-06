@@ -5,6 +5,8 @@ interface LazyIslandBoundaryProps {
   readonly children: ReactNode
   /** Shown when the island fails; non-essential islands default to nothing. */
   readonly fallback?: ReactNode
+  /** Called once when the island fails, so the owner can surface the failure. */
+  readonly onError?: (error: Error) => void
 }
 
 interface LazyIslandBoundaryState {
@@ -31,7 +33,9 @@ export class LazyIslandBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // The island is optional: record the failure and keep the page alive.
+    // The island is optional: tell the owner (once per failure), record it and
+    // keep the page alive.
+    this.props.onError?.(error)
     console.error('Lazy island failed to load:', error, errorInfo.componentStack)
   }
 

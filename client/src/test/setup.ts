@@ -71,8 +71,11 @@ vi.mock('sonner', async () => {
   const { toastStore } = await import('./stubs')
   return {
     toast: {
-      error: (message: unknown) => {
+      error: (message: unknown, options?: { id?: string }) => {
         toastStore.errorCalls.push(message)
+        // Preserve the id: the replay must reach Sonner as an update of the
+        // same toast, not as a second one.
+        toastStore.errorToasts.push({ message, id: options?.id })
       },
       success: () => undefined,
       dismiss: () => undefined,

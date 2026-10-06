@@ -14,7 +14,7 @@ export const routerDefaults = {
   defaultPendingMinMs: 300,
 } as const
 
-/** Builds the app router; tests pass a memory history to drive navigation. */
+/** Builds the app router used by the app entry; tests reuse `routerDefaults`. */
 export function createAppRouter(history?: RouterHistory) {
   return createRouter({
     routeTree,

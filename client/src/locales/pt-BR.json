@@ -243,6 +243,7 @@
     "VALIDATION_ERROR": "Por favor, verifique os campos do formulário e tente novamente.",
     "UNAUTHORIZED": "Você precisa fazer login para fazer isso.",
     "INTERNAL_ERROR": "Algo deu errado. Por favor, tente novamente mais tarde.",
+    "DIALOG_LOAD_FAILED": "Não foi possível carregar o diálogo. Tente novamente.",
     "DEFAULT": "Algo deu errado. Por favor, tente novamente."
   }
 }

@@ -19,12 +19,24 @@ const pending: Array<{ id: string; message: string }> = []
 let hostMounted = false
 let nextToastId = 0
 
+/**
+ * The replay queue is bounded: when the host never mounts (its chunk failed,
+ * `notify` loaded late), only the most recent errors are still worth showing.
+ * Older ones are dropped so a long-lived page cannot grow the array forever.
+ */
+export const MAX_PENDING_TOASTS = 5
+
 /** Publishes an error toast, replaying it if the Toaster cannot receive it yet. */
 export function showErrorToast(message: string): void {
   const id = `squadzr-error-${nextToastId++}`
   toast.error(message, { id })
 
-  if (!hostMounted) pending.push({ id, message })
+  if (!hostMounted) {
+    pending.push({ id, message })
+    if (pending.length > MAX_PENDING_TOASTS) {
+      pending.splice(0, pending.length - MAX_PENDING_TOASTS)
+    }
+  }
 }
 
 /**

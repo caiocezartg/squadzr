@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { joinRoomResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import { signIn, useSession } from '@/lib/auth-client'
@@ -11,6 +12,7 @@ import { useCatalogCommands } from '@/features/catalog/commands'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { notifyError } from '@/lib/notify'
 import { ModalLoading } from '@/components/ui/modal-loading'
+import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 import { useAutoJoin } from './use-auto-join'
 
 // The guest prompt is a non-essential sub-capability: its dialog primitives
@@ -45,6 +47,7 @@ export interface RoomJoining {
  * survives the Discord round trip.
  */
 export function useRoomJoining(): RoomJoining {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { data: session } = useSession()
   const { refreshRooms } = useCatalogCommands()
@@ -88,16 +91,21 @@ export function useRoomJoining(): RoomJoining {
 
   const authPrompt =
     pendingJoinCode !== null ? (
-      <Suspense fallback={<ModalLoading />}>
-        <LazyJoinRoomAuthModal
-          open
-          roomCode={pendingJoinCode}
-          onOpenChange={(open) => {
-            if (!open) setPendingJoinCode(null)
-          }}
-          onSignIn={handleSignIn}
-        />
-      </Suspense>
+      <LazyIslandBoundary
+        fallback={null}
+        onError={() => void notifyError(t('errors.DIALOG_LOAD_FAILED'))}
+      >
+        <Suspense fallback={<ModalLoading />}>
+          <LazyJoinRoomAuthModal
+            open
+            roomCode={pendingJoinCode}
+            onOpenChange={(open) => {
+              if (!open) setPendingJoinCode(null)
+            }}
+            onSignIn={handleSignIn}
+          />
+        </Suspense>
+      </LazyIslandBoundary>
     ) : null
 
   return { requestJoin, joiningRoomCode, authPrompt }
