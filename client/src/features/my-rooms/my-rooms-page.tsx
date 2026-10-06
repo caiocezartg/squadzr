@@ -11,6 +11,7 @@ import { notifyError } from '@/lib/notify'
 import { RoomCard, RoomFilters, useRoomFilters } from '@/features/room-list'
 import { useGames } from '@/features/games'
 import type { Game } from '@/types'
+import { MyRoomsSkeleton } from './skeleton'
 import { useMyRoomsData } from './use-my-rooms-data'
 
 // Room creation (the form contract, resolvers and dialog primitives) is a
@@ -79,15 +80,7 @@ export function MyRoomsPage() {
   const joinedCount = joined.length
 
   if (loading) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card h-64 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    )
+    return <MyRoomsSkeleton />
   }
 
   if (!session?.user) {

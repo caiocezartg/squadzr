@@ -8,6 +8,7 @@ import { ConnectionStatus } from './components/connection-status'
 import { DiscordLinkCard } from './components/discord-link-card'
 import { PlayerSlot } from './components/player-slot'
 import { RoomNotFound } from './components/room-not-found'
+import { LobbySkeleton } from './skeleton'
 import { useLobbyRoom } from './use-lobby-room'
 
 export interface LobbyPageProps {
@@ -40,16 +41,7 @@ export function LobbyPage({ roomCode }: LobbyPageProps) {
   }
 
   if (lobby.sessionPending || lobby.roomLoading) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="card h-48 animate-pulse mb-6" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="card h-16 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    )
+    return <LobbySkeleton />
   }
 
   if (!lobby.isAuthenticated) {

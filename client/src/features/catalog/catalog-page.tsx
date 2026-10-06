@@ -14,6 +14,7 @@ import { notifyError } from '@/lib/notify'
 import { Plus } from 'lucide-react'
 import type { Game } from '@/types'
 import { EmptyState } from './components/empty-state'
+import { CatalogSkeleton } from './skeleton'
 import { useCatalogData } from './use-catalog-data'
 import { useCatalogEvents } from './use-catalog-events'
 import { usePagination } from './use-pagination'
@@ -98,15 +99,7 @@ export function CatalogPage() {
   }
 
   if (loading) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card h-64 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    )
+    return <CatalogSkeleton />
   }
 
   return (

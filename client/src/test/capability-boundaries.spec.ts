@@ -36,7 +36,9 @@ const SOURCE_EXTENSION_SET = new Set(SOURCE_EXTENSIONS)
 const TEST_FILE_PATTERN = /\.(spec|test)\.[^.]+$/
 
 /** Path inside a capability that counts as its public interface. */
-const PUBLIC_ENTRY_POINTS = new Set(['', 'index', 'commands'])
+// `skeleton` is the light entry point routes use as their `pendingComponent`,
+// so the page barrel never has to be pulled into the entry chunk.
+const PUBLIC_ENTRY_POINTS = new Set(['', 'index', 'skeleton', 'commands'])
 
 function toPosix(path: string): string {
   return path.split(sep).join('/')
