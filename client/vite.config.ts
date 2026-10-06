@@ -4,7 +4,15 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import path from 'path'
 
 export default defineConfig({
-  plugins: [tanstackRouter(), react()],
+  plugins: [
+    // Route components are split into per-route chunks automatically; the
+    // bundle report reads the production manifest to measure initial loads.
+    tanstackRouter({ autoCodeSplitting: true }),
+    react(),
+  ],
+  build: {
+    manifest: true,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

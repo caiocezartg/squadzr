@@ -1,11 +1,13 @@
-import { z } from 'zod'
+// `zod/mini` keeps the same contracts as the classic build while letting the
+// bundler drop every schema the route validation does not use.
+import * as z from 'zod/mini'
 
 export const roomsSearchSchema = z.object({
-  search: z.string().optional(),
-  filter: z.enum(['all', 'has-space', 'almost-full']).optional(),
-  sort: z.enum(['newest', 'oldest']).optional(),
-  language: z.enum(['all', 'pt-br', 'en']).optional(),
-  tag: z.string().optional(),
-  page: z.coerce.number().int().min(1).optional(),
-  join: z.string().optional(),
+  search: z.optional(z.string()),
+  filter: z.optional(z.enum(['all', 'has-space', 'almost-full'])),
+  sort: z.optional(z.enum(['newest', 'oldest'])),
+  language: z.optional(z.enum(['all', 'pt-br', 'en'])),
+  tag: z.optional(z.string()),
+  page: z.optional(z.coerce.number().check(z.int(), z.gte(1))),
+  join: z.optional(z.string()),
 })

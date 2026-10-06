@@ -9,7 +9,8 @@
     "signIn": "Sign In",
     "signOut": "Sign Out",
     "createRoom": "Create Squad",
-    "createNewRoom": "Create new squad"
+    "createNewRoom": "Create new squad",
+    "loading": "Loading…"
   },
   "nav": {
     "allRooms": "ALL SQUADS",

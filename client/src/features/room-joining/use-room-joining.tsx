@@ -1,7 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { joinRoomResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import { signIn, useSession } from '@/lib/auth-client'
@@ -10,8 +9,15 @@ import { signIn, useSession } from '@/lib/auth-client'
 // flow) out of a cycle.
 import { useCatalogCommands } from '@/features/catalog/commands'
 import { getUserFriendlyError } from '@/lib/error-messages'
-import { JoinRoomAuthModal } from './join-room-auth-modal'
+import { notifyError } from '@/lib/notify'
+import { ModalLoading } from '@/components/ui/modal-loading'
 import { useAutoJoin } from './use-auto-join'
+
+// The guest prompt is a non-essential sub-capability: its dialog primitives
+// and animation runtime load only when a guest actually tries to join.
+const LazyJoinRoomAuthModal = lazy(() =>
+  import('./join-room-auth-modal').then((module) => ({ default: module.JoinRoomAuthModal }))
+)
 
 /** The room facts the join flow needs from a catalog card. */
 export interface JoinableRoom {
@@ -53,8 +59,8 @@ export function useRoomJoining(): RoomJoining {
       navigate({ to: '/rooms/$code', params: { code: roomCode } })
     },
     onError: (err) => {
-      toast.error(getUserFriendlyError(err, 'join'))
       setJoiningRoomCode(null)
+      void notifyError(getUserFriendlyError(err, 'join'))
     },
   })
 
@@ -80,16 +86,19 @@ export function useRoomJoining(): RoomJoining {
     })
   }
 
-  const authPrompt = (
-    <JoinRoomAuthModal
-      open={pendingJoinCode !== null}
-      roomCode={pendingJoinCode}
-      onOpenChange={(open) => {
-        if (!open) setPendingJoinCode(null)
-      }}
-      onSignIn={handleSignIn}
-    />
-  )
+  const authPrompt =
+    pendingJoinCode !== null ? (
+      <Suspense fallback={<ModalLoading />}>
+        <LazyJoinRoomAuthModal
+          open
+          roomCode={pendingJoinCode}
+          onOpenChange={(open) => {
+            if (!open) setPendingJoinCode(null)
+          }}
+          onSignIn={handleSignIn}
+        />
+      </Suspense>
+    ) : null
 
   return { requestJoin, joiningRoomCode, authPrompt }
 }

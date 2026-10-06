@@ -1,15 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Tabs } from '@base-ui-components/react'
 import { Plus } from 'lucide-react'
 import { useSession } from '@/lib/auth-client'
 import { AlertBox } from '@/components/ui/alert-box'
-import { CreateRoomModal } from '@/features/room-creation'
+import { ModalLoading } from '@/components/ui/modal-loading'
 import { RoomCard, RoomFilters, useRoomFilters } from '@/features/room-list'
 import { useGames } from '@/features/games'
 import type { Game } from '@/types'
 import { useMyRoomsData } from './use-my-rooms-data'
+
+// Room creation (the form contract, resolvers and dialog primitives) is a
+// non-essential capability: its chunk loads when the user opens the dialog.
+const LazyCreateRoomModal = lazy(() =>
+  import('@/features/room-creation').then((module) => ({ default: module.CreateRoomModal }))
+)
 
 /**
  * The My Rooms page. It shows the room lists the server returns — including
@@ -193,14 +199,18 @@ export function MyRoomsPage() {
       </Tabs.Root>
 
       {/* Create room modal */}
-      <CreateRoomModal
-        games={games}
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        onCreated={() => {
-          void refetchMyRooms()
-        }}
-      />
+      {modalOpen && (
+        <Suspense fallback={<ModalLoading />}>
+          <LazyCreateRoomModal
+            games={games}
+            open={modalOpen}
+            onOpenChange={setModalOpen}
+            onCreated={() => {
+              void refetchMyRooms()
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

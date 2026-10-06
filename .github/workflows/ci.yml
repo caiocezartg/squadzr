@@ -103,3 +103,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-bun
       - run: bun run build
+      # Reads dist/.vite/manifest.json, fails on any budget regression and
+      # records the report as a CI artifact (CCC-43).
+      - run: bun run bundle:budget
+      - name: Upload bundle report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-report
+          path: |
+            client/dist/bundle-report.json
+            client/dist/.vite/manifest.json
+          if-no-files-found: error

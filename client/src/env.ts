@@ -1,7 +1,9 @@
-import { z } from 'zod'
+import * as z from 'zod/mini'
 
 const envSchema = z.object({
-  VITE_API_URL: z.url().optional().default('http://localhost:3000'),
+  // `_default` is zod/mini's export for defaults (the name `default` is
+  // reserved): missing values fall back, present ones must be a URL.
+  VITE_API_URL: z._default(z.optional(z.url()), 'http://localhost:3000'),
 })
 
 function validateEnv() {

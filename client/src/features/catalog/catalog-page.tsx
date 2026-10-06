@@ -1,20 +1,26 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/lib/auth-client'
 import { WS_URL } from '@/env'
 import { useWebSocket } from '@/hooks/use-websocket'
 import { useNotificationEvents } from '@/hooks/use-notification-events'
 import { RoomCard, RoomFilters, useRoomFilters } from '@/features/room-list'
-import { CreateRoomModal } from '@/features/room-creation'
 import { useRoomJoining } from '@/features/room-joining'
 import { Pagination } from '@/components/ui/pagination'
 import { AlertBox } from '@/components/ui/alert-box'
+import { ModalLoading } from '@/components/ui/modal-loading'
 import { Plus } from 'lucide-react'
 import type { Game } from '@/types'
 import { EmptyState } from './components/empty-state'
 import { useCatalogData } from './use-catalog-data'
 import { useCatalogEvents } from './use-catalog-events'
 import { usePagination } from './use-pagination'
+
+// Room creation (the form contract, resolvers and dialog primitives) is a
+// non-essential capability: its chunk loads when the user opens the dialog.
+const LazyCreateRoomModal = lazy(() =>
+  import('@/features/room-creation').then((module) => ({ default: module.CreateRoomModal }))
+)
 
 /**
  * The catalog page. It owns the public navigation state (filters, pagination
@@ -194,8 +200,10 @@ export function CatalogPage() {
       )}
 
       {/* Create room modal */}
-      {session?.user && (
-        <CreateRoomModal games={games} open={modalOpen} onOpenChange={setModalOpen} />
+      {session?.user && modalOpen && (
+        <Suspense fallback={<ModalLoading />}>
+          <LazyCreateRoomModal games={games} open={modalOpen} onOpenChange={setModalOpen} />
+        </Suspense>
       )}
 
       {joining.authPrompt}

@@ -9,7 +9,8 @@
     "signIn": "Entrar",
     "signOut": "Sair",
     "createRoom": "Criar novo squad",
-    "createNewRoom": "Criar novo squad"
+    "createNewRoom": "Criar novo squad",
+    "loading": "Carregando…"
   },
   "nav": {
     "allRooms": "TODOS OS SQUADS",
