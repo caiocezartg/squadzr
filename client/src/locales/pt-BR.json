@@ -211,6 +211,7 @@
   },
   "notifications": {
     "title": "Notificações",
+    "bellLabel": "Notificações",
     "markAllRead": "Marcar todas como lidas",
     "empty": "Nenhuma notificação ainda",
     "emptySubtitle": "Você será notificado quando seu time estiver pronto",

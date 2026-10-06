@@ -4,6 +4,7 @@ import { signIn, useSession } from '@/lib/auth-client'
 import * as motion from 'motion/react-client'
 import { Search } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
+import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 import { useTranslation, Trans } from 'react-i18next'
 import { BackgroundRipple } from './background-ripple'
 import { HeroRoomShowcase } from './hero-room-showcase'
@@ -39,9 +40,11 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Suspense fallback={null}>
-              <LazyHeroGameBadge />
-            </Suspense>
+            <LazyIslandBoundary>
+              <Suspense fallback={null}>
+                <LazyHeroGameBadge />
+              </Suspense>
+            </LazyIslandBoundary>
           </motion.div>
 
           <motion.h1

@@ -3,8 +3,8 @@
  *
  * The production build splits every route component into its own chunk
  * (TanStack Router auto code splitting). These tests mount the real router
- * primitives the app uses — `lazyRouteComponent`, the router-level
- * `RoutePending` fallback and the real catalog page — with a controllable
+ * primitives the app uses — `lazyRouteComponent`, the app router's pending
+ * defaults (`src/router.tsx`) and the real catalog page — with a controllable
  * dynamic import, so the navigation to an unloaded route is observable: the
  * pending state shows while the chunk is in flight, then the page renders.
  */
@@ -25,6 +25,7 @@ import type { AnyRoute, Router } from '@tanstack/react-router'
 import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { RoutePending } from '@/components/route-pending'
+import { routerDefaults } from '@/router'
 import { roomsSearchSchema } from '@/features/room-list'
 import type { CatalogPage } from '@/features/catalog'
 import { createTestQueryClient } from './harness'
@@ -39,6 +40,19 @@ function deferred<T>() {
     resolve = res
   })
   return { promise, resolve }
+}
+
+interface FlowPendingOptions {
+  defaultPendingComponent: typeof RoutePending
+  defaultPendingMs: number
+  defaultPendingMinMs: number
+}
+
+/** The fast pending options the focused tests use to avoid real timers. */
+const FAST_PENDING: FlowPendingOptions = {
+  defaultPendingComponent: RoutePending,
+  defaultPendingMs: 0,
+  defaultPendingMinMs: 0,
 }
 
 function buildFlowTree(loadCatalog: () => Promise<CatalogModule>): AnyRoute {
@@ -62,15 +76,14 @@ function buildFlowTree(loadCatalog: () => Promise<CatalogModule>): AnyRoute {
 
 function renderFlow(
   loadCatalog: () => Promise<CatalogModule>,
-  initialEntry: string
+  initialEntry: string,
+  pending: FlowPendingOptions = FAST_PENDING
 ): { router: Router<AnyRoute>; queryClient: QueryClient } {
   const queryClient = createTestQueryClient()
   const router = createRouter({
     routeTree: buildFlowTree(loadCatalog),
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
-    defaultPendingComponent: RoutePending,
-    defaultPendingMs: 0,
-    defaultPendingMinMs: 0,
+    ...pending,
   })
 
   render(
@@ -118,6 +131,31 @@ describe('on-demand route navigation', () => {
   it('renders directly on an on-demand route when its chunk resolves before paint', async () => {
     const catalogModule = await import('@/features/catalog')
     renderFlow(() => Promise.resolve(catalogModule), '/rooms')
+
+    expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
+    expect(screen.queryByTestId('route-pending')).not.toBeInTheDocument()
+  })
+
+  it('shows the pending state with the app router defaults while the route chunk loads', async () => {
+    const catalogImport = deferred<CatalogModule>()
+    const { router } = renderFlow(() => catalogImport.promise, '/', routerDefaults)
+
+    expect(await screen.findByText('Landing stub')).toBeInTheDocument()
+
+    let navigation: Promise<void> | undefined
+    act(() => {
+      navigation = router.navigate({ to: '/rooms', search: {} })
+    })
+
+    // The pending UI and its timings come from `src/router.tsx`, the same
+    // module `main.tsx` uses to build the app router.
+    expect(await screen.findByTestId('route-pending')).toBeInTheDocument()
+    expect(screen.queryByText('Ranked grind')).not.toBeInTheDocument()
+
+    await act(async () => {
+      catalogImport.resolve(await import('@/features/catalog'))
+      await navigation
+    })
 
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
     expect(screen.queryByTestId('route-pending')).not.toBeInTheDocument()

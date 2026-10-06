@@ -3,6 +3,7 @@ import { useSession, signIn, signOut } from '@/lib/auth-client'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Bell, Menu } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
+import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 import { UserMenu } from '@/components/layout/user-menu'
 import { MobileSidebar } from '@/components/layout/mobile-sidebar'
 import { useTranslation } from 'react-i18next'
@@ -18,12 +19,14 @@ const LazyNotificationsMenu = lazy(() =>
 )
 
 function NotificationsFallback() {
+  const { t } = useTranslation()
+
   return (
     <button
       type="button"
       disabled
       className="relative flex items-center justify-center rounded-lg p-2 text-muted opacity-60"
-      aria-label="Notifications"
+      aria-label={t('notifications.bellLabel')}
     >
       <Bell className="size-4" />
     </button>
@@ -118,17 +121,19 @@ export function AppHeader() {
             <LanguageToggle />
             {session?.user ? (
               <>
-                <Suspense fallback={<NotificationsFallback />}>
-                  <LazyNotificationsMenu
-                    enabled={!!session?.user}
-                    isOpen={notificationsOpen}
-                    onToggle={() => {
-                      setNotificationsOpen((prev) => !prev)
-                      setMenuOpen(false)
-                    }}
-                    onClose={() => setNotificationsOpen(false)}
-                  />
-                </Suspense>
+                <LazyIslandBoundary fallback={<NotificationsFallback />}>
+                  <Suspense fallback={<NotificationsFallback />}>
+                    <LazyNotificationsMenu
+                      enabled={!!session?.user}
+                      isOpen={notificationsOpen}
+                      onToggle={() => {
+                        setNotificationsOpen((prev) => !prev)
+                        setMenuOpen(false)
+                      }}
+                      onClose={() => setNotificationsOpen(false)}
+                    />
+                  </Suspense>
+                </LazyIslandBoundary>
 
                 <UserMenu
                   session={session}

@@ -2,10 +2,13 @@ import { lazy, Suspense } from 'react'
 import { createRootRoute, lazyRouteComponent, Outlet, useMatches } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { AppHeader } from '@/components/layout/app-header'
+import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 
 // Toasts are a non-essential capability: the library and its shared chunk load
 // after the first paint instead of blocking the initial route.
-const LazyToaster = lazy(() => import('sonner').then((module) => ({ default: module.Toaster })))
+const LazyToaster = lazy(() =>
+  import('@/lib/toast-runtime').then((module) => ({ default: module.AppToaster }))
+)
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -35,9 +38,11 @@ function RootLayout() {
         </footer>
       )}
 
-      <Suspense fallback={null}>
-        <LazyToaster theme="dark" position="top-center" richColors />
-      </Suspense>
+      <LazyIslandBoundary>
+        <Suspense fallback={null}>
+          <LazyToaster theme="dark" position="top-center" richColors />
+        </Suspense>
+      </LazyIslandBoundary>
     </div>
   )
 }

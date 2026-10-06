@@ -211,6 +211,7 @@
   },
   "notifications": {
     "title": "Notifications",
+    "bellLabel": "Notifications",
     "markAllRead": "Mark all read",
     "empty": "No notifications yet",
     "emptySubtitle": "You'll be notified when your squad is ready",

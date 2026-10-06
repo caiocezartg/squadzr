@@ -29,6 +29,17 @@ vi.stubGlobal(
     disconnect(): void {}
   }
 )
+vi.stubGlobal(
+  'IntersectionObserver',
+  class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return []
+    }
+  }
+)
 Element.prototype.scrollIntoView = vi.fn()
 Object.defineProperty(navigator, 'clipboard', {
   value: { writeText: vi.fn(async () => undefined) },
