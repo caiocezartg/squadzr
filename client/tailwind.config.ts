@@ -49,23 +49,11 @@ const config: Config = {
           '0%, 100%': { boxShadow: '0 0 8px rgba(0, 255, 162, 0.2)' },
           '50%': { boxShadow: '0 0 20px rgba(0, 255, 162, 0.4)' },
         },
-        // Indeterminate route loading bar (CCC-43): a short bar sweeps the
-        // track while the entry fades in.
-        'route-progress': {
-          '0%': { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(300%)' },
-        },
-        'route-pending-in': {
-          from: { opacity: '0' },
-          to: { opacity: '1' },
-        },
       },
       animation: {
         'fade-in': 'fade-in 0.4s ease-out',
         'slide-up': 'slide-up 0.5s ease-out',
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
-        'route-progress': 'route-progress 1.2s ease-in-out infinite',
-        'route-pending-in': 'route-pending-in 150ms ease-out',
       },
     },
   },
