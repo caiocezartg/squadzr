@@ -29,7 +29,7 @@ declare module 'fastify' {
 
 export interface BuildAppOptions {
   env: Env
-  /** Overrides the environment-derived logger (tests pass `false`). */
+  /** Overrides the environment-derived logger (log-capture tests pass their own). */
   logger?: FastifyServerOptions['logger']
   /** Overrides the system clock; tests inject a fixed clock for exact instants. */
   clock?: Clock

@@ -90,7 +90,6 @@ describe('Membership durability', () => {
     await server.app.close()
     const restarted = await buildApp({
       env: createTestEnv({ DATABASE_URL: server.databaseUrl }),
-      logger: false,
       clock: new FakeClock(FIXED_NOW),
     })
     try {
