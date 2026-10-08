@@ -47,8 +47,17 @@ describe('onServerEvent', () => {
   it.each([
     ['room_updated', { roomId: openRoom.id, roomCode: openRoom.code, memberCount: -1 }],
     ['room_created', { room: { ...openRoom, createdAt: 1_769_000_000 } }],
-    ['room_joined', { roomId: openRoom.id, roomCode: 'ABC123', players: [{ id: 'user-1' }] }],
-    ['room_ready', {}],
+    [
+      'room_snapshot',
+      {
+        room: openRoom,
+        players: [{ id: 'user-1' }],
+        readyAt: null,
+        expiresAt: openRoom.updatedAt,
+        presence: [],
+      },
+    ],
+    ['room_removed', {}],
     ['error', { code: 500 }],
   ] as const)('drops an invalid %s payload before it reaches the handler', (type, payload) => {
     const { on, socket } = connectedClient()
@@ -81,10 +90,13 @@ describe('onServerEvent', () => {
   it('stops delivering after unsubscribe', () => {
     const { on, socket } = connectedClient()
     const handler = vi.fn()
-    const unsubscribe = onServerEvent(on, 'player_left', handler)
+    const unsubscribe = onServerEvent(on, 'presence_updated', handler)
 
     unsubscribe()
-    socket.serverSend({ type: 'player_left', payload: { playerId: 'user-2' } })
+    socket.serverSend({
+      type: 'presence_updated',
+      payload: { roomCode: openRoom.code, playerId: 'user-2', online: true },
+    })
 
     expect(handler).not.toHaveBeenCalled()
   })
@@ -116,30 +128,34 @@ describe('diagnostics', () => {
 
   it('reports a throwing handler by event type only and keeps the connection', () => {
     const { client, socket } = connectedClient()
-    client.on('player_left', () => {
+    client.on('presence_updated', () => {
       throw new Error(`cannot handle ${SECRET_INVITE}`)
     })
 
-    socket.serverSend({ type: 'player_left', payload: { playerId: SECRET_INVITE } })
+    socket.serverSend({
+      type: 'presence_updated',
+      payload: { roomCode: openRoom.code, playerId: SECRET_INVITE, online: true },
+    })
 
     expect(vi.mocked(console.error).mock.calls).toEqual([
-      ['WebSocket handler failed:', { type: 'player_left' }],
+      ['WebSocket handler failed:', { type: 'presence_updated' }],
     ])
     expect(client.isConnected).toBe(true)
   })
 
   it('reports issue paths and codes without any payload content', () => {
     const payload = {
-      roomId: openRoom.id,
-      roomCode: 'ABC123',
+      room: { ...openRoom, discordLink: SECRET_INVITE },
       players: [{ ...hostPlayer, name: 42, sessionToken: 'session-secret' }],
-      discordLink: SECRET_INVITE,
+      readyAt: null,
+      expiresAt: openRoom.updatedAt,
+      presence: [],
     }
 
-    expect(parseServerEvent('room_joined', payload)).toBeNull()
+    expect(parseServerEvent('room_snapshot', payload)).toBeNull()
 
     expect(console.error).toHaveBeenCalledWith('Invalid WebSocket payload:', {
-      type: 'room_joined',
+      type: 'room_snapshot',
       issues: [{ path: 'players.0.name', code: 'invalid_type' }],
     })
     const logged = JSON.stringify(vi.mocked(console.error).mock.calls)
