@@ -1,5 +1,5 @@
 import { vi, type Mock } from 'vitest'
-import type { Room, CreateRoomInput, UpdateRoomInput } from '@domain/entities/room.entity'
+import type { Room, CreateRoomInput } from '@domain/entities/room.entity'
 import type { CreateRoomOutcome, IRoomRepository } from '@domain/repositories/room.repository'
 import { FIXED_NOW } from './clock.mock'
 
@@ -28,11 +28,8 @@ export type MockRoomRepository = {
 
 export function createMockRoomRepository(): MockRoomRepository {
   return {
-    findById: vi.fn<(id: string) => Promise<Room | null>>().mockResolvedValue(null),
     findByCode: vi.fn<(code: string) => Promise<Room | null>>().mockResolvedValue(null),
     findByIds: vi.fn<(ids: readonly string[]) => Promise<Room[]>>().mockResolvedValue([]),
-    findByHostId: vi.fn<(hostId: string) => Promise<Room[]>>().mockResolvedValue([]),
-    findAll: vi.fn<() => Promise<Room[]>>().mockResolvedValue([]),
     findAvailable: vi.fn<(now: Date) => Promise<Room[]>>().mockResolvedValue([]),
     findMyRooms: vi
       .fn<(userId: string, now: Date) => Promise<{ hosted: Room[]; joined: Room[] }>>()
@@ -64,9 +61,5 @@ export function createMockRoomRepository(): MockRoomRepository {
       ),
     findExpiredRooms: vi.fn<(now: Date) => Promise<Room[]>>().mockResolvedValue([]),
     deleteExpired: vi.fn<(id: string, now: Date) => Promise<boolean>>().mockResolvedValue(false),
-    update: vi
-      .fn<(id: string, input: UpdateRoomInput, now: Date) => Promise<Room | null>>()
-      .mockResolvedValue(null),
-    delete: vi.fn<(id: string) => Promise<boolean>>().mockResolvedValue(false),
   }
 }

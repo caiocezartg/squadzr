@@ -8,11 +8,3 @@ export interface Game {
   readonly createdAt: Date
   readonly updatedAt: Date
 }
-
-export interface CreateGameInput {
-  readonly name: string
-  readonly slug: string
-  readonly coverUrl: string
-  readonly minPlayers: number
-  readonly maxPlayers: number
-}

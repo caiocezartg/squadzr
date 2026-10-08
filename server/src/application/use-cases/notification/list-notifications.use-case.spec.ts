@@ -31,7 +31,6 @@ function createNotification(overrides: Partial<UserNotification> = {}): UserNoti
 function createMockNotificationRepository() {
   return {
     findByUserId: vi.fn<(userId: string, limit?: number) => Promise<UserNotification[]>>(),
-    create: vi.fn(),
     markAsRead: vi.fn(),
     markAllAsRead: vi.fn(),
     delete: vi.fn(),
