@@ -5,6 +5,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { queryClient } from '@/lib/query-client'
 import { createAppRouter } from './router'
 import '@/lib/i18n'
+import '@/styles/fonts.css'
 import '@/styles/globals.css'
 
 const router = createAppRouter()

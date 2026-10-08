@@ -23,11 +23,15 @@
  *   entry or of more than one measured route. Each route's sum counts it once.
  * - CSS and preload hints are reported separately; they are not added to the
  *   initial JavaScript sum.
+ * - Fonts (CCC-43) are self-hosted: `index.html` must not reference the Google
+ *   Fonts hosts, and every `rel="preload" as="font"` link must point at an
+ *   asset the build actually emitted. The `.woff2` files and the CSS are not
+ *   part of the JavaScript sum.
  * - kB = 1000 bytes, matching Vite's reporter.
  */
 
 import { execFileSync } from 'node:child_process'
-import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
@@ -227,16 +231,24 @@ const cssReport = allCssFiles.map((file) => ({
 /** Preload/style hints found in index.html; reported, never summed. */
 const preloadLinks = [...indexHtml.matchAll(/<link[^>]+href="([^"]+)"[^>]*>/g)]
   .map((match) => match[0])
-  .filter((tag) => tag.includes('modulepreload') || tag.includes('stylesheet'))
+  .filter(
+    (tag) =>
+      tag.includes('modulepreload') || tag.includes('stylesheet') || tag.includes('as="font"')
+  )
   .map((tag) => {
     const href = /href="([^"]+)"/.exec(tag)?.[1] ?? ''
     const file = href.replace(/^\//, '')
-    const rel = tag.includes('modulepreload') ? 'modulepreload' : 'stylesheet'
+    const rel = tag.includes('modulepreload')
+      ? 'modulepreload'
+      : tag.includes('as="font"')
+        ? 'font-preload'
+        : 'stylesheet'
+    const exists = file.length > 0 && existsSync(join(DIST_DIR, file))
     return {
       rel,
       file,
-      exists: file.length > 0 && file.startsWith('assets/'),
-      ...(file.startsWith('assets/') ? { rawKb: roundKb(assetSize(file).rawBytes) } : {}),
+      exists,
+      ...(exists ? { rawKb: roundKb(assetSize(file).rawBytes) } : {}),
     }
   })
   .sort((a, b) => a.file.localeCompare(b.file))
@@ -277,6 +289,21 @@ for (const chunk of oversizedChunks) {
   violations.push(`Chunk ${chunk.file} is ${chunk.rawKb} kB raw, above ${MAX_CHUNK_RAW_KB} kB`)
 }
 
+// Self-hosted fonts (CCC-43): `index.html` must not depend on the Google Fonts
+// CDN and every font preload must point at a file the build emitted.
+for (const host of ['fonts.googleapis.com', 'fonts.gstatic.com']) {
+  if (indexHtml.includes(host)) {
+    violations.push(`index.html still references ${host}; fonts must be self-hosted`)
+  }
+}
+for (const preload of preloadLinks) {
+  if (preload.rel === 'font-preload' && !preload.exists) {
+    violations.push(
+      `index.html preloads "${preload.file}" as a font, but no such file was emitted in dist`
+    )
+  }
+}
+
 function buildVersion() {
   const pkg = readJson(join(CLIENT_DIR, 'package.json'))
   let commit = process.env.GITHUB_SHA ?? null
@@ -308,7 +335,7 @@ const report = {
     sharedChunk:
       'A JavaScript chunk in the initial set of the entry or of more than one measured route; counted once per route sum.',
     cssAndPreloads:
-      'CSS files and modulepreload/stylesheet links are reported separately and are not part of the initial JavaScript sum.',
+      'CSS files, modulepreload/stylesheet links and font preloads are reported separately and are not part of the initial JavaScript sum.',
     units: 'kB = 1000 bytes',
   },
   budget: {
