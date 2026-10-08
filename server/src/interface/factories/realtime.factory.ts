@@ -12,7 +12,7 @@ import { Presence } from '@infrastructure/websocket/presence'
 import { Heartbeat } from '@infrastructure/websocket/heartbeat'
 import { handleDisconnect } from '@infrastructure/websocket/handlers/room.handler'
 import type { WebSocket } from '@fastify/websocket'
-import type { Realtime } from '@infrastructure/websocket/types'
+import type { ConnectionInspection, Realtime } from '@infrastructure/websocket/types'
 
 export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogger): Realtime {
   const operations = new OrderedOperations()
@@ -43,6 +43,12 @@ export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogge
     disconnect(socket)
   })
   let stopped = false
+
+  const inspect: ConnectionInspection = {
+    catalogSubscribers: () => manager.getLobbySockets().size,
+    roomSockets: (roomCode) => manager.getRoomSockets(roomCode)?.size ?? 0,
+    trackedRooms: () => manager.roomCount,
+  }
 
   function disconnect(socket: WebSocket): void {
     heartbeat.remove(socket)
@@ -81,7 +87,9 @@ export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogge
     broadcaster,
     heartbeat,
     operations,
+    inspect,
     disconnect,
+    drain: () => operations.drain(),
     sweep,
     shutdown,
     isStopped: () => stopped,

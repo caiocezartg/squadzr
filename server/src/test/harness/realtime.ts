@@ -2,8 +2,6 @@ import type { Duplex } from 'node:stream'
 import type { WebSocket } from '@fastify/websocket'
 import { z } from 'zod'
 import { protocolMessageSchema } from '@squadzr/schemas/ws'
-import type { WsConnectionManager } from '@infrastructure/websocket/ws-connection-manager'
-import type { WsRoomBroadcaster } from '@infrastructure/websocket/room-broadcaster.service'
 import type { TestUser } from './auth'
 import type { TestServer } from './test-server'
 
@@ -121,8 +119,7 @@ export async function connect(
   const drain = async () => {
     // Let frames sent through the in-memory stream reach the server first.
     await new Promise<void>((resolve) => setImmediate(resolve))
-    const broadcaster = server.app.broadcaster as WsRoomBroadcaster
-    await broadcaster['operations'].drain()
+    await server.app.realtime.drain()
     send({ type: 'ping' })
     const received: ServerMessage[] = []
     for (let message = await next(); message.type !== 'pong'; message = await next()) {
@@ -166,18 +163,16 @@ export async function subscribeCatalog(session: RealtimeSession): Promise<void> 
 }
 
 /**
- * Read-only view of the plugin's in-memory subscription state. The connection
- * manager is private to the WebSocket plugin, so this reaches it through the
- * decorated broadcaster. Presence sweeps use the injected clock without sleeping.
+ * Read-only view of the plugin's in-memory subscription state, through the
+ * decorated realtime module. Presence sweeps use the injected clock without sleeping.
  */
 export function subscriptionState(server: TestServer) {
-  const broadcaster = server.app.broadcaster as WsRoomBroadcaster
-  const manager: WsConnectionManager = broadcaster['connectionManager']
+  const { inspect, operations, presence } = server.app.realtime
 
   return {
-    catalogSubscribers: () => manager['lobbySubscribers'].size,
-    roomSockets: (roomCode: string) => manager.getRoomSockets(roomCode)?.size ?? 0,
-    trackedRooms: () => manager['rooms'].size,
-    sweepPresence: () => broadcaster['operations'].run(() => broadcaster['presence'].sweep()),
+    catalogSubscribers: inspect.catalogSubscribers,
+    roomSockets: inspect.roomSockets,
+    trackedRooms: inspect.trackedRooms,
+    sweepPresence: () => operations.run(() => presence.sweep()),
   }
 }
