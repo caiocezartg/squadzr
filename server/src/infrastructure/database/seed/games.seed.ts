@@ -1,9 +1,6 @@
-import { drizzle } from 'drizzle-orm/node-postgres'
-import pg from 'pg'
-import { loadEnv } from '@config/env'
-import { games } from '../schema/games'
-
-const { Pool } = pg
+import { loadDatabaseEnv } from '@config/env'
+import { createDatabase } from '@infrastructure/database/drizzle'
+import { createGameRepository } from '@interface/factories/game.factory'
 
 const GAMES_DATA = [
   {
@@ -142,31 +139,19 @@ const GAMES_DATA = [
 ]
 
 async function seed() {
-  const env = loadEnv()
-  const pool = new Pool({ connectionString: env.DATABASE_URL })
-  const db = drizzle(pool)
+  const { DATABASE_URL } = loadDatabaseEnv()
+  const { db, close } = createDatabase(DATABASE_URL)
+  const gameRepository = createGameRepository(db)
 
   console.log('Seeding games...')
 
   for (const game of GAMES_DATA) {
-    await db
-      .insert(games)
-      .values(game)
-      .onConflictDoUpdate({
-        target: games.slug,
-        set: {
-          name: game.name,
-          coverUrl: game.coverUrl,
-          minPlayers: game.minPlayers,
-          maxPlayers: game.maxPlayers,
-          updatedAt: new Date(),
-        },
-      })
+    await gameRepository.upsertBySlug(game)
     console.log(`  ✓ ${game.name}`)
   }
 
   console.log('Done seeding games!')
-  await pool.end()
+  await close()
 }
 
 seed().catch((error) => {

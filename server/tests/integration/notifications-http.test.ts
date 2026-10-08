@@ -11,8 +11,8 @@ import {
   get,
   insertGame,
   joinAll,
-  markRoomReady,
   roomAction,
+  setRoomLifecycle,
 } from '@test/harness/rooms'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
@@ -261,7 +261,12 @@ describe('Room Ready notification persistence and delivery', () => {
 
     expect((await listNotifications(member))[0]?.payload.discordLink).toBe(DISCORD_INVITE)
 
-    await markRoomReady(server, room.id, 61)
+    const readyAt = new Date(Date.now() - 61 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: readyAt,
+      lastActivityAt: readyAt,
+      readyAt,
+    })
 
     const expired = await listNotifications(member)
     expect(expired).toHaveLength(1)

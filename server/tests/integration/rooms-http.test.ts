@@ -9,10 +9,9 @@ import {
   get,
   insertGame,
   joinAll,
-  markRoomActivity,
-  markRoomReady,
   postRoom,
   roomAction,
+  setRoomLifecycle,
 } from '@test/harness/rooms'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
@@ -187,7 +186,12 @@ describe('GET /api/rooms', () => {
 
   it('excludes ready rooms from the catalog immediately, before deletion', async () => {
     const room = await createRoom(server, host, { gameId })
-    await markRoomReady(server, room.id, 0)
+    const now = new Date()
+    await setRoomLifecycle(server, room.id, {
+      createdAt: now,
+      lastActivityAt: now,
+      readyAt: now,
+    })
 
     const response = await get(server, '/api/rooms')
 
@@ -255,7 +259,12 @@ describe('GET /api/rooms/:code', () => {
 
   it('answers 404 for an Open Room past lastActivityAt + 24h, before deletion', async () => {
     const room = await createRoom(server, host, { gameId })
-    await markRoomActivity(server, room.id, 25 * 60)
+    const backdated = new Date(Date.now() - 25 * 60 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: backdated,
+      lastActivityAt: backdated,
+      readyAt: null,
+    })
 
     const asMember = await get(server, `/api/rooms/${room.code}`, host)
 
@@ -267,7 +276,12 @@ describe('GET /api/rooms/:code', () => {
 
   it('answers 404 for a Ready Room past readyAt + 60min, before deletion', async () => {
     const { room } = await createFullRoom(host)
-    await markRoomReady(server, room.id, 61)
+    const readyAt = new Date(Date.now() - 61 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: readyAt,
+      lastActivityAt: readyAt,
+      readyAt,
+    })
 
     const asMember = await get(server, `/api/rooms/${room.code}`, host)
 

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { count, eq, sql } from 'drizzle-orm'
+import { count, eq } from 'drizzle-orm'
 import type { LightMyRequestResponse } from 'fastify'
 import { expect } from 'vitest'
 import { roomSchema, type GameDto, type RoomDto } from '@squadzr/schemas'
@@ -106,46 +106,10 @@ export async function findRoomRow(server: TestServer, roomId: string) {
   return row ?? null
 }
 
-/** Sets `readyAt`, optionally backdated, to simulate a room that filled up and time passing. */
-export async function markRoomReady(
-  server: TestServer,
-  roomId: string,
-  minutesAgo = 0
-): Promise<void> {
-  // Creation and activity move with readiness: the room CHECK constraints
-  // require ready_at >= created_at and ready_at >= last_activity_at.
-  await server.app.db
-    .update(rooms)
-    .set({
-      createdAt: sql`now() - make_interval(mins => ${minutesAgo})`,
-      lastActivityAt: sql`now() - make_interval(mins => ${minutesAgo})`,
-      readyAt: sql`now() - make_interval(mins => ${minutesAgo})`,
-    })
-    .where(eq(rooms.id, roomId))
-}
-
-/**
- * Backdates an Open Room's creation and activity, keeping `readyAt` null, to
- * simulate a room whose 24h window passed without touching readiness.
- */
-export async function markRoomActivity(
-  server: TestServer,
-  roomId: string,
-  minutesAgo = 0
-): Promise<void> {
-  await server.app.db
-    .update(rooms)
-    .set({
-      createdAt: sql`now() - make_interval(mins => ${minutesAgo})`,
-      lastActivityAt: sql`now() - make_interval(mins => ${minutesAgo})`,
-    })
-    .where(eq(rooms.id, roomId))
-}
-
 /**
  * Writes the three lifecycle timestamps from explicit `Date` values, so tests
- * with a fixed clock can place a room at exact instants (e.g. exactly
- * `lastActivityAt + 24h`). Honors the CHECK constraints by construction.
+ * can place a room at exact instants (e.g. exactly `lastActivityAt + 24h`) as
+ * Open (`readyAt: null`) or Ready. Honors the CHECK constraints by construction.
  */
 export async function setRoomLifecycle(
   server: TestServer,

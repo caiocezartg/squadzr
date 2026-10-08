@@ -9,10 +9,9 @@ import {
   createRoom,
   insertGame,
   joinAll,
-  markRoomActivity,
-  markRoomReady,
   postRoom,
   roomAction,
+  setRoomLifecycle,
 } from '@test/harness/rooms'
 import {
   connect,
@@ -140,7 +139,12 @@ describe('connection identity', () => {
     const host = await signIn(server)
     const game = await insertGame(server)
     const room = await createRoom(server, host, { gameId: game.id })
-    await markRoomActivity(server, room.id, 25 * 60)
+    const backdated = new Date(Date.now() - 25 * 60 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: backdated,
+      lastActivityAt: backdated,
+      readyAt: null,
+    })
     const socket = await open(server, host)
 
     socket.send({ type: 'join_room', payload: { roomCode: room.code } })
@@ -178,7 +182,12 @@ describe('connection identity', () => {
     expect(await memberSocket.drain()).toEqual([])
 
     // Past retention the Ready Room is gone for everyone, member included.
-    await markRoomReady(server, room.id, 61)
+    const readyAt = new Date(Date.now() - 61 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: readyAt,
+      lastActivityAt: readyAt,
+      readyAt,
+    })
     memberSocket.send({ type: 'join_room', payload: { roomCode: room.code } })
     expect((await memberSocket.next()).payload).toEqual({
       code: 'ROOM_NOT_FOUND',
