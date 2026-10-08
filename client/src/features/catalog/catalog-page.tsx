@@ -1,20 +1,29 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/lib/auth-client'
 import { WS_URL } from '@/env'
 import { useWebSocket } from '@/hooks/use-websocket'
 import { useNotificationEvents } from '@/hooks/use-notification-events'
 import { RoomCard, RoomFilters, useRoomFilters } from '@/features/room-list'
-import { CreateRoomModal } from '@/features/room-creation'
 import { useRoomJoining } from '@/features/room-joining'
 import { Pagination } from '@/components/ui/pagination'
 import { AlertBox } from '@/components/ui/alert-box'
+import { ModalLoading } from '@/components/ui/modal-loading'
+import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
+import { notifyError } from '@/lib/notify'
 import { Plus } from 'lucide-react'
 import type { Game } from '@/types'
 import { EmptyState } from './components/empty-state'
+import { CatalogSkeleton } from './skeleton'
 import { useCatalogData } from './use-catalog-data'
 import { useCatalogEvents } from './use-catalog-events'
 import { usePagination } from './use-pagination'
+
+// Room creation (the form contract, resolvers and dialog primitives) is a
+// non-essential capability: its chunk loads when the user opens the dialog.
+const LazyCreateRoomModal = lazy(() =>
+  import('@/features/room-creation').then((module) => ({ default: module.CreateRoomModal }))
+)
 
 /**
  * The catalog page. It owns the public navigation state (filters, pagination
@@ -90,15 +99,7 @@ export function CatalogPage() {
   }
 
   if (loading) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card h-64 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    )
+    return <CatalogSkeleton />
   }
 
   return (
@@ -194,8 +195,15 @@ export function CatalogPage() {
       )}
 
       {/* Create room modal */}
-      {session?.user && (
-        <CreateRoomModal games={games} open={modalOpen} onOpenChange={setModalOpen} />
+      {session?.user && modalOpen && (
+        <LazyIslandBoundary
+          fallback={null}
+          onError={() => void notifyError(t('errors.DIALOG_LOAD_FAILED'))}
+        >
+          <Suspense fallback={<ModalLoading />}>
+            <LazyCreateRoomModal games={games} open={modalOpen} onOpenChange={setModalOpen} />
+          </Suspense>
+        </LazyIslandBoundary>
       )}
 
       {joining.authPrompt}

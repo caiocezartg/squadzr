@@ -1,13 +1,37 @@
 import { Link } from '@tanstack/react-router'
 import { useSession, signIn, signOut } from '@/lib/auth-client'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Menu } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Bell, Menu } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
-import { NotificationsMenu } from '@/components/layout/notifications-menu'
+import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 import { UserMenu } from '@/components/layout/user-menu'
 import { MobileSidebar } from '@/components/layout/mobile-sidebar'
 import { useTranslation } from 'react-i18next'
 import { LanguageToggle } from '@/components/layout/language-toggle'
+
+// The notifications capability owns polling, the API client and the shared
+// response contracts; only signed-in users need its chunk, so it loads after
+// the header renders instead of padding every first visit.
+const LazyNotificationsMenu = lazy(() =>
+  import('@/components/layout/notifications-menu').then((module) => ({
+    default: module.NotificationsMenu,
+  }))
+)
+
+function NotificationsFallback() {
+  const { t } = useTranslation()
+
+  return (
+    <button
+      type="button"
+      disabled
+      className="relative flex items-center justify-center rounded-lg p-2 text-muted opacity-60"
+      aria-label={t('notifications.bellLabel')}
+    >
+      <Bell className="size-4" />
+    </button>
+  )
+}
 
 export function AppHeader() {
   const { t } = useTranslation()
@@ -97,15 +121,19 @@ export function AppHeader() {
             <LanguageToggle />
             {session?.user ? (
               <>
-                <NotificationsMenu
-                  enabled={!!session?.user}
-                  isOpen={notificationsOpen}
-                  onToggle={() => {
-                    setNotificationsOpen((prev) => !prev)
-                    setMenuOpen(false)
-                  }}
-                  onClose={() => setNotificationsOpen(false)}
-                />
+                <LazyIslandBoundary fallback={<NotificationsFallback />}>
+                  <Suspense fallback={<NotificationsFallback />}>
+                    <LazyNotificationsMenu
+                      enabled={!!session?.user}
+                      isOpen={notificationsOpen}
+                      onToggle={() => {
+                        setNotificationsOpen((prev) => !prev)
+                        setMenuOpen(false)
+                      }}
+                      onClose={() => setNotificationsOpen(false)}
+                    />
+                  </Suspense>
+                </LazyIslandBoundary>
 
                 <UserMenu
                   session={session}

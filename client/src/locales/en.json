@@ -9,7 +9,8 @@
     "signIn": "Sign In",
     "signOut": "Sign Out",
     "createRoom": "Create Squad",
-    "createNewRoom": "Create new squad"
+    "createNewRoom": "Create new squad",
+    "loading": "Loading…"
   },
   "nav": {
     "allRooms": "ALL SQUADS",
@@ -210,6 +211,7 @@
   },
   "notifications": {
     "title": "Notifications",
+    "bellLabel": "Notifications",
     "markAllRead": "Mark all read",
     "empty": "No notifications yet",
     "emptySubtitle": "You'll be notified when your squad is ready",
@@ -241,6 +243,7 @@
     "VALIDATION_ERROR": "Please check the form fields and try again.",
     "UNAUTHORIZED": "You need to sign in to do this.",
     "INTERNAL_ERROR": "Something went wrong. Please try again later.",
+    "DIALOG_LOAD_FAILED": "The dialog failed to load. Please try again.",
     "DEFAULT": "Something went wrong. Please try again."
   }
 }

@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { toast } from 'sonner'
 import type { CatalogCommands } from '@/features/catalog/commands'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
+import { notifyError } from '@/lib/notify'
 import type { PublicRoom } from '@/types'
 
 interface UseRoomMembershipOptions {
@@ -42,7 +42,7 @@ export function useRoomMembership({
       await catalog.refreshRooms()
       await navigate({ to: '/rooms', search: {} })
     } catch (err) {
-      toast.error(getUserFriendlyError(err, 'leave'))
+      void notifyError(getUserFriendlyError(err, 'leave'))
     }
   }, [room, userId, roomCode, notifyRoomLeave, catalog, navigate])
 

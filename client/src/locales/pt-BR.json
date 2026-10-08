@@ -9,7 +9,8 @@
     "signIn": "Entrar",
     "signOut": "Sair",
     "createRoom": "Criar novo squad",
-    "createNewRoom": "Criar novo squad"
+    "createNewRoom": "Criar novo squad",
+    "loading": "Carregando…"
   },
   "nav": {
     "allRooms": "TODOS OS SQUADS",
@@ -210,6 +211,7 @@
   },
   "notifications": {
     "title": "Notificações",
+    "bellLabel": "Notificações",
     "markAllRead": "Marcar todas como lidas",
     "empty": "Nenhuma notificação ainda",
     "emptySubtitle": "Você será notificado quando seu time estiver pronto",
@@ -241,6 +243,7 @@
     "VALIDATION_ERROR": "Por favor, verifique os campos do formulário e tente novamente.",
     "UNAUTHORIZED": "Você precisa fazer login para fazer isso.",
     "INTERNAL_ERROR": "Algo deu errado. Por favor, tente novamente mais tarde.",
+    "DIALOG_LOAD_FAILED": "Não foi possível carregar o diálogo. Tente novamente.",
     "DEFAULT": "Algo deu errado. Por favor, tente novamente."
   }
 }

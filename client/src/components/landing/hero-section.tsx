@@ -1,21 +1,24 @@
+import { lazy, Suspense } from 'react'
 import { Link } from '@tanstack/react-router'
 import { signIn, useSession } from '@/lib/auth-client'
 import * as motion from 'motion/react-client'
 import { Search } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
-import { useGames } from '@/features/games'
+import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 import { useTranslation, Trans } from 'react-i18next'
 import { BackgroundRipple } from './background-ripple'
 import { HeroRoomShowcase } from './hero-room-showcase'
+
+// The badge queries the games API; its chunk (and the shared API runtime)
+// arrives after the hero copy instead of blocking the first paint.
+const LazyHeroGameBadge = lazy(() =>
+  import('./hero-game-badge').then((module) => ({ default: module.HeroGameBadge }))
+)
 
 export function HeroSection() {
   const { t, i18n } = useTranslation()
   const lang = i18n.resolvedLanguage || i18n.language
   const { data: session } = useSession()
-
-  const { games } = useGames()
-
-  const gameCount = games.length
 
   const handleSignIn = () => {
     signIn.social({
@@ -37,12 +40,11 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            {gameCount > 0 && (
-              <span className="inline-flex items-center gap-2 rounded-full bg-accent/5 border border-accent/15 px-4 py-1.5 text-xs font-semibold text-accent mb-2">
-                <span className="size-1.5 rounded-full bg-accent animate-pulse" />
-                {t('hero.badge', { count: gameCount })}
-              </span>
-            )}
+            <LazyIslandBoundary>
+              <Suspense fallback={null}>
+                <LazyHeroGameBadge />
+              </Suspense>
+            </LazyIslandBoundary>
           </motion.div>
 
           <motion.h1

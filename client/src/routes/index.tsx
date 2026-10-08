@@ -1,9 +1,22 @@
+import { lazy, Suspense } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { HeroSection } from '@/components/landing/hero-section'
 import { HowItWorks } from '@/components/landing/how-it-works'
-import { PopularGames } from '@/components/landing/popular-games'
-import { FAQSection } from '@/components/landing/faq-section'
 import { CTABanner } from '@/components/landing/cta-banner'
+import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
+
+// Below-the-fold sections that pull extra runtimes (the games API and the
+// accordion primitives) load after the hero instead of joining the first load.
+const LazyPopularGames = lazy(() =>
+  import('@/components/landing/popular-games').then((module) => ({
+    default: module.PopularGames,
+  }))
+)
+const LazyFAQSection = lazy(() =>
+  import('@/components/landing/faq-section').then((module) => ({
+    default: module.FAQSection,
+  }))
+)
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -13,9 +26,17 @@ function HomePage() {
   return (
     <>
       <HeroSection />
-      <PopularGames />
+      <LazyIslandBoundary>
+        <Suspense fallback={null}>
+          <LazyPopularGames />
+        </Suspense>
+      </LazyIslandBoundary>
       <HowItWorks />
-      <FAQSection />
+      <LazyIslandBoundary>
+        <Suspense fallback={null}>
+          <LazyFAQSection />
+        </Suspense>
+      </LazyIslandBoundary>
       <CTABanner />
 
       {/* Footer for landing page */}
