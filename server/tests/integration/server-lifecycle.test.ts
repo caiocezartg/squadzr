@@ -3,7 +3,8 @@ import { count, sql } from 'drizzle-orm'
 import pg from 'pg'
 import type { WebSocket } from '@fastify/websocket'
 import { games } from '@infrastructure/database/schema'
-import { buildTestServer, type TestServer } from '@test/harness/test-server'
+import { buildApp } from '@/app'
+import { buildTestServer, createTestEnv, type TestServer } from '@test/harness/test-server'
 
 const servers: TestServer[] = []
 
@@ -110,6 +111,54 @@ describe('PostgreSQL 16 harness', () => {
     const server = await startServer()
 
     expect(await countGames(server)).toBe(0)
+  })
+})
+
+describe('health probes', () => {
+  const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+  // Nothing listens on port 1, so the probe's connection is refused at once.
+  const UNREACHABLE_DATABASE_URL = 'postgresql://postgres:postgres@localhost:1/unreachable'
+
+  /** The payload all three probes share: status, ISO instant, process uptime and version. */
+  function healthPayload(status: 'ok' | 'error') {
+    return {
+      status,
+      timestamp: expect.stringMatching(ISO_TIMESTAMP),
+      uptime: expect.any(Number),
+      version: '0.1.0',
+    }
+  }
+
+  it('answers /health with 200 and the ok payload', async () => {
+    const server = await startServer()
+
+    const response = await server.app.inject({ method: 'GET', url: '/health' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(healthPayload('ok'))
+  })
+
+  it('answers /health/ready with 200 and the ok payload while the database answers', async () => {
+    const server = await startServer()
+
+    const response = await server.app.inject({ method: 'GET', url: '/health/ready' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(healthPayload('ok'))
+  })
+
+  it('answers /health/ready with 503 and the error payload when the database is down', async () => {
+    const app = await buildApp({
+      env: createTestEnv({ DATABASE_URL: UNREACHABLE_DATABASE_URL }),
+      logger: false,
+    })
+    await app.ready()
+    servers.push({ app, databaseUrl: UNREACHABLE_DATABASE_URL, close: () => app.close() })
+
+    const response = await app.inject({ method: 'GET', url: '/health/ready' })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual(healthPayload('error'))
   })
 })
 

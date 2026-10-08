@@ -1,8 +1,6 @@
-import { loadDatabaseEnv } from '@config/env'
-import { createDatabase } from '@infrastructure/database/drizzle'
-import { createGameRepository } from '@interface/factories/game.factory'
+import type { IGameRepository } from '@domain/repositories/game.repository'
 
-const GAMES_DATA = [
+export const GAMES_DATA = [
   {
     name: 'Roblox',
     slug: 'roblox',
@@ -138,11 +136,8 @@ const GAMES_DATA = [
   },
 ]
 
-async function seed() {
-  const { DATABASE_URL } = loadDatabaseEnv()
-  const { db, close } = createDatabase(DATABASE_URL)
-  const gameRepository = createGameRepository(db)
-
+/** Upserts the catalog by slug: running it again refreshes the rows instead of duplicating them. */
+export async function seedGames(gameRepository: IGameRepository): Promise<void> {
   console.log('Seeding games...')
 
   for (const game of GAMES_DATA) {
@@ -151,10 +146,4 @@ async function seed() {
   }
 
   console.log('Done seeding games!')
-  await close()
 }
-
-seed().catch((error) => {
-  console.error('Seed failed:', error)
-  process.exit(1)
-})
