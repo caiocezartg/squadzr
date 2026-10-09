@@ -62,7 +62,7 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
       )
   }
 
-  broadcastRoomUpdated(roomId: string, roomCode: string, _memberCount: number): void {
+  broadcastRoomUpdated(roomId: string, roomCode: string): void {
     if (this.stopped) return
     const pending = this.operations
       .run(async () => {

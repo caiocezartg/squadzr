@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyServerOptions } from 'fastify'
 import { inject } from 'vitest'
 import { buildApp } from '@/app'
 import type { Clock } from '@domain/services/clock.interface'
@@ -18,6 +18,11 @@ export interface TestServer {
 export interface BuildTestServerOptions {
   /** Injects a deterministic clock; defaults to the production system clock. */
   clock?: Clock
+  /**
+   * Replaces the production logger for tests that read request logs. Omitted, the
+   * server logs through `defaultLogger(env)`, which stays quiet at the test level.
+   */
+  logger?: FastifyServerOptions['logger']
 }
 
 export function createTestEnv(overrides: Partial<Env> & Pick<Env, 'DATABASE_URL'>): Env {
@@ -46,7 +51,7 @@ export async function buildTestServer(
 
   let app: FastifyInstance | undefined
   try {
-    app = await buildApp({ env, logger: false, clock: options.clock })
+    app = await buildApp({ env, logger: options.logger, clock: options.clock })
     await app.ready()
   } catch (error) {
     await app?.close()
