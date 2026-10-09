@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { isoDateTimeSchema } from './date'
 
-export const roomLanguageSchema = z.enum(['en', 'pt-br'])
+const roomLanguageSchema = z.enum(['en', 'pt-br'])
 
 // Public room projection: what the catalog and guest realtime events may carry.
 // It never holds the Discord invite, the roster, or the internal lifecycle
@@ -87,8 +87,6 @@ export const roomCodeParamSchema = z.object({
     .transform((val) => val.toUpperCase()),
 })
 
-export type RoomCodeParamDto = z.infer<typeof roomCodeParamSchema>
-
 // Room HTTP responses
 export const roomsResponseSchema = z.object({ rooms: z.array(publicRoomSchema) })
 
@@ -117,12 +115,10 @@ export type RoomLobbyResponse = z.infer<typeof roomLobbyResponseSchema>
 // carries a roster or an invite claims to be lobby details, so it is refused
 // here instead of being stripped down to a public room: it has to satisfy
 // `roomLobbyResponseSchema` in full or fail.
-export const publicRoomResponseSchema = z.object({
+const publicRoomResponseSchema = z.object({
   room: publicRoomSchema.extend({ discordLink: z.never().optional() }),
   players: z.never().optional(),
 })
-
-export type PublicRoomResponse = z.infer<typeof publicRoomResponseSchema>
 
 // `GET /api/rooms/:code` answers members with the lobby details and everyone
 // else with the public projection.
@@ -145,5 +141,3 @@ export const leaveRoomResponseSchema = z.object({
   message: z.string(),
   success: z.boolean(),
 })
-
-export type LeaveRoomResponse = z.infer<typeof leaveRoomResponseSchema>

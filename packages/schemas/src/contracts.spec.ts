@@ -1,9 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import {
   describeContractIssues,
-  gameSchema,
   isRoomLobbyResponse,
-  isoDateTimeSchema,
   notificationsResponseSchema,
   publicRoomSchema,
   roomCodeParamSchema,
@@ -13,8 +11,11 @@ import {
   roomSchema,
   roomsResponseSchema,
   userNotificationSchema,
-  userSchema,
 } from './index'
+import { gameSchema } from './game'
+import { isoDateTimeSchema } from './date'
+import { userSchema } from './user'
+import type { UserNotificationPayloadDto } from './notification'
 import type {
   GameDto,
   PublicRoomDto,
@@ -23,7 +24,6 @@ import type {
   RoomsResponse,
   UserDto,
   UserNotificationDto,
-  UserNotificationPayloadDto,
 } from './index'
 
 const ROOM_ID = '3fa85f64-5717-4562-b3fc-2c963f66afa6'

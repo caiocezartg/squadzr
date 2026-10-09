@@ -10,7 +10,6 @@ export type {
   RoomsResponse,
   RoomResponse,
   GamesResponse,
-  GameResponse,
   CreateRoomResponse,
   NotificationsResponse,
   MyRoomsResponse,

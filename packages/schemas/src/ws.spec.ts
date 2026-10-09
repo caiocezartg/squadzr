@@ -59,11 +59,6 @@ const serverMessages = [
   },
   { type: 'presence_updated', payload: { roomCode: 'ABC123', playerId: player.id, online: false } },
   { type: 'room_removed', payload: { roomId: ROOM_ID, roomCode: 'ABC123' } },
-  { type: 'room_joined', payload: { roomId: ROOM_ID, roomCode: 'ABC123', players: [player] } },
-  { type: 'player_joined', payload: { player } },
-  { type: 'player_left', payload: { playerId: 'user-1' } },
-  { type: 'viewer_left', payload: { playerId: 'user-1', roomCode: 'ABC123' } },
-  { type: 'room_ready', payload: { roomId: ROOM_ID, roomCode: 'ABC123', message: 'Ready' } },
   { type: 'error', payload: { code: 'ROOM_NOT_FOUND', message: 'Room not found' } },
   { type: 'pong' },
   { type: 'lobby_subscribed', payload: { message: 'Subscribed' } },
@@ -88,7 +83,7 @@ describe('wsIncomingMessageSchema', () => {
   })
 
   it.each([
-    ['a server-only type', { type: 'room_joined', payload: {} }],
+    ['a retired server type', { type: 'room_joined', payload: {} }],
     ['an unknown type', { type: 'game_start' }],
     ['a missing payload', { type: 'join_room' }],
     ['a room code with the wrong length', { type: 'join_room', payload: { roomCode: 'ABC' } }],
@@ -110,17 +105,29 @@ describe('wsServerMessageSchema', () => {
     ['a client-only type', { type: 'join_room', payload: { roomCode: 'ABC123' } }],
     ['an unknown type', { type: 'presence_changed', payload: {} }],
     ['a payload that breaks its event contract', { type: 'room_updated', payload: { n: 1 } }],
-    ['a roster entry without a name', { type: 'player_joined', payload: { player: { id: 'u' } } }],
+    [
+      'a roster entry without a name',
+      {
+        type: 'room_snapshot',
+        payload: {
+          room: { ...publicRoom, discordLink: INVITE },
+          players: [{ id: 'u' }],
+          readyAt: null,
+          expiresAt: publicRoom.updatedAt,
+          presence: [],
+        },
+      },
+    ],
   ])('rejects %s', (_label, message) => {
     expect(wsServerMessageSchema.safeParse({ ...message, timestamp: 0 }).success).toBe(false)
   })
 
   it('discriminates the payload type by message type', () => {
     type Created = Extract<WsServerMessage, { type: 'room_created' }>
-    type Joined = Extract<WsServerMessage, { type: 'room_joined' }>
+    type Snapshot = Extract<WsServerMessage, { type: 'room_snapshot' }>
 
     expectTypeOf<Created['payload']['room']>().toEqualTypeOf<PublicRoomDto>()
-    expectTypeOf<Joined['payload']['players']>().toEqualTypeOf<PlayerDto[]>()
+    expectTypeOf<Snapshot['payload']['players']>().toEqualTypeOf<PlayerDto[]>()
     expectTypeOf<WsServerEventPayload<'room_created'>>().toEqualTypeOf<Created['payload']>()
   })
 })

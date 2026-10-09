@@ -56,7 +56,7 @@ function paddedJsonFrame(bytes: number): string {
 describe('invalid messages', () => {
   it.each([
     ['an unknown type', { type: 'game_start' }],
-    ['a server-only type', { type: 'room_joined', payload: {} }],
+    ['a retired server type', { type: 'room_joined', payload: {} }],
     ['a missing payload', { type: 'join_room' }],
     ['a room code with the wrong length', { type: 'join_room', payload: { roomCode: 'ABC' } }],
     ['a JSON value that is not an object', 42],
