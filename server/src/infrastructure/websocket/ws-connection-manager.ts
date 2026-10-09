@@ -23,6 +23,10 @@ export class WsConnectionManager {
     return this.sockets.size
   }
 
+  get roomCount(): number {
+    return this.rooms.size
+  }
+
   isConnected(socket: WebSocket): boolean {
     return this.sockets.has(socket)
   }
@@ -110,38 +114,6 @@ export class WsConnectionManager {
 
   getLobbySockets(): ReadonlySet<WebSocket> {
     return this.lobbySubscribers
-  }
-
-  broadcastToRoom(roomCode: string, message: WsServerMessage, excludeSocket?: WebSocket): void {
-    const roomSockets = this.rooms.get(roomCode)
-    if (!roomSockets) return
-
-    for (const socket of roomSockets) {
-      if (socket !== excludeSocket) {
-        this.sendToSocket(socket, message)
-      }
-    }
-  }
-
-  broadcastToLobby(message: WsServerMessage): void {
-    for (const socket of this.lobbySubscribers) {
-      this.sendToSocket(socket, message)
-    }
-  }
-
-  broadcastToRoomAndLobby(roomCode: string, message: WsServerMessage): void {
-    this.broadcastToLobby(message)
-    this.broadcastToRoom(roomCode, message)
-  }
-
-  /** Best-effort push to every open socket of one authenticated user. */
-  broadcastToUser(userId: string, message: WsServerMessage): void {
-    const sockets = this.userSockets.get(userId)
-    if (!sockets) return
-
-    for (const socket of sockets) {
-      this.sendToSocket(socket, message)
-    }
   }
 
   sendToSocket(socket: WebSocket, message: WsServerMessage): void {

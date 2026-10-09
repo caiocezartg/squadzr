@@ -17,13 +17,9 @@ export type GameDto = z.infer<typeof gameSchema>
 
 export const gameIdParamSchema = z.object({ id: z.string().uuid() })
 
-export type GameIdParamDto = z.infer<typeof gameIdParamSchema>
-
 // Game HTTP responses
 export const gamesResponseSchema = z.object({ games: z.array(gameSchema) })
 
 export type GamesResponse = z.infer<typeof gamesResponseSchema>
 
 export const gameResponseSchema = z.object({ game: gameSchema })
-
-export type GameResponse = z.infer<typeof gameResponseSchema>

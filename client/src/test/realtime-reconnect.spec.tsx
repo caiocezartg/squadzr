@@ -244,7 +244,7 @@ describe('room channel subscription', () => {
     await act(() => router.navigate({ to: '/rooms', search: {} }))
     await screen.findByText(openRoom.name)
 
-    // Leaving the route affects Presence only (server emits viewer_left on close).
+    // Leaving the route affects Presence only (server emits presence_updated on close).
     expect(lobbySocket.readyState).toBe(MockWebSocket.CLOSED)
     expect(frameTypes(lobbySocket)).toEqual(['join_room'])
     expect(latestWebSocket()).not.toBe(lobbySocket)

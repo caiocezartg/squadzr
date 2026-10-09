@@ -3,4 +3,4 @@ export {
   createRoomInputSchema as createRoomRequestSchema,
   roomCodeParamSchema,
 } from '@squadzr/schemas'
-export type { CreateRoomInput as CreateRoomRequestDto, RoomCodeParamDto } from '@squadzr/schemas'
+export type { CreateRoomInput as CreateRoomRequestDto } from '@squadzr/schemas'

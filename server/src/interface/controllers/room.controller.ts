@@ -111,7 +111,7 @@ export class RoomController {
     )
 
     // After commit: the catalog hint reflects the durable Membership change.
-    this.deps.broadcaster.broadcastRoomUpdated(room.id, room.code, result.memberCount)
+    this.deps.broadcaster.broadcastRoomUpdated(room.id, room.code)
 
     if (result.isRoomNowFull) {
       request.server.log.info(
@@ -178,7 +178,7 @@ export class RoomController {
         { roomId: room.id, roomCode: room.code, userId, memberCount: result.memberCount },
         'Room left'
       )
-      this.deps.broadcaster.broadcastRoomUpdated(room.id, room.code, result.memberCount)
+      this.deps.broadcaster.broadcastRoomUpdated(room.id, room.code)
     }
 
     await reply.send({

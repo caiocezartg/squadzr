@@ -14,7 +14,7 @@ interface UseAutoJoinOptions {
  */
 export function useAutoJoin({ session, mutate }: UseAutoJoinOptions): void {
   const searchParams = useSearch({ from: '/rooms/' })
-  const navigate = useNavigate({ from: '/rooms/' })
+  const navigate = useNavigate()
   const autoJoinCodeRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -27,7 +27,10 @@ export function useAutoJoin({ session, mutate }: UseAutoJoinOptions): void {
     autoJoinCodeRef.current = joinCode
     mutate(joinCode, {
       onSettled: () => {
+        // A successful join has already moved the router to the lobby, so the
+        // catalog route is no longer matched: navigate to it by absolute path.
         navigate({
+          to: '/rooms',
           search: (prev) => {
             const { join: _join, ...rest } = prev
             return rest

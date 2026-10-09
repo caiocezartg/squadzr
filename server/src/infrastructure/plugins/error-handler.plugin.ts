@@ -2,14 +2,8 @@ import type { FastifyInstance, FastifyError, FastifyRequest } from 'fastify'
 import fp from 'fastify-plugin'
 import { ResponseSerializationError } from 'fastify-type-provider-zod'
 import { ZodError } from 'zod'
-import { describeContractIssues } from '@squadzr/schemas'
+import { describeContractIssues, type ErrorResponse } from '@squadzr/schemas'
 import { AppError } from '@application/errors'
-
-interface ErrorResponse {
-  error: string
-  message: string
-  details?: unknown
-}
 
 interface ParsedError {
   statusCode: number

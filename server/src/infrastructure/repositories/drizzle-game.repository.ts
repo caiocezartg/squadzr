@@ -26,34 +26,9 @@ export class DrizzleGameRepository implements IGameRepository {
     return row ? mapRowToEntity(row) : null
   }
 
-  async findBySlug(slug: string): Promise<Game | null> {
-    const result = await this.db.select().from(games).where(eq(games.slug, slug)).limit(1)
-    const row = result[0]
-    return row ? mapRowToEntity(row) : null
-  }
-
   async findAll(): Promise<Game[]> {
     const result = await this.db.select().from(games)
     return result.map(mapRowToEntity)
-  }
-
-  async create(input: CreateGameInput): Promise<Game> {
-    const result = await this.db
-      .insert(games)
-      .values({
-        name: input.name,
-        slug: input.slug,
-        coverUrl: input.coverUrl,
-        minPlayers: input.minPlayers,
-        maxPlayers: input.maxPlayers,
-      })
-      .returning()
-
-    const row = result[0]
-    if (!row) {
-      throw new Error('Failed to create game')
-    }
-    return mapRowToEntity(row)
   }
 
   async upsertBySlug(input: CreateGameInput): Promise<Game> {

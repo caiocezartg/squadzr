@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createRoomInputSchema, userNotificationPayloadSchema } from './index'
+import { createRoomInputSchema } from './index'
+import { userNotificationPayloadSchema } from './notification'
 
 describe('createRoomInputSchema', () => {
   it('accepts a valid payload and applies defaults', () => {

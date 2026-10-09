@@ -14,5 +14,3 @@ export const userSchema = z.object({
 export type UserDto = z.infer<typeof userSchema>
 
 export const userResponseSchema = z.object({ user: userSchema })
-
-export type UserResponse = z.infer<typeof userResponseSchema>

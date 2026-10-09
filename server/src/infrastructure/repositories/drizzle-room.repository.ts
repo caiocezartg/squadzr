@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto'
 import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
-import type { CreateRoomInput, Room, UpdateRoomInput } from '@domain/entities/room.entity'
+import type { CreateRoomInput, Room } from '@domain/entities/room.entity'
 import type { CreateRoomOutcome, IRoomRepository } from '@domain/repositories/room.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import type { Database } from '@infrastructure/database/drizzle'
@@ -72,12 +72,6 @@ export class DrizzleRoomRepository implements IRoomRepository {
     private readonly clock: Clock
   ) {}
 
-  async findById(id: string): Promise<Room | null> {
-    const result = await this.db.select().from(rooms).where(eq(rooms.id, id)).limit(1)
-    const row = result[0]
-    return row ? mapRoomRowToEntity(row) : null
-  }
-
   async findByCode(code: string): Promise<Room | null> {
     const result = await this.db.select().from(rooms).where(eq(rooms.code, code)).limit(1)
     const row = result[0]
@@ -90,16 +84,6 @@ export class DrizzleRoomRepository implements IRoomRepository {
       .select()
       .from(rooms)
       .where(inArray(rooms.id, [...ids]))
-    return result.map(mapRoomRowToEntity)
-  }
-
-  async findByHostId(hostId: string): Promise<Room[]> {
-    const result = await this.db.select().from(rooms).where(eq(rooms.hostId, hostId))
-    return result.map(mapRoomRowToEntity)
-  }
-
-  async findAll(): Promise<Room[]> {
-    const result = await this.db.select().from(rooms)
     return result.map(mapRoomRowToEntity)
   }
 
@@ -243,49 +227,6 @@ export class DrizzleRoomRepository implements IRoomRepository {
       }
     }
     throw new Error('Failed to generate a unique room code after 5 attempts')
-  }
-
-  async update(id: string, input: UpdateRoomInput, now: Date): Promise<Room | null> {
-    const updateData: Partial<{
-      name: string
-      maxPlayers: number
-      discordLink: string
-      tags: string[]
-      language: string
-      readyAt: Date
-      updatedAt: Date
-    }> = {
-      updatedAt: now,
-    }
-
-    if (input.name !== undefined) {
-      updateData.name = input.name
-    }
-    if (input.maxPlayers !== undefined) {
-      updateData.maxPlayers = input.maxPlayers
-    }
-    if (input.discordLink !== undefined) {
-      updateData.discordLink = input.discordLink
-    }
-    if (input.tags !== undefined) {
-      updateData.tags = input.tags
-    }
-    if (input.language !== undefined) {
-      updateData.language = input.language
-    }
-    if (input.readyAt !== undefined) {
-      updateData.readyAt = input.readyAt
-    }
-
-    const result = await this.db.update(rooms).set(updateData).where(eq(rooms.id, id)).returning()
-
-    const row = result[0]
-    return row ? mapRoomRowToEntity(row) : null
-  }
-
-  async delete(id: string): Promise<boolean> {
-    const result = await this.db.delete(rooms).where(eq(rooms.id, id)).returning({ id: rooms.id })
-    return result.length > 0
   }
 
   async deleteExpired(id: string, now: Date): Promise<boolean> {

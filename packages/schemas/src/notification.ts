@@ -4,8 +4,6 @@ import { isoDateTimeSchema } from './date'
 // User notification schema
 export const userNotificationTypeSchema = z.enum(['room_ready'])
 
-export type UserNotificationTypeDto = z.infer<typeof userNotificationTypeSchema>
-
 export const userNotificationPayloadSchema = z.object({
   roomId: z.uuid(),
   roomCode: z.string().length(6),
@@ -34,13 +32,9 @@ export const notificationIdParamSchema = z.object({
   id: z.uuid(),
 })
 
-export type NotificationIdParamDto = z.infer<typeof notificationIdParamSchema>
-
 export const listNotificationsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional(),
 })
-
-export type ListNotificationsQueryDto = z.infer<typeof listNotificationsQuerySchema>
 
 // Notification HTTP responses
 export const notificationsResponseSchema = z.object({
@@ -52,11 +46,7 @@ export type NotificationsResponse = z.infer<typeof notificationsResponseSchema>
 // Mark-as-read and delete answer with the same shape.
 export const notificationChangeResponseSchema = z.object({ success: z.boolean() })
 
-export type NotificationChangeResponse = z.infer<typeof notificationChangeResponseSchema>
-
 export const readAllNotificationsResponseSchema = z.object({
   success: z.boolean(),
   count: z.number(),
 })
-
-export type ReadAllNotificationsResponse = z.infer<typeof readAllNotificationsResponseSchema>
