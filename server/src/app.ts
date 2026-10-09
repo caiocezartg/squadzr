@@ -29,7 +29,7 @@ declare module 'fastify' {
 
 export interface BuildAppOptions {
   env: Env
-  /** Overrides the environment-derived logger (tests pass `false`). */
+  /** Overrides the environment-derived logger (log-capture tests pass their own). */
   logger?: FastifyServerOptions['logger']
   /** Overrides the system clock; tests inject a fixed clock for exact instants. */
   clock?: Clock
@@ -51,15 +51,24 @@ function serializeRequestUrl(req: FastifyRequest): {
   [key: string]: unknown
 } {
   const params = req.url.indexOf('?')
+  // A socket-less request (the in-memory `injectWS` upgrade) has no peer address:
+  // `req.ip` throws without a socket, and `req.host` reads `req.ip` under trustProxy.
+  const socket = req.socket
   return {
     method: req.method,
     url: params === -1 ? req.url : req.url.slice(0, params),
     version: req.headers['accept-version'] as string | undefined,
-    host: req.host,
-    remoteAddress: req.ip,
-    remotePort: req.socket ? req.socket.remotePort : undefined,
+    host: socket ? req.host : undefined,
+    remoteAddress: socket ? req.ip : undefined,
+    remotePort: socket ? socket.remotePort : undefined,
   }
 }
+
+/**
+ * Fastify merges these over its default serializers (pino-http style). Log-capture
+ * test servers reuse them, so their request logs go through the production serializer.
+ */
+export const requestLogSerializers = { req: serializeRequestUrl }
 
 /** Options of the environment-derived server logger, as consumed by Fastify. */
 export function defaultLogger(env: Env): FastifyLoggerOptions {
@@ -71,8 +80,7 @@ export function defaultLogger(env: Env): FastifyLoggerOptions {
         options: { colorize: true },
       },
     }),
-    // Fastify merges these over its default serializers (pino-http style).
-    serializers: { req: serializeRequestUrl },
+    serializers: requestLogSerializers,
   }
 }
 

@@ -17,6 +17,7 @@ import {
 declare module 'fastify' {
   interface FastifyInstance {
     broadcaster: IRoomBroadcaster
+    realtime: Realtime
   }
 }
 
@@ -28,6 +29,7 @@ async function wsPlugin(
 ): Promise<void> {
   const { manager, heartbeat, operations, presence, broadcaster, snapshots } = realtime
   fastify.decorate('broadcaster', broadcaster)
+  fastify.decorate('realtime', realtime)
 
   const maintenance = setInterval(() => {
     void realtime
