@@ -27,12 +27,3 @@ export interface CreateRoomInput {
   readonly tags?: string[]
   readonly language?: 'en' | 'pt-br'
 }
-
-export interface UpdateRoomInput {
-  readonly name?: string
-  readonly maxPlayers?: number
-  readonly discordLink?: string
-  readonly tags?: string[]
-  readonly language?: 'en' | 'pt-br'
-  readonly readyAt?: Date
-}

@@ -23,19 +23,7 @@ export type MockGameRepository = {
 export function createMockGameRepository(): MockGameRepository {
   return {
     findById: vi.fn<(id: string) => Promise<Game | null>>().mockResolvedValue(null),
-    findBySlug: vi.fn<(slug: string) => Promise<Game | null>>().mockResolvedValue(null),
     findAll: vi.fn<() => Promise<Game[]>>().mockResolvedValue([]),
-    create: vi.fn<(input: CreateGameInput) => Promise<Game>>().mockImplementation((input) =>
-      Promise.resolve(
-        createMockGame({
-          name: input.name,
-          slug: input.slug,
-          coverUrl: input.coverUrl,
-          minPlayers: input.minPlayers,
-          maxPlayers: input.maxPlayers,
-        })
-      )
-    ),
     upsertBySlug: vi.fn<(input: CreateGameInput) => Promise<Game>>().mockImplementation((input) =>
       Promise.resolve(
         createMockGame({

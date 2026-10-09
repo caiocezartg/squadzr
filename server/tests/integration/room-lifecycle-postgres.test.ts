@@ -1,11 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { sql, type SQL } from 'drizzle-orm'
+import { eq, sql, type SQL } from 'drizzle-orm'
 import { DeleteExpiredRoomsUseCase } from '@application/use-cases/room/delete-expired-rooms.use-case'
 import { buildRoomReadyNotifications } from '@application/use-cases/room/room-ready-notifications'
 import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
 import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzle-room-member.repository'
-import { DrizzleUserNotificationRepository } from '@infrastructure/repositories/drizzle-user-notification.repository'
-import { userNotifications } from '@infrastructure/database/schema'
+import { rooms, userNotifications } from '@infrastructure/database/schema'
 import { ROOM } from '@config/constants'
 import { signIn, signInMany, type TestUser } from '@test/harness/auth'
 import { FakeClock, TickingClock } from '@test/harness/clock'
@@ -465,8 +464,7 @@ describe('join and leave transactions', () => {
   it('retries keep one logical notification per member', async () => {
     const [member] = await signInMany(server, 1)
     const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
-    const notificationRepository = new DrizzleUserNotificationRepository(server.app.db)
-    await notificationRepository.create({
+    await server.app.db.insert(userNotifications).values({
       userId: host.id,
       roomId: room.id,
       type: 'room_ready',
@@ -655,14 +653,15 @@ describe('user_notifications idempotency key', () => {
   })
 
   it('rejects a second insert with the same (room_id, user_id, type)', async () => {
-    const repository = new DrizzleUserNotificationRepository(server.app.db)
     const room = await createRoom(server, host, { gameId })
     const input = notificationInput(room.id, host.id)
 
-    const created = await repository.create(input)
+    const [created] = await server.app.db.insert(userNotifications).values(input).returning()
 
     expect(created).toMatchObject({ roomId: room.id, type: 'room_ready' })
-    await expect(repository.create(input)).rejects.toMatchObject({ code: '23505' })
+    await expect(server.app.db.insert(userNotifications).values(input)).rejects.toMatchObject({
+      code: '23505',
+    })
     expect(
       await countRows(
         sql`SELECT count(*)::int AS total FROM user_notifications WHERE room_id = ${room.id}`
@@ -685,12 +684,10 @@ describe('user_notifications idempotency key', () => {
   })
 
   it('preserves the notification history after the room is deleted', async () => {
-    const repository = new DrizzleUserNotificationRepository(server.app.db)
-    const roomRepository = new DrizzleRoomRepository(server.app.db, server.app.clock)
     const room = await createRoom(server, host, { gameId })
-    await repository.create(notificationInput(room.id, host.id))
+    await server.app.db.insert(userNotifications).values(notificationInput(room.id, host.id))
 
-    await roomRepository.delete(room.id)
+    await server.app.db.delete(rooms).where(eq(rooms.id, room.id))
 
     const remaining = await server.app.db.execute<{ room_id: string }>(
       sql`SELECT room_id FROM user_notifications WHERE room_id = ${room.id}`
