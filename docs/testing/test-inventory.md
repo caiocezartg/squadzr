@@ -23,12 +23,15 @@ inventory (see the equivalence proof below).
 
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
-| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 10 | 39 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 1 | 6 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}` | 1 | 3 |
-| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 1 | 6 |
-| `@squadzr/types` | `types:unit` | `node` | `src/**/*.spec.ts` | 1 | 2 |
+| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 22 | 97 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 16 | 202 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}` | 24 | 186 |
+| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 3 | 74 |
+| `@squadzr/types` | `types:unit` | `node` | `src/**/*.spec.ts` | 1 | 1 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
+
+Suites are test files. The counts above are the current inventory, recounted on 2026-10-08 after
+CCC-58; the CCC-28 numbers are kept as a historical record in the equivalence proof below.
 
 `@squadzr/typescript-config` ships only shared TypeScript configuration files, so no test project is
 expected there. Every other workspace must keep at least one test file: the configs deliberately do
@@ -44,8 +47,9 @@ with its project entry.
 Project names carry the suite kind after the `:` separator. Unit projects (`*:unit`) run against
 mock/in-memory dependencies:
 
-- `server:unit` — 39 historical use-case tests across 10 specs (also the historical baseline
-  recorded for this monorepo, retained under Vitest with identical assertions and test names).
+- `server:unit` — 97 tests across 22 spec files as of 2026-10-08. CCC-58 removed the
+  `create-user` (2 tests) and `update-user` (3 tests) specs together with their use cases. The
+  CCC-28 baseline of 39 tests across 10 specs is historical; see the equivalence proof below.
 - `client:unit` — runs in jsdom; the environment is proven by an assertion on `document`, which
   fails under a Node environment.
 - `schemas:unit` — runtime contract tests for the shared Zod schemas.
@@ -113,9 +117,29 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
   collecting tests. The script was removed instead of being restored with a new dependency;
   introducing coverage tooling is a deliberate follow-up decision, not an accidental default.
 
-## Equivalence proof (CCC-28)
+## Equivalence proof (CCC-28, CCC-58)
 
-Recorded on 2026-09-25 (review round), Bun 1.3.8, Vitest 2.1.9, Windows:
+### Current counts (recounted 2026-10-08, CCC-58)
+
+| Command | Test files | Tests |
+| --- | --- | --- |
+| `bun run test` (root, all projects; sum of the four unit projects) | 50 | 358 |
+| `bunx vitest run` (direct root composition) | 50 | 358 |
+| `bunx turbo test --filter=server` | 22 | 97 |
+| `bunx turbo test --filter=client` | 24 | 186 |
+| `bunx turbo test --filter=@squadzr/schemas` | 3 | 74 |
+| `bunx turbo test --filter=@squadzr/types` | 1 | 1 |
+
+The direct root composition matches the Turbo run, and the focused runs match the per-workspace
+numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
+specs together with their use cases, so the server unit suite has 5 fewer tests than before that
+change. It added and removed no integration tests: `bun run test:integration` in `server/` runs
+16 files / 202 tests.
+
+### Historical record (CCC-28, 2026-09-25)
+
+The table below is the CCC-28 measurement, kept for traceability; it is not the current
+inventory. Recorded on 2026-09-25 (review round), Bun 1.3.8, Vitest 2.1.9, Windows:
 
 | Command | Test files | Tests |
 | --- | --- | --- |
@@ -126,14 +150,15 @@ Recorded on 2026-09-25 (review round), Bun 1.3.8, Vitest 2.1.9, Windows:
 | `bunx turbo test --filter=@squadzr/schemas` | 1 | 6 |
 | `bunx turbo test --filter=@squadzr/types` | 1 | 2 |
 
-The direct root composition matches the Turbo run, the focused runs match the per-workspace
-numbers of the root run, and the server suite preserves the historical baseline of 39 tests /
-10 suites with unchanged test names. Per-suite server counts: create-room 8, join-room 9,
-leave-room 4, delete-expired-rooms 4, get-available-rooms 3, get-my-rooms 2, get-room-by-code 2,
-create-user 2, get-user 2, update-user 3.
+At that time the direct root composition matched the Turbo run, the focused runs matched the
+per-workspace numbers of the root run, and the server suite had 39 tests / 10 suites with
+unchanged test names. Per-suite server counts then: create-room 8, join-room 9, leave-room 4,
+delete-expired-rooms 4, get-available-rooms 3, get-my-rooms 2, get-room-by-code 2, create-user 2,
+get-user 2, update-user 3 (the create-user and update-user specs were removed by CCC-58).
 
 To re-verify after changes: run `bun run test`, `bunx vitest run`, and each
-`bunx turbo test --filter=<workspace>` above, then compare the `Test Files` / `Tests` summaries.
+`bunx turbo test --filter=<workspace>` above, then compare the `Test Files` / `Tests` summaries
+with the current counts table.
 `bun run test:watch` runs the same composition in watch mode; in non-interactive terminals
 (piped output) it executes the suite once, which is how the script is verified. Server project
 membership is visible in verbose output: `bun run test --reporter=verbose` inside `server` tags

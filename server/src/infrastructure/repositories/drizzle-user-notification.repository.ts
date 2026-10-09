@@ -72,20 +72,6 @@ export class DrizzleUserNotificationRepository implements IUserNotificationRepos
     return result.map(mapUserNotificationRow)
   }
 
-  async create(input: CreateUserNotificationInput): Promise<UserNotification> {
-    const result = await this.db
-      .insert(userNotifications)
-      .values(notificationInputToRow(input))
-      .returning()
-
-    const row = result[0]
-    if (!row) {
-      throw new Error('Failed to create user notification')
-    }
-
-    return mapUserNotificationRow(row)
-  }
-
   async markAsRead(id: string, userId: string): Promise<boolean> {
     const result = await this.db
       .update(userNotifications)

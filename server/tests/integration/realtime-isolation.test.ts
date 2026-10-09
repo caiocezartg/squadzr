@@ -195,9 +195,9 @@ describe('realtime isolation under subscription load', () => {
       return read(code)
     })
     try {
-      broadcaster.broadcastRoomUpdated(room.id, room.code, 1)
+      broadcaster.broadcastRoomUpdated(room.id, room.code)
       await started.promise
-      broadcaster.broadcastRoomUpdated(otherRoom.id, otherRoom.code, 1)
+      broadcaster.broadcastRoomUpdated(otherRoom.id, otherRoom.code)
       const snapshot = roomSnapshotMessageSchema.parse(await withinBound(peer.next()))
       expect(snapshot.payload.room.code).toBe(otherRoom.code)
       expect(await withinBound(peer.next())).toMatchObject({
@@ -362,7 +362,7 @@ describe('realtime isolation under subscription load', () => {
       return stale
     })
     try {
-      broadcaster.broadcastRoomUpdated(room.id, room.code, 1)
+      broadcaster.broadcastRoomUpdated(room.id, room.code)
       await started.promise
       await joinAll(server, room.code, [member])
       const newcomer = await open(member)
@@ -395,7 +395,7 @@ describe('realtime isolation under subscription load', () => {
     const pending = broadcaster['operations'].run(() => gate.promise, channel.server, room.code)
     try {
       broadcaster.broadcastRoomCreated(snapshot.room)
-      broadcaster.broadcastRoomUpdated(room.id, room.code, 1)
+      broadcaster.broadcastRoomUpdated(room.id, room.code)
       expect((await withinBound(channel.next())).type).toBe('room_created')
       expect((await withinBound(channel.next())).type).toBe('room_snapshot')
       expect((await withinBound(channel.next())).type).toBe('room_updated')

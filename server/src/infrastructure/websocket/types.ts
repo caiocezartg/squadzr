@@ -20,6 +20,16 @@ export interface WsClient {
   send: (message: WsServerMessage) => void
 }
 
+/** Read-only view of live connection state, for diagnostics and tests. */
+export interface ConnectionInspection {
+  /** Sockets subscribed to the room list (the lobby channel). */
+  catalogSubscribers: () => number
+  /** Sockets joined to one room's live channel. */
+  roomSockets: (roomCode: string) => number
+  /** Rooms that have at least one joined socket. */
+  trackedRooms: () => number
+}
+
 export interface Realtime {
   manager: WsConnectionManager
   snapshots: IGetRealtimeSnapshotUseCase
@@ -27,7 +37,10 @@ export interface Realtime {
   broadcaster: WsRoomBroadcaster
   heartbeat: Heartbeat
   operations: OrderedOperations
+  inspect: ConnectionInspection
   disconnect: (socket: WebSocket) => void
+  /** Resolves once every queued realtime operation has settled. */
+  drain: () => Promise<void>
   sweep: () => Promise<void>
   shutdown: () => Promise<void>
   isStopped: () => boolean

@@ -1,4 +1,4 @@
-import type { CreateRoomInput, Room, UpdateRoomInput } from '@domain/entities/room.entity'
+import type { CreateRoomInput, Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 
 /** Room and its host Membership, created together in one transaction. */
@@ -12,11 +12,8 @@ export type CreateRoomOutcome =
   | { readonly status: 'limit_reached' }
 
 export interface IRoomRepository {
-  findById(id: string): Promise<Room | null>
   findByCode(code: string): Promise<Room | null>
   findByIds(ids: readonly string[]): Promise<Room[]>
-  findByHostId(hostId: string): Promise<Room[]>
-  findAll(): Promise<Room[]>
   /** Open Rooms whose Room Activity is still inside the 24h window, with memberCount. */
   findAvailable(now: Date): Promise<Room[]>
   /** Open Rooms inside the activity window plus Ready Rooms inside their 60min retention. */
@@ -37,6 +34,4 @@ export interface IRoomRepository {
   findExpiredRooms(now: Date): Promise<Room[]>
   /** Deletes the room only if it is still expired at `now`; memberships cascade. */
   deleteExpired(id: string, now: Date): Promise<boolean>
-  update(id: string, input: UpdateRoomInput, now: Date): Promise<Room | null>
-  delete(id: string): Promise<boolean>
 }

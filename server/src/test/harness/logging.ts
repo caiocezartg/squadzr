@@ -1,20 +1,5 @@
-import type { FastifyLoggerOptions, FastifyRequest } from 'fastify'
-
-/**
- * Request serializer for log-capture test servers. `injectWS` dispatches the
- * WebSocket upgrade through Fastify's router with a socket-less raw request;
- * Fastify's default serializer (and the production `serializeRequestUrl`, via
- * `req.ip`) throws on it, which aborts the upgrade inside @fastify/websocket's
- * `onUpgrade` catch. Real `listen()` connections always carry a socket, so this
- * tolerant variant exists only for the in-memory test transport.
- */
-export function tolerantRequestSerializer(req: FastifyRequest): Record<string, unknown> {
-  return {
-    method: req.method,
-    url: req.url,
-    remoteAddress: req.socket ? req.ip : undefined,
-  }
-}
+import type { FastifyLoggerOptions } from 'fastify'
+import { requestLogSerializers } from '@/app'
 
 export interface LogCapture {
   /** Raw JSON log lines, in emission order. */
@@ -22,7 +7,10 @@ export interface LogCapture {
   readonly logger: FastifyLoggerOptions
 }
 
-/** In-memory info-level logger that keeps Fastify's request logs and our own. */
+/**
+ * In-memory info-level logger that keeps Fastify's request logs and our own, with
+ * the production request serializer.
+ */
 export function createLogCapture(level = 'info'): LogCapture {
   const lines: string[] = []
   return {
@@ -30,7 +18,7 @@ export function createLogCapture(level = 'info'): LogCapture {
     logger: {
       level,
       stream: { write: (line: string) => void lines.push(line) },
-      serializers: { req: tolerantRequestSerializer },
+      serializers: requestLogSerializers,
     },
   }
 }
