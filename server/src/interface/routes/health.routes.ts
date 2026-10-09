@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
-import { HealthController } from '@interface/controllers/health.controller'
+import { HealthController, type HealthResponse } from '@interface/controllers/health.controller'
 
-const healthResponse = z.object({
+// Typed against the controller's HealthResponse, so the wire schema cannot drift from the payload.
+const healthResponse: z.ZodType<HealthResponse> = z.object({
   status: z.enum(['ok', 'error']),
   timestamp: z.string(),
   uptime: z.number(),

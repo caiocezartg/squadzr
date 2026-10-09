@@ -1,11 +1,6 @@
-import { drizzle } from 'drizzle-orm/node-postgres'
-import pg from 'pg'
-import { loadEnv } from '@config/env'
-import { games } from '../schema/games'
+import type { IGameRepository } from '@domain/repositories/game.repository'
 
-const { Pool } = pg
-
-const GAMES_DATA = [
+export const GAMES_DATA = [
   {
     name: 'Roblox',
     slug: 'roblox',
@@ -141,35 +136,14 @@ const GAMES_DATA = [
   },
 ]
 
-async function seed() {
-  const env = loadEnv()
-  const pool = new Pool({ connectionString: env.DATABASE_URL })
-  const db = drizzle(pool)
-
+/** Upserts the catalog by slug: running it again refreshes the rows instead of duplicating them. */
+export async function seedGames(gameRepository: IGameRepository): Promise<void> {
   console.log('Seeding games...')
 
   for (const game of GAMES_DATA) {
-    await db
-      .insert(games)
-      .values(game)
-      .onConflictDoUpdate({
-        target: games.slug,
-        set: {
-          name: game.name,
-          coverUrl: game.coverUrl,
-          minPlayers: game.minPlayers,
-          maxPlayers: game.maxPlayers,
-          updatedAt: new Date(),
-        },
-      })
+    await gameRepository.upsertBySlug(game)
     console.log(`  ✓ ${game.name}`)
   }
 
   console.log('Done seeding games!')
-  await pool.end()
 }
-
-seed().catch((error) => {
-  console.error('Seed failed:', error)
-  process.exit(1)
-})

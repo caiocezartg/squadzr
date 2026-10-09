@@ -19,6 +19,11 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>
 
+/** The database connection alone, for scripts that never read auth or Discord settings. */
+const databaseEnvSchema = envSchema.pick({ DATABASE_URL: true })
+
+export type DatabaseEnv = z.infer<typeof databaseEnvSchema>
+
 type EnvSource = Record<string, string | undefined>
 
 /**
@@ -37,12 +42,9 @@ export function parseEnv(source: EnvSource): Env {
   return result.data
 }
 
-/**
- * Loads the environment for a process entry point (server, scripts).
- * Keeps the production contract: invalid variables are reported and the process exits.
- */
-export function loadEnv(source: EnvSource = process.env): Env {
-  const result = envSchema.safeParse(source)
+/** Validates a source against a schema, exiting the process when a variable is invalid. */
+function parseOrExit<T extends z.ZodType>(schema: T, source: EnvSource): z.output<T> {
+  const result = schema.safeParse(source)
 
   if (!result.success) {
     console.error('Invalid environment variables:')
@@ -51,4 +53,20 @@ export function loadEnv(source: EnvSource = process.env): Env {
   }
 
   return result.data
+}
+
+/**
+ * Loads the environment for a process entry point (server, scripts).
+ * Keeps the production contract: invalid variables are reported and the process exits.
+ */
+export function loadEnv(source: EnvSource = process.env): Env {
+  return parseOrExit(envSchema, source)
+}
+
+/**
+ * Loads only the database connection, so a script runs with `DATABASE_URL` alone.
+ * Same contract as `loadEnv`: invalid variables are reported and the process exits.
+ */
+export function loadDatabaseEnv(source: EnvSource = process.env): DatabaseEnv {
+  return parseOrExit(databaseEnvSchema, source)
 }

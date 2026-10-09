@@ -11,8 +11,8 @@ import {
   createRoom,
   insertGame,
   joinAll,
-  markRoomActivity,
   roomAction,
+  setRoomLifecycle,
 } from '@test/harness/rooms'
 import { connect, type RealtimeSession } from '@test/harness/realtime'
 import { createLogCapture, type LogCapture } from '@test/harness/logging'
@@ -165,7 +165,12 @@ describe('lifecycle logs', () => {
     const host = await signIn(server, 'Host')
     const game = await insertGame(server)
     const room = await createRoom(server, host, { gameId: game.id })
-    await markRoomActivity(server, room.id, 25 * 60)
+    const backdated = new Date(Date.now() - 25 * 60 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: backdated,
+      lastActivityAt: backdated,
+      readyAt: null,
+    })
 
     const repository = new DrizzleRoomRepository(server.app.db, server.app.clock)
     const useCase = new DeleteExpiredRoomsUseCase(repository, server.app.clock)
