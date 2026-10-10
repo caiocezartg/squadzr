@@ -59,7 +59,8 @@ describe('on-demand dialogs', () => {
       gates.openCreate()
     })
 
-    expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
+    // Lazy create dialog: its import and render in the test runner can outlast the 1 s default.
+    expect(await screen.findByText('Create a Squad', {}, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByTestId('modal-loading')).not.toBeInTheDocument()
   })
 

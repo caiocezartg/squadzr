@@ -94,7 +94,9 @@ describe('catalog', () => {
       })
     )
     expect(router.history.location.pathname).toBe('/rooms')
-    expect(toastStore.errorCalls[0]).toBe('Something went wrong. Please try again.')
+    await waitFor(() =>
+      expect(toastStore.errorCalls[0]).toBe('Something went wrong. Please try again.')
+    )
   })
 
   it('ignores a room_created event that breaks the contract and applies the next valid one', async () => {

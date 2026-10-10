@@ -17,7 +17,6 @@
     "@base-ui-components/react": "1.0.0-rc.0",
     "@hookform/resolvers": "5.2.2",
     "@squadzr/schemas": "workspace:*",
-    "@squadzr/types": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
     "@tanstack/react-router": "^1.80.0",
     "axios": "1.13.6",

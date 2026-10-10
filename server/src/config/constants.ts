@@ -2,7 +2,6 @@ export const ROOM = {
   CODE_LENGTH: 6,
   CREATE_LIMIT: 3,
   JOIN_LIMIT: 5,
-  DEFAULT_MAX_PLAYERS: 5,
   CLEANUP_INTERVAL_MS: 60_000,
   NOTIFICATION_LIMIT: 20,
   /** An Open Room expires 24h after its last durable Membership change. */

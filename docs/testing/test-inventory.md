@@ -13,7 +13,7 @@ remains the package manager and the server runtime.
 | Focused workspace run | `bunx turbo test --filter=<workspace>` |
 | Direct workspace run | `bun run test` inside the workspace directory |
 
-`vitest.workspace.ts` composes the four projects by pointing at each workspace directory, whose own
+`vitest.workspace.ts` composes the three projects by pointing at each workspace directory, whose own
 `vitest.config.ts` stays the single source of truth (see
 https://v2.vitest.dev/guide/workspace). Focused and direct runs execute the exact same script
 Turbo executes for the root command, so the root suite and the focused suites always share one
@@ -24,14 +24,13 @@ inventory (see the equivalence proof below).
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
 | `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 22 | 97 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 16 | 202 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 19 | 211 |
 | `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}` | 24 | 186 |
-| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 3 | 74 |
-| `@squadzr/types` | `types:unit` | `node` | `src/**/*.spec.ts` | 1 | 1 |
+| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 3 | 69 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
-Suites are test files. The counts above are the current inventory, recounted on 2026-10-08 after
-CCC-58; the CCC-28 numbers are kept as a historical record in the equivalence proof below.
+Suites are test files. The counts above are the current inventory, recounted on 2026-10-09 after
+CCC-59; the CCC-28 numbers are kept as a historical record in the equivalence proof below.
 
 `@squadzr/typescript-config` ships only shared TypeScript configuration files, so no test project is
 expected there. Every other workspace must keep at least one test file: the configs deliberately do
@@ -53,8 +52,6 @@ mock/in-memory dependencies:
 - `client:unit` — runs in jsdom; the environment is proven by an assertion on `document`, which
   fails under a Node environment.
 - `schemas:unit` — runtime contract tests for the shared Zod schemas.
-- `types:unit` — loads every static contract entry point in Node (the package intentionally has no
-  runtime exports).
 
 Integration projects follow the same naming convention:
 
@@ -107,7 +104,7 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
   fails with exit code 1 when a workspace's expected suite is missing.
 - `@squadzr/typescript-config` has no `test` script, so Turbo skips it when running `turbo test`;
   the no-masking guarantee lives in the Vitest configs (no `--passWithNoTests`) and in the root
-  composition listing exactly the four expected projects.
+  composition listing exactly the three expected projects.
 - The `schemas:unit` suite used to characterize the legacy room `status` contract
   (`roomStatusSchema`). CCC-35 removed that contract from `@squadzr/schemas`, so the suite now
   covers the remaining runtime contracts (create-room input, notification payload, and the room,
@@ -117,24 +114,27 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
   collecting tests. The script was removed instead of being restored with a new dependency;
   introducing coverage tooling is a deliberate follow-up decision, not an accidental default.
 
-## Equivalence proof (CCC-28, CCC-58)
+## Equivalence proof (CCC-28, CCC-58, CCC-59)
 
-### Current counts (recounted 2026-10-08, CCC-58)
+### Current counts (recounted 2026-10-09, CCC-59)
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the four unit projects) | 50 | 358 |
-| `bunx vitest run` (direct root composition) | 50 | 358 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 49 | 352 |
+| `bunx vitest run` (direct root composition) | 49 | 352 |
 | `bunx turbo test --filter=server` | 22 | 97 |
 | `bunx turbo test --filter=client` | 24 | 186 |
-| `bunx turbo test --filter=@squadzr/schemas` | 3 | 74 |
-| `bunx turbo test --filter=@squadzr/types` | 1 | 1 |
+| `bunx turbo test --filter=@squadzr/schemas` | 3 | 69 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
 numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
 specs together with their use cases, so the server unit suite has 5 fewer tests than before that
-change. It added and removed no integration tests: `bun run test:integration` in `server/` runs
-16 files / 202 tests.
+change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
+16 files / 202 tests at the CCC-58 recount; CCC-59 measured 19 files / 211 tests, and this ticket
+does not touch `server/tests`, so that drift predates it. CCC-59 removed the `types:unit` project
+(1 file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 69 tests,
+not the 74 recorded by the CCC-58 recount; this ticket does not touch `packages/schemas`, so that
+drift predates CCC-59 and is corrected here.
 
 ### Historical record (CCC-28, 2026-09-25)
 
