@@ -1,38 +1,29 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { z } from 'zod'
 import type { listNotificationsQuerySchema, notificationIdParamSchema } from '@squadzr/schemas'
-import type { IUserNotificationRepository } from '@domain/repositories/user-notification.repository'
 import type { IGetUserUseCase } from '@application/use-cases/user/get-user.use-case'
 import type { IListNotificationsUseCase } from '@application/use-cases/notification/list-notifications.use-case'
-import { UserNotFoundError, UnauthorizedError } from '@application/errors'
+import type { IMarkNotificationReadUseCase } from '@application/use-cases/notification/mark-notification-read.use-case'
+import type { IMarkAllNotificationsReadUseCase } from '@application/use-cases/notification/mark-all-notifications-read.use-case'
+import type { IDeleteNotificationUseCase } from '@application/use-cases/notification/delete-notification.use-case'
 import { toUserDto, toUserNotificationDto } from '@application/projections'
 
 type ListNotificationsQuery = z.infer<typeof listNotificationsQuerySchema>
 type NotificationIdParams = z.infer<typeof notificationIdParamSchema>
 
-function getUserId(request: FastifyRequest): string {
-  if (!request.session?.user?.id) {
-    throw new UnauthorizedError()
-  }
-  return request.session.user.id
-}
-
 export interface UserControllerDeps {
   readonly getUserUseCase: IGetUserUseCase
-  readonly userNotificationRepository: IUserNotificationRepository
   readonly listNotificationsUseCase: IListNotificationsUseCase
+  readonly markNotificationReadUseCase: IMarkNotificationReadUseCase
+  readonly markAllNotificationsReadUseCase: IMarkAllNotificationsReadUseCase
+  readonly deleteNotificationUseCase: IDeleteNotificationUseCase
 }
 
 export class UserController {
   constructor(private readonly deps: UserControllerDeps) {}
 
   async me(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const userId = getUserId(request)
-    const result = await this.deps.getUserUseCase.execute({ id: userId })
-
-    if (!result.user) {
-      throw new UserNotFoundError(userId)
-    }
+    const result = await this.deps.getUserUseCase.execute({ id: request.userId })
 
     await reply.send({ user: toUserDto(result.user) })
   }
@@ -41,10 +32,12 @@ export class UserController {
     request: FastifyRequest<{ Querystring: ListNotificationsQuery }>,
     reply: FastifyReply
   ): Promise<void> {
-    const userId = getUserId(request)
     const limit = request.query.limit ?? 20
 
-    const result = await this.deps.listNotificationsUseCase.execute({ userId, limit })
+    const result = await this.deps.listNotificationsUseCase.execute({
+      userId: request.userId,
+      limit,
+    })
 
     await reply.send({
       notifications: result.notifications.map(({ notification, discordLink }) =>
@@ -57,31 +50,31 @@ export class UserController {
     request: FastifyRequest<{ Params: NotificationIdParams }>,
     reply: FastifyReply
   ): Promise<void> {
-    const userId = getUserId(request)
-    const params = request.params
+    const result = await this.deps.markNotificationReadUseCase.execute({
+      id: request.params.id,
+      userId: request.userId,
+    })
 
-    const success = await this.deps.userNotificationRepository.markAsRead(params.id, userId)
-
-    await reply.send({ success })
+    await reply.send({ success: result.success })
   }
 
   async markAllNotificationsAsRead(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const userId = getUserId(request)
+    const result = await this.deps.markAllNotificationsReadUseCase.execute({
+      userId: request.userId,
+    })
 
-    const count = await this.deps.userNotificationRepository.markAllAsRead(userId)
-
-    await reply.send({ success: true, count })
+    await reply.send({ success: true, count: result.count })
   }
 
   async deleteNotification(
     request: FastifyRequest<{ Params: NotificationIdParams }>,
     reply: FastifyReply
   ): Promise<void> {
-    const userId = getUserId(request)
-    const params = request.params
+    const result = await this.deps.deleteNotificationUseCase.execute({
+      id: request.params.id,
+      userId: request.userId,
+    })
 
-    const success = await this.deps.userNotificationRepository.delete(params.id, userId)
-
-    await reply.send({ success })
+    await reply.send({ success: result.success })
   }
 }

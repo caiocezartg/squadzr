@@ -2,6 +2,7 @@ import { ApiClientError } from './api'
 import i18n from './i18n'
 
 const ERROR_CODE_KEYS = [
+  'GAME_NOT_FOUND',
   'ROOM_NOT_FOUND',
   'ROOM_FULL',
   'ROOM_READY',

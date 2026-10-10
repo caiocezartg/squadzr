@@ -232,6 +232,7 @@
     "offline": "Offline"
   },
   "errors": {
+    "GAME_NOT_FOUND": "This game could not be found.",
     "ROOM_NOT_FOUND": "This squad no longer exists or the code is invalid.",
     "ROOM_FULL": "This squad is already full.",
     "ROOM_READY": "This squad is ready — members cannot leave.",
