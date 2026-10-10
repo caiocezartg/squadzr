@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import type { z } from 'zod'
+import { ZodError, type z } from 'zod'
 import type { CreateRoomInput, roomCodeParamSchema } from '@squadzr/schemas'
 import type { ICreateRoomUseCase } from '@application/use-cases/room/create-room.use-case'
 import type { IGetAvailableRoomsUseCase } from '@application/use-cases/room/get-available-rooms.use-case'
@@ -100,7 +100,8 @@ export class RoomController {
     } catch (error) {
       // A transaction failure rolls back Membership, Room Activity, readiness
       // and notifications together; the room stays open and untouched.
-      if (!(error instanceof AppError)) {
+      // An AppError is an expected rejection, and the error handler alone logs a ZodError.
+      if (!(error instanceof AppError) && !(error instanceof ZodError)) {
         request.server.log.error(
           { err: error, roomCode: params.code, userId },
           'Room join failed — activity, readiness and notifications rolled back'

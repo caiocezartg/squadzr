@@ -8,7 +8,9 @@ import { runRoomCleanup } from '@infrastructure/plugins/room-cleanup.plugin'
 import { signIn } from '@test/harness/auth'
 import {
   DISCORD_INVITE,
+  countMembers,
   createRoom,
+  findRoomRow,
   insertGame,
   joinAll,
   roomAction,
@@ -231,6 +233,44 @@ describe('lifecycle logs', () => {
         }),
       ])
     )
+    expect(capture.lines.join('\n')).not.toContain(DISCORD_INVITE)
+  })
+
+  it('answers a join whose ready notification breaks its schema with 500 and logs the ZodError once', async () => {
+    const host = await signIn(server, 'Host')
+    const member = await signIn(server, 'Member')
+    const game = await insertGame(server)
+    const room = await createRoom(server, host, { gameId: game.id, maxPlayers: 2 })
+
+    await server.app.db.execute(sql`
+      CREATE OR REPLACE FUNCTION corrupt_room_ready_payload() RETURNS trigger AS $$
+      BEGIN NEW.payload := '{}'::jsonb; RETURN NEW; END;
+      $$ LANGUAGE plpgsql
+    `)
+    await server.app.db.execute(sql`
+      CREATE TRIGGER corrupt_room_ready_payload
+      BEFORE INSERT ON user_notifications
+      FOR EACH ROW EXECUTE FUNCTION corrupt_room_ready_payload()
+    `)
+
+    const failed = await roomAction(server, member, room.code, 'join')
+
+    expect(failed.statusCode).toBe(500)
+    expect(failed.json()).toEqual({
+      error: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred',
+    })
+    // The whole transaction rolled back: only the host is a member and the room is not ready.
+    expect(await countMembers(server, room.id)).toBe(1)
+    expect((await findRoomRow(server, room.id))?.readyAt).toBeNull()
+    // Error level is where the error handler logs a server error: exactly one entry, for the ZodError.
+    const errors = logs().filter((entry) => Number(entry.level) >= 50)
+    expect(errors).toEqual([
+      expect.objectContaining({
+        msg: 'Unhandled error',
+        err: expect.objectContaining({ type: 'ZodError' }),
+      }),
+    ])
     expect(capture.lines.join('\n')).not.toContain(DISCORD_INVITE)
   })
 })
