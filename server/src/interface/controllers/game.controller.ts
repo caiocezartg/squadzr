@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { IGameRepository } from '@domain/repositories/game.repository'
-import type { gameIdParamSchema } from '@application/dtos'
+import type { gameIdParamSchema } from '@squadzr/schemas'
 import { toGameDto } from '@application/projections'
 import type { z } from 'zod'
 

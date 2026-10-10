@@ -7,15 +7,16 @@ import {
   createRoomInputSchema,
   createRoomResponseSchema,
   errorResponseSchema as errorResponse,
+  gameIdParamSchema,
   gameResponseSchema,
   gamesResponseSchema,
   joinRoomResponseSchema,
   leaveRoomResponseSchema,
   myRoomsResponseSchema,
+  roomCodeParamSchema,
   roomResponseSchema,
   roomsResponseSchema,
 } from '@squadzr/schemas'
-import { roomCodeParamSchema, gameIdParamSchema } from '@application/dtos'
 
 export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()

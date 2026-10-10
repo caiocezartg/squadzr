@@ -7,6 +7,7 @@ import Fastify, {
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import websocket from '@fastify/websocket'
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
 import { WS_MAX_PAYLOAD_BYTES } from '@squadzr/schemas/ws'
 import type { Env } from '@config/env'
 import type { Clock } from '@domain/services/clock.interface'
@@ -97,7 +98,11 @@ export async function buildApp({ env, logger, clock }: BuildAppOptions): Promise
 
   fastify.decorate('clock', clock ?? new SystemClock())
 
-  await fastify.register(errorHandlerPlugin)
+  // Route schemas validate and serialize all HTTP input and output: set them before any route.
+  fastify.setValidatorCompiler(validatorCompiler)
+  fastify.setSerializerCompiler(serializerCompiler)
+
+  await fastify.register(errorHandlerPlugin, { config: env })
 
   await fastify.register(cors, {
     origin: env.CORS_ORIGIN,

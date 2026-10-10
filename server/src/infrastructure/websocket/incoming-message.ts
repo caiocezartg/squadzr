@@ -1,5 +1,5 @@
 import { describeContractIssues, type ContractIssue } from '@squadzr/schemas'
-import { wsIncomingMessageSchema, type WsIncomingMessage } from './types'
+import { wsIncomingMessageSchema, type WsIncomingMessage } from '@squadzr/schemas/ws'
 
 export type IncomingMessageResult =
   | { ok: true; message: WsIncomingMessage }

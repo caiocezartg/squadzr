@@ -7,9 +7,6 @@ import type { OrderedOperations } from './ordered-operations'
 import type { Presence } from './presence'
 import type { Heartbeat } from './heartbeat'
 
-// Re-export all WS schemas and types from shared package
-export * from '@squadzr/schemas/ws'
-
 // Server-specific: WebSocket client state (not shared with client)
 export interface WsClient {
   userId: string | null

@@ -4,6 +4,12 @@ import { ResponseSerializationError } from 'fastify-type-provider-zod'
 import { ZodError } from 'zod'
 import { describeContractIssues, type ErrorResponse } from '@squadzr/schemas'
 import { AppError } from '@application/errors'
+import type { Env } from '@config/env'
+
+export interface ErrorHandlerOptions {
+  /** The loaded configuration: its runtime mode alone decides which client errors are logged. */
+  config: Pick<Env, 'NODE_ENV'>
+}
 
 interface ParsedError {
   statusCode: number
@@ -11,20 +17,6 @@ interface ParsedError {
 }
 
 function parseError(error: FastifyError | Error): ParsedError {
-  if (error instanceof ZodError) {
-    return {
-      statusCode: 400,
-      response: {
-        error: 'VALIDATION_ERROR',
-        message: 'Request validation failed',
-        details: error.issues.map((issue) => ({
-          field: issue.path.join('.'),
-          message: issue.message,
-        })),
-      },
-    }
-  }
-
   if (error instanceof AppError) {
     return {
       statusCode: error.statusCode,
@@ -35,6 +27,8 @@ function parseError(error: FastifyError | Error): ParsedError {
     }
   }
 
+  // Fastify reports every rejected route input (params, querystring, body, headers) here.
+  // Any other ZodError is a server-side contract break, such as a persisted row: it answers 500.
   if ('validation' in error && error.validation) {
     return {
       statusCode: 400,
@@ -77,7 +71,8 @@ function logError(
   fastify: FastifyInstance,
   error: Error,
   request: FastifyRequest,
-  statusCode: number
+  statusCode: number,
+  isProduction: boolean
 ): void {
   const context = { method: request.method, path: requestPath(request), statusCode }
 
@@ -95,19 +90,26 @@ function logError(
     return
   }
 
+  // Each server error is logged once, with its cause; client errors only outside production.
   if (statusCode === 500) {
-    fastify.log.error(error, 'Unhandled error')
+    fastify.log.error({ err: error, ...context }, 'Unhandled error')
+    return
   }
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProduction) {
     fastify.log.error({ err: error, ...context })
   }
 }
 
-async function errorHandlerPlugin(fastify: FastifyInstance): Promise<void> {
+async function errorHandlerPlugin(
+  fastify: FastifyInstance,
+  { config }: ErrorHandlerOptions
+): Promise<void> {
+  const isProduction = config.NODE_ENV === 'production'
+
   fastify.setErrorHandler((error: FastifyError | Error, request, reply) => {
     const { statusCode, response } = parseError(error)
-    logError(fastify, error, request, statusCode)
+    logError(fastify, error, request, statusCode, isProduction)
     return reply.status(statusCode).send(response)
   })
 }
