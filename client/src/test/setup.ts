@@ -8,14 +8,10 @@
 
 import { afterEach, vi } from 'vitest'
 import '@testing-library/jest-dom/vitest'
-import { cleanup, configure } from '@testing-library/react'
+import { cleanup } from '@testing-library/react'
 import { installHttpAdapter, resetHttpRoutes } from './http-router'
 import { MockWebSocket, resetWebSocketInstances } from './ws-mock'
 import { resetStubs } from './stubs'
-
-// Async queries (findBy*, waitFor) wait up to 5 s: the first render of a lazily imported
-// dialog can outlast testing-library's 1 s default when the machine is busy.
-configure({ asyncUtilTimeout: 5000 })
 
 // 1. Deterministic HTTP: must run before any import of '@/lib/api' so the
 //    axios instance created there snapshots the mock adapter.

@@ -50,7 +50,8 @@ async function openCreateModal(
   user: Awaited<ReturnType<typeof renderRoomsFlow>['user']>
 ): Promise<void> {
   await user.click(await screen.findByText('Create new squad'))
-  await screen.findByText('Create a Squad')
+  // Lazy create dialog: its import and render in the test runner can outlast the 1 s default.
+  await screen.findByText('Create a Squad', {}, { timeout: 5000 })
 }
 
 describe('create room — entry point', () => {
@@ -169,7 +170,8 @@ describe('create room — from my rooms', () => {
     const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
 
     await user.click(screen.getByRole('button', { name: 'Create new squad' }))
-    await screen.findByText('Create a Squad')
+    // Lazy create dialog: its import and render in the test runner can outlast the 1 s default.
+    await screen.findByText('Create a Squad', {}, { timeout: 5000 })
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
     await user.click(screen.getByLabelText('Game'))
     await user.click(await screen.findByText('League of Legends (1-5 players)'))
