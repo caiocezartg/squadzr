@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
-import { REALTIME_PROTOCOL_VERSION } from '@squadzr/schemas/ws'
+import { REALTIME_PROTOCOL_VERSION, type WsIncomingMessage } from '@squadzr/schemas/ws'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
 import { AppError } from '@application/errors'
 import { parseIncomingMessage } from './incoming-message'
 import { InvalidMessages, INVALID_MESSAGE_LIMIT } from './invalid-messages'
-import type { Realtime, WsClient, WsIncomingMessage } from './types'
+import type { Realtime, WsClient } from './types'
 import {
   handleJoinRoom,
   handleLeaveRoom,

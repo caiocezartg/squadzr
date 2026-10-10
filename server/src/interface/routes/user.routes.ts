@@ -4,12 +4,13 @@ import { requireAuth } from '@interface/hooks/auth.hook'
 import { createUserController } from '@interface/factories/user.factory'
 import {
   errorResponseSchema as errorResponse,
+  listNotificationsQuerySchema,
   notificationChangeResponseSchema,
+  notificationIdParamSchema,
   notificationsResponseSchema,
   readAllNotificationsResponseSchema,
   userResponseSchema,
 } from '@squadzr/schemas'
-import { listNotificationsQuerySchema, notificationIdParamSchema } from '@application/dtos'
 
 export async function userRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()

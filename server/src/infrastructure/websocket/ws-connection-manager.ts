@@ -1,5 +1,6 @@
 import type { WebSocket } from '@fastify/websocket'
-import type { WsClient, WsServerMessage } from './types'
+import type { WsServerMessage } from '@squadzr/schemas/ws'
+import type { WsClient } from './types'
 
 export class WsConnectionManager {
   private readonly sockets = new Set<WebSocket>()

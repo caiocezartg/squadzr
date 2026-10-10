@@ -1,4 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import { ZodError, type z } from 'zod'
+import type { CreateRoomInput, roomCodeParamSchema } from '@squadzr/schemas'
 import type { ICreateRoomUseCase } from '@application/use-cases/room/create-room.use-case'
 import type { IGetAvailableRoomsUseCase } from '@application/use-cases/room/get-available-rooms.use-case'
 import type { IGetRoomByCodeUseCase } from '@application/use-cases/room/get-room-by-code.use-case'
@@ -7,8 +9,9 @@ import type { ILeaveRoomUseCase } from '@application/use-cases/room/leave-room.u
 import type { IGetMyRoomsUseCase } from '@application/use-cases/room/get-my-rooms.use-case'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
 import { AppError, RoomNotFoundError, NotRoomMemberError } from '@application/errors'
-import { createRoomRequestSchema, roomCodeParamSchema } from '@application/dtos'
 import { toMemberRoom, toPublicRoom, toRoomMemberDto } from '@application/projections'
+
+type RoomCodeParams = z.infer<typeof roomCodeParamSchema>
 
 export interface RoomControllerDeps {
   readonly createRoomUseCase: ICreateRoomUseCase
@@ -30,8 +33,11 @@ export class RoomController {
     await reply.send({ rooms: result.rooms.map(toPublicRoom) })
   }
 
-  async getByCode(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const params = roomCodeParamSchema.parse(request.params)
+  async getByCode(
+    request: FastifyRequest<{ Params: RoomCodeParams }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    const params = request.params
     const result = await this.deps.getRoomByCodeUseCase.execute({
       code: params.code,
       viewerId: request.session?.user?.id,
@@ -50,9 +56,12 @@ export class RoomController {
     await reply.send({ room: toMemberRoom(result.room), players: result.players })
   }
 
-  async create(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async create(
+    request: FastifyRequest<{ Body: CreateRoomInput }>,
+    reply: FastifyReply
+  ): Promise<void> {
     const userId = request.userId
-    const body = createRoomRequestSchema.parse(request.body)
+    const body = request.body
 
     const result = await this.deps.createRoomUseCase.execute({
       name: body.name,
@@ -75,9 +84,12 @@ export class RoomController {
     await reply.status(201).send({ room: toMemberRoom(result.room) })
   }
 
-  async join(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async join(
+    request: FastifyRequest<{ Params: RoomCodeParams }>,
+    reply: FastifyReply
+  ): Promise<void> {
     const userId = request.userId
-    const params = roomCodeParamSchema.parse(request.params)
+    const params = request.params
 
     let result
     try {
@@ -88,7 +100,8 @@ export class RoomController {
     } catch (error) {
       // A transaction failure rolls back Membership, Room Activity, readiness
       // and notifications together; the room stays open and untouched.
-      if (!(error instanceof AppError)) {
+      // An AppError is an expected rejection, and the error handler alone logs a ZodError.
+      if (!(error instanceof AppError) && !(error instanceof ZodError)) {
         request.server.log.error(
           { err: error, roomCode: params.code, userId },
           'Room join failed — activity, readiness and notifications rolled back'
@@ -145,9 +158,12 @@ export class RoomController {
     })
   }
 
-  async leave(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async leave(
+    request: FastifyRequest<{ Params: RoomCodeParams }>,
+    reply: FastifyReply
+  ): Promise<void> {
     const userId = request.userId
-    const params = roomCodeParamSchema.parse(request.params)
+    const params = request.params
 
     const { room } = await this.deps.getRoomByCodeUseCase.execute({
       code: params.code,

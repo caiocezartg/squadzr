@@ -2,16 +2,9 @@ import type { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
 import fastifySwagger from '@fastify/swagger'
 import ScalarApiReference from '@scalar/fastify-api-reference'
-import {
-  serializerCompiler,
-  validatorCompiler,
-  jsonSchemaTransform,
-} from 'fastify-type-provider-zod'
+import { jsonSchemaTransform } from 'fastify-type-provider-zod'
 
 async function swaggerPlugin(fastify: FastifyInstance): Promise<void> {
-  fastify.setValidatorCompiler(validatorCompiler)
-  fastify.setSerializerCompiler(serializerCompiler)
-
   await fastify.register(fastifySwagger, {
     openapi: {
       openapi: '3.1.0',
