@@ -236,7 +236,6 @@
     "ROOM_FULL": "This squad is already full.",
     "ROOM_READY": "This squad is ready — members cannot leave.",
     "ROOM_READY_JOIN": "This squad is already full and ready — it's no longer accepting players.",
-    "ALREADY_IN_ROOM": "You are already a member of this squad.",
     "NOT_ROOM_MEMBER": "You are not a member of this squad.",
     "ROOM_CREATE_LIMIT_REACHED": "You have reached the maximum number of active squads.",
     "ROOM_JOIN_LIMIT_REACHED": "You have reached the maximum number of squads you can join.",

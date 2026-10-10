@@ -780,15 +780,13 @@ describe('rooms catalog — join flows', () => {
 
   it('shows a friendly toast and stays in the catalog when joining fails', async () => {
     onHttp('POST', '/api/rooms/:code/join', () =>
-      httpError(409, { message: 'Room already joined', error: 'ALREADY_IN_ROOM' })
+      httpError(409, { message: 'Room is full', error: 'ROOM_FULL' })
     )
     const { router, user } = renderRoomsFlow('/rooms')
 
     await user.click(await screen.findByText('Ranked grind'))
 
-    await waitFor(() =>
-      expect(toastStore.errorCalls[0]).toBe('You are already a member of this squad.')
-    )
+    await waitFor(() => expect(toastStore.errorCalls[0]).toBe('This squad is already full.'))
     expect(router.history.location.pathname).toBe('/rooms')
     expect(screen.getByText('Ranked grind')).toBeInTheDocument()
   })

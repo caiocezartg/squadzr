@@ -1,8 +1,7 @@
 export { AppError } from './base.error'
-export { ValidationError, InvalidGameError } from './validation.error'
+export { InvalidGameError } from './validation.error'
 export { UnauthorizedError } from './unauthorized.error'
-export { NotFoundError, RoomNotFoundError, UserNotFoundError } from './not-found.error'
-export { ConflictError, EmailAlreadyExistsError, UserAlreadyInRoomError } from './conflict.error'
+export { RoomNotFoundError, UserNotFoundError } from './not-found.error'
 export {
   RoomFullError,
   RoomReadyError,
