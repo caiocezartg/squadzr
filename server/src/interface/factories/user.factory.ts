@@ -5,6 +5,9 @@ import { DrizzleUserNotificationRepository } from '@infrastructure/repositories/
 import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
 import { GetUserUseCase } from '@application/use-cases/user/get-user.use-case'
 import { ListNotificationsUseCase } from '@application/use-cases/notification/list-notifications.use-case'
+import { MarkNotificationReadUseCase } from '@application/use-cases/notification/mark-notification-read.use-case'
+import { MarkAllNotificationsReadUseCase } from '@application/use-cases/notification/mark-all-notifications-read.use-case'
+import { DeleteNotificationUseCase } from '@application/use-cases/notification/delete-notification.use-case'
 import { UserController } from '@interface/controllers/user.controller'
 
 export function createUserController(db: Database, clock: Clock) {
@@ -18,10 +21,17 @@ export function createUserController(db: Database, clock: Clock) {
     roomRepository,
     clock
   )
+  const markNotificationReadUseCase = new MarkNotificationReadUseCase(userNotificationRepository)
+  const markAllNotificationsReadUseCase = new MarkAllNotificationsReadUseCase(
+    userNotificationRepository
+  )
+  const deleteNotificationUseCase = new DeleteNotificationUseCase(userNotificationRepository)
 
   return new UserController({
     getUserUseCase,
-    userNotificationRepository,
     listNotificationsUseCase,
+    markNotificationReadUseCase,
+    markAllNotificationsReadUseCase,
+    deleteNotificationUseCase,
   })
 }

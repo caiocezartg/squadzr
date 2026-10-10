@@ -20,6 +20,7 @@ import wsPlugin from '@infrastructure/websocket/ws.plugin'
 import roomCleanupPlugin from '@infrastructure/plugins/room-cleanup.plugin'
 import { registerRoutes } from '@interface/routes'
 import { createRealtime } from '@interface/factories/realtime.factory'
+import { createRoomCleanupUseCase } from '@interface/factories/room-cleanup.factory'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -125,7 +126,9 @@ export async function buildApp({ env, logger, clock }: BuildAppOptions): Promise
   await fastify.register(wsPlugin, {
     realtime: createRealtime(fastify.db, fastify.clock, fastify.log),
   })
-  await fastify.register(roomCleanupPlugin)
+  await fastify.register(roomCleanupPlugin, {
+    deleteExpiredRoomsUseCase: createRoomCleanupUseCase(fastify.db, fastify.clock),
+  })
   await registerRoutes(fastify)
 
   return fastify

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { GetUserUseCase } from './get-user.use-case'
+import { UserNotFoundError } from '@application/errors'
 import { createMockUser, createMockUserRepository } from '@test/mocks'
 
 describe('GetUserUseCase', () => {
@@ -23,12 +24,13 @@ describe('GetUserUseCase', () => {
       expect(mockUserRepository.findById).toHaveBeenCalledOnce()
     })
 
-    it('should return null when user not found', async () => {
+    it('should throw UserNotFoundError when user not found', async () => {
       mockUserRepository.findById.mockResolvedValue(null)
 
-      const result = await useCase.execute({ id: 'non-existent' })
+      const error = await useCase.execute({ id: 'non-existent' }).catch((caught: unknown) => caught)
 
-      expect(result.user).toBeNull()
+      expect(error).toBeInstanceOf(UserNotFoundError)
+      expect(error).toMatchObject({ code: 'USER_NOT_FOUND', statusCode: 404 })
       expect(mockUserRepository.findById).toHaveBeenCalledWith('non-existent')
     })
   })
