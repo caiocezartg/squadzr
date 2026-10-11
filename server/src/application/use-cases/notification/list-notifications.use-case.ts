@@ -13,7 +13,8 @@ export interface ResolvedUserNotification {
 
 export interface ListNotificationsInput {
   readonly userId: string
-  readonly limit: number
+  /** Page size. Omitted, the notification page size applies. */
+  readonly limit?: number
 }
 
 export interface ListNotificationsOutput {
@@ -34,7 +35,7 @@ export class ListNotificationsUseCase implements IListNotificationsUseCase {
   async execute(input: ListNotificationsInput): Promise<ListNotificationsOutput> {
     const notifications = await this.userNotificationRepository.findByUserId(
       input.userId,
-      input.limit
+      input.limit ?? ROOM.NOTIFICATION_LIMIT
     )
 
     const roomIds = [

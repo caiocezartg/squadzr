@@ -70,6 +70,17 @@ describe('realtime snapshot access', () => {
     expect(users.findByIds).not.toHaveBeenCalled()
   })
 
+  it('answers ROOM_NOT_FOUND for a room that does not exist', async () => {
+    const { useCase, rooms } = setup()
+    rooms.findByCode.mockResolvedValue(null)
+    const subscription = useCase.subscribe('ABC123', 'outsider')
+    await expect(subscription).rejects.toBeInstanceOf(RoomNotFoundError)
+    await expect(subscription).rejects.toMatchObject({
+      code: 'ROOM_NOT_FOUND',
+      message: 'Room "ABC123" not found',
+    })
+  })
+
   it('allows members until the exact Ready Room retention deadline', async () => {
     const { useCase, rooms, room, clock } = setup()
     rooms.findByCode.mockResolvedValue({ ...room, readyAt: NOW })

@@ -4,9 +4,10 @@
  * each one reads the message for what it attempted.
  */
 
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { ApiClientError } from './api'
 import { getUserFriendlyError } from './error-messages'
+import i18n from './i18n'
 
 function apiError(code: string): ApiClientError {
   return new ApiClientError('server message', 422, code)
@@ -28,5 +29,21 @@ describe('getUserFriendlyError', () => {
   it('reads the same for action-independent codes in both contexts', () => {
     expect(getUserFriendlyError(apiError('ROOM_FULL'), 'join')).toBe('This squad is already full.')
     expect(getUserFriendlyError(apiError('ROOM_FULL'), 'leave')).toBe('This squad is already full.')
+  })
+})
+
+describe('GAME_NOT_FOUND', () => {
+  afterEach(async () => {
+    await i18n.changeLanguage('en')
+  })
+
+  it('translates a missing game in English', () => {
+    expect(getUserFriendlyError(apiError('GAME_NOT_FOUND'))).toBe('This game could not be found.')
+  })
+
+  it('translates a missing game in Portuguese', async () => {
+    await i18n.changeLanguage('pt-BR')
+
+    expect(getUserFriendlyError(apiError('GAME_NOT_FOUND'))).toBe('Este jogo não foi encontrado.')
   })
 })

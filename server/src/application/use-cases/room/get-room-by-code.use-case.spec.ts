@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { GetRoomByCodeUseCase } from './get-room-by-code.use-case'
+import { RoomNotFoundError } from '@application/errors'
 import {
   createMockClock,
   createMockRoom,
@@ -56,13 +57,16 @@ describe('GetRoomByCodeUseCase', () => {
       expect(mockRoomRepository.findByCode).toHaveBeenCalledWith('ABC123')
     })
 
-    it('should return null and empty players when not found', async () => {
+    it('should throw RoomNotFoundError when the room does not exist', async () => {
       mockRoomRepository.findByCode.mockResolvedValue(null)
 
-      const result = await useCase.execute({ code: 'NOTFND' })
+      const outcome = useCase.execute({ code: 'NOTFND' })
 
-      expect(result.room).toBeNull()
-      expect(result.players).toEqual([])
+      await expect(outcome).rejects.toBeInstanceOf(RoomNotFoundError)
+      await expect(outcome).rejects.toMatchObject({
+        code: 'ROOM_NOT_FOUND',
+        message: 'Room "NOTFND" not found',
+      })
       expect(mockRoomRepository.findByCode).toHaveBeenCalledWith('NOTFND')
     })
 
@@ -121,7 +125,7 @@ describe('GetRoomByCodeUseCase', () => {
       expect(mockRoomMemberRepository.findByRoomId).not.toHaveBeenCalled()
     })
 
-    it('should hide an Open Room at exactly lastActivityAt + 24h', async () => {
+    it('should throw RoomNotFoundError for an Open Room at exactly lastActivityAt + 24h', async () => {
       const room = createMockRoom({ lastActivityAt: ACTIVITY, createdAt: ACTIVITY })
       mockRoomRepository.findByCode.mockResolvedValue(room)
       mockRoomMemberRepository.findByRoomAndUser.mockResolvedValue(
@@ -129,11 +133,12 @@ describe('GetRoomByCodeUseCase', () => {
       )
       clock.set(new Date(ACTIVITY.getTime() + ROOM.OPEN_ROOM_TTL_MS))
 
-      const result = await useCase.execute({ code: 'ABC123', viewerId: 'member-1' })
+      const outcome = useCase.execute({ code: 'ABC123', viewerId: 'member-1' })
 
-      expect(result.room).toBeNull()
-      expect(result.isMember).toBe(false)
-      expect(result.players).toEqual([])
+      await expect(outcome).rejects.toBeInstanceOf(RoomNotFoundError)
+      await expect(outcome).rejects.toMatchObject({ code: 'ROOM_NOT_FOUND' })
+      expect(mockRoomMemberRepository.findByRoomId).not.toHaveBeenCalled()
+      expect(mockUserRepository.findByIds).not.toHaveBeenCalled()
     })
 
     it('should serve an Open Room one millisecond before its expiration', async () => {
@@ -152,7 +157,7 @@ describe('GetRoomByCodeUseCase', () => {
       expect(result.isMember).toBe(true)
     })
 
-    it('should answer 404 to a non-member of a Ready Room during retention', async () => {
+    it('should throw RoomNotFoundError to a non-member of a Ready Room during retention', async () => {
       const room = createMockRoom({
         lastActivityAt: READY_AT,
         createdAt: READY_AT,
@@ -162,10 +167,10 @@ describe('GetRoomByCodeUseCase', () => {
       mockRoomMemberRepository.findByRoomAndUser.mockResolvedValue(null)
       clock.set(new Date(READY_AT.getTime() + 1_000))
 
-      const result = await useCase.execute({ code: 'ABC123', viewerId: 'outsider-1' })
+      const outcome = useCase.execute({ code: 'ABC123', viewerId: 'outsider-1' })
 
-      expect(result.room).toBeNull()
-      expect(result.isMember).toBe(false)
+      await expect(outcome).rejects.toBeInstanceOf(RoomNotFoundError)
+      await expect(outcome).rejects.toMatchObject({ code: 'ROOM_NOT_FOUND' })
     })
 
     it('should serve a Ready Room to its member inside retention', async () => {
@@ -188,7 +193,7 @@ describe('GetRoomByCodeUseCase', () => {
       expect(result.isMember).toBe(true)
     })
 
-    it('should hide a Ready Room at exactly readyAt + 60min, even for its member', async () => {
+    it('should throw RoomNotFoundError for a Ready Room at exactly readyAt + 60min, even for its member', async () => {
       const room = createMockRoom({
         lastActivityAt: READY_AT,
         createdAt: READY_AT,
@@ -200,10 +205,10 @@ describe('GetRoomByCodeUseCase', () => {
       )
       clock.set(new Date(READY_AT.getTime() + ROOM.READY_ROOM_RETENTION_MS))
 
-      const result = await useCase.execute({ code: 'ABC123', viewerId: 'member-1' })
+      const outcome = useCase.execute({ code: 'ABC123', viewerId: 'member-1' })
 
-      expect(result.room).toBeNull()
-      expect(result.isMember).toBe(false)
+      await expect(outcome).rejects.toBeInstanceOf(RoomNotFoundError)
+      await expect(outcome).rejects.toMatchObject({ code: 'ROOM_NOT_FOUND' })
     })
   })
 })

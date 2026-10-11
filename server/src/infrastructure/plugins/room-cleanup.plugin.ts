@@ -2,9 +2,12 @@ import type { FastifyBaseLogger, FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
 import type { IDeleteExpiredRoomsUseCase } from '@application/use-cases/room/delete-expired-rooms.use-case'
-import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
-import { DeleteExpiredRoomsUseCase } from '@application/use-cases/room/delete-expired-rooms.use-case'
 import { ROOM } from '@config/constants'
+
+export interface RoomCleanupPluginOptions {
+  /** Built by the composition root from the database and the clock. */
+  readonly deleteExpiredRoomsUseCase: IDeleteExpiredRoomsUseCase
+}
 
 /**
  * One cleanup pass. Every failure path is contained here: a scheduler failure
@@ -37,7 +40,10 @@ export async function runRoomCleanup(
   }
 }
 
-async function roomCleanupPlugin(fastify: FastifyInstance): Promise<void> {
+async function roomCleanupPlugin(
+  fastify: FastifyInstance,
+  { deleteExpiredRoomsUseCase }: RoomCleanupPluginOptions
+): Promise<void> {
   let intervalId: ReturnType<typeof setInterval>
 
   fastify.addHook('onReady', async () => {
@@ -50,11 +56,8 @@ async function roomCleanupPlugin(fastify: FastifyInstance): Promise<void> {
       'Room cleanup scheduler started'
     )
 
-    const cleanupRepository = new DrizzleRoomRepository(fastify.db, fastify.clock)
-    const cleanupUseCase = new DeleteExpiredRoomsUseCase(cleanupRepository, fastify.clock)
-
     intervalId = setInterval(() => {
-      void runRoomCleanup(fastify.log, cleanupUseCase, fastify.broadcaster)
+      void runRoomCleanup(fastify.log, deleteExpiredRoomsUseCase, fastify.broadcaster)
     }, ROOM.CLEANUP_INTERVAL_MS)
   })
 

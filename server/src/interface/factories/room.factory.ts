@@ -37,7 +37,7 @@ export function createRoomController(db: Database, broadcaster: IRoomBroadcaster
     gameRepository,
     clock
   )
-  const leaveRoomUseCase = new LeaveRoomUseCase(roomMemberRepository)
+  const leaveRoomUseCase = new LeaveRoomUseCase(roomRepository, roomMemberRepository, clock)
   const getMyRoomsUseCase = new GetMyRoomsUseCase(roomRepository, clock)
 
   return new RoomController({

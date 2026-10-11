@@ -112,4 +112,15 @@ describe('ListNotificationsUseCase', () => {
     expect(roomRepository.findByIds).toHaveBeenCalledWith([])
     expect(result.notifications[0]?.discordLink).toBeNull()
   })
+
+  it('lists one notification page when the caller gives no limit', async () => {
+    notificationRepository.findByUserId.mockResolvedValue([])
+
+    await useCase.execute({ userId: 'user-1' })
+
+    expect(notificationRepository.findByUserId).toHaveBeenCalledWith(
+      'user-1',
+      ROOM.NOTIFICATION_LIMIT
+    )
+  })
 })

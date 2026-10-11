@@ -434,6 +434,43 @@ describe('POST /api/rooms/:code/leave', () => {
     expect(await countMembers(server, room.id)).toBe(2)
   })
 
+  it('answers 404 ROOM_NOT_FOUND to a non-member leaving a Ready room, and keeps the room', async () => {
+    const { room } = await createFullRoom(host)
+    const [outsider] = await signInMany(server, 1)
+
+    const response = await roomAction(server, outsider!, room.code, 'leave')
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toEqual({
+      error: 'ROOM_NOT_FOUND',
+      message: `Room "${room.code}" not found`,
+    })
+    expect(await countMembers(server, room.id)).toBe(2)
+  })
+
+  it('answers 404 ROOM_NOT_FOUND to a member of an expired room, before deletion', async () => {
+    const [member] = await signInMany(server, 1)
+    const room = await createRoom(server, host, { gameId })
+    await joinAll(server, room.code, [member!])
+    const backdated = new Date(Date.now() - 25 * 60 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: backdated,
+      lastActivityAt: backdated,
+      readyAt: null,
+    })
+
+    const response = await roomAction(server, member!, room.code, 'leave')
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toEqual({
+      error: 'ROOM_NOT_FOUND',
+      message: `Room "${room.code}" not found`,
+    })
+    // The scheduler has not deleted the row yet, and the membership is untouched.
+    expect(await findRoomRow(server, room.id)).not.toBeNull()
+    expect(await countMembers(server, room.id)).toBe(2)
+  })
+
   it('requires authentication', async () => {
     const room = await createRoom(server, host, { gameId })
 
