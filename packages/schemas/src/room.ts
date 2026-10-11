@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { isoDateTimeSchema } from './date'
 
-const roomLanguageSchema = z.enum(['en', 'pt-br'])
+export const roomLanguageSchema = z.enum(['en', 'pt-br'])
 
 // Public room projection: what the catalog and guest realtime events may carry.
 // It never holds the Discord invite, the roster, or the internal lifecycle

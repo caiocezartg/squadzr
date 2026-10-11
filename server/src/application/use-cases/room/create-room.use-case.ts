@@ -1,19 +1,9 @@
-import type { Room } from '@domain/entities/room.entity'
+import type { CreateRoomInput, Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
 import { InvalidGameError, RoomCreateLimitReachedError } from '@application/errors'
 import { ROOM } from '@config/constants'
-
-export interface CreateRoomInput {
-  readonly name: string
-  readonly hostId: string
-  readonly gameId: string
-  readonly maxPlayers?: number
-  readonly discordLink: string
-  readonly tags?: string[]
-  readonly language?: 'en' | 'pt-br'
-}
 
 export interface CreateRoomOutput {
   readonly room: Room

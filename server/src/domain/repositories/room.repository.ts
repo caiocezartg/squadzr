@@ -27,9 +27,9 @@ export interface IRoomRepository {
    * lock, so concurrent creations by one host cannot
    * both pass the limit. A creation inserts a brand-new room row and never
    * locks an existing one, so this user-first path cannot cycle with the
-   * room-then-user order of `joinOpenRoom`.
+   * room-then-user order of `joinOpenRoom`. The capacity arrives resolved.
    */
-  create(input: CreateRoomInput): Promise<CreateRoomOutcome>
+  create(input: CreateRoomInput & { readonly maxPlayers: number }): Promise<CreateRoomOutcome>
   /** Rooms whose activity/retention window ended at or before `now`. */
   findExpiredRooms(now: Date): Promise<Room[]>
   /** Deletes the room only if it is still expired at `now`; memberships cascade. */

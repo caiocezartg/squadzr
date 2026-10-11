@@ -8,20 +8,12 @@ import type { Database } from '@infrastructure/database/drizzle'
 import { rooms, type RoomRow } from '@infrastructure/database/schema/rooms'
 import { roomMembers } from '@infrastructure/database/schema/room-members'
 import { ROOM } from '@config/constants'
+import { openRoomCutoff, validOpenRoomCondition } from './open-room-rules'
 import { mapRoomMemberRowToEntity, mapRoomRowToEntity } from './room-mapping'
 import { lockUserRow } from './user-lock'
 
-function openRoomCutoff(now: Date): Date {
-  return new Date(now.getTime() - ROOM.OPEN_ROOM_TTL_MS)
-}
-
 function readyRoomCutoff(now: Date): Date {
   return new Date(now.getTime() - ROOM.READY_ROOM_RETENTION_MS)
-}
-
-/** Open Rooms whose Room Activity is still inside the 24h window. */
-export function validOpenRoomCondition(now: Date) {
-  return and(isNull(rooms.readyAt), gt(rooms.lastActivityAt, openRoomCutoff(now)))
 }
 
 /** Valid Open Rooms plus Ready Rooms still inside their 60min retention. */
@@ -160,7 +152,9 @@ export class DrizzleRoomRepository implements IRoomRepository {
     return result.map(mapRoomRowToEntity)
   }
 
-  async create(input: CreateRoomInput): Promise<CreateRoomOutcome> {
+  async create(
+    input: CreateRoomInput & { readonly maxPlayers: number }
+  ): Promise<CreateRoomOutcome> {
     const MAX_ATTEMPTS = 5
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {

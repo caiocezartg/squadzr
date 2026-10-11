@@ -22,7 +22,8 @@ export interface CreateRoomInput {
   readonly name: string
   readonly hostId: string
   readonly gameId: string
-  readonly maxPlayers: number
+  /** Omitted, the game's capacity applies: the use case resolves it before persisting. */
+  readonly maxPlayers?: number
   readonly discordLink: string
   readonly tags?: string[]
   readonly language?: 'en' | 'pt-br'
