@@ -32,11 +32,9 @@ export class UserController {
     request: FastifyRequest<{ Querystring: ListNotificationsQuery }>,
     reply: FastifyReply
   ): Promise<void> {
-    const limit = request.query.limit ?? 20
-
     const result = await this.deps.listNotificationsUseCase.execute({
       userId: request.userId,
-      limit,
+      limit: request.query.limit,
     })
 
     await reply.send({

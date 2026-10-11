@@ -3,9 +3,8 @@ import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { Clock } from '@domain/services/clock.interface'
-import { isRoomExpired } from '@domain/services/room-lifecycle'
-import { ROOM } from '@config/constants'
 import { findRoomPlayers } from './find-room-players'
+import { resolveAccessibleRoom } from './resolve-accessible-room'
 
 export interface RoomPlayer {
   readonly id: string
@@ -21,8 +20,8 @@ export interface GetRoomByCodeInput {
 }
 
 export interface GetRoomByCodeOutput {
-  /** Null when the room does not exist, expired, or is a Ready Room read by a non-member. */
-  readonly room: Room | null
+  /** Never null: a missing, expired or hidden room throws RoomNotFoundError instead. */
+  readonly room: Room
   /** True when `viewerId` holds a Membership in the room: only then may private details be shown. */
   readonly isMember: boolean
   readonly players: RoomPlayer[]
@@ -41,22 +40,12 @@ export class GetRoomByCodeUseCase implements IGetRoomByCodeUseCase {
   ) {}
 
   async execute(input: GetRoomByCodeInput): Promise<GetRoomByCodeOutput> {
-    const room = await this.roomRepository.findByCode(input.code)
-    if (!room) {
-      return { room: null, isMember: false, players: [] }
-    }
-
-    const isMember = await this.isMember(room.id, input.viewerId)
-
-    // Expiration is decided by the injected clock, never by the scheduler row.
-    if (isRoomExpired(room, this.clock.now(), ROOM)) {
-      return { room: null, isMember: false, players: [] }
-    }
-
-    // A Ready Room is accessible only to its members, during retention.
-    if (room.readyAt && !isMember) {
-      return { room: null, isMember: false, players: [] }
-    }
+    const { room, isMember } = await resolveAccessibleRoom(
+      this.roomRepository,
+      this.roomMemberRepository,
+      this.clock,
+      input
+    )
 
     if (!isMember) {
       return { room, isMember: false, players: [] }
@@ -67,11 +56,5 @@ export class GetRoomByCodeUseCase implements IGetRoomByCodeUseCase {
       isMember: true,
       players: await findRoomPlayers(room, this.roomMemberRepository, this.userRepository),
     }
-  }
-
-  private async isMember(roomId: string, viewerId: string | undefined): Promise<boolean> {
-    if (!viewerId) return false
-    const membership = await this.roomMemberRepository.findByRoomAndUser(roomId, viewerId)
-    return membership !== null
   }
 }

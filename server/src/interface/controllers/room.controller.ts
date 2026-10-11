@@ -8,7 +8,7 @@ import type { IJoinRoomUseCase } from '@application/use-cases/room/join-room.use
 import type { ILeaveRoomUseCase } from '@application/use-cases/room/leave-room.use-case'
 import type { IGetMyRoomsUseCase } from '@application/use-cases/room/get-my-rooms.use-case'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
-import { AppError, RoomNotFoundError, NotRoomMemberError } from '@application/errors'
+import { AppError } from '@application/errors'
 import { toMemberRoom, toPublicRoom, toRoomMemberDto } from '@application/projections'
 
 type RoomCodeParams = z.infer<typeof roomCodeParamSchema>
@@ -42,10 +42,6 @@ export class RoomController {
       code: params.code,
       viewerId: request.session?.user?.id,
     })
-
-    if (!result.room) {
-      throw new RoomNotFoundError(params.code)
-    }
 
     // Discord invite and roster are lobby details: members only.
     if (!result.isMember) {
@@ -165,36 +161,29 @@ export class RoomController {
     const userId = request.userId
     const params = request.params
 
-    const { room } = await this.deps.getRoomByCodeUseCase.execute({
-      code: params.code,
-      viewerId: userId,
-    })
-    if (!room) {
-      throw new RoomNotFoundError(params.code)
-    }
-
     const result = await this.deps.leaveRoomUseCase.execute({
-      roomId: room.id,
+      code: params.code,
       userId,
     })
-
-    if (!result.success) {
-      throw new NotRoomMemberError(userId, room.id)
-    }
 
     // After commit: the deletion or the new member count is durable.
     if (result.wasHostLeave) {
       request.server.log.info(
-        { roomId: room.id, roomCode: room.code, userId },
+        { roomId: result.roomId, roomCode: result.roomCode, userId },
         'Room deleted (host left)'
       )
-      this.deps.broadcaster.broadcastRoomDeleted(room.id, room.code)
+      this.deps.broadcaster.broadcastRoomDeleted(result.roomId, result.roomCode)
     } else {
       request.server.log.info(
-        { roomId: room.id, roomCode: room.code, userId, memberCount: result.memberCount },
+        {
+          roomId: result.roomId,
+          roomCode: result.roomCode,
+          userId,
+          memberCount: result.memberCount,
+        },
         'Room left'
       )
-      this.deps.broadcaster.broadcastRoomUpdated(room.id, room.code)
+      this.deps.broadcaster.broadcastRoomUpdated(result.roomId, result.roomCode)
     }
 
     await reply.send({

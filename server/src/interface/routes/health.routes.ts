@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
-import { HealthController, type HealthResponse } from '@interface/controllers/health.controller'
+import type { HealthResponse } from '@interface/controllers/health.controller'
+import { createHealthController } from '@interface/factories/health.factory'
 
 // Typed against the controller's HealthResponse, so the wire schema cannot drift from the payload.
 const healthResponse: z.ZodType<HealthResponse> = z.object({
@@ -13,7 +14,7 @@ const healthResponse: z.ZodType<HealthResponse> = z.object({
 
 export async function healthRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
-  const controller = new HealthController()
+  const controller = createHealthController(fastify.db)
 
   app.get('/health', {
     schema: {

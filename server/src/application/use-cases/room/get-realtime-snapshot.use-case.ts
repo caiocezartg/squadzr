@@ -5,7 +5,7 @@ import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import { isRoomExpired, roomExpiresAt } from '@domain/services/room-lifecycle'
 import { ROOM } from '@config/constants'
-import { RoomNotFoundError, UnauthorizedError, NotRoomMemberError } from '@application/errors'
+import { UnauthorizedError, NotRoomMemberError } from '@application/errors'
 import { GetRoomByCodeUseCase, type RoomPlayer } from './get-room-by-code.use-case'
 import { findRoomPlayers } from './find-room-players'
 
@@ -39,7 +39,6 @@ export class GetRealtimeSnapshotUseCase implements IGetRealtimeSnapshotUseCase {
   ): Promise<RealtimeSnapshot & { userId: string }> {
     if (!userId) throw new UnauthorizedError()
     const result = await this.getRoom.execute({ code, viewerId: userId })
-    if (!result.room) throw new RoomNotFoundError(code)
     if (!result.isMember) throw new NotRoomMemberError(userId, result.room.id)
     return { ...this.snapshot(result.room, result.players), userId }
   }
