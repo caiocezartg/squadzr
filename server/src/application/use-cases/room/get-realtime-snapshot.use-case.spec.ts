@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { GetRealtimeSnapshotUseCase } from './get-realtime-snapshot.use-case'
+import { GetRoomByCodeUseCase } from './get-room-by-code.use-case'
 import {
   createMockRoom,
   createMockRoomMember,
@@ -31,7 +32,13 @@ function setup() {
     members,
     users,
     room,
-    useCase: new GetRealtimeSnapshotUseCase(rooms, members, users, clock),
+    useCase: new GetRealtimeSnapshotUseCase(
+      new GetRoomByCodeUseCase(rooms, members, users, clock),
+      rooms,
+      members,
+      users,
+      clock
+    ),
   }
 }
 

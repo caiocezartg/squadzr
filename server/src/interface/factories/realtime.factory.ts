@@ -5,6 +5,7 @@ import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room
 import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzle-room-member.repository'
 import { DrizzleUserRepository } from '@infrastructure/repositories/drizzle-user.repository'
 import { GetRealtimeSnapshotUseCase } from '@application/use-cases/room/get-realtime-snapshot.use-case'
+import { GetRoomByCodeUseCase } from '@application/use-cases/room/get-room-by-code.use-case'
 import { WsConnectionManager } from '@infrastructure/websocket/ws-connection-manager'
 import { WsRoomBroadcaster } from '@infrastructure/websocket/room-broadcaster.service'
 import { OrderedOperations } from '@infrastructure/websocket/ordered-operations'
@@ -16,12 +17,11 @@ import type { ConnectionInspection, Realtime } from '@infrastructure/websocket/t
 
 export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogger): Realtime {
   const operations = new OrderedOperations()
-  const snapshots = new GetRealtimeSnapshotUseCase(
-    new DrizzleRoomRepository(db, clock),
-    new DrizzleRoomMemberRepository(db, clock),
-    new DrizzleUserRepository(db),
-    clock
-  )
+  const rooms = new DrizzleRoomRepository(db, clock)
+  const members = new DrizzleRoomMemberRepository(db, clock)
+  const users = new DrizzleUserRepository(db)
+  const getRoomByCode = new GetRoomByCodeUseCase(rooms, members, users, clock)
+  const snapshots = new GetRealtimeSnapshotUseCase(getRoomByCode, rooms, members, users, clock)
   const manager = new WsConnectionManager((socket) => {
     log.warn({ category: 'transport', event: 'send_failed' }, 'WebSocket send failed')
     disconnect(socket)

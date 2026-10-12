@@ -1,12 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import type { HealthResponse } from '@squadzr/schemas'
 import type { ICheckReadinessUseCase } from '@application/use-cases/health/check-readiness.use-case'
-
-export interface HealthResponse {
-  status: 'ok' | 'error'
-  timestamp: string
-  uptime: number
-  version: string
-}
 
 export interface HealthControllerDeps {
   readonly checkReadinessUseCase: ICheckReadinessUseCase

@@ -6,7 +6,7 @@ import type { Clock } from '@domain/services/clock.interface'
 import { isRoomExpired, roomExpiresAt } from '@domain/services/room-lifecycle'
 import { ROOM } from '@config/constants'
 import { UnauthorizedError, NotRoomMemberError } from '@application/errors'
-import { GetRoomByCodeUseCase, type RoomPlayer } from './get-room-by-code.use-case'
+import type { IGetRoomByCodeUseCase, RoomPlayer } from './get-room-by-code.use-case'
 import { findRoomPlayers } from './find-room-players'
 
 export interface RealtimeSnapshot {
@@ -22,16 +22,13 @@ export interface IGetRealtimeSnapshotUseCase {
 }
 
 export class GetRealtimeSnapshotUseCase implements IGetRealtimeSnapshotUseCase {
-  private readonly getRoom: GetRoomByCodeUseCase
-
   constructor(
+    private readonly getRoom: IGetRoomByCodeUseCase,
     private readonly rooms: IRoomRepository,
     private readonly members: IRoomMemberRepository,
     private readonly users: IUserRepository,
     private readonly clock: Clock
-  ) {
-    this.getRoom = new GetRoomByCodeUseCase(rooms, members, users, clock)
-  }
+  ) {}
 
   async subscribe(
     code: string,

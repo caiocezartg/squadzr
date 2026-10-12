@@ -4,6 +4,7 @@ export {
   type ContractIssue,
   type ErrorResponse,
 } from './error'
+export { healthResponseSchema, type HealthResponse } from './health'
 export { userResponseSchema, type UserDto } from './user'
 export {
   gameIdParamSchema,
