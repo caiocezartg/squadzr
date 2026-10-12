@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto'
 import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
-import type { CreateRoomInput, Room } from '@domain/entities/room.entity'
+import type { NewRoom, Room } from '@domain/entities/room.entity'
 import type { CreateRoomOutcome, IRoomRepository } from '@domain/repositories/room.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import type { Database } from '@infrastructure/database/drizzle'
@@ -152,9 +152,7 @@ export class DrizzleRoomRepository implements IRoomRepository {
     return result.map(mapRoomRowToEntity)
   }
 
-  async create(
-    input: CreateRoomInput & { readonly maxPlayers: number }
-  ): Promise<CreateRoomOutcome> {
+  async create(input: NewRoom): Promise<CreateRoomOutcome> {
     const MAX_ATTEMPTS = 5
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {

@@ -1,4 +1,4 @@
-import type { CreateRoomInput, Room } from '@domain/entities/room.entity'
+import type { NewRoom, Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 
 /** Room and its host Membership, created together in one transaction. */
@@ -29,7 +29,7 @@ export interface IRoomRepository {
    * locks an existing one, so this user-first path cannot cycle with the
    * room-then-user order of `joinOpenRoom`. The capacity arrives resolved.
    */
-  create(input: CreateRoomInput & { readonly maxPlayers: number }): Promise<CreateRoomOutcome>
+  create(input: NewRoom): Promise<CreateRoomOutcome>
   /** Rooms whose activity/retention window ended at or before `now`. */
   findExpiredRooms(now: Date): Promise<Room[]>
   /** Deletes the room only if it is still expired at `now`; memberships cascade. */

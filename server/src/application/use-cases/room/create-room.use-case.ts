@@ -1,4 +1,4 @@
-import type { CreateRoomInput, Room } from '@domain/entities/room.entity'
+import type { NewRoom, Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
@@ -9,6 +9,9 @@ export interface CreateRoomOutput {
   readonly room: Room
   readonly hostMember: RoomMember
 }
+
+/** maxPlayers may be omitted: the game's capacity applies. */
+export type CreateRoomInput = Omit<NewRoom, 'maxPlayers'> & { readonly maxPlayers?: number }
 
 export interface ICreateRoomUseCase {
   execute(input: CreateRoomInput): Promise<CreateRoomOutput>
