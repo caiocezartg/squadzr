@@ -2,9 +2,8 @@ import type { Room } from '@domain/entities/room.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { Clock } from '@domain/services/clock.interface'
-import { isRoomExpired } from '@domain/services/room-lifecycle'
-import { ROOM } from '@config/constants'
 import { RoomNotFoundError } from '@application/errors'
+import { findUnexpiredRoomByCode } from './find-unexpired-room-by-code'
 
 export interface AccessibleRoomInput {
   readonly code: string
@@ -29,17 +28,12 @@ export async function resolveAccessibleRoom(
   clock: Clock,
   input: AccessibleRoomInput
 ): Promise<AccessibleRoom> {
-  const room = await rooms.findByCode(input.code)
+  const room = await findUnexpiredRoomByCode(rooms, clock, input.code)
   if (!room) {
     throw new RoomNotFoundError(input.code)
   }
 
   const isMember = await isMemberOf(members, room.id, input.viewerId)
-
-  // Expiration is decided by the injected clock, never by the scheduler row.
-  if (isRoomExpired(room, clock.now(), ROOM)) {
-    throw new RoomNotFoundError(input.code)
-  }
 
   // A Ready Room is accessible only to its members, during retention.
   if (room.readyAt && !isMember) {

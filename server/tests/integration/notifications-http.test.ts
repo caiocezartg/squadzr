@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { sql } from 'drizzle-orm'
 import { userNotificationSchema, type UserNotificationDto } from '@squadzr/schemas'
 import { signIn, signInMany, type TestUser } from '@test/harness/auth'
+import { FakeClock } from '@test/harness/clock'
 import {
   DISCORD_INVITE,
   countMembers,
@@ -323,5 +324,50 @@ describe('Room Ready notification persistence and delivery', () => {
     expect((await findRoomRow(server, room.id))?.readyAt).toBeInstanceOf(Date)
     expect(await listNotifications(member)).toHaveLength(1)
     expect(await listNotifications(host)).toHaveLength(1)
+  })
+})
+
+describe('read timestamps come from the injected clock', () => {
+  // A pinned clock makes readAt an exact instant rather than a wall-clock reading.
+  const READ_AT = new Date('2026-01-01T00:00:00.000Z')
+  let pinned: TestServer
+
+  beforeEach(async () => {
+    pinned = await buildTestServer({}, { clock: new FakeClock(READ_AT) })
+  })
+
+  afterEach(async () => {
+    await pinned.close()
+  })
+
+  it('stamps readAt with the injected instant when one or all notifications are read', async () => {
+    const host = await signIn(pinned, 'Host')
+    const member = await signIn(pinned, 'Member')
+    const game = await insertGame(pinned)
+    for (const name of ['First squad', 'Second squad']) {
+      const room = await createRoom(pinned, host, { gameId: game.id, maxPlayers: 2, name })
+      await joinAll(pinned, room.code, [member])
+    }
+    const listed = await get(pinned, '/api/notifications', member)
+    const [first] = listed.json<{ notifications: { id: string }[] }>().notifications
+
+    const single = await pinned.app.inject({
+      method: 'POST',
+      url: `/api/notifications/${first!.id}/read`,
+      headers: member.headers,
+    })
+    const all = await pinned.app.inject({
+      method: 'POST',
+      url: '/api/notifications/read-all',
+      headers: member.headers,
+    })
+    const relisted = await get(pinned, '/api/notifications', member)
+    const readAts = relisted
+      .json<{ notifications: { readAt: string | null }[] }>()
+      .notifications.map((notification) => notification.readAt)
+
+    expect(single.json()).toEqual({ success: true })
+    expect(all.json()).toEqual({ success: true, count: 1 })
+    expect(readAts).toEqual([READ_AT.toISOString(), READ_AT.toISOString()])
   })
 })

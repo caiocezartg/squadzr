@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { games } from '@infrastructure/database/schema'
 import { DrizzleGameRepository } from '@infrastructure/repositories/drizzle-game.repository'
+import { FakeClock } from '@test/harness/clock'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
 // CCC-61: upsertBySlug resolves its conflict inside PostgreSQL on the unique slug:
@@ -19,7 +20,7 @@ let repository: DrizzleGameRepository
 
 beforeEach(async () => {
   server = await buildTestServer()
-  repository = new DrizzleGameRepository(server.app.db)
+  repository = new DrizzleGameRepository(server.app.db, server.app.clock)
 })
 
 afterEach(async () => {
@@ -62,6 +63,16 @@ describe('DrizzleGameRepository.upsertBySlug', () => {
     expect(updated.createdAt).toEqual(created.createdAt)
     expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime())
     expect(await countRows()).toBe(1)
+  })
+
+  it('stamps updatedAt from the injected clock on a slug conflict', async () => {
+    const instant = new Date('2026-01-01T00:00:00.000Z')
+    await repository.upsertBySlug(LOL)
+    const pinned = new DrizzleGameRepository(server.app.db, new FakeClock(instant))
+
+    const updated = await pinned.upsertBySlug({ ...LOL, name: 'League of Legends: Wild Rift' })
+
+    expect(updated.updatedAt).toEqual(instant)
   })
 
   it('keeps exactly one row when the same catalog entry is upserted again', async () => {

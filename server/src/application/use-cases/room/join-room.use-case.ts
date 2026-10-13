@@ -5,7 +5,6 @@ import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
 import type { Clock } from '@domain/services/clock.interface'
-import { isRoomExpired } from '@domain/services/room-lifecycle'
 import {
   RoomNotFoundError,
   RoomFullError,
@@ -13,6 +12,7 @@ import {
   RoomReadyError,
 } from '@application/errors'
 import { buildRoomReadyNotifications } from './room-ready-notifications'
+import { findUnexpiredRoomByCode } from './find-unexpired-room-by-code'
 import { ROOM } from '@config/constants'
 
 export interface JoinRoomInput {
@@ -43,10 +43,8 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
   ) {}
 
   async execute(input: JoinRoomInput): Promise<JoinRoomOutput> {
-    const now = this.clock.now()
-
-    const room = await this.roomRepository.findByCode(input.code)
-    if (!room || isRoomExpired(room, now, ROOM)) {
+    const room = await findUnexpiredRoomByCode(this.roomRepository, this.clock, input.code)
+    if (!room) {
       throw new RoomNotFoundError(input.code)
     }
 

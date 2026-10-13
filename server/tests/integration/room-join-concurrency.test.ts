@@ -33,7 +33,7 @@ beforeEach(async () => {
   join = new JoinRoomUseCase(
     new DrizzleRoomRepository(db, server.app.clock),
     new DrizzleRoomMemberRepository(db, server.app.clock),
-    new DrizzleGameRepository(db),
+    new DrizzleGameRepository(db, server.app.clock),
     server.app.clock
   )
   control = new pg.Client({ connectionString: server.databaseUrl })

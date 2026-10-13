@@ -3,11 +3,12 @@ import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { Clock } from '@domain/services/clock.interface'
-import { isRoomExpired, roomExpiresAt } from '@domain/services/room-lifecycle'
+import { roomExpiresAt } from '@domain/services/room-lifecycle'
 import { ROOM } from '@config/constants'
 import { UnauthorizedError, NotRoomMemberError } from '@application/errors'
 import type { IGetRoomByCodeUseCase, RoomPlayer } from './get-room-by-code.use-case'
 import { findRoomPlayers } from './find-room-players'
+import { findUnexpiredRoomByCode } from './find-unexpired-room-by-code'
 
 export interface RealtimeSnapshot {
   readonly room: Room
@@ -41,8 +42,8 @@ export class GetRealtimeSnapshotUseCase implements IGetRealtimeSnapshotUseCase {
   }
 
   async read(code: string): Promise<RealtimeSnapshot | null> {
-    const room = await this.rooms.findByCode(code)
-    if (!room || isRoomExpired(room, this.clock.now(), ROOM)) return null
+    const room = await findUnexpiredRoomByCode(this.rooms, this.clock, code)
+    if (!room) return null
     return this.snapshot(room, await findRoomPlayers(room, this.members, this.users))
   }
 
