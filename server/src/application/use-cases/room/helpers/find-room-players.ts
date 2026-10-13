@@ -1,7 +1,7 @@
 import type { Room } from '@domain/entities/room.entity'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
-import type { RoomPlayer } from './get-room-by-code.use-case'
+import type { RoomPlayer } from '@application/use-cases/room/get-room-by-code.use-case'
 
 export async function findRoomPlayers(
   room: Room,

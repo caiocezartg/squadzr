@@ -11,8 +11,8 @@ import {
   RoomJoinLimitReachedError,
   RoomReadyError,
 } from '@application/errors'
-import { buildRoomReadyNotifications } from './room-ready-notifications'
-import { findUnexpiredRoomByCode } from './find-unexpired-room-by-code'
+import { buildRoomReadyNotifications } from './helpers/room-ready-notifications'
+import { findUnexpiredRoomByCode } from './helpers/find-unexpired-room-by-code'
 import { ROOM } from '@config/constants'
 
 export interface JoinRoomInput {

@@ -7,8 +7,8 @@ import { roomExpiresAt } from '@domain/services/room-lifecycle'
 import { ROOM } from '@config/constants'
 import { UnauthorizedError, NotRoomMemberError } from '@application/errors'
 import type { IGetRoomByCodeUseCase, RoomPlayer } from './get-room-by-code.use-case'
-import { findRoomPlayers } from './find-room-players'
-import { findUnexpiredRoomByCode } from './find-unexpired-room-by-code'
+import { findRoomPlayers } from './helpers/find-room-players'
+import { findUnexpiredRoomByCode } from './helpers/find-unexpired-room-by-code'
 
 export interface RealtimeSnapshot {
   readonly room: Room

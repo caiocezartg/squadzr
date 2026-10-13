@@ -3,8 +3,8 @@ import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { Clock } from '@domain/services/clock.interface'
-import { findRoomPlayers } from './find-room-players'
-import { resolveAccessibleRoom } from './resolve-accessible-room'
+import { findRoomPlayers } from './helpers/find-room-players'
+import { resolveAccessibleRoom } from './helpers/resolve-accessible-room'
 
 export interface RoomPlayer {
   readonly id: string
