@@ -4,10 +4,8 @@ import type { Room } from '@domain/entities/room.entity'
 import type { UserNotification } from '@domain/entities/user-notification.entity'
 import type { Clock } from '@domain/services/clock.interface'
 import { toMemberRoom, toPublicRoom, toUserNotificationDto } from '@application/projections'
-import type {
-  IGetRealtimeSnapshotUseCase,
-  RealtimeSnapshot,
-} from '@application/use-cases/room/get-realtime-snapshot.use-case'
+import type { IGetRealtimeSnapshotUseCase } from '@application/use-cases/room/get-realtime-snapshot.use-case'
+import type { RealtimeSnapshot } from '@application/use-cases/room/helpers/realtime-snapshot'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
 import type { WsConnectionManager } from './ws-connection-manager'
 import type { Presence } from './presence'
@@ -19,7 +17,7 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
 
   constructor(
     private readonly connectionManager: WsConnectionManager,
-    private readonly snapshots: IGetRealtimeSnapshotUseCase,
+    private readonly getSnapshot: IGetRealtimeSnapshotUseCase,
     private readonly presence: Presence,
     private readonly operations: OrderedOperations,
     private readonly clock: Clock,
@@ -68,7 +66,7 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
       .run(async () => {
         if (this.stopped) return
         const observedPresence = this.presence.captureMembers(roomCode)
-        const snapshot = await this.snapshots.read(roomCode)
+        const snapshot = await this.getSnapshot.execute({ code: roomCode })
         if (this.stopped) return
         if (!snapshot) return null
         this.presence.retainMembers(

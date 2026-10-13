@@ -21,7 +21,7 @@ import {
 export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
   const roomController = createRoomController(fastify.db, fastify.broadcaster, fastify.clock)
-  const gameController = createGameController(fastify.db)
+  const gameController = createGameController(fastify.db, fastify.clock)
 
   // Games
   app.get('/api/games', {

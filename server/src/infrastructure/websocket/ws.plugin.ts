@@ -27,7 +27,7 @@ async function wsPlugin(
   fastify: FastifyInstance,
   { realtime }: { realtime: Realtime }
 ): Promise<void> {
-  const { manager, heartbeat, operations, presence, broadcaster, snapshots } = realtime
+  const { manager, heartbeat, operations, presence, broadcaster, subscribeSnapshot } = realtime
   fastify.decorate('broadcaster', broadcaster)
   fastify.decorate('realtime', realtime)
 
@@ -74,7 +74,7 @@ async function wsPlugin(
     function dispatch(message: WsIncomingMessage): void | Promise<void> {
       switch (message.type) {
         case 'join_room':
-          return handleJoinRoom(socket, message, manager, snapshots, presence, broadcaster)
+          return handleJoinRoom(socket, message, manager, subscribeSnapshot, presence, broadcaster)
         case 'leave_room':
           if (!client.userId) {
             sendError(socket, 'UNAUTHORIZED', 'Authentication required', manager, fastify.clock)

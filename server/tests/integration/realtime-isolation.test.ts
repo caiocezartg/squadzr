@@ -97,18 +97,17 @@ describe('realtime isolation under subscription load', () => {
     'bounds another socket snapshot and heartbeat in the %s',
     async (target) => {
       vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
-      const { host, member, otherHost, room, otherRoom, broadcaster, clock, capture } =
-        await setup()
+      const { host, member, otherHost, room, otherRoom, clock, capture } = await setup()
       await joinAll(server, room.code, [member])
       const attacker = await open(host)
       const peer = await open(target === 'same room' ? member : otherHost)
-      const snapshots = broadcaster['snapshots']
-      const subscribe = snapshots.subscribe.bind(snapshots)
+      const subscribeSnapshot = server.app.realtime.subscribeSnapshot
+      const subscribe = subscribeSnapshot.execute.bind(subscribeSnapshot)
       const gate = deferred()
       const started = deferred()
-      const spy = vi.spyOn(snapshots, 'subscribe').mockImplementation(async (code, userId) => {
-        const snapshot = await subscribe(code, userId)
-        if (userId === host.id) {
+      const spy = vi.spyOn(subscribeSnapshot, 'execute').mockImplementation(async (input) => {
+        const snapshot = await subscribe(input)
+        if (input.userId === host.id) {
           started.resolve()
           await gate.promise
         }
@@ -126,7 +125,7 @@ describe('realtime isolation under subscription load', () => {
         )
         for (const reply of rejected)
           expect(errorMessageSchema.parse(reply).payload.code).toBe('TOO_MANY_REQUESTS')
-        expect(spy.mock.calls.filter(([, userId]) => userId === host.id)).toHaveLength(1)
+        expect(spy.mock.calls.filter(([input]) => input.userId === host.id)).toHaveLength(1)
         expect(
           (
             await withinBound(
@@ -169,7 +168,7 @@ describe('realtime isolation under subscription load', () => {
       expect(accepted.filter((message) => message.type === 'room_snapshot')).toHaveLength(
         SOCKET_OPERATION_LIMIT
       )
-      expect(spy.mock.calls.filter(([, userId]) => userId === host.id)).toHaveLength(
+      expect(spy.mock.calls.filter(([input]) => input.userId === host.id)).toHaveLength(
         SOCKET_OPERATION_LIMIT
       )
       expect((await joinRoomChannel(attacker, room.code)).type).toBe('room_snapshot')
@@ -183,16 +182,16 @@ describe('realtime isolation under subscription load', () => {
     await joinRoomChannel(first, room.code)
     await joinRoomChannel(peer, otherRoom.code)
     await subscribeCatalog(peer)
-    const snapshots = broadcaster['snapshots']
-    const read = snapshots.read.bind(snapshots)
+    const getSnapshot = server.app.realtime.getSnapshot
+    const read = getSnapshot.execute.bind(getSnapshot)
     const gate = deferred()
     const started = deferred()
-    vi.spyOn(snapshots, 'read').mockImplementation(async (code) => {
-      if (code === room.code) {
+    vi.spyOn(getSnapshot, 'execute').mockImplementation(async (input) => {
+      if (input.code === room.code) {
         started.resolve()
         await gate.promise
       }
-      return read(code)
+      return read(input)
     })
     try {
       broadcaster.broadcastRoomUpdated(room.id, room.code)
@@ -222,12 +221,12 @@ describe('realtime isolation under subscription load', () => {
   it('delivers a committed snapshot after a pending initial subscription without losing the publication', async () => {
     const { host, member, room, broadcaster } = await setup()
     const channel = await open(host)
-    const snapshots = broadcaster['snapshots']
-    const subscribe = snapshots.subscribe.bind(snapshots)
+    const subscribeSnapshot = server.app.realtime.subscribeSnapshot
+    const subscribe = subscribeSnapshot.execute.bind(subscribeSnapshot)
     const gate = deferred()
     const started = deferred()
-    vi.spyOn(snapshots, 'subscribe').mockImplementation(async (code, userId) => {
-      const snapshot = await subscribe(code, userId)
+    vi.spyOn(subscribeSnapshot, 'execute').mockImplementation(async (input) => {
+      const snapshot = await subscribe(input)
       started.resolve()
       await gate.promise
       return snapshot
@@ -249,18 +248,18 @@ describe('realtime isolation under subscription load', () => {
   })
 
   it('keeps Presence behind a resubscription snapshot while other connections subscribe immediately', async () => {
-    const { host, member, room, broadcaster } = await setup()
+    const { host, member, room } = await setup()
     await joinAll(server, room.code, [member])
     const channel = await open(host)
     const peer = await open(member)
     await joinRoomChannel(channel, room.code)
-    const snapshots = broadcaster['snapshots']
-    const subscribe = snapshots.subscribe.bind(snapshots)
+    const subscribeSnapshot = server.app.realtime.subscribeSnapshot
+    const subscribe = subscribeSnapshot.execute.bind(subscribeSnapshot)
     const gate = deferred()
     const started = deferred()
-    vi.spyOn(snapshots, 'subscribe').mockImplementation(async (code, userId) => {
-      const snapshot = await subscribe(code, userId)
-      if (userId === host.id) {
+    vi.spyOn(subscribeSnapshot, 'execute').mockImplementation(async (input) => {
+      const snapshot = await subscribe(input)
+      if (input.userId === host.id) {
         started.resolve()
         await gate.promise
       }
@@ -282,19 +281,19 @@ describe('realtime isolation under subscription load', () => {
   })
 
   it('publishes to a healthy subscriber in the same room while another socket resubscribes slowly', async () => {
-    const { host, member, otherHost, room, broadcaster } = await setup()
+    const { host, member, otherHost, room } = await setup()
     await joinAll(server, room.code, [member])
     const channel = await open(host)
     const peer = await open(member)
     await joinRoomChannel(channel, room.code)
     await joinRoomChannel(peer, room.code)
     await channel.drain()
-    const snapshots = broadcaster['snapshots']
-    const subscribe = snapshots.subscribe.bind(snapshots)
+    const subscribeSnapshot = server.app.realtime.subscribeSnapshot
+    const subscribe = subscribeSnapshot.execute.bind(subscribeSnapshot)
     const gate = deferred()
     const started = deferred()
-    vi.spyOn(snapshots, 'subscribe').mockImplementation(async (code, userId) => {
-      const snapshot = await subscribe(code, userId)
+    vi.spyOn(subscribeSnapshot, 'execute').mockImplementation(async (input) => {
+      const snapshot = await subscribe(input)
       started.resolve()
       await gate.promise
       return snapshot
@@ -319,12 +318,12 @@ describe('realtime isolation under subscription load', () => {
   it('orders deletion after a pending initial snapshot and leaves no room subscription behind', async () => {
     const { host, room, broadcaster } = await setup()
     const channel = await open(host)
-    const snapshots = broadcaster['snapshots']
-    const subscribe = snapshots.subscribe.bind(snapshots)
+    const subscribeSnapshot = server.app.realtime.subscribeSnapshot
+    const subscribe = subscribeSnapshot.execute.bind(subscribeSnapshot)
     const gate = deferred()
     const started = deferred()
-    vi.spyOn(snapshots, 'subscribe').mockImplementation(async (code, userId) => {
-      const snapshot = await subscribe(code, userId)
+    vi.spyOn(subscribeSnapshot, 'execute').mockImplementation(async (input) => {
+      const snapshot = await subscribe(input)
       started.resolve()
       await gate.promise
       return snapshot
@@ -351,12 +350,12 @@ describe('realtime isolation under subscription load', () => {
     const { host, member, room, broadcaster } = await setup()
     const observer = await open(host)
     await joinRoomChannel(observer, room.code)
-    const snapshots = broadcaster['snapshots']
-    const read = snapshots.read.bind(snapshots)
+    const getSnapshot = server.app.realtime.getSnapshot
+    const read = getSnapshot.execute.bind(getSnapshot)
     const gate = deferred()
     const started = deferred()
-    vi.spyOn(snapshots, 'read').mockImplementationOnce(async (code) => {
-      const stale = await read(code)
+    vi.spyOn(getSnapshot, 'execute').mockImplementationOnce(async (input) => {
+      const stale = await read(input)
       started.resolve()
       await gate.promise
       return stale
@@ -389,7 +388,7 @@ describe('realtime isolation under subscription load', () => {
     const channel = await open(host)
     await joinRoomChannel(channel, room.code)
     await subscribeCatalog(channel)
-    const snapshot = await broadcaster['snapshots'].read(room.code)
+    const snapshot = await server.app.realtime.getSnapshot.execute({ code: room.code })
     if (!snapshot) throw new Error('Expected room snapshot')
     const gate = deferred()
     const pending = broadcaster['operations'].run(() => gate.promise, channel.server, room.code)

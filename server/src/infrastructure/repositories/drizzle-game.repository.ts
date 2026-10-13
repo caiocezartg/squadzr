@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { CreateGameInput, Game } from '@domain/entities/game.entity'
 import type { IGameRepository } from '@domain/repositories/game.repository'
+import type { Clock } from '@domain/services/clock.interface'
 import type { Database } from '@infrastructure/database/drizzle'
 import { games, type GameRow } from '@infrastructure/database/schema/games'
 
@@ -18,7 +19,10 @@ function mapRowToEntity(row: GameRow): Game {
 }
 
 export class DrizzleGameRepository implements IGameRepository {
-  constructor(private readonly db: Database) {}
+  constructor(
+    private readonly db: Database,
+    private readonly clock: Clock
+  ) {}
 
   async findById(id: string): Promise<Game | null> {
     const result = await this.db.select().from(games).where(eq(games.id, id)).limit(1)
@@ -48,7 +52,7 @@ export class DrizzleGameRepository implements IGameRepository {
           coverUrl: input.coverUrl,
           minPlayers: input.minPlayers,
           maxPlayers: input.maxPlayers,
-          updatedAt: new Date(),
+          updatedAt: this.clock.now(),
         },
       })
       .returning()

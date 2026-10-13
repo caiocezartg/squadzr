@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq, sql, type SQL } from 'drizzle-orm'
 import { DeleteExpiredRoomsUseCase } from '@application/use-cases/room/delete-expired-rooms.use-case'
-import { buildRoomReadyNotifications } from '@application/use-cases/room/room-ready-notifications'
+import { buildRoomReadyNotifications } from '@application/use-cases/room/helpers/room-ready-notifications'
 import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
 import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzle-room-member.repository'
 import { rooms, userNotifications } from '@infrastructure/database/schema'

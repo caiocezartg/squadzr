@@ -2,7 +2,7 @@ import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import { NotRoomMemberError, RoomNotFoundError, RoomReadyError } from '@application/errors'
-import { resolveAccessibleRoom } from './resolve-accessible-room'
+import { resolveAccessibleRoom } from './helpers/resolve-accessible-room'
 
 export interface LeaveRoomInput {
   readonly code: string
