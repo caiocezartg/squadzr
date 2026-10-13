@@ -4,6 +4,7 @@ export {
   type ContractIssue,
   type ErrorResponse,
 } from './error'
+export { healthResponseSchema, type HealthResponse } from './health'
 export { userResponseSchema, type UserDto } from './user'
 export {
   gameIdParamSchema,
@@ -22,6 +23,7 @@ export {
   playerSchema,
   publicRoomSchema,
   roomCodeParamSchema,
+  roomLanguageSchema,
   roomLobbyResponseSchema,
   roomMemberSchema,
   roomResponseSchema,
@@ -45,6 +47,7 @@ export {
   notificationIdParamSchema,
   notificationsResponseSchema,
   readAllNotificationsResponseSchema,
+  userNotificationPayloadSchema,
   userNotificationSchema,
   userNotificationTypeSchema,
   type NotificationsResponse,

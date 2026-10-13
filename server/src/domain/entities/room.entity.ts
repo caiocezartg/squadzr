@@ -18,7 +18,7 @@ export interface Room {
   readonly updatedAt: Date
 }
 
-export interface CreateRoomInput {
+export interface NewRoom {
   readonly name: string
   readonly hostId: string
   readonly gameId: string

@@ -1,10 +1,11 @@
-import { z } from 'zod'
+import { roomLanguageSchema } from '@squadzr/schemas'
 import type { Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { RoomRow } from '@infrastructure/database/schema/rooms'
 import type { RoomMemberRow } from '@infrastructure/database/schema/room-members'
 
-const languageSchema = z.enum(['en', 'pt-br']).catch('pt-br')
+// A stored language outside the contract reads as pt-br instead of failing the row.
+const languageSchema = roomLanguageSchema.catch('pt-br')
 
 /** Single mapping seam for room rows, shared by the room and member repositories. */
 export function mapRoomRowToEntity(row: RoomRow): Room {

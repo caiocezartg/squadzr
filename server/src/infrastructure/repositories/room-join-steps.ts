@@ -1,4 +1,4 @@
-import { and, count, eq, gt, isNull } from 'drizzle-orm'
+import { and, count, eq } from 'drizzle-orm'
 import type { Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { UserNotification } from '@domain/entities/user-notification.entity'
@@ -12,11 +12,9 @@ import { user } from '@infrastructure/database/schema/auth'
 import { roomMembers, type RoomMemberRow } from '@infrastructure/database/schema/room-members'
 import { rooms, type RoomRow } from '@infrastructure/database/schema/rooms'
 import { userNotifications } from '@infrastructure/database/schema/user-notifications'
-import {
-  mapUserNotificationRow,
-  notificationInputToRow,
-} from './drizzle-user-notification.repository'
+import { validOpenRoomCondition } from './open-room-rules'
 import { mapRoomMemberRowToEntity } from './room-mapping'
+import { mapUserNotificationRow, notificationInputToRow } from './user-notification-mapping'
 import type { DatabaseTransaction } from './user-lock'
 
 // The named steps of `DrizzleRoomMemberRepository.joinOpenRoom`. Each step takes the
@@ -203,18 +201,8 @@ async function countActiveMemberships(
     .select({ currentCount: count() })
     .from(roomMembers)
     .innerJoin(rooms, eq(rooms.id, roomMembers.roomId))
-    .where(
-      and(
-        eq(roomMembers.userId, userId),
-        isNull(rooms.readyAt),
-        gt(rooms.lastActivityAt, openRoomCutoff(now))
-      )
-    )
+    .where(and(eq(roomMembers.userId, userId), validOpenRoomCondition(now)))
   return rows[0]?.currentCount ?? 0
-}
-
-function openRoomCutoff(now: Date): Date {
-  return new Date(now.getTime() - ROOM.OPEN_ROOM_TTL_MS)
 }
 
 /** Members and profiles as they stand under the join's locks, not as they were before. */

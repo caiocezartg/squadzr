@@ -3,11 +3,9 @@ import pg from 'pg'
 import { and, count, eq } from 'drizzle-orm'
 import { ROOM } from '@config/constants'
 import { roomMembers, rooms, userNotifications } from '@infrastructure/database/schema'
-import {
-  DrizzleRoomRepository,
-  validOpenRoomCondition,
-} from '@infrastructure/repositories/drizzle-room.repository'
+import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
 import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzle-room-member.repository'
+import { validOpenRoomCondition } from '@infrastructure/repositories/open-room-rules'
 import { signIn, signInMany } from '@test/harness/auth'
 import { FakeClock } from '@test/harness/clock'
 import {
