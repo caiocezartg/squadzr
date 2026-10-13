@@ -2,10 +2,8 @@ import type { WebSocket } from '@fastify/websocket'
 import { describe, expect, it, vi } from 'vitest'
 import { WsConnectionManager } from '../ws-connection-manager'
 import { handleDisconnect, handleJoinRoom } from './room.handler'
-import type {
-  IGetRealtimeSnapshotUseCase,
-  RealtimeSnapshot,
-} from '@application/use-cases/room/get-realtime-snapshot.use-case'
+import type { RealtimeSnapshot } from '@application/use-cases/room/helpers/realtime-snapshot'
+import type { ISubscribeRealtimeSnapshotUseCase } from '@application/use-cases/room/subscribe-realtime-snapshot.use-case'
 import type { WsRoomBroadcaster } from '../room-broadcaster.service'
 import { createMockRoom } from '@test/mocks'
 import { Presence } from '../presence'
@@ -70,9 +68,8 @@ describe('handleDisconnect', () => {
     const query = new Promise<RealtimeSnapshot & { userId: string }>((resolve) => {
       release = resolve
     })
-    const snapshots: IGetRealtimeSnapshotUseCase = {
-      subscribe: vi.fn(() => query),
-      read: vi.fn().mockResolvedValue(null),
+    const subscribeSnapshot: ISubscribeRealtimeSnapshotUseCase = {
+      execute: vi.fn(() => query),
     }
     const broadcaster = {
       sendSnapshot: vi.fn(),
@@ -82,7 +79,7 @@ describe('handleDisconnect', () => {
       leaving.socket,
       { type: 'join_room', timestamp: 0, payload: { roomCode: ROOM_CODE } },
       manager,
-      snapshots,
+      subscribeSnapshot,
       presence,
       broadcaster
     )

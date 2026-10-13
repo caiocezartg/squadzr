@@ -1,7 +1,7 @@
 import type { WebSocket } from '@fastify/websocket'
 import type { JoinRoomMessage, LeaveRoomMessage } from '@squadzr/schemas/ws'
 import type { Clock } from '@domain/services/clock.interface'
-import type { IGetRealtimeSnapshotUseCase } from '@application/use-cases/room/get-realtime-snapshot.use-case'
+import type { ISubscribeRealtimeSnapshotUseCase } from '@application/use-cases/room/subscribe-realtime-snapshot.use-case'
 import type { WsConnectionManager } from '../ws-connection-manager'
 import type { WsRoomBroadcaster } from '../room-broadcaster.service'
 import type { Presence } from '../presence'
@@ -24,13 +24,16 @@ export async function handleJoinRoom(
   socket: WebSocket,
   message: JoinRoomMessage,
   manager: WsConnectionManager,
-  snapshots: IGetRealtimeSnapshotUseCase,
+  subscribeSnapshot: ISubscribeRealtimeSnapshotUseCase,
   presence: Presence,
   broadcaster: WsRoomBroadcaster
 ): Promise<void> {
   const client = manager.getClientData(socket)
   if (!client || !manager.isConnected(socket)) return
-  const snapshot = await snapshots.subscribe(message.payload.roomCode, client.userId)
+  const snapshot = await subscribeSnapshot.execute({
+    code: message.payload.roomCode,
+    userId: client.userId,
+  })
   const { userId } = snapshot
   // A disconnect during the query must never resurrect a subscription.
   if (!manager.isConnected(socket) || socket.readyState !== socket.OPEN) return

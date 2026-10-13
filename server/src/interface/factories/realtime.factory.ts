@@ -6,6 +6,7 @@ import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzl
 import { DrizzleUserRepository } from '@infrastructure/repositories/drizzle-user.repository'
 import { GetRealtimeSnapshotUseCase } from '@application/use-cases/room/get-realtime-snapshot.use-case'
 import { GetRoomByCodeUseCase } from '@application/use-cases/room/get-room-by-code.use-case'
+import { SubscribeRealtimeSnapshotUseCase } from '@application/use-cases/room/subscribe-realtime-snapshot.use-case'
 import { WsConnectionManager } from '@infrastructure/websocket/ws-connection-manager'
 import { WsRoomBroadcaster } from '@infrastructure/websocket/room-broadcaster.service'
 import { OrderedOperations } from '@infrastructure/websocket/ordered-operations'
@@ -21,7 +22,8 @@ export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogge
   const members = new DrizzleRoomMemberRepository(db, clock)
   const users = new DrizzleUserRepository(db)
   const getRoomByCode = new GetRoomByCodeUseCase(rooms, members, users, clock)
-  const snapshots = new GetRealtimeSnapshotUseCase(getRoomByCode, rooms, members, users, clock)
+  const subscribeSnapshot = new SubscribeRealtimeSnapshotUseCase(getRoomByCode)
+  const getSnapshot = new GetRealtimeSnapshotUseCase(rooms, members, users, clock)
   const manager = new WsConnectionManager((socket) => {
     log.warn({ category: 'transport', event: 'send_failed' }, 'WebSocket send failed')
     disconnect(socket)
@@ -30,7 +32,7 @@ export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogge
   const presence = new Presence(clock, (roomCode, userId, online) =>
     broadcaster.broadcastPresence(roomCode, userId, online)
   )
-  const broadcaster = new WsRoomBroadcaster(manager, snapshots, presence, operations, clock, log)
+  const broadcaster = new WsRoomBroadcaster(manager, getSnapshot, presence, operations, clock, log)
   const heartbeat = new Heartbeat(clock, (socket) => {
     log.warn(
       {
@@ -82,7 +84,8 @@ export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogge
 
   return {
     manager,
-    snapshots,
+    subscribeSnapshot,
+    getSnapshot,
     presence,
     broadcaster,
     heartbeat,
