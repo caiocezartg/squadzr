@@ -27,6 +27,9 @@ export function createAuth(db: Database, config: AuthConfig) {
       discord: {
         clientId: config.DISCORD_CLIENT_ID,
         clientSecret: config.DISCORD_CLIENT_SECRET,
+        // Refresh name and image on every sign-in: Discord drops the old avatar file
+        // when its hash changes, so the stored image URL would answer 404.
+        overrideUserInfoOnSignIn: true,
       },
     },
     session: {
