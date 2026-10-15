@@ -37,9 +37,6 @@ vi.mock('@/components/landing/popular-games', () => {
 vi.mock('@/components/landing/faq-section', () => {
   throw new Error('faq chunk failed')
 })
-vi.mock('sonner', () => {
-  throw new Error('sonner chunk failed')
-})
 
 function renderScene(tree: AnyRoute): void {
   const router = createRouter({
@@ -72,7 +69,7 @@ function headerScene(): AnyRoute {
   return rootRoute.addChildren([indexRoute]) as AnyRoute
 }
 
-/** The real root layout and landing page, with failing sections and toaster. */
+/** The real root layout and landing page, with failing sections. */
 function landingScene(): AnyRoute {
   const rootRoute = createRootRoute({ component: RootRoute.options.component })
   const indexRoute = createRoute({
@@ -109,7 +106,7 @@ describe('non-essential lazy islands', () => {
     expect(within(header).getByText('Caio')).toBeInTheDocument()
   })
 
-  it('keeps the landing rendered when its sections and the toaster chunk fail', async () => {
+  it('keeps the landing rendered when its sections fail', async () => {
     renderScene(landingScene())
 
     // The hero (and its badge island) render, as do the static sections and

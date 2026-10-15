@@ -42,7 +42,7 @@ export function useRoomMembership({
       await catalog.refreshRooms()
       await navigate({ to: '/rooms', search: {} })
     } catch (err) {
-      void notifyError(getUserFriendlyError(err, 'leave'))
+      notifyError(getUserFriendlyError(err, 'leave'))
     }
   }, [room, userId, roomCode, notifyRoomLeave, catalog, navigate])
 

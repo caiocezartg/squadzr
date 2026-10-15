@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { signIn, useSession } from '@/lib/auth-client'
-import * as motion from 'motion/react-client'
+import * as m from 'motion/react-m'
 import { DiscordIcon } from '@/components/ui/icons'
 import { useTranslation, Trans } from 'react-i18next'
 
@@ -22,7 +22,7 @@ export function CTABanner() {
         <div className="w-[500px] h-[300px] bg-accent/5 rounded-full blur-[100px]" />
       </div>
 
-      <motion.div
+      <m.div
         className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -45,7 +45,7 @@ export function CTABanner() {
             </button>
           )}
         </div>
-      </motion.div>
+      </m.div>
     </section>
   )
 }

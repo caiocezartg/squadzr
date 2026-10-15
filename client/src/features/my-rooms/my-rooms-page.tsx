@@ -197,7 +197,7 @@ export function MyRoomsPage() {
       {modalOpen && (
         <LazyIslandBoundary
           fallback={null}
-          onError={() => void notifyError(t('errors.DIALOG_LOAD_FAILED'))}
+          onError={() => notifyError(t('errors.DIALOG_LOAD_FAILED'))}
         >
           <Suspense fallback={<ModalLoading />}>
             <LazyCreateRoomModal

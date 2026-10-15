@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
+import { notifyError } from '@/lib/notify'
 import {
   notificationChangeResponseSchema,
   notificationsResponseSchema,
@@ -44,6 +44,26 @@ function playNotificationSound() {
   }
 }
 
+/**
+ * The three notification changes share one shape: a success refetches the notifications, and a
+ * failure shows its message as an error toast.
+ */
+function useNotificationMutation<TData, TVariables = void>(
+  mutationFn: (variables: TVariables) => Promise<TData>
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+    onError: (err) => {
+      notifyError(getUserFriendlyError(err))
+    },
+  })
+}
+
 interface UseNotificationsOptions {
   enabled: boolean
   limit?: number
@@ -51,7 +71,6 @@ interface UseNotificationsOptions {
 
 export function useNotifications(options: UseNotificationsOptions) {
   const { enabled, limit = 20 } = options
-  const queryClient = useQueryClient()
 
   const query = useQuery({
     queryKey: ['notifications', { limit }],
@@ -61,38 +80,17 @@ export function useNotifications(options: UseNotificationsOptions) {
     staleTime: 15_000,
   })
 
-  const markAsReadMutation = useMutation({
-    mutationFn: (notificationId: string) =>
-      api.post(`/api/notifications/${notificationId}/read`, {}, notificationChangeResponseSchema),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['notifications'] })
-    },
-    onError: (err) => {
-      toast.error(getUserFriendlyError(err))
-    },
-  })
+  const markAsReadMutation = useNotificationMutation((notificationId: string) =>
+    api.post(`/api/notifications/${notificationId}/read`, {}, notificationChangeResponseSchema)
+  )
 
-  const markAllAsReadMutation = useMutation({
-    mutationFn: () =>
-      api.post('/api/notifications/read-all', {}, readAllNotificationsResponseSchema),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['notifications'] })
-    },
-    onError: (err) => {
-      toast.error(getUserFriendlyError(err))
-    },
-  })
+  const markAllAsReadMutation = useNotificationMutation(() =>
+    api.post('/api/notifications/read-all', {}, readAllNotificationsResponseSchema)
+  )
 
-  const deleteNotificationMutation = useMutation({
-    mutationFn: (notificationId: string) =>
-      api.delete(`/api/notifications/${notificationId}`, notificationChangeResponseSchema),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['notifications'] })
-    },
-    onError: (err) => {
-      toast.error(getUserFriendlyError(err))
-    },
-  })
+  const deleteNotificationMutation = useNotificationMutation((notificationId: string) =>
+    api.delete(`/api/notifications/${notificationId}`, notificationChangeResponseSchema)
+  )
 
   const notifications = query.data?.notifications ?? EMPTY_NOTIFICATIONS
 

@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Link } from '@tanstack/react-router'
 import { signIn, useSession } from '@/lib/auth-client'
-import * as motion from 'motion/react-client'
+import * as m from 'motion/react-m'
 import { Search } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
 import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
@@ -35,7 +35,7 @@ export function HeroSection() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-20 sm:pt-28 sm:pb-24">
         <div className="max-w-full flex flex-col items-center">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
@@ -45,9 +45,9 @@ export function HeroSection() {
                 <LazyHeroGameBadge />
               </Suspense>
             </LazyIslandBoundary>
-          </motion.div>
+          </m.div>
 
-          <motion.h1
+          <m.h1
             className="font-heading text-5xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl xl:text-8xl"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -58,16 +58,16 @@ export function HeroSection() {
             {t('hero.titleLine2')}&nbsp;
             <span className="relative text-accent">
               {t('hero.titleAccent')}
-              <motion.span
+              <m.span
                 className="absolute bottom-0 left-0 h-[3px] bg-accent/60 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: '100%' }}
                 transition={{ duration: 0.6, delay: 0.7, ease: 'easeOut' }}
               />
             </span>
-          </motion.h1>
+          </m.h1>
 
-          <motion.p
+          <m.p
             className={`mt-6 text-base text-muted leading-relaxed sm:text-lg ${lang === 'pt-BR' ? 'max-w-lg' : 'max-w-md'} text-center`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -77,10 +77,10 @@ export function HeroSection() {
               i18nKey="hero.subtitle"
               components={{ bold: <strong className="text-offwhite" /> }}
             />
-          </motion.p>
+          </m.p>
 
           {/* CTAs */}
-          <motion.div
+          <m.div
             className="mt-8 flex flex-col sm:flex-row items-start gap-3"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -103,7 +103,7 @@ export function HeroSection() {
                 {t('hero.signInWithDiscord')}
               </button>
             )}
-          </motion.div>
+          </m.div>
 
           <div className="relative w-full max-w-5xl mt-12 -mb-8">
             <HeroRoomShowcase />

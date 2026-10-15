@@ -10,7 +10,8 @@
  * - The largest emitted JavaScript chunk, by raw bytes.
  *
  * Routes and files are sorted, the report has no timestamps, and gzip uses a fixed level, so the
- * output is deterministic. kB = 1000 bytes. The report describes sizes only; limits come later.
+ * output is deterministic. kB = 1000 bytes. The report describes sizes only; `bundle-limits.mjs`
+ * checks it against the limits.
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs'

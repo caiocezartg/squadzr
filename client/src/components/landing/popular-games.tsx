@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import * as motion from 'motion/react-client'
+import * as m from 'motion/react-m'
 import type { Game } from '@/types'
 import { useGames } from '@/features/games'
 import { useTranslation } from 'react-i18next'
@@ -32,7 +32,7 @@ export function PopularGames() {
   return (
     <section className="relative py-24 border-t border-border/50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <motion.div
+        <m.div
           className="text-center mb-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -42,7 +42,7 @@ export function PopularGames() {
           <span className="section-label">{t('popularGames.label')}</span>
           <h2 className="font-heading text-3xl font-bold sm:text-4xl">{t('popularGames.title')}</h2>
           <p className="mt-4 text-muted max-w-lg mx-auto">{t('popularGames.subtitle')}</p>
-        </motion.div>
+        </m.div>
 
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -53,7 +53,7 @@ export function PopularGames() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {shuffledGames.map((game, i) => (
-              <motion.div
+              <m.div
                 key={game.id}
                 className="relative aspect-[3/4] rounded-xl overflow-hidden border border-border bg-surface cursor-default"
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -80,12 +80,12 @@ export function PopularGames() {
 
                 {/* Hover glow */}
                 <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/5 group-hover:ring-accent/30 transition-all duration-300" />
-              </motion.div>
+              </m.div>
             ))}
           </div>
         )}
 
-        <motion.div
+        <m.div
           className="text-center mb-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -93,7 +93,7 @@ export function PopularGames() {
           transition={{ duration: 0.5 }}
         >
           <p className="mt-8 text-muted text-lg max-w-lg mx-auto">{t('popularGames.moreGames')}</p>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   )

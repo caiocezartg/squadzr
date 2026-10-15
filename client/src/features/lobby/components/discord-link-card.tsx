@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import * as motion from 'motion/react-client'
+import * as m from 'motion/react-m'
 import { Copy, ExternalLink } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { DiscordIcon } from '@/components/ui/icons'
@@ -26,7 +26,7 @@ export function DiscordLinkCard({ discordLink, isReadyRoom }: DiscordLinkCardPro
   if (!isReadyRoom || !isValidDiscordLink) return null
 
   return (
-    <motion.div
+    <m.div
       className="relative rounded-2xl border border-discord/30 bg-discord/5 overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -69,6 +69,6 @@ export function DiscordLinkCard({ discordLink, isReadyRoom }: DiscordLinkCardPro
           </a>
         </div>
       </div>
-    </motion.div>
+    </m.div>
   )
 }

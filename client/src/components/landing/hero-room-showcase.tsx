@@ -1,4 +1,4 @@
-import * as motion from 'motion/react-client'
+import * as m from 'motion/react-m'
 import { RoomCard } from '@/features/room-list'
 import type { Room, Game } from '@/types'
 
@@ -111,13 +111,13 @@ export function HeroRoomShowcase() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pointer-events-none">
       {SHOWCASE_ITEMS.map(({ room, game, entryDelay, floatAmount, floatDuration, floatDelay }) => (
-        <motion.div
+        <m.div
           key={room.id}
           initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65, delay: entryDelay, ease: [0.22, 1, 0.36, 1] }}
         >
-          <motion.div
+          <m.div
             animate={{ y: [0, -floatAmount, 0] }}
             transition={{
               duration: floatDuration,
@@ -127,8 +127,8 @@ export function HeroRoomShowcase() {
             }}
           >
             <RoomCard room={room} game={game} currentMembers={room.memberCount} />
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       ))}
     </div>
   )

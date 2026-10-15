@@ -1,3 +1,17 @@
+const MOTION_MESSAGE =
+  'Use the lightweight m components from "motion/react-m" instead of the full motion components: they throw under LazyMotion strict mode and pull every animation feature into the initial JavaScript.'
+
+// Entries whose exports are all full components, plus the `motion` export of the entries that also
+// export LazyMotion and the feature bundles. ESLint also reports a namespace import of these entries
+// (`import * as motion`), since its members would be the full components.
+const MOTION_FULL_IMPORTS = [
+  { name: 'motion/react-client', message: MOTION_MESSAGE },
+  { name: 'framer-motion/client', message: MOTION_MESSAGE },
+  { name: 'motion', importNames: ['motion'], message: MOTION_MESSAGE },
+  { name: 'motion/react', importNames: ['motion'], message: MOTION_MESSAGE },
+  { name: 'framer-motion', importNames: ['motion'], message: MOTION_MESSAGE },
+]
+
 /** @type {import('eslint').Linter.Config} */
 module.exports = {
   root: true,
@@ -70,6 +84,7 @@ module.exports = {
         'react/react-in-jsx-scope': 'off',
         'react-hooks/rules-of-hooks': 'error',
         'react-hooks/exhaustive-deps': 'warn',
+        'no-restricted-imports': ['error', { paths: MOTION_FULL_IMPORTS }],
       },
     },
     {

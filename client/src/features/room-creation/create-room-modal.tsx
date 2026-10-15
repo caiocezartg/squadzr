@@ -4,15 +4,15 @@ import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { toast } from 'sonner'
 import { Dialog } from '@base-ui-components/react/dialog'
 import { Select } from '@base-ui-components/react/select'
-import * as motion from 'motion/react-client'
+import * as m from 'motion/react-m'
 import { X, Loader2, ChevronsUpDown, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { createRoomInputSchema, createRoomResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
+import { notifyError } from '@/lib/notify'
 // The commands entry point is the catalog's cross-capability port. Importing
 // it instead of the barrel keeps the catalog page (which renders this dialog)
 // out of a cycle.
@@ -194,7 +194,7 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
     try {
       await createRoom.mutateAsync(data)
     } catch (err) {
-      toast.error(getUserFriendlyError(err))
+      notifyError(getUserFriendlyError(err))
     }
   })
 
@@ -209,7 +209,7 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
         <Dialog.Popup className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-5">
-          <motion.div
+          <m.div
             className="my-4 w-full max-w-2xl rounded-2xl border border-border bg-surface shadow-2xl shadow-black/50 sm:my-8"
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -458,7 +458,7 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
                 )}
               </button>
             </form>
-          </motion.div>
+          </m.div>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
