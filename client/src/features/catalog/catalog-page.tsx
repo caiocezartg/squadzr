@@ -198,7 +198,7 @@ export function CatalogPage() {
       {session?.user && modalOpen && (
         <LazyIslandBoundary
           fallback={null}
-          onError={() => void notifyError(t('errors.DIALOG_LOAD_FAILED'))}
+          onError={() => notifyError(t('errors.DIALOG_LOAD_FAILED'))}
         >
           <Suspense fallback={<ModalLoading />}>
             <LazyCreateRoomModal games={games} open={modalOpen} onOpenChange={setModalOpen} />

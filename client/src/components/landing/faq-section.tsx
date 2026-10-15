@@ -1,4 +1,4 @@
-import * as motion from 'motion/react-client'
+import * as m from 'motion/react-m'
 import { Accordion } from '@base-ui-components/react/accordion'
 import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -13,7 +13,7 @@ export function FAQSection() {
   return (
     <section className="relative py-24 border-t border-border/50">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <motion.div
+        <m.div
           className="text-center mb-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -23,11 +23,11 @@ export function FAQSection() {
           <span className="section-label">{t('faq.label')}</span>
           <h2 className="mt-3 font-heading text-3xl font-bold sm:text-4xl">{t('faq.title')}</h2>
           <p className="mt-3 text-muted">{t('faq.subtitle')}</p>
-        </motion.div>
+        </m.div>
 
         <Accordion.Root className="space-y-2">
           {faqItems.map((item, i) => (
-            <motion.div
+            <m.div
               key={i}
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -47,7 +47,7 @@ export function FAQSection() {
                   <p className="px-5 pb-4 text-sm leading-relaxed text-muted">{item.answer}</p>
                 </Accordion.Panel>
               </Accordion.Item>
-            </motion.div>
+            </m.div>
           ))}
         </Accordion.Root>
       </div>

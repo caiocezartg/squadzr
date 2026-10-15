@@ -1,5 +1,5 @@
 import { Dialog } from '@base-ui-components/react/dialog'
-import * as motion from 'motion/react-client'
+import * as m from 'motion/react-m'
 import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { DiscordIcon } from '@/components/ui/icons'
@@ -24,7 +24,7 @@ export function JoinRoomAuthModal({
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
         <Dialog.Popup className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div
+          <m.div
             className="w-full max-w-xl rounded-2xl border border-border bg-surface shadow-2xl shadow-black/50"
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -60,7 +60,7 @@ export function JoinRoomAuthModal({
                 </button>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

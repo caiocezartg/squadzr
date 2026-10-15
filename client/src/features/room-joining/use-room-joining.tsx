@@ -63,7 +63,7 @@ export function useRoomJoining(): RoomJoining {
     },
     onError: (err) => {
       setJoiningRoomCode(null)
-      void notifyError(getUserFriendlyError(err, 'join'))
+      notifyError(getUserFriendlyError(err, 'join'))
     },
   })
 
@@ -93,7 +93,7 @@ export function useRoomJoining(): RoomJoining {
     pendingJoinCode !== null ? (
       <LazyIslandBoundary
         fallback={null}
-        onError={() => void notifyError(t('errors.DIALOG_LOAD_FAILED'))}
+        onError={() => notifyError(t('errors.DIALOG_LOAD_FAILED'))}
       >
         <Suspense fallback={<ModalLoading />}>
           <LazyJoinRoomAuthModal

@@ -1,19 +1,11 @@
-import { lazy, Suspense } from 'react'
 import { createRootRoute, lazyRouteComponent, Outlet, useMatches } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { Toaster } from 'sonner'
 import { AppHeader } from '@/components/layout/app-header'
-import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
-
-// Toasts are a non-essential capability: the library and its shared chunk load
-// after the first paint instead of blocking the initial route.
-const LazyToaster = lazy(() =>
-  import('@/lib/toast-runtime').then((module) => ({ default: module.AppToaster }))
-)
 
 export const Route = createRootRoute({
   component: RootLayout,
-  // The 404 view follows the same rule: its chunk (and the animation runtime it
-  // shares with the landing page) stays out of the entry.
+  // The 404 view is a lazy chunk, so the entry does not carry its markup.
   notFoundComponent: lazyRouteComponent(() => import('@/components/ui/not-found'), 'NotFound'),
 })
 
@@ -38,11 +30,8 @@ function RootLayout() {
         </footer>
       )}
 
-      <LazyIslandBoundary>
-        <Suspense fallback={null}>
-          <LazyToaster theme="dark" position="top-center" richColors />
-        </Suspense>
-      </LazyIslandBoundary>
+      {/* Eager, so an error toast shows on the first failure instead of waiting for a chunk. */}
+      <Toaster theme="dark" position="top-center" richColors />
     </div>
   )
 }

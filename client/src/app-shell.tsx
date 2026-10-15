@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
+import { MotionProvider } from '@/components/ui/motion-provider'
 import { queryClient } from '@/lib/query-client'
 import { createRouterHistory } from '@/lib/router-history'
 import { createAppRouter } from './router'
@@ -17,9 +18,11 @@ declare module '@tanstack/react-router' {
 export default function AppShell() {
   return (
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
+      <MotionProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </MotionProvider>
     </StrictMode>
   )
 }

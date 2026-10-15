@@ -1,4 +1,4 @@
-import * as motion from 'motion/react-client'
+import * as m from 'motion/react-m'
 import { User } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PresenceIndicator } from './presence-indicator'
@@ -26,7 +26,7 @@ export function PlayerSlot({ player, index, online = false }: PlayerSlotProps) {
   }
 
   return (
-    <motion.div
+    <m.div
       className="flex items-center gap-3 rounded-xl border border-border bg-surface-hover/50 p-3"
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
@@ -48,6 +48,6 @@ export function PlayerSlot({ player, index, online = false }: PlayerSlotProps) {
       </div>
       <PresenceIndicator online={online} />
       {player.isHost && <span className="badge-accent text-[10px] shrink-0">Host</span>}
-    </motion.div>
+    </m.div>
   )
 }

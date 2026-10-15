@@ -117,9 +117,15 @@ export function NotificationsMenu({ enabled, isOpen, onToggle, onClose }: Notifi
 
   const isBusy = isMarkingAsRead || isMarkingAllAsRead || isDeletingNotification
 
+  // A failed change is already shown as an error toast by its mutation, so the handlers only stop
+  // there; the rejection is not left unhandled.
   const handleNotificationClick = async (notification: UserNotification) => {
     if (!notification.readAt) {
-      await markAsRead(notification.id)
+      try {
+        await markAsRead(notification.id)
+      } catch {
+        return
+      }
     }
     onClose()
     await navigate({ to: '/rooms/$code', params: { code: notification.payload.roomCode } })
@@ -127,11 +133,11 @@ export function NotificationsMenu({ enabled, isOpen, onToggle, onClose }: Notifi
 
   const handleDismiss = async (e: React.MouseEvent, notificationId: string) => {
     e.stopPropagation()
-    await deleteNotification(notificationId)
+    await deleteNotification(notificationId).catch(() => undefined)
   }
 
   const handleMarkAllAsRead = async () => {
-    await markAllAsRead()
+    await markAllAsRead().catch(() => undefined)
   }
 
   return (

@@ -1,4 +1,4 @@
-import * as motion from 'motion/react-client'
+import * as m from 'motion/react-m'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { SearchX } from 'lucide-react'
@@ -12,7 +12,7 @@ export function RoomNotFound({ code }: RoomNotFoundProps) {
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-24">
-      <motion.div
+      <m.div
         className="flex flex-col items-center text-center max-w-md w-full"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -53,7 +53,7 @@ export function RoomNotFound({ code }: RoomNotFoundProps) {
             {t('rooms.notFound.createRoom')}
           </Link>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   )
 }
