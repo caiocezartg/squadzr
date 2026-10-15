@@ -47,9 +47,11 @@ so no other app or commit status can satisfy them.
   The harness itself refuses any major version other than 16. On failure, the job prints the
   PostgreSQL container logs; no secrets are used by any job.
 - **Least privilege.** `CI` runs with `contents: read`; `Promotion` runs with no token permissions.
-- **Known non-blocking output.** The client build prints Vite's "chunks larger than 500 kB" advisory.
-  It is a pre-existing baseline item owned by roadmap issue 17 (bundle budgets) and does not fail
-  `build` today.
+- **Zero build warnings.** The client builds with `next build` (Next.js 16), and its log must show no
+  warning, Browserslist notice included; no build advisory is accepted as known output. `build` does
+  not fail on a warning by itself, so a warning in the log is a defect to fix at its root.
+  `bun run bundle:budget` only reports sizes from the Next output (the bundle report of CCC-70);
+  enforcing limits is a later ticket of the migration (CCC-69).
 
 ## Required GitHub settings (owner action)
 
