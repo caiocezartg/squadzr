@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -33,8 +33,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        heading: ['"Exo 2"', 'sans-serif'],
-        body: ['"Plus Jakarta Sans"', 'sans-serif'],
+        heading: ['var(--font-exo-2)', 'sans-serif'],
+        body: ['var(--font-plus-jakarta-sans)', 'sans-serif'],
       },
       keyframes: {
         'fade-in': {

@@ -6,6 +6,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["next.config.ts", "src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

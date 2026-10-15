@@ -23,14 +23,16 @@ inventory (see the equivalence proof below).
 
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
-| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 22 | 97 |
+| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 25 | 109 |
 | `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 19 | 211 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}` | 24 | 186 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}` | 26 | 193 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 3 | 69 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
-Suites are test files. The counts above are the current inventory, recounted on 2026-10-09 after
-CCC-59; the CCC-28 numbers are kept as a historical record in the equivalence proof below.
+Suites are test files. The counts above are the current inventory, recounted on 2026-10-15 for
+CCC-70, which adds `src/env.spec.ts` and `src/lib/router-history.spec.ts` to `client:unit` and
+corrects the server and client rows that had drifted since the 2026-10-09 recount. The CCC-28
+numbers are kept as a historical record in the equivalence proof below.
 
 `@squadzr/typescript-config` ships only shared TypeScript configuration files, so no test project is
 expected there. Every other workspace must keep at least one test file: the configs deliberately do
@@ -116,14 +118,14 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 
 ## Equivalence proof (CCC-28, CCC-58, CCC-59)
 
-### Current counts (recounted 2026-10-09, CCC-59)
+### Current counts (recounted 2026-10-15, CCC-70)
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 49 | 352 |
-| `bunx vitest run` (direct root composition) | 49 | 352 |
-| `bunx turbo test --filter=server` | 22 | 97 |
-| `bunx turbo test --filter=client` | 24 | 186 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 54 | 371 |
+| `bunx vitest run` (direct root composition) | 54 | 371 |
+| `bunx turbo test --filter=server` | 25 | 109 |
+| `bunx turbo test --filter=client` | 26 | 193 |
 | `bunx turbo test --filter=@squadzr/schemas` | 3 | 69 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
