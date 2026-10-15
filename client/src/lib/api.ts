@@ -34,7 +34,7 @@ export class ApiContractError extends Error {
 }
 
 const client = axios.create({
-  baseURL: env.VITE_API_URL,
+  baseURL: env.NEXT_PUBLIC_API_URL,
   withCredentials: true,
 })
 
