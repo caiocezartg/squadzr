@@ -1,5 +1,14 @@
 import { z } from 'zod'
 
+// A bare parent domain such as `squadzr.app`: DNS labels, at least two, ending in a
+// letter-only TLD.
+const parentDomainSchema = z
+  .string()
+  .regex(
+    /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i,
+    'BETTER_AUTH_COOKIE_DOMAIN must be a parent domain such as squadzr.app'
+  )
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
@@ -11,6 +20,8 @@ const envSchema = z.object({
   // Better Auth
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.url().default('http://localhost:3000'),
+  // Shares the session cookie with every subdomain of this parent domain. Unset: host-only cookies.
+  BETTER_AUTH_COOKIE_DOMAIN: parentDomainSchema.optional(),
 
   // Discord OAuth
   DISCORD_CLIENT_ID: z.string().min(1, 'DISCORD_CLIENT_ID is required'),
