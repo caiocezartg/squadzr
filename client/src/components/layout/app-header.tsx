@@ -99,7 +99,7 @@ export function AppHeader() {
                 search={{}}
                 activeOptions={{ exact: true }}
                 className="rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite"
-                activeProps={{ className: '!text-accent' }}
+                activeProps={{ className: 'text-accent!' }}
               >
                 {t('nav.allRooms')}
               </Link>
@@ -108,7 +108,7 @@ export function AppHeader() {
                   to="/rooms/my"
                   activeOptions={{ exact: true }}
                   className="rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite"
-                  activeProps={{ className: '!text-accent' }}
+                  activeProps={{ className: 'text-accent!' }}
                 >
                   {t('nav.myRooms')}
                 </Link>

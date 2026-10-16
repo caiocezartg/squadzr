@@ -25,7 +25,7 @@ function DiscordClickIllustration() {
 
       {/* Animated cursor */}
       <m.svg
-        className="absolute z-20 size-5 drop-shadow-md"
+        className="absolute z-20 size-5 [filter:drop-shadow(0_4px_3px_rgb(0_0_0/0.07))_drop-shadow(0_2px_2px_rgb(0_0_0/0.06))]"
         viewBox="0 0 24 24"
         fill="#F0F0F0"
         style={{ top: '50%', left: '50%' }}
@@ -88,7 +88,7 @@ function RoomBrowseIllustration() {
           viewport={{ once: true }}
           transition={{ delay: 0.3 + i * 0.15, duration: 0.35 }}
         >
-          <div className={`size-4 rounded shrink-0 ${room.color}`} />
+          <div className={`size-4 rounded-sm shrink-0 ${room.color}`} />
           <span className="text-offwhite/80 font-medium truncate">{room.name}</span>
           <span className="ml-auto text-muted shrink-0">{room.players}</span>
         </m.div>
@@ -96,7 +96,7 @@ function RoomBrowseIllustration() {
 
       {/* Cursor near selected card */}
       <m.svg
-        className="absolute z-20 size-4 drop-shadow right-5 sm:right-8 bottom-5 sm:bottom-7"
+        className="absolute z-20 size-4 [filter:drop-shadow(0_1px_2px_rgb(0_0_0/0.1))_drop-shadow(0_1px_1px_rgb(0_0_0/0.06))] right-5 sm:right-8 bottom-5 sm:bottom-7"
         viewBox="0 0 24 24"
         fill="rgba(240,240,240,0.7)"
         initial={{ opacity: 0, x: 16 }}

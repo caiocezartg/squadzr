@@ -23,7 +23,7 @@ function renderNotice(mode: 'reloading' | 'manual'): void {
   notice.id = REALTIME_UPDATE_NOTICE_ID
   notice.setAttribute('role', mode === 'manual' ? 'alert' : 'status')
   const base =
-    'fixed inset-x-0 top-0 z-[100] border-b border-border bg-surface px-4 py-2 text-center text-sm text-offwhite'
+    'fixed inset-x-0 top-0 z-100 border-b border-border bg-surface px-4 py-2 text-center text-sm text-offwhite'
   notice.className =
     mode === 'manual' ? `${base} flex flex-wrap items-center justify-center gap-3` : base
 

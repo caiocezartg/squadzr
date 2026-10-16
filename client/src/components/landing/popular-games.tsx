@@ -47,7 +47,7 @@ export function PopularGames() {
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="aspect-[3/4] rounded-xl bg-surface animate-pulse" />
+              <div key={i} className="aspect-3/4 rounded-xl bg-surface animate-pulse" />
             ))}
           </div>
         ) : (
@@ -55,7 +55,7 @@ export function PopularGames() {
             {shuffledGames.map((game, i) => (
               <m.div
                 key={game.id}
-                className="relative aspect-[3/4] rounded-xl overflow-hidden border border-border bg-surface cursor-default"
+                className="relative aspect-3/4 rounded-xl overflow-hidden border border-border bg-surface cursor-default"
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true, margin: '-30px' }}
@@ -68,7 +68,7 @@ export function PopularGames() {
                   loading="lazy"
                 />
                 {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent" />
 
                 {/* Game info */}
                 <div className="absolute bottom-0 left-0 right-0 p-3">

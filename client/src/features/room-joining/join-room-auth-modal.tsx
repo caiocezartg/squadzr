@@ -22,7 +22,7 @@ export function JoinRoomAuthModal({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs" />
         <Dialog.Popup className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <m.div
             className="w-full max-w-xl rounded-2xl border border-border bg-surface shadow-2xl shadow-black/50"

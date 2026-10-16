@@ -27,7 +27,7 @@ export function MobileSidebar({ isOpen, onClose, hasUser }: MobileSidebarProps) 
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity duration-300 md:hidden ${
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={onClose}
@@ -60,7 +60,7 @@ export function MobileSidebar({ isOpen, onClose, hasUser }: MobileSidebarProps) 
             search={{}}
             activeOptions={{ exact: true }}
             className="rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite"
-            activeProps={{ className: '!text-accent !bg-accent/[0.08]' }}
+            activeProps={{ className: 'text-accent! bg-accent/8!' }}
             onClick={onClose}
           >
             {t('nav.allRooms')}
@@ -70,7 +70,7 @@ export function MobileSidebar({ isOpen, onClose, hasUser }: MobileSidebarProps) 
               to="/rooms/my"
               activeOptions={{ exact: true }}
               className="rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite"
-              activeProps={{ className: '!text-accent !bg-accent/[0.08]' }}
+              activeProps={{ className: 'text-accent! bg-accent/8!' }}
               onClick={onClose}
             >
               {t('nav.myRooms')}

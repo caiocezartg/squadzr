@@ -128,13 +128,13 @@ export function MyRoomsPage() {
         <Tabs.List className="flex gap-1 border-b border-white/10 mb-6">
           <Tabs.Tab
             value="created"
-            className="px-4 py-2.5 text-sm font-medium text-white/50 transition-colors cursor-pointer data-[selected]:text-accent data-[selected]:border-b-2 data-[selected]:border-accent hover:text-white/80 -mb-px outline-none"
+            className="px-4 py-2.5 text-sm font-medium text-white/50 transition-colors cursor-pointer data-selected:text-accent data-selected:border-b-2 data-selected:border-accent hover:text-white/80 -mb-px outline-hidden"
           >
             {t('rooms.myRooms.tabCreated', { count: hostedCount })}
           </Tabs.Tab>
           <Tabs.Tab
             value="joined"
-            className="px-4 py-2.5 text-sm font-medium text-white/50 transition-colors cursor-pointer data-[selected]:text-accent data-[selected]:border-b-2 data-[selected]:border-accent hover:text-white/80 -mb-px outline-none"
+            className="px-4 py-2.5 text-sm font-medium text-white/50 transition-colors cursor-pointer data-selected:text-accent data-selected:border-b-2 data-selected:border-accent hover:text-white/80 -mb-px outline-hidden"
           >
             {t('rooms.myRooms.tabJoined', { count: joinedCount })}
           </Tabs.Tab>

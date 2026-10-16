@@ -109,16 +109,16 @@ export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: Room
           <div className="h-full w-full bg-surface-light" />
         )}
 
-        <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-surface/40 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-surface/40 to-transparent" />
 
         {game && (
-          <span className="absolute bottom-2 left-3 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+          <span className="absolute bottom-2 left-3 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs">
             {game.name}
           </span>
         )}
 
         {room.isMember && (
-          <span className="absolute right-3 top-2 flex items-center gap-1 rounded-md border border-accent/20 bg-surface/80 px-2 py-0.5 text-[10px] font-semibold text-accent backdrop-blur-sm">
+          <span className="absolute right-3 top-2 flex items-center gap-1 rounded-md border border-accent/20 bg-surface/80 px-2 py-0.5 text-[10px] font-semibold text-accent backdrop-blur-xs">
             <Check className="size-3" />
             {t('rooms.card.joined')}
           </span>
