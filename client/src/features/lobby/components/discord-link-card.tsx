@@ -33,7 +33,7 @@ export function DiscordLinkCard({ discordLink, isReadyRoom }: DiscordLinkCardPro
       transition={{ duration: 0.5, ease: 'easeInOut' }}
     >
       {/* Subtle animated glow */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-discord/10 via-discord/5 to-discord/10 blur-xl animate-pulse-glow" />
+      <div className="absolute -inset-1 bg-linear-to-r from-discord/10 via-discord/5 to-discord/10 blur-xl animate-pulse-glow" />
 
       <div className="relative px-6 py-5 flex flex-col sm:flex-row sm:items-center gap-4">
         {/* Icon + text */}

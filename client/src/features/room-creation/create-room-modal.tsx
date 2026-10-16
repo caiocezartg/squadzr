@@ -119,7 +119,7 @@ function TagsChipInput({ value: tags, onChange, onBlur, hasError }: TagsChipInpu
           onKeyDown={handleKeyDown}
           onBlur={onBlur}
           maxLength={15}
-          className="min-w-[96px] flex-1 bg-transparent text-sm text-offwhite outline-none placeholder:text-muted/60"
+          className="min-w-[96px] flex-1 bg-transparent text-sm text-offwhite outline-hidden placeholder:text-muted/60"
           placeholder={
             tags.length === 0
               ? t('rooms.createModal.tagsPlaceholder')
@@ -207,7 +207,7 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
       }}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs" />
         <Dialog.Popup className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-5">
           <m.div
             className="my-4 w-full max-w-2xl rounded-2xl border border-border bg-surface shadow-2xl shadow-black/50 sm:my-8"
@@ -258,76 +258,81 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
                       >
                         {t('rooms.createModal.game')}
                       </label>
-                      <Controller
-                        name="gameId"
-                        control={control}
-                        render={({ field }) => {
-                          const selectedOption = games.find((game) => game.id === field.value)
-                          const selectedLabel = selectedOption
-                            ? t('rooms.createModal.gameWithPlayers', {
-                                name: selectedOption.name,
-                                min: selectedOption.minPlayers,
-                                max: selectedOption.maxPlayers,
-                              })
-                            : null
+                      {/* The Select adds a hidden input after its trigger; wrapped, it is not the last child of the space-y stack. */}
+                      <div>
+                        <Controller
+                          name="gameId"
+                          control={control}
+                          render={({ field }) => {
+                            const selectedOption = games.find((game) => game.id === field.value)
+                            const selectedLabel = selectedOption
+                              ? t('rooms.createModal.gameWithPlayers', {
+                                  name: selectedOption.name,
+                                  min: selectedOption.minPlayers,
+                                  max: selectedOption.maxPlayers,
+                                })
+                              : null
 
-                          return (
-                            <Select.Root
-                              value={field.value || null}
-                              onValueChange={(value) => {
-                                field.onChange(value)
-                              }}
-                            >
-                              <Select.Trigger
-                                id="modal-gameId"
-                                className={`flex h-[44px] w-full cursor-default select-none items-center justify-between rounded-lg border px-4 text-sm transition-colors duration-200 focus:outline-none focus:ring-1 ${
-                                  errors.gameId
-                                    ? 'border-danger/50 bg-surface text-offwhite focus:border-danger/70 focus:ring-danger/20'
-                                    : 'border-border-light bg-surface text-offwhite hover:border-muted/30 focus:border-accent/50 focus:ring-accent/20'
-                                } data-[popup-open]:border-accent/50 data-[popup-open]:ring-1 data-[popup-open]:ring-accent/20`}
+                            return (
+                              <Select.Root
+                                value={field.value || null}
+                                onValueChange={(value) => {
+                                  field.onChange(value)
+                                }}
                               >
-                                <span className={`truncate ${field.value ? '' : 'text-muted/60'}`}>
-                                  {selectedLabel ?? t('rooms.createModal.selectGame')}
-                                </span>
-                                <Select.Icon className="flex items-center text-muted">
-                                  <ChevronsUpDown className="size-3" />
-                                </Select.Icon>
-                              </Select.Trigger>
-                              <Select.Portal>
-                                <Select.Positioner
-                                  className="z-[60] select-none outline-none"
-                                  sideOffset={8}
+                                <Select.Trigger
+                                  id="modal-gameId"
+                                  className={`flex h-[44px] w-full cursor-default select-none items-center justify-between rounded-lg border px-4 text-sm transition-colors duration-200 focus:outline-hidden focus:ring-1 ${
+                                    errors.gameId
+                                      ? 'border-danger/50 bg-surface text-offwhite focus:border-danger/70 focus:ring-danger/20'
+                                      : 'border-border-light bg-surface text-offwhite hover:border-muted/30 focus:border-accent/50 focus:ring-accent/20'
+                                  } data-popup-open:border-accent/50 data-popup-open:ring-1 data-popup-open:ring-accent/20`}
                                 >
-                                  <Select.Popup className="origin-[var(--transform-origin)] rounded-xl border border-border bg-surface shadow-2xl shadow-black/50 transition-[transform,scale,opacity] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0">
-                                    <Select.ScrollUpArrow className="flex h-5 w-full cursor-default items-center justify-center bg-surface text-muted" />
-                                    <Select.List className="relative max-h-[var(--available-height)] overflow-y-auto py-1">
-                                      {games.map((game) => (
-                                        <Select.Item
-                                          key={game.id}
-                                          value={game.id}
-                                          className="grid min-w-[var(--anchor-width)] cursor-default select-none grid-cols-[1rem_1fr] items-center gap-2 px-3 py-2.5 text-sm text-offwhite outline-none data-[highlighted]:bg-surface-hover data-[highlighted]:text-accent"
-                                        >
-                                          <Select.ItemIndicator className="col-start-1">
-                                            <Check className="size-3.5" />
-                                          </Select.ItemIndicator>
-                                          <Select.ItemText className="col-start-2">
-                                            {t('rooms.createModal.gameWithPlayers', {
-                                              name: game.name,
-                                              min: game.minPlayers,
-                                              max: game.maxPlayers,
-                                            })}
-                                          </Select.ItemText>
-                                        </Select.Item>
-                                      ))}
-                                    </Select.List>
-                                    <Select.ScrollDownArrow className="flex h-5 w-full cursor-default items-center justify-center bg-surface text-muted" />
-                                  </Select.Popup>
-                                </Select.Positioner>
-                              </Select.Portal>
-                            </Select.Root>
-                          )
-                        }}
-                      />
+                                  <span
+                                    className={`truncate ${field.value ? '' : 'text-muted/60'}`}
+                                  >
+                                    {selectedLabel ?? t('rooms.createModal.selectGame')}
+                                  </span>
+                                  <Select.Icon className="flex items-center text-muted">
+                                    <ChevronsUpDown className="size-3" />
+                                  </Select.Icon>
+                                </Select.Trigger>
+                                <Select.Portal>
+                                  <Select.Positioner
+                                    className="z-60 select-none outline-hidden"
+                                    sideOffset={8}
+                                  >
+                                    <Select.Popup className="origin-(--transform-origin) rounded-xl border border-border bg-surface shadow-2xl shadow-black/50 transition-[transform,scale,opacity] data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+                                      <Select.ScrollUpArrow className="flex h-5 w-full cursor-default items-center justify-center bg-surface text-muted" />
+                                      <Select.List className="relative max-h-(--available-height) overflow-y-auto py-1">
+                                        {games.map((game) => (
+                                          <Select.Item
+                                            key={game.id}
+                                            value={game.id}
+                                            className="grid min-w-(--anchor-width) cursor-default select-none grid-cols-[1rem_1fr] items-center gap-2 px-3 py-2.5 text-sm text-offwhite outline-hidden data-highlighted:bg-surface-hover data-highlighted:text-accent"
+                                          >
+                                            <Select.ItemIndicator className="col-start-1">
+                                              <Check className="size-3.5" />
+                                            </Select.ItemIndicator>
+                                            <Select.ItemText className="col-start-2">
+                                              {t('rooms.createModal.gameWithPlayers', {
+                                                name: game.name,
+                                                min: game.minPlayers,
+                                                max: game.maxPlayers,
+                                              })}
+                                            </Select.ItemText>
+                                          </Select.Item>
+                                        ))}
+                                      </Select.List>
+                                      <Select.ScrollDownArrow className="flex h-5 w-full cursor-default items-center justify-center bg-surface text-muted" />
+                                    </Select.Popup>
+                                  </Select.Positioner>
+                                </Select.Portal>
+                              </Select.Root>
+                            )
+                          }}
+                        />
+                      </div>
                       {errors.gameId && (
                         <p className="field-error">{t('rooms.createModal.selectGameError')}</p>
                       )}

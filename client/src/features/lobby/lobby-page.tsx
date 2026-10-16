@@ -104,12 +104,12 @@ export function LobbyPage({ roomCode }: LobbyPageProps) {
             <img
               src={lobby.game.coverUrl}
               alt=""
-              className="w-full h-full object-cover scale-110 blur-sm"
+              className="w-full h-full object-cover scale-110 blur-xs"
             />
           ) : (
             <div className="w-full h-full bg-surface-light" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/85 to-background/70" />
+          <div className="absolute inset-0 bg-linear-to-r from-background/95 via-background/85 to-background/70" />
         </div>
 
         {/* Header content */}

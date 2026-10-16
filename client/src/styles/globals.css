@@ -1,6 +1,172 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --color-background: #0a0a0b;
+
+  --color-surface: #141416;
+  --color-surface-hover: #1a1a1d;
+  --color-surface-light: #1e1e22;
+
+  --color-border: #1f1f23;
+  --color-border-light: #2a2a2f;
+
+  --color-accent: #00ffa2;
+  --color-accent-hover: #00e694;
+  --color-accent-muted: rgba(0, 255, 162, 0.1);
+  --color-accent-glow: rgba(0, 255, 162, 0.15);
+
+  --color-muted: #8a8a8e;
+  --color-muted-light: #a0a0a4;
+
+  --color-offwhite: #f0f0f0;
+  --color-discord: #5865f2;
+
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+
+  /*
+    Tailwind 3 gave each font size a fixed line height in rem; Tailwind 4 uses ratios, which resize
+    when a text-[Npx] class overrides the size. These keep the Tailwind 3 values.
+  */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  /* Tailwind 4 redefined these palette colors; the app keeps its Tailwind 3 look. */
+  --color-red-500: #ef4444;
+  --color-blue-500: #3b82f6;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-yellow-400: #facc15;
+  --color-yellow-500: #eab308;
+
+  --font-heading: var(--font-exo-2), sans-serif;
+  --font-body: var(--font-plus-jakarta-sans), sans-serif;
+
+  --animate-fade-in: fade-in 0.4s ease-out;
+  --animate-slide-up: slide-up 0.5s ease-out;
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      box-shadow: 0 0 8px rgba(0, 255, 162, 0.2);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(0, 255, 162, 0.4);
+    }
+  }
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold
+      transition-all duration-200 focus-visible:outline-hidden focus-visible:ring-2
+      focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background
+      disabled:pointer-events-none disabled:opacity-40;
+}
+
+@utility btn-accent {
+  @apply btn bg-accent text-background hover:bg-accent-hover
+      shadow-[0_0_20px_rgba(0,255,162,0.15)] hover:shadow-[0_0_30px_rgba(0,255,162,0.25)];
+}
+
+@utility btn-discord {
+  @apply btn bg-discord text-white hover:bg-discord/85;
+}
+
+@utility btn-ghost {
+  @apply btn border border-border-light text-offwhite hover:bg-surface-hover hover:border-muted/30;
+}
+
+@utility btn-danger {
+  @apply btn bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20;
+}
+
+@utility input-field {
+  @apply w-full rounded-lg border border-border-light bg-surface px-4 py-2.5 text-sm text-offwhite
+      placeholder:text-muted/60 transition-colors duration-200
+      focus:outline-hidden focus:border-accent/50 focus:ring-1 focus:ring-accent/20;
+}
+
+@utility card {
+  @apply rounded-xl border border-border bg-surface overflow-hidden;
+}
+
+@utility card-hover {
+  @apply card transition-all duration-300
+      hover:border-accent/20 hover:shadow-[0_0_30px_rgba(0,255,162,0.05)];
+}
+
+@utility badge {
+  @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium;
+}
+
+@utility badge-accent {
+  @apply badge bg-accent/10 text-accent border border-accent/20;
+}
+
+@utility badge-muted {
+  @apply badge bg-surface-light text-muted border border-border;
+}
+
+@utility input-field-error {
+  @apply input-field border-danger/50 focus:border-danger/70 focus:ring-danger/20;
+}
+
+@utility field-error {
+  @apply text-xs text-danger;
+}
+
+@utility section-label {
+  @apply text-xs font-semibold uppercase tracking-widest text-accent;
+}
 
 @layer base {
   *,
@@ -21,6 +187,11 @@
 
   #root {
     @apply min-h-screen;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
   }
 
   ::selection {
@@ -49,94 +220,5 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-}
-
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 9999px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-}
-
-@layer components {
-  .btn {
-    @apply inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold
-      transition-all duration-200 focus-visible:outline-none focus-visible:ring-2
-      focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background
-      disabled:pointer-events-none disabled:opacity-40;
-  }
-
-  .btn-accent {
-    @apply btn bg-accent text-background hover:bg-accent-hover
-      shadow-[0_0_20px_rgba(0,255,162,0.15)] hover:shadow-[0_0_30px_rgba(0,255,162,0.25)];
-  }
-
-  .btn-discord {
-    @apply btn bg-discord text-white hover:bg-discord/85;
-  }
-
-  .btn-ghost {
-    @apply btn border border-border-light text-offwhite hover:bg-surface-hover hover:border-muted/30;
-  }
-
-  .btn-danger {
-    @apply btn bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20;
-  }
-
-  .input-field {
-    @apply w-full rounded-lg border border-border-light bg-surface px-4 py-2.5 text-sm text-offwhite
-      placeholder:text-muted/60 transition-colors duration-200
-      focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20;
-  }
-
-  .card {
-    @apply rounded-xl border border-border bg-surface overflow-hidden;
-  }
-
-  .card-hover {
-    @apply card transition-all duration-300
-      hover:border-accent/20 hover:shadow-[0_0_30px_rgba(0,255,162,0.05)];
-  }
-
-  .badge {
-    @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium;
-  }
-
-  .badge-accent {
-    @apply badge bg-accent/10 text-accent border border-accent/20;
-  }
-
-  .badge-muted {
-    @apply badge bg-surface-light text-muted border border-border;
-  }
-
-  .input-field-error {
-    @apply input-field border-danger/50 focus:border-danger/70 focus:ring-danger/20;
-  }
-
-  .field-error {
-    @apply mt-1 text-xs text-danger;
-  }
-
-  .section-label {
-    @apply text-xs font-semibold uppercase tracking-widest text-accent;
   }
 }

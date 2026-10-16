@@ -48,7 +48,7 @@ export function HeroSection() {
           </m.div>
 
           <m.h1
-            className="font-heading text-5xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl xl:text-8xl"
+            className="font-heading text-5xl font-extrabold leading-[0.95] tracking-tight sm:leading-none sm:text-6xl lg:text-7xl xl:text-8xl"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
@@ -68,7 +68,7 @@ export function HeroSection() {
           </m.h1>
 
           <m.p
-            className={`mt-6 text-base text-muted leading-relaxed sm:text-lg ${lang === 'pt-BR' ? 'max-w-lg' : 'max-w-md'} text-center`}
+            className={`mt-6 text-base text-muted leading-relaxed sm:text-lg sm:leading-7 ${lang === 'pt-BR' ? 'max-w-lg' : 'max-w-md'} text-center`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
@@ -111,7 +111,7 @@ export function HeroSection() {
         </div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 h-20 lg:h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-20 lg:h-32 bg-linear-to-t from-background to-transparent pointer-events-none" />
     </section>
   )
 }
