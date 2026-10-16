@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { invalidateCatalogRooms, removeCatalogRoom } from './catalog-query'
+import { invalidateCatalogRooms, removeCatalogRoom } from './catalog-cache'
 import { createCatalogRefetchScheduler } from './catalog-refetch-scheduler'
 import type { RealtimeChannelHandlers, RealtimeSubscription } from '@/lib/ws-client'
 

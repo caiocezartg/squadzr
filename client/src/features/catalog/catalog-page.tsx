@@ -4,7 +4,7 @@ import { useSession } from '@/lib/auth-client'
 import { WS_URL } from '@/env'
 import { useWebSocket } from '@/hooks/use-websocket'
 import { useNotificationEvents } from '@/hooks/use-notification-events'
-import { RoomCard, RoomFilters, useRoomFilters } from '@/features/room-list'
+import { RoomCard, RoomFilters, querySquadList, useRoomFilters } from '@/features/room-list'
 import { useRoomJoining } from '@/features/room-joining'
 import { Pagination } from '@/components/ui/pagination'
 import { AlertBox } from '@/components/ui/alert-box'
@@ -17,7 +17,6 @@ import { EmptyState } from './components/empty-state'
 import { CatalogSkeleton } from './skeleton'
 import { useCatalogData } from './use-catalog-data'
 import { useCatalogEvents } from './use-catalog-events'
-import { usePagination } from './use-pagination'
 
 // Room creation (the form contract, resolvers and dialog primitives) is a
 // non-essential capability: its chunk loads when the user opens the dialog.
@@ -67,31 +66,23 @@ export function CatalogPage() {
     setSort,
     language,
     setLanguage,
-    page,
     setPage,
-    applyFilters,
-  } = useRoomFilters(gamesMap)
-
-  const filteredRooms = applyFilters(rooms)
+    query,
+  } = useRoomFilters()
 
   const {
+    matching: filteredRooms,
+    pageRooms: paginatedRooms,
     currentPage,
     totalPages,
-    startIndex,
-    endIndex,
     hasPreviousPage,
     hasNextPage,
-    goToPage,
-    nextPage,
-    previousPage,
     pageRange,
-  } = usePagination({
-    totalItems: filteredRooms.length,
-    currentPage: page,
-    onPageChange: setPage,
-  })
+  } = querySquadList(rooms, gamesMap, query)
 
-  const paginatedRooms = filteredRooms.slice(startIndex, endIndex)
+  const goToPage = (target: number) => setPage(Math.max(1, Math.min(target, totalPages)))
+  const previousPage = () => goToPage(currentPage - 1)
+  const nextPage = () => goToPage(currentPage + 1)
 
   const handlePageChange = (p: number) => {
     goToPage(p)

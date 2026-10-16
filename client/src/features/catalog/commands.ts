@@ -6,4 +6,4 @@
  * capabilities, so importing it would create a cycle. Query keys and cache
  * mutations stay internal.
  */
-export { useCatalogCommands, type CatalogCommands } from './use-catalog-commands'
+export { useCatalogCommands, type CatalogCommands } from './catalog-cache'

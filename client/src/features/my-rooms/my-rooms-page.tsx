@@ -8,7 +8,7 @@ import { AlertBox } from '@/components/ui/alert-box'
 import { ModalLoading } from '@/components/ui/modal-loading'
 import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 import { notifyError } from '@/lib/notify'
-import { RoomCard, RoomFilters, useRoomFilters } from '@/features/room-list'
+import { RoomCard, RoomFilters, querySquadList, useRoomFilters } from '@/features/room-list'
 import { useGames } from '@/features/games'
 import type { Game } from '@/types'
 import { MyRoomsSkeleton } from './skeleton'
@@ -70,11 +70,11 @@ export function MyRoomsPage() {
     language,
     setLanguage,
     hasActiveFilters,
-    applyFilters,
-  } = useRoomFilters(gamesMap, '/rooms/my')
+    query,
+  } = useRoomFilters('/rooms/my')
 
-  const filteredHosted = applyFilters(hosted)
-  const filteredJoined = applyFilters(joined)
+  const filteredHosted = querySquadList(hosted, gamesMap, query).matching
+  const filteredJoined = querySquadList(joined, gamesMap, query).matching
 
   const hostedCount = hosted.length
   const joinedCount = joined.length

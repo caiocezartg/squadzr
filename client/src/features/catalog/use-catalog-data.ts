@@ -3,7 +3,7 @@ import { roomsResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import { useGames } from '@/features/games'
 import type { Game, PublicRoom } from '@/types'
-import { catalogRoomsQueryKey } from './catalog-query'
+import { catalogRoomsQueryKey } from './catalog-cache'
 
 /** Stable empty keeps memo dependencies from changing while the rooms query loads. */
 const NO_ROOMS: PublicRoom[] = []
