@@ -15,7 +15,8 @@ import { httpOk, onHttp } from './http-router'
 import { catalogGames, catalogRooms, openRoom } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
-import { REALTIME_UPDATE_NOTICE_ID } from '@/lib/realtime-update'
+import { REALTIME_RELOAD_ATTEMPT_KEY } from '@/lib/realtime-update'
+import { setRealtimeUpdateNotice } from '@/lib/realtime-update-store'
 
 const originalLocation = window.location
 const realSessionStorage = window.sessionStorage
@@ -49,7 +50,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.stubGlobal('sessionStorage', realSessionStorage)
-  document.getElementById(REALTIME_UPDATE_NOTICE_ID)?.remove()
+  act(() => setRealtimeUpdateNotice(null))
   window.sessionStorage.clear()
   Object.defineProperty(window, 'location', {
     value: originalLocation,
@@ -69,6 +70,7 @@ describe('realtime protocol handshake', () => {
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 
     expect(await screen.findByText(RELOADING_NOTICE)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(RELOADING_NOTICE)
     expect(reload).toHaveBeenCalledTimes(1)
   })
 
@@ -131,12 +133,14 @@ describe('realtime protocol reload bound', () => {
     // the server still announces the other version. sessionStorage remembers
     // the attempt, so the client must not loop.
     cleanup()
+    act(() => setRealtimeUpdateNotice(null))
     renderRoomsFlow('/rooms')
     await screen.findByText(openRoom.name)
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 
     expect(await screen.findByText(MANUAL_RELOAD_NOTICE)).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(MANUAL_RELOAD_NOTICE)
     expect(screen.queryByText(RELOADING_NOTICE)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument()
     expect(reload).toHaveBeenCalledTimes(1)
@@ -152,6 +156,7 @@ describe('realtime protocol reload bound', () => {
     expect(reload).toHaveBeenCalledTimes(1)
 
     cleanup()
+    act(() => setRealtimeUpdateNotice(null))
     renderRoomsFlow('/rooms')
     await screen.findByText(openRoom.name)
     sendUnparseableFrame()
@@ -177,6 +182,20 @@ describe('realtime protocol reload bound', () => {
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 
     expect(await screen.findByText(MANUAL_RELOAD_NOTICE)).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(reload).not.toHaveBeenCalled()
+  })
+
+  it('reloads from the manual notice button', async () => {
+    const reload = stubReload()
+    window.sessionStorage.setItem(REALTIME_RELOAD_ATTEMPT_KEY, String(Date.now()))
+    const { user } = renderRoomsFlow('/rooms')
+    await screen.findByText(openRoom.name)
+    openLatestWebSocket()
+    sendFromServer({ type: 'protocol', payload: { version: 99 } })
+
+    await user.click(await screen.findByRole('button', { name: 'Reload' }))
+
+    expect(reload).toHaveBeenCalledTimes(1)
   })
 })
