@@ -6,4 +6,4 @@
  * filters, pagination and cache mutations stay internal.
  */
 export { CatalogPage } from './catalog-page'
-export { useCatalogCommands, type CatalogCommands } from './use-catalog-commands'
+export { useCatalogCommands, type CatalogCommands } from './catalog-cache'

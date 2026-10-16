@@ -767,6 +767,23 @@ describe('rooms catalog — join flows', () => {
     expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1)
   })
 
+  it('opens a board URL with invalid parameters: they fall back, the valid ones and the auto-join stay', async () => {
+    // The join stays pending so the URL still carries every parameter it was opened with.
+    onHttp('POST', '/api/rooms/:code/join', () => new Promise<MockHttpResponse>(() => {}))
+    const { router } = renderRoomsFlow(
+      '/rooms?filter=bogus&sort=sideways&page=0&language=pt-br&join=ABC123'
+    )
+
+    // The valid join is kept: the auto-join fires once for its code.
+    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms/ABC123/join')).toBe(1))
+    expect(router.state.location.search).toEqual({ language: 'pt-br', join: 'ABC123' })
+
+    // The valid language filters the board; the invalid filter, sort and page use their defaults.
+    const titles = () =>
+      screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
+    await waitFor(() => expect(titles()).toEqual(['Full lobby', 'Casual five stack']))
+  })
+
   it('opens the lobby directly for rooms the user already belongs to', async () => {
     registerLobbyRoutes()
     const { router, user } = renderRoomsFlow('/rooms')
