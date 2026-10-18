@@ -24,9 +24,21 @@ export type RequestPolicy =
 
 type ServerFetchInit = RequestInit & { next?: { revalidate: number } }
 
-/** Per-call options. `timeoutMs` rejects the call when Fastify has not finished answering in time. */
+/** What a failed call needs from its error body, whichever contract the body follows. */
+export interface ErrorBody {
+  readonly message?: string
+  readonly code?: string
+  readonly error?: string
+}
+
+/**
+ * Per-call options. `timeoutMs` rejects the call when Fastify has not finished answering in time.
+ * `errorSchema` replaces the shared error contract for a route whose errors are not the app's own,
+ * such as Better Auth's.
+ */
 export interface GetOptions {
   readonly timeoutMs?: number
+  readonly errorSchema?: z.ZodType<ErrorBody>
 }
 
 /** The fetch options a policy stands for. The cookie and the client IP go out only with a viewer call. */
@@ -62,7 +74,8 @@ async function readJson(response: Response, bounded: boolean): Promise<unknown> 
 
 /**
  * Reads one Fastify route. The body is parsed with the caller's schema, and an error body with the
- * shared error contract, so a response that breaks either throws `ApiContractError`.
+ * shared error contract (or the caller's `errorSchema`), so a response that breaks either throws
+ * `ApiContractError`.
  */
 async function get<S extends z.ZodType>(
   path: string,
@@ -79,8 +92,13 @@ async function get<S extends z.ZodType>(
   const body = await readJson(response, options.timeoutMs !== undefined)
 
   if (!response.ok) {
-    const error = parseApiResponse(errorResponseSchema, context, body)
-    throw new ApiClientError(error.message, response.status, error.error)
+    const errorSchema: z.ZodType<ErrorBody> = options.errorSchema ?? errorResponseSchema
+    const error = parseApiResponse(errorSchema, context, body)
+    throw new ApiClientError(
+      error.message ?? `Request failed with status ${response.status}`,
+      response.status,
+      error.error ?? error.code
+    )
   }
   return parseApiResponse(schema, context, body)
 }

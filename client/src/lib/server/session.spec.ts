@@ -167,9 +167,18 @@ describe('loadSession', () => {
 
     await expect(loadSession('better-auth.session_token=abc')).resolves.toBeNull()
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(
-      errorSpy.mock.calls.filter(([message]) => /Session read failed/.test(String(message)))
-    ).toHaveLength(1)
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    expect(String(errorSpy.mock.calls[0]?.[0])).toMatch(/Session read failed/)
+  })
+
+  it('logs once for a Better Auth { code, message } refusal', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fetchMock = stubFetch(JSON.stringify({ code: 'FORBIDDEN', message: 'Forbidden' }), 403)
+
+    await expect(loadSession('better-auth.session_token=abc')).resolves.toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    expect(String(errorSpy.mock.calls[0]?.[0])).toMatch(/Session read failed/)
   })
 
   it('renders signed out on any other 4xx without retrying', async () => {

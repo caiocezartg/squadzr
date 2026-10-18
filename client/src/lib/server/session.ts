@@ -1,6 +1,7 @@
 import 'server-only'
 import { headers } from 'next/headers'
 import { cache } from 'react'
+import { z } from 'zod'
 import { sessionResponseSchema, type SessionDto } from '@squadzr/schemas'
 import { ApiClientError, ApiContractError } from '@/lib/api-contract'
 import { serverApi } from './api'
@@ -12,6 +13,13 @@ const GET_SESSION_PATH = '/api/auth/get-session?disableRefresh=true'
 const SESSION_TIMEOUT_MS = 2_000
 // The first try and one retry.
 const SESSION_TRIES = 2
+
+// Better Auth and its rate limiter refuse with `{ message }` or `{ code, message }`, not with the
+// app's error contract. The loader fails open on them, so their shape is not a contract break.
+const betterAuthErrorSchema = z.object({
+  code: z.string().optional(),
+  message: z.string().optional(),
+})
 
 /**
  * Reads the session of the viewer who sent `cookie` from `forwardedFor`. A `null` body and a 401
@@ -55,7 +63,7 @@ async function readSession(
       GET_SESSION_PATH,
       sessionResponseSchema,
       { credentials: 'viewer', caching: 'uncached', cookie, forwardedFor },
-      { timeoutMs: SESSION_TIMEOUT_MS }
+      { timeoutMs: SESSION_TIMEOUT_MS, errorSchema: betterAuthErrorSchema }
     )
   } catch (error) {
     if (isUnauthorized(error)) return null
