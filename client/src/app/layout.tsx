@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getLocale } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
+import { ClockProvider } from '@/hooks/use-clock'
 import '../styles/globals.css'
 
 // Same families and weights as the Google Fonts request that index.html used.
@@ -44,8 +45,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         {/* The provider inherits the locale, messages and request time from src/i18n/request.ts. */}
         <NextIntlClientProvider>
-          <div id="root">{children}</div>
-          <RealtimeUpdateNotice />
+          <ClockProvider>
+            <div id="root">{children}</div>
+            <RealtimeUpdateNotice />
+          </ClockProvider>
         </NextIntlClientProvider>
       </body>
     </html>

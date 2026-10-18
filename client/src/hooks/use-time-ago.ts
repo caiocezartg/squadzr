@@ -1,7 +1,5 @@
-import { useFormatter, useNow, useTranslations } from 'next-intl'
-
-/** The relative wording only changes at minute boundaries, so the reference time ticks once a minute. */
-const NOW_UPDATE_INTERVAL_MS = 60_000
+import { useFormatter, useTranslations } from 'next-intl'
+import { useClock } from './use-clock'
 
 /**
  * The viewer's own zone. next-intl reports a date formatted without one, and these dates have always
@@ -33,13 +31,13 @@ function getTimeAgo(date: Date, now: Date, t: Translate, format: Format): string
 }
 
 /**
- * The relative time of `date` against the reference time next-intl hands over from the server, and
- * formatted in the active locale once it is a week old.
+ * The relative time of `date` against the shared clock, and formatted in the active locale once it is
+ * a week old.
  */
 export function useTimeAgo(date: Date | string | undefined): string {
   const t = useTranslations()
   const format = useFormatter()
-  const now = useNow({ updateInterval: NOW_UPDATE_INTERVAL_MS })
+  const now = useClock()
 
   if (!date) return ''
   return getTimeAgo(new Date(date), now, t, format)

@@ -279,6 +279,7 @@ describe('room lobby — server-driven errors and redirects', () => {
 
     // The alert shows the translation of the code, not the server's English text.
     expect(await screen.findByText('This squad is already full.')).toBeInTheDocument()
+    expect(screen.queryByText('Join rejected by server')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await waitFor(() =>
