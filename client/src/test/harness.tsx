@@ -10,7 +10,8 @@
  * re-parenting) or details of `routeTree.gen.ts`.
  *
  * The tree is mounted inside a fresh TanStack Query client so cache updates
- * are observable through public query APIs.
+ * are observable through public query APIs. The realtime update notice is
+ * mounted beside it, as the root layout mounts it beside the app.
  */
 
 import { StrictMode } from 'react'
@@ -27,6 +28,7 @@ import type { AnyRoute, Router } from '@tanstack/react-router'
 import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
+import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
 import { Route as RoomsIndexRoute } from '@/routes/rooms/index'
 import { Route as RoomsCodeRoute } from '@/routes/rooms/$code'
 import { Route as RoomsMyRoute } from '@/routes/rooms/my'
@@ -105,6 +107,7 @@ export function renderRoomsFlow(url: string, options: RenderRoomsFlowOptions = {
   const tree = (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
+      <RealtimeUpdateNotice />
     </QueryClientProvider>
   )
 

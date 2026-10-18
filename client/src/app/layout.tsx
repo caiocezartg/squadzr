@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Exo_2, Plus_Jakarta_Sans } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
 import '../styles/globals.css'
 
 // Same families and weights as the Google Fonts request that index.html used.
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={`${exo2.variable} ${plusJakartaSans.variable}`}>
       <body>
         <div id="root">{children}</div>
+        <RealtimeUpdateNotice />
       </body>
     </html>
   )
