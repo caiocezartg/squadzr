@@ -50,22 +50,21 @@ Object.defineProperty(navigator, 'clipboard', {
   configurable: true,
 })
 
-// 4. Session and toasts as module mocks with shared mutable state (./stubs).
+// 4. Auth and toasts as module mocks with shared mutable state (./stubs). The browser's session
+//    check answers from the same store the session provider is seeded from.
 vi.mock('@/lib/auth-client', async () => {
   const { authStore } = await import('./stubs')
   return {
-    useSession: () => ({
-      data: authStore.user
-        ? { user: authStore.user, session: { userId: authStore.user.id } }
-        : null,
+    getSession: vi.fn(async () => ({
+      data: authStore.user ? { user: authStore.user, session: { id: 'session-1' } } : null,
       error: null,
-      isPending: false,
-    }),
-    signIn: {
-      social: (input: { provider?: string; callbackURL?: string }) => {
-        authStore.signInSocialCalls.push(input)
-        return Promise.resolve({ ok: true })
-      },
+    })),
+    signInWithDiscord: (callbackPath: string) => {
+      authStore.signInSocialCalls.push({
+        provider: 'discord',
+        callbackURL: window.location.origin + callbackPath,
+      })
+      return Promise.resolve({ ok: true })
     },
     signOut: async () => ({ ok: true }),
   }
@@ -109,3 +108,7 @@ afterEach(() => {
   resetStubs()
   resetHarnessNavigation()
 })
+
+// 8. Server-only modules (the server env and the Next server API) are imported by specs. The real
+//    guard throws outside a React Server Component, so the suite replaces it with an empty module.
+vi.mock('server-only', () => ({}))

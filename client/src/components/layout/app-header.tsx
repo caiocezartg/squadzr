@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { useSession, signIn, signOut } from '@/lib/auth-client'
+import { useSession } from '@/hooks/use-session'
+import { signInWithDiscord, signOut } from '@/lib/auth-client'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Bell, Menu } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
@@ -35,7 +36,7 @@ function NotificationsFallback() {
 
 export function AppHeader() {
   const t = useTranslations()
-  const { data: session } = useSession()
+  const session = useSession()
   const [menuOpen, setMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -67,10 +68,7 @@ export function AppHeader() {
   }
 
   const handleSignIn = () => {
-    signIn.social({
-      provider: 'discord',
-      callbackURL: window.location.origin + '/rooms',
-    })
+    signInWithDiscord('/rooms')
   }
 
   const closeSidebar = () => setSidebarOpen(false)

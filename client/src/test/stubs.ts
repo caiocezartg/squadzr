@@ -4,6 +4,8 @@
  * never leaks across files.
  */
 
+import type { SessionDto } from '@squadzr/schemas'
+
 export interface FakeSessionUser {
   id: string
   name: string
@@ -13,7 +15,7 @@ export interface FakeSessionUser {
 
 export const authStore = {
   user: null as FakeSessionUser | null,
-  /** Arguments captured from every `signIn.social` call, in order. */
+  /** Arguments captured from every Discord sign-in (`signInWithDiscord`), in order. */
   signInSocialCalls: [] as Array<{ provider?: string; callbackURL?: string }>,
 }
 
@@ -35,6 +37,14 @@ export function signInAsFakeUser(user: Partial<FakeSessionUser> = {}): void {
 
 export function signOutFakeUser(): void {
   authStore.user = null
+}
+
+/** The session the fake store describes, in the shape the session provider holds. */
+export function fakeSession(): SessionDto | null {
+  const user = authStore.user
+  if (!user) return null
+
+  return { user: { id: user.id, name: user.name, email: user.email, image: user.image } }
 }
 
 export function resetStubs(): void {

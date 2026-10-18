@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useCatalogCommands } from '@/features/catalog/commands'
-import { useSession } from '@/lib/auth-client'
+import { useSession } from '@/hooks/use-session'
 import type { RealtimeStatus } from '@/lib/ws-client'
 import type { Game, Player, PublicRoom } from '@/types'
 import { rosterFromSnapshot, type PresenceState } from './room-snapshot'
@@ -10,7 +10,6 @@ import { useRoomData } from './use-room-data'
 import { useRoomMembership } from './use-room-membership'
 
 export interface LobbyRoomView {
-  sessionPending: boolean
   isAuthenticated: boolean
   roomLoading: boolean
   roomNotFound: boolean
@@ -36,7 +35,7 @@ export interface LobbyRoomView {
  * renders. The route only supplies the room code.
  */
 export function useLobbyRoom(roomCode: string): LobbyRoomView {
-  const { data: session, isPending: sessionPending } = useSession()
+  const session = useSession()
   const navigate = useNavigate()
   const catalog = useCatalogCommands()
   const roomData = useRoomData(roomCode)
@@ -77,7 +76,6 @@ export function useLobbyRoom(roomCode: string): LobbyRoomView {
   const isReadyRoom = channel.snapshot?.readyAt != null
 
   return {
-    sessionPending,
     isAuthenticated: !!session?.user,
     roomLoading: roomData.isLoading,
     roomNotFound: roomData.hasError,

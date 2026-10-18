@@ -4,7 +4,8 @@ import { useMutation } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { joinRoomResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
-import { signIn, useSession } from '@/lib/auth-client'
+import { useSession } from '@/hooks/use-session'
+import { signInWithDiscord } from '@/lib/auth-client'
 // The commands entry point is the catalog's cross-capability port. Importing
 // it instead of the barrel keeps the catalog page (which renders the join
 // flow) out of a cycle.
@@ -49,7 +50,7 @@ export interface RoomJoining {
 export function useRoomJoining(): RoomJoining {
   const t = useTranslations()
   const navigate = useNavigate()
-  const { data: session } = useSession()
+  const session = useSession()
   const { refreshRooms } = useCatalogCommands()
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null)
   const [joiningRoomCode, setJoiningRoomCode] = useState<string | null>(null)
@@ -83,10 +84,7 @@ export function useRoomJoining(): RoomJoining {
   const handleSignIn = () => {
     if (!pendingJoinCode) return
 
-    signIn.social({
-      provider: 'discord',
-      callbackURL: `${window.location.origin}/rooms?join=${encodeURIComponent(pendingJoinCode)}`,
-    })
+    signInWithDiscord(`/rooms?join=${encodeURIComponent(pendingJoinCode)}`)
   }
 
   const authPrompt =

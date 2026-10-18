@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useSession } from '@/lib/auth-client'
+import { useSession } from '@/hooks/use-session'
 import { WS_URL } from '@/env'
 import { useWebSocket } from '@/hooks/use-websocket'
 import { useNotificationEvents } from '@/hooks/use-notification-events'
@@ -32,7 +32,7 @@ const LazyCreateRoomModal = lazy(() =>
  */
 export function CatalogPage() {
   const t = useTranslations()
-  const { data: session } = useSession()
+  const session = useSession()
   const [modalOpen, setModalOpen] = useState(false)
 
   // WebSocket for real-time room list updates

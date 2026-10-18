@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import type { useSession } from '@/lib/auth-client'
+import type { SessionDto } from '@squadzr/schemas'
 
 interface UseAutoJoinOptions {
-  session: ReturnType<typeof useSession>['data']
+  session: SessionDto | null
   mutate: (code: string, options: { onSettled: () => void }) => void
 }
 
