@@ -27,6 +27,20 @@ async function settleMountCheck(): Promise<void> {
   await settleChecks()
 }
 
+/** A browser check the test holds open until it chooses the answer. */
+function heldCheck() {
+  let answer: (result: unknown) => void = () => undefined
+  const promise = new Promise<unknown>((resolve) => {
+    answer = resolve
+  })
+  return { promise, answer }
+}
+
+function signedInAnswer(name: string) {
+  const user = { id: 'user-1', name, email: 'caio@squadzr.test', image: null }
+  return { data: { user, session: { id: 'session-1' } }, error: null }
+}
+
 beforeEach(() => {
   vi.mocked(getSession).mockClear()
 })
@@ -117,5 +131,32 @@ describe('SessionProvider', () => {
 
     expect(screen.getByText('signed in as Ana')).toBeInTheDocument()
     expect(navigation.calls).not.toContainEqual({ method: 'refresh' })
+  })
+
+  it('applies only the latest check when an older check answers last', async () => {
+    signInAsFakeUser({ name: 'Ana' })
+    const navigation = createHarnessNavigation('/')
+    const mountCheck = heldCheck()
+    const focusCheck = heldCheck()
+    vi.mocked(getSession)
+      .mockReturnValueOnce(mountCheck.promise as never)
+      .mockReturnValueOnce(focusCheck.promise as never)
+    render(<SessionProbe />)
+    await waitFor(() => expect(getSession).toHaveBeenCalledTimes(1))
+    await focusWindow()
+    await waitFor(() => expect(getSession).toHaveBeenCalledTimes(2))
+
+    // The focus check answers first with a signed-out viewer, then the older mount check answers.
+    await act(async () => {
+      focusCheck.answer({ data: null, error: null })
+    })
+    expect(await screen.findByText('signed out')).toBeInTheDocument()
+    await act(async () => {
+      mountCheck.answer(signedInAnswer('Ana'))
+    })
+    await settleChecks()
+
+    expect(screen.getByText('signed out')).toBeInTheDocument()
+    expect(navigation.calls.filter((call) => call.method === 'refresh')).toHaveLength(1)
   })
 })

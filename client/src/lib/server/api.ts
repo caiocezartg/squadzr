@@ -18,15 +18,35 @@ export type RequestPolicy =
 
 type ServerFetchInit = RequestInit & { next?: { revalidate: number } }
 
+/** Per-call options. `timeoutMs` rejects the call when Fastify has not finished answering in time. */
+export interface GetOptions {
+  readonly timeoutMs?: number
+}
+
 /** The fetch options a policy stands for. The cookie goes out only with a viewer call. */
-function requestInit(policy: RequestPolicy): ServerFetchInit {
+function requestInit(policy: RequestPolicy, { timeoutMs }: GetOptions): ServerFetchInit {
   const headers = new Headers({ accept: 'application/json' })
   if (policy.credentials === 'viewer' && policy.cookie) headers.set('cookie', policy.cookie)
+  // The signal runs until the body is read too, so a stalled body rejects like a dropped connection.
+  const signal = timeoutMs === undefined ? undefined : AbortSignal.timeout(timeoutMs)
 
   if (policy.credentials === 'anonymous' && policy.caching === 'revalidated') {
-    return { headers, next: { revalidate: REVALIDATE_SECONDS } }
+    return { headers, signal, next: { revalidate: REVALIDATE_SECONDS } }
   }
-  return { headers, cache: 'no-store' }
+  return { headers, signal, cache: 'no-store' }
+}
+
+/**
+ * The body parsed as JSON, or `undefined` when it is not JSON. A read that fails midway, such as a
+ * timed-out or dropped body, is not a body, so it throws to the caller.
+ */
+async function readJson(response: Response): Promise<unknown> {
+  const text = await response.text()
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -36,15 +56,16 @@ function requestInit(policy: RequestPolicy): ServerFetchInit {
 async function get<S extends z.ZodType>(
   path: string,
   schema: S,
-  policy: RequestPolicy
+  policy: RequestPolicy,
+  options: GetOptions = {}
 ): Promise<z.output<S>> {
   const response = await fetch(
     `${API_INTERNAL_URL.replace(/\/+$/, '')}${path}`,
-    requestInit(policy)
+    requestInit(policy, options)
   )
   const context = { method: 'GET', path, status: response.status }
   // A body that is not JSON cannot match a contract, so it reaches the parser as undefined.
-  const body: unknown = await response.json().catch(() => undefined)
+  const body = await readJson(response)
 
   if (!response.ok) {
     const error = parseApiResponse(errorResponseSchema, context, body)

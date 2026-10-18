@@ -28,11 +28,15 @@ export function SessionProvider({
 
   useEffect(() => {
     let mounted = true
+    // The mount check and a focus check can overlap, and the older one can answer last. Only the
+    // latest check's answer may change the session.
+    let latestCheck = 0
 
     async function revalidate() {
+      const check = ++latestCheck
       // A failed check, a network error included, is not a signed-out viewer: the page keeps its session.
       const result = await getSession().catch(() => undefined)
-      if (!mounted || !result || result.error) return
+      if (!mounted || check !== latestCheck || !result || result.error) return
 
       const parsed = sessionResponseSchema.safeParse(result.data)
       if (!parsed.success) {
