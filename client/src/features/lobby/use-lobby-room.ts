@@ -24,7 +24,8 @@ export interface LobbyRoomView {
   discordLink: string | null
   isReadyRoom: boolean
   connectionStatus: RealtimeStatus
-  error: string | null
+  /** The code of the latest realtime error, translated by the page; null when none shows. */
+  errorCode: string | null
   dismissError: () => void
   leaveRoom: () => Promise<void>
 }
@@ -90,7 +91,7 @@ export function useLobbyRoom(roomCode: string): LobbyRoomView {
     discordLink,
     isReadyRoom,
     connectionStatus: channel.status,
-    error: channel.error,
+    errorCode: channel.errorCode,
     dismissError: channel.dismissError,
     leaveRoom,
   }

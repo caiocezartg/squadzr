@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 
 interface RoomFiltersProps {
   search: string
@@ -26,7 +26,7 @@ export function RoomFilters({
   tagFilter,
   onTagFilterChange,
 }: RoomFiltersProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   const filters = [
     { value: 'all', label: t('rooms.filters.statusAll') },

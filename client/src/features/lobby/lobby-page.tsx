@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { ArrowLeft, Copy, LogOut } from 'lucide-react'
 import { AlertBox } from '@/components/ui/alert-box'
 import { useTimeAgo } from '@/hooks/use-time-ago'
+import { translateErrorCode } from '@/lib/error-messages'
+import { languageBadgeKey } from '@/lib/language-badge'
 import { ConnectionStatus } from './components/connection-status'
 import { DiscordLinkCard } from './components/discord-link-card'
 import { PlayerSlot } from './components/player-slot'
@@ -21,7 +23,7 @@ export interface LobbyPageProps {
  * stay inside the capability.
  */
 export function LobbyPage({ roomCode }: LobbyPageProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const lobby = useLobbyRoom(roomCode)
   const timeAgo = useTimeAgo(lobby.room?.createdAt)
   const [codeCopied, setCodeCopied] = useState(false)
@@ -68,7 +70,10 @@ export function LobbyPage({ roomCode }: LobbyPageProps) {
           <ArrowLeft className="size-4" />
           {t('rooms.lobby.backToRooms')}
         </Link>
-        <AlertBox type="error" message={lobby.error ?? t('errors.NOT_ROOM_MEMBER')} />
+        <AlertBox
+          type="error"
+          message={translateErrorCode(lobby.errorCode ?? 'NOT_ROOM_MEMBER', t)}
+        />
       </div>
     )
   }
@@ -120,7 +125,7 @@ export function LobbyPage({ roomCode }: LobbyPageProps) {
                 {lobby.game && <span className="badge-accent text-[10px]">{lobby.game.name}</span>}
                 {lobby.room?.language && (
                   <span className="badge-muted text-[10px]">
-                    {lobby.room.language === 'pt-br' ? 'PT-BR' : 'EN'}
+                    {t(languageBadgeKey(lobby.room.language))}
                   </span>
                 )}
                 <span className="badge-muted text-[10px]">{timeAgo}</span>
@@ -171,9 +176,13 @@ export function LobbyPage({ roomCode }: LobbyPageProps) {
         </div>
       </div>
 
-      {lobby.error && (
+      {lobby.errorCode && (
         <div className="mb-6">
-          <AlertBox type="error" message={lobby.error} onClose={lobby.dismissError} />
+          <AlertBox
+            type="error"
+            message={translateErrorCode(lobby.errorCode, t)}
+            onClose={lobby.dismissError}
+          />
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { useGames } from '@/features/games'
 
 /**
@@ -7,7 +7,7 @@ import { useGames } from '@/features/games'
  * runtime it needs) arrives after the hero copy is on screen.
  */
 export function HeroGameBadge() {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const { games } = useGames()
 
   if (games.length === 0) return null

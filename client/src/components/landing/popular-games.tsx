@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import * as m from 'motion/react-m'
 import type { Game } from '@/types'
 import { useGames } from '@/features/games'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 
 function fisherYatesShuffle<T>(arr: T[]): T[] {
   const result = [...arr]
@@ -16,7 +16,7 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
 }
 
 export function PopularGames() {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const { games, loading: isLoading } = useGames()
 
   const prevGamesRef = useRef<Game[] | undefined>(undefined)

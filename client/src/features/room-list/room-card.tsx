@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { useTimeAgo } from '@/hooks/use-time-ago'
+import { languageBadgeKey } from '@/lib/language-badge'
 import { Check, Users } from 'lucide-react'
 import type { PublicRoom, Game } from '@/types'
 
@@ -60,7 +61,7 @@ function useEntranceFade<T extends HTMLElement>() {
 }
 
 export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: RoomCardProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const timeAgo = useTimeAgo(room.createdAt)
   const members = currentMembers ?? 1
   const isFull = members >= room.maxPlayers
@@ -146,7 +147,7 @@ export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: Room
           <h3 className="truncate font-heading text-base font-bold leading-snug">{room.name}</h3>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span className="badge-muted px-1.5 py-0.5 text-[10px]">
-              {room.language === 'pt-br' ? 'PT-BR' : 'EN-US'}
+              {t(languageBadgeKey(room.language))}
             </span>
             {roomTags.map((tag) => (
               <span

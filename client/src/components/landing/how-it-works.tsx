@@ -1,12 +1,12 @@
 import * as m from 'motion/react-m'
 import { Check, Link as LinkIcon } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 
 /* ─── Illustration: Step 1 — Discord Sign In ─── */
 
 function DiscordClickIllustration() {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   return (
     <div className="relative h-32 sm:h-40 flex items-center justify-center overflow-hidden">
@@ -113,7 +113,7 @@ function RoomBrowseIllustration() {
 /* ─── Illustration: Step 3 — Squad Fill ─── */
 
 function SquadFillIllustration() {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const totalSlots = 5
 
   return (
@@ -179,9 +179,9 @@ const ILLUSTRATIONS = [
 /* ─── Main Component ─── */
 
 export function HowItWorks() {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
-  const stepData = t('howItWorks.steps', { returnObjects: true }) as Array<{
+  const stepData = t.raw('howItWorks.steps') as Array<{
     title: string
     description: string
   }>

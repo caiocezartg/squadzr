@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { useSession } from '@/lib/auth-client'
 import { WS_URL } from '@/env'
 import { useWebSocket } from '@/hooks/use-websocket'
@@ -31,7 +31,7 @@ const LazyCreateRoomModal = lazy(() =>
  * create and join workflows live in their own capabilities, behind this page.
  */
 export function CatalogPage() {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const { data: session } = useSession()
   const [modalOpen, setModalOpen] = useState(false)
 

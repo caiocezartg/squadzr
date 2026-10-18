@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { useNavigate } from '@tanstack/react-router'
 import { Bell, CheckCheck, Gamepad2, Users, X } from 'lucide-react'
 import { useNotifications } from '@/hooks/use-notifications'
@@ -24,7 +24,7 @@ function NotificationItem({
   onDismiss: (e: React.MouseEvent) => void
   disabled: boolean
 }) {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const timeAgo = useTimeAgo(notification.createdAt)
   const isUnread = !notification.readAt
   const playerCount = notification.payload.players?.length ?? 0
@@ -95,7 +95,7 @@ function NotificationItem({
 }
 
 export function NotificationsMenu({ enabled, isOpen, onToggle, onClose }: NotificationsMenuProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const navigate = useNavigate()
   const {
     notifications,

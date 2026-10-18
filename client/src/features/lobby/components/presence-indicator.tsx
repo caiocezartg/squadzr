@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { Tooltip } from '@/components/ui/tooltip'
 
 interface PresenceIndicatorProps {
@@ -11,7 +11,7 @@ interface PresenceIndicatorProps {
  * keyboard focus.
  */
 export function PresenceIndicator({ online }: PresenceIndicatorProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const label = online ? t('realtime.online') : t('realtime.offline')
 
   return (

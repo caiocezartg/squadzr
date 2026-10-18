@@ -1,11 +1,11 @@
 import * as m from 'motion/react-m'
 import { Accordion } from '@base-ui-components/react/accordion'
 import { Plus } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 
 export function FAQSection() {
-  const { t } = useTranslation()
-  const faqItems = t('faq.items', { returnObjects: true }) as Array<{
+  const t = useTranslations()
+  const faqItems = t.raw('faq.items') as Array<{
     question: string
     answer: string
   }>

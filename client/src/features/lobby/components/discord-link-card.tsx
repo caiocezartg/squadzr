@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import * as m from 'motion/react-m'
 import { Copy, ExternalLink } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { DiscordIcon } from '@/components/ui/icons'
 
 interface DiscordLinkCardProps {
@@ -10,7 +10,7 @@ interface DiscordLinkCardProps {
 }
 
 export function DiscordLinkCard({ discordLink, isReadyRoom }: DiscordLinkCardProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {

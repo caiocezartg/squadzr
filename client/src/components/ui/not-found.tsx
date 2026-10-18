@@ -1,10 +1,10 @@
 import * as m from 'motion/react-m'
 import { Link } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { Compass } from 'lucide-react'
 
 export function NotFound() {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-24">

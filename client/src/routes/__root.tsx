@@ -1,5 +1,5 @@
 import { createRootRoute, lazyRouteComponent, Outlet, useMatches } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { Toaster } from 'sonner'
 import { AppHeader } from '@/components/layout/app-header'
 
@@ -10,7 +10,7 @@ export const Route = createRootRoute({
 })
 
 function RootLayout() {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const matches = useMatches()
   const isLanding = matches.length > 0 && matches[matches.length - 1]?.fullPath === '/'
 
@@ -25,7 +25,7 @@ function RootLayout() {
       {!isLanding && (
         <footer className="border-t border-border/50 py-6">
           <div className="mx-auto max-w-7xl px-4 text-center text-xs text-muted sm:px-6 lg:px-8">
-            Squadzr &mdash; {t('footer.tagline')}
+            {t('footer.line')}
           </div>
         </footer>
       )}

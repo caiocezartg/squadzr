@@ -1,4 +1,5 @@
 import { XCircle, CheckCircle, AlertTriangle, X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface AlertBoxProps {
   type: 'error' | 'success' | 'warning'
@@ -19,6 +20,7 @@ const icons = {
 }
 
 export function AlertBox({ type, message, onClose }: AlertBoxProps) {
+  const t = useTranslations()
   return (
     <div className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm ${styles[type]}`}>
       {icons[type]}
@@ -27,7 +29,7 @@ export function AlertBox({ type, message, onClose }: AlertBoxProps) {
         <button
           onClick={onClose}
           className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
-          aria-label="Close"
+          aria-label={t('common.close')}
         >
           <X className="size-4" />
         </button>

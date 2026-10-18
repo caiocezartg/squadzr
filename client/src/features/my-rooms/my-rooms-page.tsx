@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { Tabs } from '@base-ui-components/react'
 import { Plus } from 'lucide-react'
 import { useSession } from '@/lib/auth-client'
@@ -28,7 +28,7 @@ const LazyCreateRoomModal = lazy(() =>
  * creation stay internal.
  */
 export function MyRoomsPage() {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const { data: session, isPending: sessionLoading } = useSession()
   const navigate = useNavigate()
 

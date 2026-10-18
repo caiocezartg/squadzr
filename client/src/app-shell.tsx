@@ -5,7 +5,6 @@ import { MotionProvider } from '@/components/ui/motion-provider'
 import { queryClient } from '@/lib/query-client'
 import { createRouterHistory } from '@/lib/router-history'
 import { createAppRouter } from './router'
-import '@/lib/i18n'
 
 const router = createAppRouter(createRouterHistory())
 

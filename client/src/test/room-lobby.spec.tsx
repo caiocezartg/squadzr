@@ -277,11 +277,12 @@ describe('room lobby — server-driven errors and redirects', () => {
       payload: { code: 'ROOM_FULL', message: 'Join rejected by server' },
     })
 
-    expect(await screen.findByText('Join rejected by server')).toBeInTheDocument()
+    // The alert shows the translation of the code, not the server's English text.
+    expect(await screen.findByText('This squad is already full.')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await waitFor(() =>
-      expect(screen.queryByText('Join rejected by server')).not.toBeInTheDocument()
+      expect(screen.queryByText('This squad is already full.')).not.toBeInTheDocument()
     )
   })
 
@@ -298,7 +299,7 @@ describe('room lobby — server-driven errors and redirects', () => {
       payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
     })
 
-    expect(await screen.findByText('You are not a member of this squad')).toBeInTheDocument()
+    expect(await screen.findByText('You are not a member of this squad.')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument())
     expect(screen.queryByText('Caio')).not.toBeInTheDocument()
     expect(screen.queryByText('2/3 players')).not.toBeInTheDocument()
@@ -421,7 +422,7 @@ describe('room lobby — Ready Room access gates', () => {
       payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
     })
 
-    expect(await screen.findByText('You are not a member of this squad')).toBeInTheDocument()
+    expect(await screen.findByText('You are not a member of this squad.')).toBeInTheDocument()
     expect(screen.queryByText('Caio')).not.toBeInTheDocument()
     expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
