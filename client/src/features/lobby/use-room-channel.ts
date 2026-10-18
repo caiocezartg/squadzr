@@ -27,7 +27,8 @@ export interface RoomChannel {
   status: RealtimeStatus
   snapshot: RoomSnapshot | null
   presence: PresenceState
-  error: string | null
+  /** The code of the latest realtime error. The page translates it; the server's text is not shown. */
+  errorCode: string | null
   membershipRevoked: boolean
   dismissError: () => void
   /** Tells the server this tab is leaving the room channel (Presence only). */
@@ -50,7 +51,7 @@ export function useRoomChannel({
 }: UseRoomChannelOptions): RoomChannel {
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null)
   const [presence, setPresence] = useState<PresenceState>({})
-  const [error, setError] = useState<string | null>(null)
+  const [errorCode, setErrorCode] = useState<string | null>(null)
   const [membershipRevoked, setMembershipRevoked] = useState(false)
 
   const { status, send, on, subscribe } = useWebSocket({ url: WS_URL, autoConnect: true })
@@ -74,7 +75,7 @@ export function useRoomChannel({
     // A different room code must never show the previous room's live state.
     setSnapshot(null)
     setPresence({})
-    setError(null)
+    setErrorCode(null)
     setMembershipRevoked(false)
 
     const previousCode = joinedCodeRef.current
@@ -98,7 +99,7 @@ export function useRoomChannel({
           setPresence(presenceFromSnapshot(payload))
           // The authoritative snapshot of this room supersedes any error a
           // previous join left behind (e.g. a late NOT_ROOM_MEMBER).
-          setError(null)
+          setErrorCode(null)
           setMembershipRevoked(false)
         },
         presence_updated: (payload) => {
@@ -114,7 +115,7 @@ export function useRoomChannel({
           // evidence: a handler from a room the page has already left must not
           // poison the new room with a delayed error.
           if (activeCodeRef.current !== roomCode) return
-          setError(payload.message)
+          setErrorCode(payload.code)
           if (payload.code === 'NOT_ROOM_MEMBER') {
             // Membership was revoked: the last snapshot is no longer
             // authorized, so the page falls back to the error alone.
@@ -127,7 +128,7 @@ export function useRoomChannel({
     )
   }, [subscribe, send, enabled, roomCode, onRoomRemoved])
 
-  const dismissError = useCallback(() => setError(null), [])
+  const dismissError = useCallback(() => setErrorCode(null), [])
 
   const notifyRoomLeave = useCallback(
     (code: string) => send({ type: 'leave_room', payload: { roomCode: code } }),
@@ -138,7 +139,7 @@ export function useRoomChannel({
     status,
     snapshot,
     presence,
-    error,
+    errorCode,
     membershipRevoked,
     dismissError,
     notifyRoomLeave,

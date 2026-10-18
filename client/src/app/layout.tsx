@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
 import { Exo_2, Plus_Jakarta_Sans } from 'next/font/google'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
+import { ClockProvider } from '@/hooks/use-clock'
 import '../styles/globals.css'
 
 // Same families and weights as the Google Fonts request that index.html used.
@@ -32,12 +35,21 @@ export const metadata: Metadata = {
   manifest: '/site.webmanifest',
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // The locale comes from the request (cookie, then Accept-Language), so the first render, the
+  // page's language and every date agree before any script runs.
+  const locale = await getLocale()
+
   return (
-    <html lang="en" className={`${exo2.variable} ${plusJakartaSans.variable}`}>
+    <html lang={locale} className={`${exo2.variable} ${plusJakartaSans.variable}`}>
       <body>
-        <div id="root">{children}</div>
-        <RealtimeUpdateNotice />
+        {/* The provider inherits the locale, messages and request time from src/i18n/request.ts. */}
+        <NextIntlClientProvider>
+          <ClockProvider>
+            <div id="root">{children}</div>
+            <RealtimeUpdateNotice />
+          </ClockProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   )

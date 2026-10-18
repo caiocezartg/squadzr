@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
 import { X } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 
 interface MobileSidebarProps {
   readonly isOpen: boolean
@@ -10,7 +10,7 @@ interface MobileSidebarProps {
 }
 
 export function MobileSidebar({ isOpen, onClose, hasUser }: MobileSidebarProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   useEffect(() => {
     if (!isOpen) return

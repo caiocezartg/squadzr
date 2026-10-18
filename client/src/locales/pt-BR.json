@@ -1,16 +1,18 @@
 {
   "timeAgo": {
     "justNow": "agora mesmo",
-    "minutesAgo": "há {{count}}min",
-    "hoursAgo": "há {{count}}h",
-    "daysAgo": "há {{count}}d"
+    "minutesAgo": "há {count}min",
+    "hoursAgo": "há {count}h",
+    "daysAgo": "há {count}d"
   },
   "common": {
     "signIn": "Entrar",
     "signOut": "Sair",
     "createRoom": "Criar novo squad",
     "createNewRoom": "Criar novo squad",
-    "loading": "Carregando…"
+    "loading": "Carregando…",
+    "language": "Idioma",
+    "close": "Fechar"
   },
   "nav": {
     "allRooms": "TODOS OS SQUADS",
@@ -19,10 +21,10 @@
     "openMenu": "Abrir menu"
   },
   "footer": {
-    "tagline": "Encontre seu time gamer"
+    "line": "Squadzr — Encontre seu time gamer"
   },
   "hero": {
-    "badge": "{{count}} JOGOS DISPONÍVEIS",
+    "badge": "{count} JOGOS DISPONÍVEIS",
     "titleLine1": "PARE DE JOGAR",
     "titleLine2": "TUDO",
     "titleAccent": "SOZINHO",
@@ -99,14 +101,13 @@
     "label": "Jogos Disponíveis",
     "title": "Jogue o que você ama",
     "subtitle": "Encontre companheiros nos títulos multiplayer mais populares.",
-    "playerRange": "{{min}}-{{max}} jogadores",
+    "playerRange": "{min}-{max} jogadores",
     "moreGames": "E muitos outros jogos!"
   },
   "rooms": {
     "page": {
       "title": "Explorar squads",
-      "subtitle_one": "{{count}} squad disponível",
-      "subtitle_other": "{{count}} squads disponíveis",
+      "subtitle": "{count, plural, one {{count} squad disponível} other {{count} squads disponíveis}}",
       "loadError": "Falha ao carregar squads. Por favor, atualize a página.",
       "emptyTitle": "Nenhum squad ainda",
       "emptyTitleFiltered": "Nenhum squad encontrado",
@@ -117,8 +118,8 @@
       "title": "Meus squads",
       "subtitle": "Squads que você criou ou entrou",
       "loadError": "Falha ao carregar seus squads. Por favor, atualize a página.",
-      "tabCreated": "Criados ({{count}})",
-      "tabJoined": "Participando ({{count}})",
+      "tabCreated": "Criados ({count})",
+      "tabJoined": "Participando ({count})",
       "noRoomsYet": "Nenhum squad aqui ainda.",
       "noRoomsFiltered": "Nenhum squad corresponde aos seus filtros."
     },
@@ -135,10 +136,11 @@
       "squadLocked": "Time fechado",
       "cannotLeave": "Não é possível sair de um squad cheio",
       "pleaseSignIn": "Por favor, entre com sua conta para ver este squad.",
-      "playerCount": "{{current}}/{{max}} jogadores",
-      "players": "Jogadores ({{current}}/{{max}})",
+      "playerCount": "{current}/{max} jogadores",
+      "players": "Jogadores ({current}/{max})",
       "copied": "Copiado!",
-      "waitingForPlayer": "Aguardando jogador..."
+      "waitingForPlayer": "Aguardando jogador...",
+      "host": "Anfitrião"
     },
     "card": {
       "joined": "Entrou",
@@ -165,10 +167,10 @@
       "roomNamePlaceholder": "ex: Grind ranked hoje à noite",
       "game": "Jogo",
       "selectGame": "Selecione um jogo",
-      "gameWithPlayers": "{{name}} ({{min}}-{{max}} jogadores)",
+      "gameWithPlayers": "{name} ({min}-{max} jogadores)",
       "playerLimit": "Jogadores",
       "optional": "(opcional)",
-      "playerLimitHelperWithGame": "Deixe vazio para usar {{maxPlayers}} jogadores (padrão do {{gameName}}).",
+      "playerLimitHelperWithGame": "Deixe vazio para usar {maxPlayers} jogadores (padrão do {gameName}).",
       "playerLimitHelper": "Deixe vazio para usar o máximo do jogo selecionado.",
       "discordLink": "Link de Convite do Discord",
       "discordLinkHelper": "Compartilhado com todos os jogadores quando o squad estiver cheio.",
@@ -176,7 +178,10 @@
       "tagsHelper": "Pressione Enter ou vírgula para adicionar - máx. 5 tags",
       "tagsPlaceholder": "Digite uma tag...",
       "tagsPlaceholderMore": "Adicionar mais...",
-      "removeTag": "Remover tag {{tag}}",
+      "removeTag": "Remover tag {tag}",
+      "addTag": "Adicionar tag",
+      "tagsMax": "Máximo de 5 tags",
+      "tagTooLong": "Tag muito longa",
       "language": "Idioma",
       "creating": "Criando...",
       "submit": "Criar Squad",
@@ -217,8 +222,7 @@
     "emptySubtitle": "Você será notificado quando seu time estiver pronto",
     "squadReady": "Seu time está pronto — convite do Discord disponível",
     "dismiss": "Dispensar",
-    "showing_one": "Mostrando última {{count}} notificação",
-    "showing_other": "Mostrando últimas {{count}} notificações"
+    "showing": "{count, plural, one {Mostrando última {count} notificação} other {Mostrando últimas {count} notificações}}"
   },
   "realtime": {
     "updating": "Uma nova versão está disponível. Recarregando…",
@@ -230,6 +234,16 @@
     "disconnected": "Desconectado",
     "online": "Online",
     "offline": "Offline"
+  },
+  "languages": {
+    "ptBr": "PT-BR",
+    "enUs": "EN-US"
+  },
+  "pagination": {
+    "label": "Paginação",
+    "previous": "Ir para a página anterior",
+    "next": "Ir para a próxima página",
+    "page": "Ir para a página {page}"
   },
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",

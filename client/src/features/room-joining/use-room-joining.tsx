@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { joinRoomResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import { signIn, useSession } from '@/lib/auth-client'
@@ -47,7 +47,7 @@ export interface RoomJoining {
  * survives the Discord round trip.
  */
 export function useRoomJoining(): RoomJoining {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const navigate = useNavigate()
   const { data: session } = useSession()
   const { refreshRooms } = useCatalogCommands()
@@ -63,7 +63,7 @@ export function useRoomJoining(): RoomJoining {
     },
     onError: (err) => {
       setJoiningRoomCode(null)
-      notifyError(getUserFriendlyError(err, 'join'))
+      notifyError(getUserFriendlyError(err, t, 'join'))
     },
   })
 

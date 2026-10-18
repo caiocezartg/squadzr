@@ -6,7 +6,7 @@ import { DiscordIcon } from '@/components/ui/icons'
 import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 import { UserMenu } from '@/components/layout/user-menu'
 import { MobileSidebar } from '@/components/layout/mobile-sidebar'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { LanguageToggle } from '@/components/layout/language-toggle'
 
 // The notifications capability owns polling, the API client and the shared
@@ -19,7 +19,7 @@ const LazyNotificationsMenu = lazy(() =>
 )
 
 function NotificationsFallback() {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   return (
     <button
@@ -34,7 +34,7 @@ function NotificationsFallback() {
 }
 
 export function AppHeader() {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const { data: session } = useSession()
   const [menuOpen, setMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)

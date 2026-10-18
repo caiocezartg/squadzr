@@ -2,10 +2,10 @@ import { Link } from '@tanstack/react-router'
 import { signIn, useSession } from '@/lib/auth-client'
 import * as m from 'motion/react-m'
 import { DiscordIcon } from '@/components/ui/icons'
-import { useTranslation, Trans } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 
 export function CTABanner() {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const { data: session } = useSession()
 
   const handleSignIn = () => {
@@ -30,7 +30,9 @@ export function CTABanner() {
         transition={{ duration: 0.5 }}
       >
         <h2 className="font-heading text-3xl font-bold sm:text-5xl">
-          <Trans i18nKey="cta.title" components={{ accent: <span className="text-accent" /> }} />
+          {t.rich('cta.title', {
+            accent: (chunks) => <span className="text-accent">{chunks}</span>,
+          })}
         </h2>
         <p className="mt-4 text-muted text-lg max-w-xl mx-auto">{t('cta.subtitle')}</p>
 

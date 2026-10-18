@@ -1,5 +1,5 @@
 import { ChevronDown, LogOut } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 
 interface UserMenuProps {
   readonly session: {
@@ -11,7 +11,7 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ session, menuOpen, onToggle, onSignOut }: UserMenuProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   return (
     <div className="relative">

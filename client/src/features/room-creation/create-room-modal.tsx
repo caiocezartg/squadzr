@@ -8,10 +8,12 @@ import { Dialog } from '@base-ui-components/react/dialog'
 import { Select } from '@base-ui-components/react/select'
 import * as m from 'motion/react-m'
 import { X, Loader2, ChevronsUpDown, Check } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { createRoomInputSchema, createRoomResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
+import { languageBadgeKey } from '@/lib/language-badge'
+import { translateTagError } from './tag-errors'
 import { notifyError } from '@/lib/notify'
 // The commands entry point is the catalog's cross-capability port. Importing
 // it instead of the barrel keeps the catalog page (which renders this dialog)
@@ -21,7 +23,7 @@ import type { Game, Room } from '@/types'
 import type { CreateRoomInput } from '@squadzr/schemas'
 
 const formSchema = createRoomInputSchema.extend({
-  gameId: z.uuid({ error: 'Please select a game' }),
+  gameId: z.uuid(),
 })
 
 type FormInput = z.input<typeof formSchema>
@@ -46,7 +48,7 @@ interface TagsChipInputProps {
 }
 
 function TagsChipInput({ value: tags, onChange, onBlur, hasError }: TagsChipInputProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const [inputValue, setInputValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const atLimit = tags.length >= 5
@@ -125,17 +127,14 @@ function TagsChipInput({ value: tags, onChange, onBlur, hasError }: TagsChipInpu
               ? t('rooms.createModal.tagsPlaceholder')
               : t('rooms.createModal.tagsPlaceholderMore')
           }
-          aria-label="Add tag"
+          aria-label={t('rooms.createModal.addTag')}
         />
       )}
     </div>
   )
 }
 
-const languageOptions = [
-  { value: 'pt-br', label: 'PT-BR' },
-  { value: 'en', label: 'EN-US' },
-] as const
+const languageOptions = ['pt-br', 'en'] as const
 
 /**
  * The create-room dialog: form values are inferred from the shared contract,
@@ -144,7 +143,7 @@ const languageOptions = [
  * already loaded and control the dialog.
  */
 export function CreateRoomModal({ games, open, onOpenChange, onCreated }: CreateRoomModalProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const navigate = useNavigate()
   const { refreshRooms } = useCatalogCommands()
   const {
@@ -194,7 +193,7 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
     try {
       await createRoom.mutateAsync(data)
     } catch (err) {
-      notifyError(getUserFriendlyError(err))
+      notifyError(getUserFriendlyError(err, t))
     }
   })
 
@@ -415,7 +414,9 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
                     )}
                   />
                   <p className="text-xs text-muted">{t('rooms.createModal.tagsHelper')}</p>
-                  {errors.tags && <p className="field-error">{errors.tags.message}</p>}
+                  {errors.tags?.message && (
+                    <p className="field-error">{translateTagError(errors.tags.message, t)}</p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5 lg:col-span-2">
@@ -427,7 +428,7 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
                     control={control}
                     render={({ field }) => (
                       <div className="grid grid-cols-2 gap-2">
-                        {languageOptions.map(({ value, label }) => (
+                        {languageOptions.map((value) => (
                           <button
                             key={value}
                             type="button"
@@ -438,7 +439,7 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
                                 : 'border border-border bg-surface text-muted hover:border-border-light hover:text-offwhite'
                             }`}
                           >
-                            {label}
+                            {t(languageBadgeKey(value))}
                           </button>
                         ))}
                       </div>

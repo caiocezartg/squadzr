@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { Tooltip } from '@/components/ui/tooltip'
 import type { RealtimeStatus } from '@/lib/ws-client'
 
@@ -22,7 +22,7 @@ const DOT_CLASSES: Record<RealtimeStatus, string> = {
 
 /** Overall realtime connection state: color plus an accessible status tooltip. */
 export function ConnectionStatus({ status }: ConnectionStatusProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const label = t(LABEL_KEYS[status])
 
   return (

@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 
 /**
  * Default route loading state, shown by the router while an on-demand route
@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next'
  * into the bundle budget.
  */
 export function RoutePending() {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   return (
     <div role="status" aria-live="polite" data-testid="route-pending" className="min-h-[50vh]">

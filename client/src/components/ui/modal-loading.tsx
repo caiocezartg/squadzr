@@ -1,12 +1,12 @@
 import { Loader2 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 
 /**
  * Loading state for on-demand dialogs: rendered while the dialog capability
  * chunk is fetched, so opening it never shows a frozen page.
  */
 export function ModalLoading() {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   return (
     <div

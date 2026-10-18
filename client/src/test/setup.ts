@@ -2,16 +2,20 @@
  * Global setup for the client unit/UI project.
  *
  * Contract of the suite (CCC-32): HTTP and WebSocket are isolated behind
- * deterministic adapters, auth and toasts are module mocks, and i18n is
- * pinned to English. No test reaches the network.
+ * deterministic adapters, auth and toasts are module mocks, and the messages
+ * are pinned to English. The Next navigation modules share the harness location.
+ * No test reaches the network.
  */
 
+import type { ReactElement } from 'react'
 import { afterEach, vi } from 'vitest'
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
+import type * as TestingLibrary from '@testing-library/react'
 import { installHttpAdapter, resetHttpRoutes } from './http-router'
 import { MockWebSocket, resetWebSocketInstances } from './ws-mock'
 import { resetStubs } from './stubs'
+import { resetHarnessNavigation } from './navigation'
 
 // 1. Deterministic HTTP: must run before any import of '@/lib/api' so the
 //    axios instance created there snapshots the mock adapter.
@@ -81,16 +85,27 @@ vi.mock('sonner', async () => {
   }
 })
 
-// 5. i18n pinned to English so text assertions are deterministic regardless
-//    of the host machine's navigator language.
-import i18n from '@/lib/i18n'
+// 5. Messages pinned to English: every render gets the English provider, as the
+//    app root provides it, so a spec needs no wrapper of its own.
+vi.mock('@testing-library/react', async (importOriginal) => {
+  const testing = await importOriginal<typeof TestingLibrary>()
+  const { withEnglishIntl } = await import('./intl')
+  return {
+    ...testing,
+    render: (ui: ReactElement, options: Parameters<typeof testing.render>[1] = {}) =>
+      testing.render(ui, { ...options, wrapper: withEnglishIntl(options.wrapper) }),
+  }
+})
 
-void i18n.changeLanguage('en')
+// 6. next/navigation and next/link read and write the harness location (./navigation).
+vi.mock('next/navigation', async () => (await import('./navigation')).nextNavigationMock)
+vi.mock('next/link', async () => (await import('./navigation')).nextLinkMock)
 
-// 6. Per-test isolation: unmount, clear route table, sockets and stub state.
+// 7. Per-test isolation: unmount, clear route table, sockets, stub state and the location.
 afterEach(() => {
   cleanup()
   resetHttpRoutes()
   resetWebSocketInstances()
   resetStubs()
+  resetHarnessNavigation()
 })

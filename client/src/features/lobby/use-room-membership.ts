@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslations } from 'next-intl'
 import type { CatalogCommands } from '@/features/catalog/commands'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
@@ -30,6 +31,7 @@ export function useRoomMembership({
   notifyRoomLeave,
 }: UseRoomMembershipOptions) {
   const navigate = useNavigate()
+  const t = useTranslations()
 
   const leaveRoom = useCallback(async () => {
     try {
@@ -42,9 +44,9 @@ export function useRoomMembership({
       await catalog.refreshRooms()
       await navigate({ to: '/rooms', search: {} })
     } catch (err) {
-      notifyError(getUserFriendlyError(err, 'leave'))
+      notifyError(getUserFriendlyError(err, t, 'leave'))
     }
-  }, [room, userId, roomCode, notifyRoomLeave, catalog, navigate])
+  }, [room, userId, roomCode, notifyRoomLeave, catalog, navigate, t])
 
   return { leaveRoom }
 }

@@ -9,9 +9,11 @@
  * any generated internals (`_addFileChildren`, `_addFileTypes`, `update`
  * re-parenting) or details of `routeTree.gen.ts`.
  *
- * The tree is mounted inside a fresh TanStack Query client so cache updates
- * are observable through public query APIs. The realtime update notice is
- * mounted beside it, as the root layout mounts it beside the app.
+ * The tree renders with next-intl and the real English messages. Its location
+ * is the harness navigation, which `next/navigation` and `next/link` share (see
+ * ./navigation). The tree is mounted inside a fresh TanStack Query client so
+ * cache updates are observable through public query APIs. The realtime update
+ * notice is mounted beside it, as the root layout mounts it beside the app.
  */
 
 import { StrictMode } from 'react'
@@ -19,7 +21,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   Outlet,
   RouterProvider,
-  createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
@@ -32,6 +33,9 @@ import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice
 import { Route as RoomsIndexRoute } from '@/routes/rooms/index'
 import { Route as RoomsCodeRoute } from '@/routes/rooms/$code'
 import { Route as RoomsMyRoute } from '@/routes/rooms/my'
+import { EnglishIntlProvider } from './intl'
+import { createHarnessNavigation } from './navigation'
+import type { HarnessNavigation } from './navigation'
 import { signInAsFakeUser, signOutFakeUser } from './stubs'
 import type { FakeSessionUser } from './stubs'
 
@@ -78,6 +82,8 @@ export interface RoomsFlow {
   user: UserEvent
   queryClient: QueryClient
   router: Router<AnyRoute>
+  /** The in-memory location the router and the Next hooks share, with the calls recorded on it. */
+  navigation: HarnessNavigation
   /** Unmounts the tree; remount by rendering again with the same queryClient. */
   unmount: () => void
 }
@@ -99,16 +105,19 @@ export function renderRoomsFlow(url: string, options: RenderRoomsFlowOptions = {
     signInAsFakeUser(options.user ?? {})
   }
 
+  const navigation = createHarnessNavigation(url)
   const router = createRouter({
     routeTree: buildRoomsRouteTree(),
-    history: createMemoryHistory({ initialEntries: [url] }),
+    history: navigation.history,
   })
 
   const tree = (
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <RealtimeUpdateNotice />
-    </QueryClientProvider>
+    <EnglishIntlProvider>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        <RealtimeUpdateNotice />
+      </QueryClientProvider>
+    </EnglishIntlProvider>
   )
 
   const view = render(options.strictMode ? <StrictMode>{tree}</StrictMode> : tree)
@@ -117,6 +126,7 @@ export function renderRoomsFlow(url: string, options: RenderRoomsFlowOptions = {
     user: userEvent.setup({ delay: null }),
     queryClient,
     router,
+    navigation,
     unmount: () => view.unmount(),
   }
 }

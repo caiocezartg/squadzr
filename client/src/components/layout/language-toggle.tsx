@@ -1,20 +1,31 @@
-import { useTranslation } from 'react-i18next'
+import { useLocale, useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
+import { LOCALE_COOKIE, type Locale } from '@/i18n/locales'
+
+const LOCALE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
+
+function writeLocaleCookie(locale: Locale): void {
+  document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE_SECONDS}; samesite=lax`
+}
 
 export function LanguageToggle() {
-  const { i18n } = useTranslation()
-  const isEN = i18n.resolvedLanguage === 'en'
+  const t = useTranslations()
+  const locale = useLocale()
+  const router = useRouter()
+  const isEN = locale === 'en'
 
-  const switchTo = (lang: 'en' | 'pt-BR') => {
-    if (i18n.resolvedLanguage !== lang) {
-      void i18n.changeLanguage(lang)
-    }
+  const switchTo = (next: Locale) => {
+    if (locale === next) return
+    writeLocaleCookie(next)
+    // The refresh re-renders the root layout, which reads the new cookie and sends its messages.
+    router.refresh()
   }
 
   return (
     <div
       className="relative flex items-center rounded-lg bg-surface border border-border p-0.5 font-heading"
       role="radiogroup"
-      aria-label="Language"
+      aria-label={t('common.language')}
     >
       {/* Sliding highlight */}
       <div

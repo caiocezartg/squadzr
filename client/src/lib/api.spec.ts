@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { roomResponseSchema, roomsResponseSchema } from '@squadzr/schemas'
 import { ApiClientError, ApiContractError, api } from './api'
 import { getUserFriendlyError } from './error-messages'
+import { englishT } from '../test/intl'
 import { getHttpLog, httpError, httpOk, onHttp } from '@/test/http-router'
 import { hostPlayer, lobbyRoom, openRoom } from '@/test/fixtures'
 
@@ -148,7 +149,7 @@ describe('invalid responses', () => {
 
     const error = await api.get('/api/rooms', roomsResponseSchema).catch((e: unknown) => e)
 
-    expect(getUserFriendlyError(error)).toBe('Something went wrong. Please try again.')
+    expect(getUserFriendlyError(error, englishT)).toBe('Something went wrong. Please try again.')
   })
 })
 
@@ -178,7 +179,9 @@ describe('error responses and commands', () => {
 
     expect(error).toBeInstanceOf(ApiClientError)
     expect(error).toMatchObject({ status: 400, code: 'VALIDATION_ERROR' })
-    expect(getUserFriendlyError(error)).toBe('Please check the form fields and try again.')
+    expect(getUserFriendlyError(error, englishT)).toBe(
+      'Please check the form fields and try again.'
+    )
   })
 
   it.each([
@@ -215,7 +218,7 @@ describe('error responses and commands', () => {
       const logged = JSON.stringify(vi.mocked(console.error).mock.calls)
       expect(logged).not.toContain(SECRET_INVITE)
       expect(logged).not.toContain('session-secret')
-      expect(getUserFriendlyError(error)).toBe('Something went wrong. Please try again.')
+      expect(getUserFriendlyError(error, englishT)).toBe('Something went wrong. Please try again.')
     }
   )
 

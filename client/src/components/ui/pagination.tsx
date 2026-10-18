@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 
 interface PaginationProps {
   currentPage: number
@@ -23,14 +24,15 @@ export function Pagination({
   onPreviousPage,
   onNextPage,
 }: PaginationProps) {
+  const t = useTranslations()
   if (totalPages <= 1) return null
 
   return (
-    <nav aria-label="Pagination" className="flex items-center justify-center gap-1 mt-8">
+    <nav aria-label={t('pagination.label')} className="flex items-center justify-center gap-1 mt-8">
       <button
         onClick={onPreviousPage}
         disabled={!hasPreviousPage}
-        aria-label="Go to previous page"
+        aria-label={t('pagination.previous')}
         className={cn(
           'flex items-center justify-center size-9 rounded-lg text-sm transition-colors',
           'border border-border-light',
@@ -58,7 +60,7 @@ export function Pagination({
             )}
             <button
               onClick={() => onPageChange(page)}
-              aria-label={`Go to page ${page}`}
+              aria-label={t('pagination.page', { page })}
               aria-current={page === currentPage ? 'page' : undefined}
               className={cn(
                 'flex items-center justify-center size-9 rounded-lg text-sm font-medium transition-colors',
@@ -76,7 +78,7 @@ export function Pagination({
       <button
         onClick={onNextPage}
         disabled={!hasNextPage}
-        aria-label="Go to next page"
+        aria-label={t('pagination.next')}
         className={cn(
           'flex items-center justify-center size-9 rounded-lg text-sm transition-colors',
           'border border-border-light',

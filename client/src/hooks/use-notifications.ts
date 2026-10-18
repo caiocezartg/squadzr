@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { notifyError } from '@/lib/notify'
@@ -52,6 +53,7 @@ function useNotificationMutation<TData, TVariables = void>(
   mutationFn: (variables: TVariables) => Promise<TData>
 ) {
   const queryClient = useQueryClient()
+  const t = useTranslations()
 
   return useMutation({
     mutationFn,
@@ -59,7 +61,7 @@ function useNotificationMutation<TData, TVariables = void>(
       await queryClient.invalidateQueries({ queryKey: ['notifications'] })
     },
     onError: (err) => {
-      notifyError(getUserFriendlyError(err))
+      notifyError(getUserFriendlyError(err, t))
     },
   })
 }

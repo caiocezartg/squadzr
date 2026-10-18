@@ -5,7 +5,7 @@ import * as m from 'motion/react-m'
 import { Search } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
 import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
-import { useTranslation, Trans } from 'react-i18next'
+import { useLocale, useTranslations } from 'next-intl'
 import { BackgroundRipple } from './background-ripple'
 import { HeroRoomShowcase } from './hero-room-showcase'
 
@@ -16,8 +16,8 @@ const LazyHeroGameBadge = lazy(() =>
 )
 
 export function HeroSection() {
-  const { t, i18n } = useTranslation()
-  const lang = i18n.resolvedLanguage || i18n.language
+  const t = useTranslations()
+  const lang = useLocale()
   const { data: session } = useSession()
 
   const handleSignIn = () => {
@@ -73,10 +73,9 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <Trans
-              i18nKey="hero.subtitle"
-              components={{ bold: <strong className="text-offwhite" /> }}
-            />
+            {t.rich('hero.subtitle', {
+              bold: (chunks) => <strong className="text-offwhite">{chunks}</strong>,
+            })}
           </m.p>
 
           {/* CTAs */}

@@ -1,7 +1,7 @@
 import { Dialog } from '@base-ui-components/react/dialog'
 import * as m from 'motion/react-m'
 import { X } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
 import { DiscordIcon } from '@/components/ui/icons'
 
 interface JoinRoomAuthModalProps {
@@ -17,7 +17,7 @@ export function JoinRoomAuthModal({
   onOpenChange,
   onSignIn,
 }: JoinRoomAuthModalProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
