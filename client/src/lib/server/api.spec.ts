@@ -64,6 +64,58 @@ describe('serverApi.get credentials', () => {
     expect(new Headers(sentInit(fetchMock).headers).has('cookie')).toBe(false)
   })
 
+  it("forwards the incoming request's x-forwarded-for on a viewer call", async () => {
+    const fetchMock = stubFetch(jsonResponse({ ok: true }))
+
+    await serverApi.get('/api/me', schema, {
+      credentials: 'viewer',
+      caching: 'uncached',
+      cookie: null,
+      forwardedFor: '203.0.113.7, 10.0.0.1',
+    })
+
+    expect(new Headers(sentInit(fetchMock).headers).get('x-forwarded-for')).toBe(
+      '203.0.113.7, 10.0.0.1'
+    )
+  })
+
+  it('sends no x-forwarded-for for a viewer request that has none', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse({ ok: true })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await serverApi.get('/api/me', schema, {
+      credentials: 'viewer',
+      caching: 'uncached',
+      cookie: 'a=b',
+      forwardedFor: null,
+    })
+    await serverApi.get('/api/me', schema, {
+      credentials: 'viewer',
+      caching: 'uncached',
+      cookie: 'a=b',
+    })
+
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(new Headers(init?.headers).has('x-forwarded-for')).toBe(false)
+    }
+  })
+
+  it('never sends x-forwarded-for on an anonymous call', async () => {
+    const fetchMock = stubFetch(jsonResponse({ ok: true }))
+    // A viewer-only field slipping past the types must not leak into an anonymous call.
+    const policy = {
+      credentials: 'anonymous',
+      caching: 'uncached',
+      forwardedFor: '203.0.113.7',
+    } as const
+
+    await serverApi.get('/api/public', schema, policy)
+
+    expect(new Headers(sentInit(fetchMock).headers).has('x-forwarded-for')).toBe(false)
+  })
+
   it('calls the internal API URL with the path and its query', async () => {
     const fetchMock = stubFetch(jsonResponse({ ok: true }))
 
@@ -150,6 +202,36 @@ describe('serverApi.get contracts', () => {
 
     expect(error).toBeInstanceOf(ApiClientError)
     expect(error).toMatchObject({ status: 404, code: 'ROOM_NOT_FOUND', message: 'Room not found' })
+  })
+
+  it('throws ApiContractError when the body cannot be read on a call without a timeout', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const response = jsonResponse({ ok: true })
+    vi.spyOn(response, 'text').mockRejectedValue(new TypeError('terminated'))
+    stubFetch(response)
+
+    const error = await serverApi
+      .get('/api/public', schema, { credentials: 'anonymous', caching: 'uncached' })
+      .catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(ApiContractError)
+    expect(error).toMatchObject({ status: 200, path: '/api/public' })
+  })
+
+  it('rethrows a body read that fails on a call with a timeout, so the caller can retry it', async () => {
+    const response = jsonResponse({ ok: true })
+    const timedOut = new DOMException('The operation timed out.', 'TimeoutError')
+    vi.spyOn(response, 'text').mockRejectedValue(timedOut)
+    stubFetch(response)
+
+    await expect(
+      serverApi.get(
+        '/api/public',
+        schema,
+        { credentials: 'anonymous', caching: 'uncached' },
+        { timeoutMs: 2000 }
+      )
+    ).rejects.toBe(timedOut)
   })
 
   it('throws ApiContractError for an error body outside the error contract', async () => {

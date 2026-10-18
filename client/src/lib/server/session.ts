@@ -14,20 +14,24 @@ const SESSION_TIMEOUT_MS = 2_000
 const SESSION_TRIES = 2
 
 /**
- * Reads the session of the viewer who sent `cookie`. A `null` body and a 401 both mean signed out;
- * a body that breaks the contract throws. A network error, a timeout or a 5xx is retried once. When
- * the retry fails too, the error is logged once and the page renders signed out, so the browser's
- * check corrects it.
+ * Reads the session of the viewer who sent `cookie` from `forwardedFor`. A `null` body and a 401
+ * both mean signed out; a 200 whose body breaks the contract throws. Any other failure is logged
+ * once and the page renders signed out, so the browser's check corrects it. A network error, a
+ * timeout or a 5xx is retried once first; a refused request (a 429 included) is not.
  */
-export async function loadSession(cookie: string | null): Promise<SessionDto | null> {
+export async function loadSession(
+  cookie: string | null,
+  forwardedFor: string | null = null
+): Promise<SessionDto | null> {
   let lastFailure: unknown
 
   for (let attempt = 1; attempt <= SESSION_TRIES; attempt += 1) {
     try {
-      return await readSession(cookie)
+      return await readSession(cookie, forwardedFor)
     } catch (error) {
-      if (!isRetryable(error)) throw error
+      if (isMalformedSuccess(error)) throw error
       lastFailure = error
+      if (!isRetryable(error)) break
     }
   }
 
@@ -42,12 +46,15 @@ export async function loadSession(cookie: string | null): Promise<SessionDto | n
  * One try at the session, bounded by the timeout. A 401 is signed out; anything else is either an
  * answer or an error for the caller to retry or rethrow.
  */
-async function readSession(cookie: string | null): Promise<SessionDto | null> {
+async function readSession(
+  cookie: string | null,
+  forwardedFor: string | null
+): Promise<SessionDto | null> {
   try {
     return await serverApi.get(
       GET_SESSION_PATH,
       sessionResponseSchema,
-      { credentials: 'viewer', caching: 'uncached', cookie },
+      { credentials: 'viewer', caching: 'uncached', cookie, forwardedFor },
       { timeoutMs: SESSION_TIMEOUT_MS }
     )
   } catch (error) {
@@ -56,19 +63,30 @@ async function readSession(cookie: string | null): Promise<SessionDto | null> {
   }
 }
 
-/** The session of the current request. React's cache makes every server component share one read. */
-export const getRequestSession = cache(async () => loadSession((await headers()).get('cookie')))
+/**
+ * The session of the current request. React's cache makes every server component share one read.
+ * The viewer's `x-forwarded-for` goes along so Fastify rate-limits the viewer, not the Next server.
+ */
+export const getRequestSession = cache(async () => {
+  const requestHeaders = await headers()
+  return loadSession(requestHeaders.get('cookie'), requestHeaders.get('x-forwarded-for'))
+})
 
 /**
  * A try is retried when Fastify gives no answer (a network error or a timeout) or answers with a
- * 5xx, whatever the body. An answer below 500 is not retried: a refused request or a body that
- * breaks its contract would fail the same way again.
+ * 5xx, whatever the body. An answer below 500 is not retried: a refused request would be refused
+ * again.
  */
 function isRetryable(error: unknown): boolean {
   if (error instanceof ApiClientError || error instanceof ApiContractError) {
     return error.status >= 500
   }
   return true
+}
+
+/** A 2xx whose body breaks the contract: the only failure that stops the page. */
+function isMalformedSuccess(error: unknown): boolean {
+  return error instanceof ApiContractError && error.status < 300
 }
 
 function isUnauthorized(error: unknown): boolean {

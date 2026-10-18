@@ -161,6 +161,36 @@ describe('loadSession', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('renders signed out on a 429 without retrying, and logs once', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fetchMock = stubFetch(JSON.stringify({ message: 'Too many requests' }), 429)
+
+    await expect(loadSession('better-auth.session_token=abc')).resolves.toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(
+      errorSpy.mock.calls.filter(([message]) => /Session read failed/.test(String(message)))
+    ).toHaveLength(1)
+  })
+
+  it('renders signed out on any other 4xx without retrying', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fetchMock = stubFetch(JSON.stringify({ error: 'FORBIDDEN', message: 'Forbidden' }), 403)
+
+    await expect(loadSession('better-auth.session_token=abc')).resolves.toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("forwards the viewer's x-forwarded-for, and nothing when it has none", async () => {
+    const fetchMock = stubFetch('null')
+
+    await loadSession('better-auth.session_token=abc', '203.0.113.7')
+    await loadSession('better-auth.session_token=abc')
+
+    const sent = fetchMock.mock.calls.map(([, init]) => new Headers(init?.headers))
+    expect(sent[0]?.get('x-forwarded-for')).toBe('203.0.113.7')
+    expect(sent[1]?.has('x-forwarded-for')).toBe(false)
+  })
+
   it('does not retry a null body', async () => {
     const fetchMock = stubFetch('null')
 
