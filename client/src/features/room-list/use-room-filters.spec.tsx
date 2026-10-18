@@ -19,7 +19,7 @@ async function renderFilters(url = '/rooms') {
     path: '/rooms/',
     validateSearch: (raw) => roomsSearchSchema.parse(raw),
     component: function FilterProbe() {
-      filters = useRoomFilters(new Map())
+      filters = useRoomFilters()
       return null
     },
   })

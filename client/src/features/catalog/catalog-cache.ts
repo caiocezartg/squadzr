@@ -1,10 +1,12 @@
-import type { QueryClient } from '@tanstack/react-query'
+import { useCallback, useMemo } from 'react'
+import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import type { RoomsResponse } from '@/types'
 
 /**
- * The catalog's query key and cache commands. Confining them to one module
- * lets data, realtime and commands share the same key while callers describe
- * intent ("the catalog changed", "this room is gone") without knowing it.
+ * The catalog's cache: its query key, the cache commands and the hook that
+ * hands the commands to other capabilities. Confining them to one module lets
+ * data, realtime and commands share the same key while callers describe intent
+ * ("the catalog changed", "this room is gone") without knowing it.
  */
 export const catalogRoomsQueryKey = ['rooms'] as const
 
@@ -30,4 +32,29 @@ export function removeCatalogRoom(queryClient: QueryClient, roomId: string): voi
     if (!old) return old
     return { rooms: old.rooms.filter((room) => room.id !== roomId) }
   })
+}
+
+export interface CatalogCommands {
+  /** A room this tab was watching no longer exists in the catalog. */
+  removeRoom: (roomId: string) => void
+  /** Refetches the catalog after a Membership change. */
+  refreshRooms: () => Promise<void>
+}
+
+/**
+ * The catalog commands other capabilities need. Exposing them through the
+ * capability's public interface means callers describe what happened to the
+ * catalog without knowing query keys or cache mutations.
+ */
+export function useCatalogCommands(): CatalogCommands {
+  const queryClient = useQueryClient()
+
+  const removeRoom = useCallback(
+    (roomId: string) => removeCatalogRoom(queryClient, roomId),
+    [queryClient]
+  )
+
+  const refreshRooms = useCallback(() => invalidateCatalogRooms(queryClient), [queryClient])
+
+  return useMemo(() => ({ removeRoom, refreshRooms }), [removeRoom, refreshRooms])
 }
