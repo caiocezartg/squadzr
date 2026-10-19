@@ -20,11 +20,12 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { AppHeader } from '@/components/layout/app-header'
 import { WS_URL } from '@/env'
 import { useWebSocket } from '@/hooks/use-websocket'
+import en from '@/locales/en.json'
 import { createTestQueryClient } from '@/test/harness'
 import { httpOk, onHttp } from '@/test/http-router'
 import { createHarnessNavigation } from '@/test/navigation'
 import { RegisterLegacyNavigator } from '@/test/shell'
-import { signInAsFakeUser } from '@/test/stubs'
+import { authStore, signInAsFakeUser, toastStore } from '@/test/stubs'
 import { MockWebSocket, latestWebSocket } from '@/test/ws-mock'
 
 /** A screen with a realtime connection, as the squads page and the lobby open one. */
@@ -82,7 +83,13 @@ describe('signing out from the header', () => {
 
     await signOutFromHeader(user)
 
-    await waitFor(() => expect(navigation.calls).toContainEqual({ method: 'push', href: '/' }))
+    // The refresh follows the push, so it also drops the back-navigation entry of the screen just left.
+    await waitFor(() =>
+      expect(navigation.calls.slice(-2)).toEqual([
+        { method: 'push', href: '/' },
+        { method: 'refresh' },
+      ])
+    )
     expect(navigation.history.location.pathname).toBe('/')
     expect(queryClient.getQueryData(['my-squads'])).toBeUndefined()
     expect(
@@ -101,5 +108,19 @@ describe('signing out from the header', () => {
 
     await waitFor(() => expect(navigation.calls).toContainEqual({ method: 'push', href: '/' }))
     expect(socket.readyState).toBe(MockWebSocket.CLOSED)
+  })
+
+  it('keeps the session and says so when the server refuses the sign-out', async () => {
+    signInAsFakeUser({ name: 'Caio' })
+    authStore.signOutError = { message: 'Sign-out refused' }
+    const { user, navigation } = renderHeaderOver('/rooms')
+
+    await signOutFromHeader(user)
+
+    await waitFor(() => expect(toastStore.errorCalls).toEqual([en.errors.DEFAULT]))
+    expect(within(screen.getByRole('banner')).getByRole('button', { name: /caio/i })).toBeVisible()
+    expect(navigation.history.location.pathname).toBe('/rooms')
+    expect(navigation.calls).not.toContainEqual({ method: 'push', href: '/' })
+    expect(navigation.calls).not.toContainEqual({ method: 'refresh' })
   })
 })
