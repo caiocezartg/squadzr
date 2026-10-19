@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { API_INTERNAL_URL } from '@/env.server'
 import { ApiContractError } from '@/lib/api-contract'
-import { catalogGames, gameCs2, gameLol } from '@/test/fixtures'
+import { boardGames, gameCs2, gameLol } from '@/test/fixtures'
 import { loadGames, pickPopularGames } from './games'
 
 type RecordedInit = RequestInit & { next?: { revalidate?: number } }
@@ -30,14 +30,14 @@ afterEach(() => {
 
 describe('loadGames', () => {
   it('returns the games the list response carries, parsed against the contract', async () => {
-    const fetchMock = stubFetch(jsonResponse(catalogGames))
+    const fetchMock = stubFetch(jsonResponse(boardGames))
 
     await expect(loadGames()).resolves.toEqual([gameLol, gameCs2])
     expect(fetchMock.mock.calls[0]?.[0]).toBe(`${API_INTERNAL_URL}/api/games`)
   })
 
   it('sends no cookie', async () => {
-    const fetchMock = stubFetch(jsonResponse(catalogGames))
+    const fetchMock = stubFetch(jsonResponse(boardGames))
 
     await loadGames()
 
@@ -45,7 +45,7 @@ describe('loadGames', () => {
   })
 
   it('is revalidated every five minutes', async () => {
-    const fetchMock = stubFetch(jsonResponse(catalogGames))
+    const fetchMock = stubFetch(jsonResponse(boardGames))
 
     await loadGames()
 

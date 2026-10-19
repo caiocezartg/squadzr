@@ -49,7 +49,7 @@ export function AppHeader() {
   }
 
   const handleSignIn = () => {
-    signInWithDiscord('/rooms')
+    signInWithDiscord('/squads')
   }
 
   const closeSidebar = () => setSidebarOpen(false)
@@ -74,9 +74,9 @@ export function AppHeader() {
 
             <nav className="hidden md:flex items-center gap-1">
               <AppLink
-                href="/rooms"
+                href="/squads"
                 className={`rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite ${
-                  pathname === '/rooms' ? 'text-accent!' : ''
+                  pathname === '/squads' ? 'text-accent!' : ''
                 }`}
               >
                 {t('nav.allSquads')}

@@ -10,7 +10,7 @@ import { ApiClientError, ApiContractError, api } from './api'
 import { getUserFriendlyError } from './error-messages'
 import { englishT } from '../test/intl'
 import { getHttpLog, httpError, httpOk, onHttp } from '@/test/http-router'
-import { hostPlayer, lobbyRoom, openRoom } from '@/test/fixtures'
+import { hostPlayer, lobbySquad, openSquad } from '@/test/fixtures'
 
 const SECRET_INVITE = 'https://discord.gg/secret-invite'
 
@@ -24,18 +24,18 @@ afterEach(() => {
 
 describe('valid responses', () => {
   it('returns the parsed body with dates as ISO strings', async () => {
-    onHttp('GET', '/api/rooms', () => httpOk({ rooms: [openRoom] }))
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: [openSquad] }))
 
     const { rooms } = await api.get('/api/rooms', roomsResponseSchema)
 
-    expect(rooms[0]?.createdAt).toBe(openRoom.createdAt)
+    expect(rooms[0]?.createdAt).toBe(openSquad.createdAt)
     expect(typeof rooms[0]?.createdAt).toBe('string')
     expect(console.error).not.toHaveBeenCalled()
   })
 
   it('keeps only the public projection of a catalog room', async () => {
     onHttp('GET', '/api/rooms', () =>
-      httpOk({ rooms: [{ ...openRoom, discordLink: SECRET_INVITE }], players: [hostPlayer] })
+      httpOk({ rooms: [{ ...openSquad, discordLink: SECRET_INVITE }], players: [hostPlayer] })
     )
 
     const response = await api.get('/api/rooms', roomsResponseSchema)
@@ -46,11 +46,11 @@ describe('valid responses', () => {
   })
 
   it('returns lobby details for a member and the public projection otherwise', async () => {
-    const { discordLink: _discordLink, ...publicRoom } = lobbyRoom
+    const { discordLink: _discordLink, ...publicRoom } = lobbySquad
     onHttp('GET', '/api/rooms/:code', (req) =>
       httpOk(
         req.params.code === 'LOBBY1'
-          ? { room: lobbyRoom, players: [hostPlayer] }
+          ? { room: lobbySquad, players: [hostPlayer] }
           : { room: publicRoom }
       )
     )
@@ -58,7 +58,7 @@ describe('valid responses', () => {
     const asMember = await api.get('/api/rooms/LOBBY1', roomResponseSchema)
     const asOutsider = await api.get('/api/rooms/OTHER1', roomResponseSchema)
 
-    expect(asMember).toEqual({ room: lobbyRoom, players: [hostPlayer] })
+    expect(asMember).toEqual({ room: lobbySquad, players: [hostPlayer] })
     expect(asOutsider).toEqual({ room: publicRoom })
   })
 })
@@ -66,9 +66,9 @@ describe('valid responses', () => {
 describe('invalid responses', () => {
   it.each([
     ['a missing collection', {}],
-    ['a room without an id', { rooms: [{ ...openRoom, id: undefined }] }],
-    ['a date that is not an ISO string', { rooms: [{ ...openRoom, createdAt: 1_769_000_000 }] }],
-    ['a room name that is not a string', { rooms: [{ ...openRoom, name: 42 }] }],
+    ['a room without an id', { rooms: [{ ...openSquad, id: undefined }] }],
+    ['a date that is not an ISO string', { rooms: [{ ...openSquad, createdAt: 1_769_000_000 }] }],
+    ['a room name that is not a string', { rooms: [{ ...openSquad, name: 42 }] }],
   ])('rejects %s with a typed ApiContractError', async (_label, body) => {
     onHttp('GET', '/api/rooms', () => httpOk(body))
 
@@ -94,14 +94,14 @@ describe('invalid responses', () => {
     ],
     [
       'an invite that is not a URL',
-      { room: { ...lobbyRoom, discordLink: 'not a url' } },
+      { room: { ...lobbySquad, discordLink: 'not a url' } },
       'room.discordLink',
     ],
   ])(
     'rejects lobby details with %s instead of downgrading them to a public room',
     async (_label, override, path) => {
       onHttp('GET', '/api/rooms/:code', () =>
-        httpOk({ room: lobbyRoom, players: [hostPlayer], ...override })
+        httpOk({ room: lobbySquad, players: [hostPlayer], ...override })
       )
 
       const error = await api.get('/api/rooms/LOBBY1', roomResponseSchema).catch((e: unknown) => e)
@@ -120,7 +120,7 @@ describe('invalid responses', () => {
   it('logs structured diagnostics without the response body or the query string', async () => {
     onHttp('GET', '/api/rooms/:code', () =>
       httpOk({
-        room: { ...lobbyRoom, discordLink: SECRET_INVITE, createdAt: 'yesterday' },
+        room: { ...lobbySquad, discordLink: SECRET_INVITE, createdAt: 'yesterday' },
         players: [hostPlayer],
       })
     )

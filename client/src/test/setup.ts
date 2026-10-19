@@ -15,7 +15,7 @@ import type * as TestingLibrary from '@testing-library/react'
 import { installHttpFetch, resetHttpRoutes } from './http-router'
 import { MockWebSocket, resetWebSocketInstances } from './ws-mock'
 import { resetStubs } from './stubs'
-import { resetHarnessNavigation } from './navigation'
+import { bridgeWindowHistory, resetHarnessNavigation } from './navigation'
 
 // 1. Deterministic HTTP: `@/lib/api` calls the global `fetch` for each request, which answers from
 //    the route table.
@@ -102,9 +102,11 @@ vi.mock('@testing-library/react', async (importOriginal) => {
   }
 })
 
-// 6. next/navigation and next/link read and write the harness location (./navigation).
+// 6. next/navigation and next/link read and write the harness location (./navigation). A write through
+//    window.history moves that location too, as the App Router's patch of the window does.
 vi.mock('next/navigation', async () => (await import('./navigation')).nextNavigationMock)
 vi.mock('next/link', async () => (await import('./navigation')).nextLinkMock)
+bridgeWindowHistory()
 
 // 7. Per-test isolation: unmount, clear route table, sockets, stub state and the location.
 afterEach(() => {

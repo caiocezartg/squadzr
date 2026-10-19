@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { myRoomsResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
-import type { Room } from '@/types'
+import type { Squad } from '@/types'
 
 /**
  * The My Rooms query key. It stays private to the capability: callers refresh
@@ -10,11 +10,11 @@ import type { Room } from '@/types'
 const myRoomsQueryKey = ['my-rooms'] as const
 
 /** Stable empties keep memo dependencies from changing while the query loads. */
-const NO_ROOMS: Room[] = []
+const NO_ROOMS: Squad[] = []
 
 export interface MyRoomsData {
-  hosted: Room[]
-  joined: Room[]
+  hosted: Squad[]
+  joined: Squad[]
   loading: boolean
   error: boolean
   /** Re-reads the authoritative lists, e.g. after creating a room. */

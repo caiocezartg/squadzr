@@ -23,7 +23,7 @@ type ErrorCode = (typeof ERROR_CODE_KEYS)[number]
 export type MembershipAction = 'join' | 'leave'
 
 /** A translation key under `errors.`: the code itself, its action override or the generic message. */
-type ErrorTranslationKey = ErrorCode | 'ROOM_READY_JOIN' | 'DEFAULT'
+type ErrorTranslationKey = ErrorCode | 'SQUAD_READY_JOIN' | 'DEFAULT'
 
 /**
  * The translator a caller passes in (`useTranslations()` in a component). Code outside React gets
@@ -39,7 +39,7 @@ const ACTION_ERROR_KEYS: Partial<
   Record<ErrorCode, Partial<Record<MembershipAction, ErrorTranslationKey>>>
 > = {
   ROOM_READY: {
-    join: 'ROOM_READY_JOIN',
+    join: 'SQUAD_READY_JOIN',
     leave: 'ROOM_READY',
   },
 }

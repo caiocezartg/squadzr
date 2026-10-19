@@ -75,6 +75,32 @@ function currentNavigation(): HarnessNavigation {
   return active ?? createHarnessNavigation('/')
 }
 
+/** The path, search and hash of a URL, resolved against the window's URL, as a location holds them. */
+function locationHref(url: string | URL): string {
+  const resolved = new URL(String(url), window.location.href)
+  return `${resolved.pathname}${resolved.search}${resolved.hash}`
+}
+
+/**
+ * The App Router patches `window.history`, so a write through it moves the URL that the Next hooks read
+ * (`useSearchParams`, `usePathname`) without a navigation. The bridge does the same for the active location:
+ * a write moves it and the window's own URL, and it is never recorded as a router call.
+ */
+export function bridgeWindowHistory(): void {
+  const history = window.history
+  const pushState = history.pushState.bind(history)
+  const replaceState = history.replaceState.bind(history)
+
+  history.pushState = (data, unused, url) => {
+    if (url != null) active?.history.push(locationHref(url))
+    pushState(data, unused, url)
+  }
+  history.replaceState = (data, unused, url) => {
+    if (url != null) active?.history.replace(locationHref(url))
+    replaceState(data, unused, url)
+  }
+}
+
 function useLocationValue(select: (history: RouterHistory) => string): string {
   const { history } = currentNavigation()
   const read = () => select(history)

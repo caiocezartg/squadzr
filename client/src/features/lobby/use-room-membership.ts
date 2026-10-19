@@ -1,52 +1,52 @@
 import { useCallback } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { useTranslations } from 'next-intl'
-import type { CatalogCommands } from '@/features/catalog/commands'
+import type { SquadBoardCommands } from '@/features/squad-board'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
+import { useAppNavigation } from '@/lib/navigation'
 import { notifyError } from '@/lib/notify'
-import type { PublicRoom } from '@/types'
+import type { PublicSquad } from '@/types'
 
 interface UseRoomMembershipOptions {
   roomCode: string
   /** Metadata of the room whose Membership is being left. */
-  room: PublicRoom | null
+  room: PublicSquad | null
   userId: string | undefined
-  catalog: CatalogCommands
+  board: SquadBoardCommands
   /** Releases this tab's channel for the room. */
   notifyRoomLeave: (roomCode: string) => void
 }
 
 /**
  * The Membership workflow of leaving the room: release the realtime channel,
- * end the durable Membership over HTTP, drop a hosted room from the catalog
- * and return to the catalog. Leaving the route instead only changes Presence,
+ * end the durable Membership over HTTP, drop a hosted room from the board
+ * and return to the board. Leaving the route instead only changes Presence,
  * because it never runs this workflow.
  */
 export function useRoomMembership({
   roomCode,
   room,
   userId,
-  catalog,
+  board,
   notifyRoomLeave,
 }: UseRoomMembershipOptions) {
-  const navigate = useNavigate()
+  const navigateApp = useAppNavigation()
   const t = useTranslations()
 
   const leaveRoom = useCallback(async () => {
     try {
       const isHost = room?.hostId === userId
       notifyRoomLeave(roomCode)
-      await api.post(`/api/rooms/${roomCode}/leave`, {})
+      await api.post(`/api/rooms/${encodeURIComponent(roomCode)}/leave`, {})
       if (isHost && room) {
-        catalog.removeRoom(room.id)
+        board.removeSquad(room.id)
       }
-      await catalog.refreshRooms()
-      await navigate({ to: '/rooms', search: {} })
+      await board.refreshSquads()
+      navigateApp('/squads')
     } catch (err) {
       notifyError(getUserFriendlyError(err, t, 'leave'))
     }
-  }, [room, userId, roomCode, notifyRoomLeave, catalog, navigate, t])
+  }, [room, userId, roomCode, notifyRoomLeave, board, navigateApp, t])
 
   return { leaveRoom }
 }

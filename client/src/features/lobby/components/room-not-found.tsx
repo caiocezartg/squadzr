@@ -1,5 +1,5 @@
 import * as m from 'motion/react-m'
-import { Link } from '@tanstack/react-router'
+import { AppLink } from '@/components/layout/app-link'
 import { useTranslations } from 'next-intl'
 import { SearchX } from 'lucide-react'
 
@@ -46,12 +46,12 @@ export function RoomNotFound({ code }: RoomNotFoundProps) {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          <Link to="/rooms" search={{}} className="btn-accent w-full sm:w-auto text-center">
+          <AppLink href="/squads" className="btn-accent w-full sm:w-auto text-center">
             {t('rooms.notFound.backToRooms')}
-          </Link>
-          <Link to="/rooms" search={{}} className="btn-ghost w-full sm:w-auto text-center">
+          </AppLink>
+          <AppLink href="/squads" className="btn-ghost w-full sm:w-auto text-center">
             {t('rooms.notFound.createRoom')}
-          </Link>
+          </AppLink>
         </div>
       </m.div>
     </div>

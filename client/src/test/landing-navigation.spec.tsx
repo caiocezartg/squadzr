@@ -9,12 +9,12 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { HeroSection } from '@/components/landing/hero-section'
 import { NotFound } from '@/components/ui/not-found'
-import { renderRoomsFlow } from './harness'
+import { renderSquadsFlow } from './harness'
 import { createHarnessNavigation } from './navigation'
 
 describe('links to the landing', () => {
   it('sends a signed-out visitor of My Squads to the App Router landing', async () => {
-    const { navigation } = renderRoomsFlow('/rooms/my', { user: null })
+    const { navigation } = renderSquadsFlow('/rooms/my', { user: null })
 
     await waitFor(() => expect(navigation.calls).toEqual([{ method: 'push', href: '/' }]))
   })
@@ -40,6 +40,6 @@ describe('links from the landing', () => {
 
     await user.click(screen.getByRole('link', { name: 'Explore squads' }))
 
-    expect(navigation.calls).toEqual([{ method: 'push', href: '/rooms' }])
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads' }])
   })
 })

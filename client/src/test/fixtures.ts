@@ -9,9 +9,9 @@ import type {
   Game,
   GamesResponse,
   Player,
-  Room,
   RoomResponse,
   RoomsResponse,
+  Squad,
   UserNotification,
 } from '@/types'
 import type { JoinRoomResponse } from '@squadzr/schemas'
@@ -45,12 +45,12 @@ export const gameCs2: Game = {
   updatedAt: hoursAgo(24),
 }
 
-export const catalogGames: GamesResponse = {
+export const boardGames: GamesResponse = {
   games: [gameLol, gameCs2],
 }
 
-/** Open room with free slots — joinable by a signed-in user. */
-export const openRoom: Room = {
+/** Open squad with free slots — joinable by a signed-in user. */
+export const openSquad: Squad = {
   id: 'aaaaaaaa-0000-4000-8000-000000000001',
   code: 'ABC123',
   name: 'Ranked grind',
@@ -66,8 +66,8 @@ export const openRoom: Room = {
   updatedAt: hoursAgo(2),
 }
 
-/** Room already at capacity — join is disabled for non-members. */
-export const fullRoom: Room = {
+/** Squad already at capacity — join is disabled for non-members. */
+export const fullSquad: Squad = {
   id: 'aaaaaaaa-0000-4000-8000-000000000002',
   code: 'XYZ789',
   name: 'Full lobby',
@@ -83,8 +83,8 @@ export const fullRoom: Room = {
   updatedAt: hoursAgo(4),
 }
 
-/** Room the signed-in user already belongs to. */
-export const memberRoom: Room = {
+/** Squad the signed-in user already belongs to. */
+export const memberSquad: Squad = {
   id: 'aaaaaaaa-0000-4000-8000-000000000003',
   code: 'MEM111',
   name: 'Casual five stack',
@@ -100,14 +100,14 @@ export const memberRoom: Room = {
   updatedAt: hoursAgo(6),
 }
 
-export const catalogRooms: RoomsResponse = {
-  rooms: [openRoom, fullRoom, memberRoom],
+export const boardSquads: RoomsResponse = {
+  rooms: [openSquad, fullSquad, memberSquad],
 }
 
-export function roomsForPagination(): RoomsResponse {
+export function squadsForPagination(): RoomsResponse {
   const rooms = Array.from({ length: 7 }, (_, i) => {
     const index = i + 1
-    const room: Room = {
+    const squad: Squad = {
       id: `aaaaaaaa-0000-4000-8000-00000000001${index}`,
       code: `P${String(index).padStart(5, '0')}`,
       name: `Page room ${index}`,
@@ -122,12 +122,12 @@ export function roomsForPagination(): RoomsResponse {
       createdAt: hoursAgo(index + 5),
       updatedAt: hoursAgo(index + 5),
     }
-    return room
+    return squad
   })
   return { rooms }
 }
 
-export const lobbyRoom: Room = {
+export const lobbySquad: Squad = {
   id: 'aaaaaaaa-0000-4000-8000-000000000004',
   code: 'LOBBY1',
   name: 'Squad ready check',
@@ -141,8 +141,8 @@ export const lobbyRoom: Room = {
   updatedAt: hoursAgo(1),
 }
 
-export const invalidDiscordRoom: Room = {
-  ...lobbyRoom,
+export const invalidDiscordSquad: Squad = {
+  ...lobbySquad,
   id: 'aaaaaaaa-0000-4000-8000-000000000005',
   code: 'BADLNK',
   discordLink: 'https://not-discord.example/invite',
@@ -163,16 +163,16 @@ export const guestPlayer: Player = {
 }
 
 export const lobbyRoomResponse: RoomResponse = {
-  room: lobbyRoom,
+  room: lobbySquad,
   players: [hostPlayer],
 }
 
 export const invalidDiscordRoomResponse: RoomResponse = {
-  room: invalidDiscordRoom,
+  room: invalidDiscordSquad,
   players: [hostPlayer],
 }
 
-export const createdRoom: Room = {
+export const createdSquad: Squad = {
   id: 'aaaaaaaa-0000-4000-8000-000000000006',
   code: 'NEW001',
   name: 'Created squad',
@@ -189,7 +189,7 @@ export const createdRoom: Room = {
 }
 
 export const createRoomResponse: CreateRoomResponse = {
-  room: createdRoom,
+  room: createdSquad,
 }
 
 /**
@@ -201,7 +201,7 @@ export const joinRoomResponse: JoinRoomResponse = {
   message: 'Joined squad',
   roomMember: {
     id: 'bbbbbbbb-0000-4000-8000-000000000001',
-    roomId: openRoom.id,
+    roomId: openSquad.id,
     userId: 'user-1',
     joinedAt: hoursAgo(0),
   },
@@ -216,7 +216,7 @@ export type LobbySnapshot = WsServerEventPayload<'room_snapshot'>
  */
 export function lobbySnapshot(overrides: Partial<LobbySnapshot> = {}): LobbySnapshot {
   return {
-    room: { ...lobbyRoom, memberCount: 2, isMember: true },
+    room: { ...lobbySquad, memberCount: 2, isMember: true },
     players: [hostPlayer, guestPlayer],
     readyAt: null,
     expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
@@ -247,12 +247,12 @@ export const roomReadyNotification: UserNotification = {
   title: 'Your squad is ready',
   message: 'Squad ready check is full. The Discord invite is available.',
   payload: {
-    roomId: lobbyRoom.id,
-    roomCode: lobbyRoom.code,
-    roomName: lobbyRoom.name,
+    roomId: lobbySquad.id,
+    roomCode: lobbySquad.code,
+    roomName: lobbySquad.name,
     gameName: gameLol.name,
     players: [{ name: hostPlayer.name, image: hostPlayer.image }],
-    discordLink: lobbyRoom.discordLink,
+    discordLink: lobbySquad.discordLink,
   },
   readAt: null,
   createdAt: hoursAgo(0),

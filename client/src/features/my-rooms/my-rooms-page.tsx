@@ -9,10 +9,11 @@ import { ModalLoading } from '@/components/ui/modal-loading'
 import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 import { useAppNavigation } from '@/lib/navigation'
 import { notifyError } from '@/lib/notify'
-import { RoomCard, RoomFilters, querySquadList, useRoomFilters } from '@/features/room-list'
+import { SquadCard, SquadFilters, querySquadList, useSquadFilters } from '@/features/squad-list'
 import { useGames } from '@/features/games'
 import type { Game } from '@/types'
 import { MyRoomsSkeleton } from './skeleton'
+import { useLegacySquadSearch } from './use-legacy-squad-search'
 import { useMyRoomsData } from './use-my-rooms-data'
 
 // Room creation (the form contract, resolvers and dialog primitives) is a
@@ -24,7 +25,7 @@ const LazyCreateRoomModal = lazy(() =>
 /**
  * The My Rooms page. It shows the room lists the server returns — including
  * Ready Rooms still inside their retention window — with the lobby reachable
- * from every card, and composes the shared room list, the create dialog and
+ * from every card, and composes the shared squad list, the create dialog and
  * the game catalog behind the capability. Query keys and the refresh after a
  * creation stay internal.
  */
@@ -61,6 +62,7 @@ export function MyRoomsPage() {
     [games]
   )
 
+  const squadSearch = useLegacySquadSearch('/rooms/my')
   const {
     localSearch,
     setLocalSearch,
@@ -74,7 +76,7 @@ export function MyRoomsPage() {
     setLanguage,
     hasActiveFilters,
     query,
-  } = useRoomFilters('/rooms/my')
+  } = useSquadFilters(squadSearch)
 
   const filteredHosted = querySquadList(hosted, gamesMap, query).matching
   const filteredJoined = querySquadList(joined, gamesMap, query).matching
@@ -102,7 +104,7 @@ export function MyRoomsPage() {
         </div>
         <button onClick={() => setModalOpen(true)} className="btn-accent gap-2">
           <Plus className="size-4" />
-          {t('common.createNewRoom')}
+          {t('common.createNewSquad')}
         </button>
       </div>
 
@@ -113,7 +115,7 @@ export function MyRoomsPage() {
       )}
 
       {/* Filters */}
-      <RoomFilters
+      <SquadFilters
         search={localSearch}
         onSearchChange={setLocalSearch}
         filter={filter}
@@ -153,16 +155,15 @@ export function MyRoomsPage() {
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredHosted.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  game={gamesMap.get(room.gameId)}
+              {filteredHosted.map((squad) => (
+                <SquadCard
+                  key={squad.id}
+                  squad={squad}
+                  game={gamesMap.get(squad.gameId)}
                   onJoin={(code) => {
                     navigate({ to: '/rooms/$code', params: { code } })
                   }}
                   isLoading={false}
-                  currentMembers={room.memberCount}
                 />
               ))}
             </div>
@@ -179,16 +180,15 @@ export function MyRoomsPage() {
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredJoined.map((room) => (
-                <RoomCard
-                  key={room.id}
-                  room={room}
-                  game={gamesMap.get(room.gameId)}
+              {filteredJoined.map((squad) => (
+                <SquadCard
+                  key={squad.id}
+                  squad={squad}
+                  game={gamesMap.get(squad.gameId)}
                   onJoin={(code) => {
                     navigate({ to: '/rooms/$code', params: { code } })
                   }}
                   isLoading={false}
-                  currentMembers={room.memberCount}
                 />
               ))}
             </div>

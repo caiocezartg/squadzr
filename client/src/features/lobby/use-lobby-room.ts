@@ -1,9 +1,9 @@
 import { useCallback, useMemo } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { useCatalogCommands } from '@/features/catalog/commands'
+import { useSquadBoardCommands } from '@/features/squad-board'
 import { useSession } from '@/hooks/use-session'
+import { useAppNavigation } from '@/lib/navigation'
 import type { RealtimeStatus } from '@/lib/ws-client'
-import type { Game, Player, PublicRoom } from '@/types'
+import type { Game, Player, PublicSquad } from '@/types'
 import { rosterFromSnapshot, type PresenceState } from './room-snapshot'
 import { useRoomChannel } from './use-room-channel'
 import { useRoomData } from './use-room-data'
@@ -14,7 +14,7 @@ export interface LobbyRoomView {
   roomLoading: boolean
   roomNotFound: boolean
   membershipRevoked: boolean
-  room: PublicRoom | null
+  room: PublicSquad | null
   game: Game | null
   players: Player[]
   maxPlayers: number
@@ -36,17 +36,17 @@ export interface LobbyRoomView {
  */
 export function useLobbyRoom(roomCode: string): LobbyRoomView {
   const session = useSession()
-  const navigate = useNavigate()
-  const catalog = useCatalogCommands()
+  const navigateApp = useAppNavigation()
+  const board = useSquadBoardCommands()
   const roomData = useRoomData(roomCode)
   const userId = session?.user?.id
 
   const handleRoomRemoved = useCallback(
     (roomId: string) => {
-      catalog.removeRoom(roomId)
-      void navigate({ to: '/rooms', search: {} })
+      board.removeSquad(roomId)
+      navigateApp('/squads')
     },
-    [catalog, navigate]
+    [board, navigateApp]
   )
 
   const channel = useRoomChannel({
@@ -63,7 +63,7 @@ export function useLobbyRoom(roomCode: string): LobbyRoomView {
     roomCode,
     room,
     userId,
-    catalog,
+    board,
     notifyRoomLeave: channel.notifyRoomLeave,
   })
 

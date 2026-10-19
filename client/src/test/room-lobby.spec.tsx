@@ -18,17 +18,17 @@
 
 import { act, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { renderRoomsFlow } from './harness'
+import { renderSquadsFlow } from './harness'
 import { httpError, httpOk, onHttp } from './http-router'
 import {
-  catalogGames,
-  catalogRooms,
+  boardGames,
+  boardSquads,
   gameLol,
   guestPlayer,
   hostPlayer,
-  invalidDiscordRoom,
+  invalidDiscordSquad,
   invalidDiscordRoomResponse,
-  lobbyRoom,
+  lobbySquad,
   lobbyRoomResponse,
   lobbySnapshot,
   readyLobbySnapshot,
@@ -37,11 +37,11 @@ import { openLatestWebSocket, sendFromServer, serverSentFrames } from './ws-flow
 import { latestWebSocket } from './ws-mock'
 
 function registerLobbyRoutes(): void {
-  onHttp('GET', '/api/rooms', () => httpOk(catalogRooms))
-  onHttp('GET', '/api/games', () => httpOk(catalogGames))
+  onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  onHttp('GET', '/api/games', () => httpOk(boardGames))
   onHttp('GET', '/api/rooms/:code', (req) => {
-    if (req.params.code === lobbyRoom.code) return httpOk(lobbyRoomResponse)
-    if (req.params.code === invalidDiscordRoom.code) {
+    if (req.params.code === lobbySquad.code) return httpOk(lobbyRoomResponse)
+    if (req.params.code === invalidDiscordSquad.code) {
       return httpOk(invalidDiscordRoomResponse)
     }
     return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
@@ -57,7 +57,7 @@ beforeEach(() => {
 
 describe('room lobby — snapshot handshake', () => {
   it('joins the room over WebSocket and renders the roster from the snapshot', async () => {
-    renderRoomsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/rooms/LOBBY1')
 
     expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
     // HTTP alone does not seed the live roster: it is empty until the snapshot.
@@ -86,7 +86,7 @@ describe('room lobby — snapshot handshake', () => {
   })
 
   it('replaces the roster from every snapshot and never duplicates members', async () => {
-    renderRoomsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
 
@@ -117,7 +117,7 @@ describe('room lobby — snapshot handshake', () => {
   })
 
   it('renders Presence from the snapshot and applies presence_updated without adding members', async () => {
-    renderRoomsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
 
@@ -172,7 +172,7 @@ describe('room lobby — snapshot handshake', () => {
   })
 
   it('shows the overall connection state with accessible text', async () => {
-    renderRoomsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
 
     expect(screen.getByText('Connecting…')).toBeInTheDocument()
@@ -184,7 +184,7 @@ describe('room lobby — snapshot handshake', () => {
 
 describe('room lobby — readiness from the snapshot', () => {
   it('reveals the invite only when the snapshot carries readiness and locks leaving', async () => {
-    renderRoomsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
 
     openLatestWebSocket()
@@ -206,14 +206,14 @@ describe('room lobby — readiness from the snapshot', () => {
   })
 
   it('never reveals the invite for an invalid Discord link', async () => {
-    renderRoomsFlow('/rooms/BADLNK')
+    renderSquadsFlow('/rooms/BADLNK')
     await screen.findByText('Squad ready check')
 
     openLatestWebSocket()
     sendFromServer({
       type: 'room_snapshot',
       payload: readyLobbySnapshot({
-        room: { ...invalidDiscordRoom, memberCount: 2, isMember: true },
+        room: { ...invalidDiscordSquad, memberCount: 2, isMember: true },
       }),
     })
 
@@ -224,8 +224,8 @@ describe('room lobby — readiness from the snapshot', () => {
 })
 
 describe('room lobby — leave flow', () => {
-  it('member leaves over WS + HTTP and lands back on the catalog', async () => {
-    const { router, user } = renderRoomsFlow('/rooms/LOBBY1', {
+  it('member leaves over WS + HTTP and lands back on the board', async () => {
+    const { router, user } = renderSquadsFlow('/rooms/LOBBY1', {
       user: { id: 'user-2', name: 'Ana', email: 'ana@squadzr.test', image: null },
     })
     await screen.findByText('Squad ready check')
@@ -240,35 +240,36 @@ describe('room lobby — leave flow', () => {
     await waitFor(() =>
       expect(lobbySocket.sentFrames().some((frame) => frame.type === 'leave_room')).toBe(true)
     )
-    await waitFor(() => expect(router.history.location.pathname).toBe('/rooms'))
+    await waitFor(() => expect(router.history.location.pathname).toBe('/squads'))
     expect(await screen.findByText('Explore squads')).toBeInTheDocument()
-    expect(screen.getByText('Ranked grind')).toBeInTheDocument()
+    // The title renders while the board's list loads, so the list is awaited.
+    expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
   })
 
-  it('host leave takes the room out of the catalog', async () => {
+  it('host leave takes the squad off the board', async () => {
     // The host leaving closes the room: model the server state change so the
-    // catalog refetch no longer returns it.
-    const remainingRooms = { rooms: [lobbyRoom] }
+    // board refetch no longer returns it.
+    const remainingRooms = { rooms: [lobbySquad] }
     onHttp('POST', '/api/rooms/:code/leave', () => {
       remainingRooms.rooms = []
       return httpOk({ ok: true })
     })
     onHttp('GET', '/api/rooms', () => httpOk({ rooms: remainingRooms.rooms }))
 
-    const { router, user } = renderRoomsFlow('/rooms/LOBBY1')
+    const { router, user } = renderSquadsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
 
     await user.click(screen.getByRole('button', { name: 'Leave squad' }))
 
-    await waitFor(() => expect(router.history.location.pathname).toBe('/rooms'))
+    await waitFor(() => expect(router.history.location.pathname).toBe('/squads'))
     expect(await screen.findByText('No squads yet')).toBeInTheDocument()
   })
 })
 
 describe('room lobby — server-driven errors and redirects', () => {
   it('shows WS error payloads in a dismissible alert box', async () => {
-    const { user } = renderRoomsFlow('/rooms/LOBBY1')
+    const { user } = renderSquadsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
 
     openLatestWebSocket()
@@ -288,7 +289,7 @@ describe('room lobby — server-driven errors and redirects', () => {
   })
 
   it('clears the stale lobby state when membership is revoked', async () => {
-    renderRoomsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
 
     openLatestWebSocket()
@@ -309,7 +310,7 @@ describe('room lobby — server-driven errors and redirects', () => {
 
   it('recovers the new room from a delayed error of the previous room', async () => {
     const nextRoom = {
-      ...lobbyRoom,
+      ...lobbySquad,
       id: 'aaaaaaaa-0000-4000-8000-000000000007',
       code: 'NEXT01',
       name: 'Next squad',
@@ -321,7 +322,7 @@ describe('room lobby — server-driven errors and redirects', () => {
       return httpOk(lobbyRoomResponse)
     })
 
-    const { router } = renderRoomsFlow('/rooms/LOBBY1')
+    const { router } = renderSquadsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
@@ -357,31 +358,31 @@ describe('room lobby — server-driven errors and redirects', () => {
     expect(screen.queryByText('You are not a member of this squad')).not.toBeInTheDocument()
   })
 
-  it('navigates back to the catalog when the room is deleted', async () => {
-    const { router } = renderRoomsFlow('/rooms/LOBBY1')
+  it('navigates back to the board when the squad is deleted', async () => {
+    const { router } = renderSquadsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
 
     openLatestWebSocket()
     sendFromServer({
       type: 'room_deleted',
-      payload: { roomId: lobbyRoom.id, roomCode: 'LOBBY1' },
+      payload: { roomId: lobbySquad.id, roomCode: 'LOBBY1' },
     })
 
-    await waitFor(() => expect(router.history.location.pathname).toBe('/rooms'))
+    await waitFor(() => expect(router.history.location.pathname).toBe('/squads'))
     expect(await screen.findByText('Explore squads')).toBeInTheDocument()
   })
 })
 
 describe('room lobby — failure and access gates', () => {
   it('shows the not-found state for an unknown room code', async () => {
-    renderRoomsFlow('/rooms/ZZZZZZ')
+    renderSquadsFlow('/rooms/ZZZZZZ')
 
     expect(await screen.findByText('Squad not found')).toBeInTheDocument()
     expect(screen.getByText('ZZZZZZ')).toBeInTheDocument()
   })
 
   it('gates the lobby behind sign-in for guests', async () => {
-    renderRoomsFlow('/rooms/LOBBY1', { user: null })
+    renderSquadsFlow('/rooms/LOBBY1', { user: null })
 
     expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
   })
@@ -390,14 +391,14 @@ describe('room lobby — failure and access gates', () => {
 describe('room lobby — Ready Room access gates', () => {
   // A Ready Room as the server answers a visitor or non-member: the public
   // projection, with no roster, no invite and no readiness.
-  const { discordLink: _discordLink, ...publicLobbyRoom } = lobbyRoom
+  const { discordLink: _discordLink, ...publicLobbyRoom } = lobbySquad
   const publicReadyRoomResponse = {
-    room: { ...publicLobbyRoom, memberCount: lobbyRoom.maxPlayers, isMember: false },
+    room: { ...publicLobbyRoom, memberCount: lobbySquad.maxPlayers, isMember: false },
   }
 
   it('never shows the roster or invite of a Ready Room to a visitor', async () => {
     onHttp('GET', '/api/rooms/:code', () => httpOk(publicReadyRoomResponse))
-    renderRoomsFlow('/rooms/LOBBY1', { user: null })
+    renderSquadsFlow('/rooms/LOBBY1', { user: null })
 
     expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
 
@@ -412,7 +413,7 @@ describe('room lobby — Ready Room access gates', () => {
 
   it('never shows the roster or invite of a Ready Room to a non-member', async () => {
     onHttp('GET', '/api/rooms/:code', () => httpOk(publicReadyRoomResponse))
-    renderRoomsFlow('/rooms/LOBBY1', {
+    renderSquadsFlow('/rooms/LOBBY1', {
       user: { id: 'user-7', name: 'Outsider', email: 'outsider@squadzr.test', image: null },
     })
     expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
@@ -435,14 +436,14 @@ describe('room lobby — full reload of a full room', () => {
   const fullRoster = [hostPlayer, guestPlayer, thirdPlayer]
 
   function registerFullRoomRoutes(): void {
-    onHttp('GET', '/api/rooms', () => httpOk(catalogRooms))
-    onHttp('GET', '/api/games', () => httpOk(catalogGames))
+    onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+    onHttp('GET', '/api/games', () => httpOk(boardGames))
     onHttp('GET', '/api/rooms/:code', (req) => {
-      if (req.params.code !== lobbyRoom.code) {
+      if (req.params.code !== lobbySquad.code) {
         return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
       }
       // HTTP still carries no ready indicator at all.
-      return httpOk({ room: lobbyRoom, players: fullRoster })
+      return httpOk({ room: lobbySquad, players: fullRoster })
     })
     onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
   }
@@ -452,7 +453,7 @@ describe('room lobby — full reload of a full room', () => {
 
     // Reload: a fresh mount of the lobby; the authoritative HTTP state carries
     // the room as full but no readiness the client could rehydrate from.
-    renderRoomsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/rooms/LOBBY1')
     await screen.findByText('Squad ready check')
 
     openLatestWebSocket()
@@ -466,7 +467,7 @@ describe('room lobby — full reload of a full room', () => {
     sendFromServer({
       type: 'room_snapshot',
       payload: lobbySnapshot({
-        room: { ...lobbyRoom, memberCount: fullRoster.length, isMember: true },
+        room: { ...lobbySquad, memberCount: fullRoster.length, isMember: true },
         players: fullRoster,
         readyAt: new Date().toISOString(),
         presence: fullRoster.map((player) => ({ playerId: player.id, online: true })),

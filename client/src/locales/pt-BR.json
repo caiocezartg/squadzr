@@ -8,8 +8,8 @@
   "common": {
     "signIn": "Entrar",
     "signOut": "Sair",
-    "createRoom": "Criar novo squad",
-    "createNewRoom": "Criar novo squad",
+    "createSquad": "Criar novo squad",
+    "createNewSquad": "Criar novo squad",
     "loading": "Carregando…",
     "language": "Idioma",
     "close": "Fechar"
@@ -104,16 +104,45 @@
     "playerRange": "{min}-{max} jogadores",
     "moreGames": "E muitos outros jogos!"
   },
-  "rooms": {
+  "squads": {
     "page": {
       "title": "Explorar squads",
       "subtitle": "{count, plural, one {{count} squad disponível} other {{count} squads disponíveis}}",
+      "retry": "Tentar novamente",
       "loadError": "Falha ao carregar squads. Por favor, atualize a página.",
       "emptyTitle": "Nenhum squad ainda",
       "emptyTitleFiltered": "Nenhum squad encontrado",
       "emptyDescription": "Seja o primeiro a criar um squad e montar um time!",
       "emptyDescriptionFiltered": "Nenhum squad corresponde aos seus filtros. Tente ajustar sua busca."
     },
+    "card": {
+      "joined": "Entrou",
+      "seeSquad": "VER SQUAD",
+      "joinSquad": "ENTRAR",
+      "full": "Cheio"
+    },
+    "filters": {
+      "searchPlaceholder": "Buscar por jogo ou nome do squad...",
+      "tagPlaceholder": "filtrar por tag...",
+      "lang": "Idioma",
+      "statusAll": "TODOS",
+      "statusHasSpace": "COM VAGA",
+      "statusAlmostFull": "QUASE CHEIO",
+      "sortNewest": "MAIS RECENTES",
+      "sortOldest": "MAIS ANTIGOS",
+      "langAll": "TODOS OS IDIOMAS",
+      "langPtBr": "PT-BR",
+      "langEn": "EN-US"
+    },
+    "authModal": {
+      "title": "Login necessário",
+      "description": "Você pode explorar a lista de squads como convidado, mas entrar em um squad e ver detalhes completos requer login com Discord.",
+      "squadCode": "Squad que você está tentando entrar:",
+      "maybeLater": "Talvez mais tarde",
+      "continueWithDiscord": "Continuar com Discord"
+    }
+  },
+  "rooms": {
     "myRooms": {
       "title": "Meus squads",
       "subtitle": "Squads que você criou ou entrou",
@@ -141,25 +170,6 @@
       "copied": "Copiado!",
       "waitingForPlayer": "Aguardando jogador...",
       "host": "Anfitrião"
-    },
-    "card": {
-      "joined": "Entrou",
-      "seeRoom": "VER SQUAD",
-      "joinRoom": "ENTRAR",
-      "full": "Cheio"
-    },
-    "filters": {
-      "searchPlaceholder": "Buscar por jogo ou nome do squad...",
-      "tagPlaceholder": "filtrar por tag...",
-      "lang": "Idioma",
-      "statusAll": "TODOS",
-      "statusHasSpace": "COM VAGA",
-      "statusAlmostFull": "QUASE CHEIO",
-      "sortNewest": "MAIS RECENTES",
-      "sortOldest": "MAIS ANTIGOS",
-      "langAll": "TODOS OS IDIOMAS",
-      "langPtBr": "PT-BR",
-      "langEn": "EN-US"
     },
     "createModal": {
       "title": "Criar um Squad",
@@ -192,13 +202,6 @@
       "discordLinkNotValid": "Deve ser um convite válido do Discord (discord.gg ou discord.com/invite)",
       "maxPlayersTooFew": "Mínimo de 2 jogadores",
       "maxPlayersTooMany": "Máximo de 20 jogadores"
-    },
-    "authModal": {
-      "title": "Login necessário",
-      "description": "Você pode explorar a lista de squads como convidado, mas entrar em um squad e ver detalhes completos requer login com Discord.",
-      "roomCode": "Squad que você está tentando entrar:",
-      "maybeLater": "Talvez mais tarde",
-      "continueWithDiscord": "Continuar com Discord"
     },
     "discordCard": {
       "title": "Seu time está pronto!",
@@ -250,7 +253,7 @@
     "ROOM_NOT_FOUND": "Este squad não existe mais ou o código é inválido.",
     "ROOM_FULL": "Este squad já está cheio.",
     "ROOM_READY": "Este squad está pronto — membros não podem sair.",
-    "ROOM_READY_JOIN": "Este squad já está cheio e pronto — não aceita mais jogadores.",
+    "SQUAD_READY_JOIN": "Este squad já está cheio e pronto — não aceita mais jogadores.",
     "NOT_ROOM_MEMBER": "Você não é membro deste squad.",
     "ROOM_CREATE_LIMIT_REACHED": "Você atingiu o número máximo de squads ativos.",
     "ROOM_JOIN_LIMIT_REACHED": "Você atingiu o número máximo de squads que pode participar.",

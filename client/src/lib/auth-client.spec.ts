@@ -15,11 +15,11 @@ vi.mock('better-auth/react', () => ({
 
 describe('signInWithDiscord', () => {
   it('starts Discord sign-in and returns to the path on this origin', async () => {
-    await signInWithDiscord('/rooms?join=ABC123')
+    await signInWithDiscord('/squads?join=ABC123')
 
     expect(social).toHaveBeenCalledWith({
       provider: 'discord',
-      callbackURL: `${window.location.origin}/rooms?join=ABC123`,
+      callbackURL: `${window.location.origin}/squads?join=ABC123`,
     })
   })
 })

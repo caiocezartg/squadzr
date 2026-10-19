@@ -1,10 +1,10 @@
 /**
- * Characterization tests for the create-room flow on the rooms catalog page
+ * Characterization tests for the create-room flow on the Squad Board page
  * and on My squads (`/rooms/my`).
  *
  * Covers the gating of the create button by session state, client-side
  * validation of the form, the payload posted to the API on success (including
- * navigation to the created lobby), the catalog refresh shared by both entry
+ * navigation to the created lobby), the board refresh shared by both entry
  * points and the error presentation when the server rejects the creation.
  *
  * HTTP runs through the deterministic adapter (./http-router); auth and
@@ -13,29 +13,29 @@
 
 import { screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { renderRoomsFlow } from './harness'
+import { renderSquadsFlow } from './harness'
 import { countHttpCalls, getHttpLog, httpCreated, httpError, httpOk, onHttp } from './http-router'
 import {
-  catalogGames,
-  catalogRooms,
+  boardGames,
+  boardSquads,
   createRoomResponse,
-  createdRoom,
+  createdSquad,
   gameLol,
   hostPlayer,
 } from './fixtures'
 import { toastStore } from './stubs'
 import type { MyRoomsResponse } from '@/types'
 
-function registerCatalogRoutes(): void {
-  onHttp('GET', '/api/rooms', () => httpOk(catalogRooms))
-  onHttp('GET', '/api/games', () => httpOk(catalogGames))
+function registerBoardRoutes(): void {
+  onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  onHttp('GET', '/api/games', () => httpOk(boardGames))
 }
 
 function registerCreateRoutes(): void {
   onHttp('POST', '/api/rooms', () => httpCreated(createRoomResponse))
   onHttp('GET', '/api/rooms/:code', () =>
     httpOk({
-      room: createdRoom,
+      room: createdSquad,
       players: [hostPlayer],
     })
   )
@@ -43,33 +43,33 @@ function registerCreateRoutes(): void {
 }
 
 beforeEach(() => {
-  registerCatalogRoutes()
+  registerBoardRoutes()
 })
 
 async function openCreateModal(
-  user: Awaited<ReturnType<typeof renderRoomsFlow>['user']>
+  user: Awaited<ReturnType<typeof renderSquadsFlow>['user']>
 ): Promise<void> {
   await user.click(await screen.findByText('Create new squad'))
   // Lazy create dialog: its import and render in the test runner can outlast the 1 s default.
   await screen.findByText('Create a Squad', {}, { timeout: 5000 })
 }
 
-describe('create room — entry point', () => {
+describe('create squad — entry point', () => {
   it('shows the create button only for signed-in users', async () => {
-    const { user } = renderRoomsFlow('/rooms')
+    const { user } = renderSquadsFlow('/squads')
     await openCreateModal(user)
   })
 
   it('hides the create button for guests', async () => {
-    renderRoomsFlow('/rooms', { user: null })
+    renderSquadsFlow('/squads', { user: null })
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
     expect(screen.queryByText('Create new squad')).not.toBeInTheDocument()
   })
 })
 
-describe('create room — client validation', () => {
+describe('create squad — client validation', () => {
   it('blocks submission and shows field errors for an empty form', async () => {
-    const { user } = renderRoomsFlow('/rooms')
+    const { user } = renderSquadsFlow('/squads')
     await openCreateModal(user)
 
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
@@ -81,10 +81,10 @@ describe('create room — client validation', () => {
   })
 })
 
-describe('create room — success flow', () => {
+describe('create squad — success flow', () => {
   it('posts the form payload and opens the created lobby', async () => {
     registerCreateRoutes()
-    const { router, user } = renderRoomsFlow('/rooms')
+    const { router, user } = renderSquadsFlow('/squads')
     await openCreateModal(user)
 
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
@@ -114,17 +114,19 @@ describe('create room — success flow', () => {
       })
     })
 
-    await waitFor(() => expect(router.history.location.pathname).toBe(`/rooms/${createdRoom.code}`))
+    await waitFor(() =>
+      expect(router.history.location.pathname).toBe(`/rooms/${createdSquad.code}`)
+    )
     expect(screen.getByText('Created squad')).toBeInTheDocument()
   })
 })
 
-describe('create room — returning to the catalog', () => {
-  it('shows the created room after the lobby and re-reads the catalog', async () => {
+describe('create squad — returning to the board', () => {
+  it('shows the created squad after the lobby and re-reads the board', async () => {
     registerCreateRoutes()
-    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    const serverRooms = { rooms: [...boardSquads.rooms] }
     onHttp('GET', '/api/rooms', () => httpOk({ rooms: serverRooms.rooms }))
-    const { router, user } = renderRoomsFlow('/rooms')
+    const { router, user } = renderSquadsFlow('/squads')
     await openCreateModal(user)
 
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
@@ -133,40 +135,42 @@ describe('create room — returning to the catalog', () => {
     await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
 
     // The server lists the room as soon as it exists.
-    serverRooms.rooms = [...serverRooms.rooms, createdRoom]
+    serverRooms.rooms = [...serverRooms.rooms, createdSquad]
     const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
 
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
-    await waitFor(() => expect(router.history.location.pathname).toBe(`/rooms/${createdRoom.code}`))
+    await waitFor(() =>
+      expect(router.history.location.pathname).toBe(`/rooms/${createdSquad.code}`)
+    )
 
-    // The create flow refreshes the catalog before it navigates to the lobby.
+    // The create flow refreshes the board before it navigates to the lobby.
     await waitFor(() =>
       expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeCreate)
     )
 
-    await router.navigate({ to: '/rooms', search: {} })
+    await router.navigate({ href: '/squads' })
     expect(await screen.findByText('Created squad')).toBeInTheDocument()
   })
 })
 
-describe('create room — from my rooms', () => {
-  it('refreshes the catalog so the new room appears when returning to it', async () => {
-    const serverRooms = { rooms: [...catalogRooms.rooms] }
+describe('create squad — from my squads', () => {
+  it('refreshes the board so the new squad appears when returning to it', async () => {
+    const serverRooms = { rooms: [...boardSquads.rooms] }
     const myRooms: MyRoomsResponse = { hosted: [], joined: [] }
     onHttp('GET', '/api/rooms', () => httpOk({ rooms: serverRooms.rooms }))
     registerCreateRoutes()
     // Registered after the lobby route so the exact segment wins over `:code`.
     onHttp('GET', '/api/rooms/my', () => httpOk(myRooms))
-    const { router, user } = renderRoomsFlow('/rooms')
+    const { router, user } = renderSquadsFlow('/squads')
 
-    // The catalog is loaded and fresh when the user leaves for My squads.
+    // The board is loaded and fresh when the user leaves for My squads.
     await screen.findByText('Ranked grind')
     await router.navigate({ to: '/rooms/my', search: {} })
     await screen.findByText('My squads')
 
     // The server lists the new room in both lists as soon as it exists.
-    serverRooms.rooms = [...serverRooms.rooms, createdRoom]
-    myRooms.hosted = [createdRoom]
+    serverRooms.rooms = [...serverRooms.rooms, createdSquad]
+    myRooms.hosted = [createdSquad]
     const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
 
     await user.click(screen.getByRole('button', { name: 'Create new squad' }))
@@ -178,18 +182,20 @@ describe('create room — from my rooms', () => {
     await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
 
-    await waitFor(() => expect(router.history.location.pathname).toBe(`/rooms/${createdRoom.code}`))
+    await waitFor(() =>
+      expect(router.history.location.pathname).toBe(`/rooms/${createdSquad.code}`)
+    )
 
-    // The create capability asked the catalog to refresh even though the
-    // catalog was unmounted: the next visit must re-read the authoritative
+    // The create capability asked the board to refresh even though the
+    // board was unmounted: the next visit must re-read the authoritative
     // list instead of trusting the cache for the whole staleTime.
-    await router.navigate({ to: '/rooms', search: {} })
+    await router.navigate({ href: '/squads' })
     expect(await screen.findByText('Created squad')).toBeInTheDocument()
     expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeCreate)
   })
 })
 
-describe('create room — server error', () => {
+describe('create squad — server error', () => {
   it('keeps the modal open and shows a friendly toast', async () => {
     onHttp('POST', '/api/rooms', () =>
       httpError(400, {
@@ -197,7 +203,7 @@ describe('create room — server error', () => {
         error: 'ROOM_CREATE_LIMIT_REACHED',
       })
     )
-    const { user } = renderRoomsFlow('/rooms')
+    const { user } = renderSquadsFlow('/squads')
     await openCreateModal(user)
 
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')

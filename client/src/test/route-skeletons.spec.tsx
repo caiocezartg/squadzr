@@ -4,12 +4,18 @@
  * The data-heavy routes declare their page skeleton as `pendingComponent`
  * (`src/routes/rooms/*`), so the skeleton shown while the route is held back
  * is the same markup the page shows while its data loads: one continuous
- * loading phase, no swap. Each test mounts a route with the real
+ * loading phase, no swap. The Squad Board is an App Router page with no
+ * loading file of its own: its list shows the same skeleton while the list
+ * loads, under the title and the filters, so the skeleton never covers squads
+ * the cache already holds. Each test mounts a route with the real
  * `pendingComponent`, a deferred lazy component and deferred HTTP handlers,
  * then walks the three states: route pending → skeleton, page mounted with
  * data pending → the same skeleton, data loaded → the page.
  */
 
+import { existsSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { StrictMode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import {
@@ -24,25 +30,26 @@ import {
 import type { AnyRoute } from '@tanstack/react-router'
 import { act, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { Route as RoomsIndexRoute } from '@/routes/rooms/index'
+import { SquadBoardPage } from '@/features/squad-board/page'
 import { Route as RoomsCodeRoute } from '@/routes/rooms/$code'
 import { Route as RoomsMyRoute } from '@/routes/rooms/my'
-import type { CatalogPage } from '@/features/catalog'
 import type { LobbyPage } from '@/features/lobby'
 import type { MyRoomsPage } from '@/features/my-rooms'
 import { createTestQueryClient } from './harness'
 import { httpOk, onHttp } from './http-router'
 import type { MockHttpResponse } from './http-router'
-import { catalogGames, catalogRooms, gameLol, lobbyRoom, lobbyRoomResponse } from './fixtures'
+import { boardGames, boardSquads, gameLol, lobbySquad, lobbyRoomResponse } from './fixtures'
+import { createHarnessNavigation } from './navigation'
 import { signInAsFakeUser } from './stubs'
 
-type CatalogModule = { CatalogPage: typeof CatalogPage }
 type LobbyModule = { LobbyPage: typeof LobbyPage }
 type MyRoomsModule = { MyRoomsPage: typeof MyRoomsPage }
 
 /** TanStack Router defaults the app relies on (`src/router.tsx` keeps them). */
 const PENDING_MS = 1_000
 const PENDING_MIN_MS = 500
+
+const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -68,16 +75,15 @@ function mountFlow(routeTree: AnyRoute, initialEntry: string): void {
   )
 }
 
-function buildCatalogTree(load: () => Promise<CatalogModule>): AnyRoute {
+/** The board mounted where its App Router page sits: the page renders its own loading state and data. */
+function buildBoardTree(): AnyRoute {
   const rootRoute = createRootRoute({ component: () => <Outlet /> })
-  const catalogRoute = createRoute({
+  const boardRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/rooms/',
-    validateSearch: RoomsIndexRoute.options.validateSearch,
-    component: lazyRouteComponent(load, 'CatalogPage'),
-    pendingComponent: RoomsIndexRoute.options.pendingComponent,
+    path: '/squads',
+    component: SquadBoardPage,
   })
-  return rootRoute.addChildren([catalogRoute]) as AnyRoute
+  return rootRoute.addChildren([boardRoute]) as AnyRoute
 }
 
 function buildLobbyTree(load: () => Promise<LobbyModule>): AnyRoute {
@@ -122,44 +128,25 @@ async function reachPendingSkeleton(testId: string): Promise<void> {
 }
 
 describe('route skeletons', () => {
-  it('keeps the catalog skeleton from the route pending state through the data load', async () => {
-    const catalogModule = await import('@/features/catalog')
+  it('has no route-level loading state, so the skeleton never covers squads the cache holds', () => {
+    expect(existsSync(join(SRC_DIR, 'app/squads/loading.tsx'))).toBe(false)
+  })
+
+  it('keeps the board skeleton through the data load, then shows the board', async () => {
     const roomsResponse = deferred<MockHttpResponse>()
     const gamesResponse = deferred<MockHttpResponse>()
     onHttp('GET', '/api/rooms', () => roomsResponse.promise)
     onHttp('GET', '/api/games', () => gamesResponse.promise)
+    createHarnessNavigation('/squads')
+    mountFlow(buildBoardTree(), '/squads')
 
-    vi.useFakeTimers()
-    try {
-      const catalogImport = deferred<CatalogModule>()
-      mountFlow(
-        buildCatalogTree(() => catalogImport.promise),
-        '/rooms/'
-      )
-      await reachPendingSkeleton('catalog-skeleton')
+    expect(await screen.findByTestId('squad-board-skeleton')).toBeInTheDocument()
 
-      // The chunk lands but the page data is still pending: same skeleton.
-      await act(async () => {
-        catalogImport.resolve(catalogModule)
-        await vi.advanceTimersByTimeAsync(PENDING_MIN_MS)
-      })
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0)
-      })
-      expect(screen.getByTestId('catalog-skeleton')).toBeInTheDocument()
-      expect(screen.queryByText('Ranked grind')).not.toBeInTheDocument()
-
-      // The data lands: the skeleton gives way to the page.
-      await act(async () => {
-        roomsResponse.resolve(httpOk(catalogRooms))
-        gamesResponse.resolve(httpOk(catalogGames))
-        await vi.advanceTimersByTimeAsync(0)
-      })
-      expect(screen.getByText('Ranked grind')).toBeInTheDocument()
-      expect(screen.queryByTestId('catalog-skeleton')).not.toBeInTheDocument()
-    } finally {
-      vi.useRealTimers()
-    }
+    // The data lands: the skeleton gives way to the board.
+    roomsResponse.resolve(httpOk(boardSquads))
+    gamesResponse.resolve(httpOk(boardGames))
+    expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
+    expect(screen.queryByTestId('squad-board-skeleton')).not.toBeInTheDocument()
   })
 
   it('keeps the lobby skeleton from the route pending state through the data load', async () => {
@@ -174,7 +161,7 @@ describe('route skeletons', () => {
       const lobbyImport = deferred<LobbyModule>()
       mountFlow(
         buildLobbyTree(() => lobbyImport.promise),
-        `/rooms/${lobbyRoom.code}`
+        `/rooms/${lobbySquad.code}`
       )
       await reachPendingSkeleton('lobby-skeleton')
 
@@ -186,7 +173,7 @@ describe('route skeletons', () => {
         await vi.advanceTimersByTimeAsync(0)
       })
       expect(screen.getByTestId('lobby-skeleton')).toBeInTheDocument()
-      expect(screen.queryByText(lobbyRoom.name)).not.toBeInTheDocument()
+      expect(screen.queryByText(lobbySquad.name)).not.toBeInTheDocument()
 
       await act(async () => {
         roomResponse.resolve(httpOk(lobbyRoomResponse))
@@ -195,7 +182,7 @@ describe('route skeletons', () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0)
       })
-      expect(screen.getByText(lobbyRoom.name)).toBeInTheDocument()
+      expect(screen.getByText(lobbySquad.name)).toBeInTheDocument()
       expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()
     } finally {
       vi.useRealTimers()
@@ -231,7 +218,7 @@ describe('route skeletons', () => {
 
       await act(async () => {
         myRoomsResponse.resolve(httpOk({ hosted: [], joined: [] }))
-        gamesResponse.resolve(httpOk(catalogGames))
+        gamesResponse.resolve(httpOk(boardGames))
         await vi.advanceTimersByTimeAsync(0)
       })
       expect(screen.getByText('My squads')).toBeInTheDocument()

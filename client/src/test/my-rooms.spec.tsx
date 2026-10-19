@@ -13,17 +13,17 @@
 
 import { screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { renderRoomsFlow } from './harness'
+import { renderSquadsFlow } from './harness'
 import { httpOk, onHttp } from './http-router'
-import { catalogGames, gameLol, guestPlayer, hostPlayer } from './fixtures'
-import type { MyRoomsResponse, Room } from '@/types'
+import { boardGames, gameLol, guestPlayer, hostPlayer } from './fixtures'
+import type { MyRoomsResponse, Squad } from '@/types'
 
 /**
  * A full Ready Room as `/api/rooms/my` returns it to a member: the readiness
  * timestamp is not part of the coordinated HTTP contract, only the lifecycle
  * outcome (still inside retention → still listed).
  */
-const readyHostedRoom: Room = {
+const readyHostedRoom: Squad = {
   id: 'aaaaaaaa-0000-4000-8000-00000000000c',
   code: 'READY1',
   name: 'Ready squad',
@@ -39,7 +39,7 @@ const readyHostedRoom: Room = {
   updatedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
 }
 
-const readyJoinedRoom: Room = {
+const readyJoinedRoom: Squad = {
   ...readyHostedRoom,
   id: 'aaaaaaaa-0000-4000-8000-00000000000d',
   code: 'READY2',
@@ -47,22 +47,38 @@ const readyJoinedRoom: Room = {
   hostId: 'user-9',
 }
 
-function myRooms(hosted: Room[], joined: Room[]): MyRoomsResponse {
+function myRooms(hosted: Squad[], joined: Squad[]): MyRoomsResponse {
   return { hosted, joined }
 }
 
 beforeEach(() => {
-  onHttp('GET', '/api/games', () => httpOk(catalogGames))
+  onHttp('GET', '/api/games', () => httpOk(boardGames))
   onHttp('GET', '/api/rooms/:code', () =>
     httpOk({ room: readyHostedRoom, players: [hostPlayer, guestPlayer] })
   )
   onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
 })
 
+describe('my squads — filters through the URL', () => {
+  it('filters both lists by the search in the URL and keeps the filter on the route', async () => {
+    onHttp('GET', '/api/rooms/my', () => httpOk(myRooms([readyHostedRoom], [readyJoinedRoom])))
+    const { router, user } = renderSquadsFlow('/rooms/my')
+    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText('Search by game or squad name...'), 'Joined')
+
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ search: 'Joined' }))
+    expect(screen.queryByText('Ready squad')).not.toBeInTheDocument()
+
+    await user.click(screen.getByText('Joined (1)'))
+    expect(await screen.findByText('Joined ready squad')).toBeInTheDocument()
+  })
+})
+
 describe('my squads — Ready Room retention', () => {
   it('keeps a Ready room the server still returns and opens its lobby', async () => {
     onHttp('GET', '/api/rooms/my', () => httpOk(myRooms([readyHostedRoom], [])))
-    const { router, user } = renderRoomsFlow('/rooms/my')
+    const { router, user } = renderSquadsFlow('/rooms/my')
 
     // A full room stays on screen and enabled for its member: the server's
     // retention contract decides visibility, not the room's capacity.
@@ -78,7 +94,7 @@ describe('my squads — Ready Room retention', () => {
 
   it('keeps a Ready room the user joined under the Joined tab and opens its lobby', async () => {
     onHttp('GET', '/api/rooms/my', () => httpOk(myRooms([], [readyJoinedRoom])))
-    const { router, user } = renderRoomsFlow('/rooms/my')
+    const { router, user } = renderSquadsFlow('/rooms/my')
     await screen.findByText('My squads')
 
     await user.click(screen.getByText('Joined (1)'))
@@ -91,14 +107,14 @@ describe('my squads — Ready Room retention', () => {
 
   it('drops a Ready room once the server stops returning it', async () => {
     onHttp('GET', '/api/rooms/my', () => httpOk(myRooms([readyHostedRoom], [])))
-    const firstVisit = renderRoomsFlow('/rooms/my')
+    const firstVisit = renderSquadsFlow('/rooms/my')
     expect(await screen.findByText('Ready squad')).toBeInTheDocument()
     firstVisit.unmount()
 
     // The 60-minute retention deadline passed: the server's next answer no
     // longer carries the room, so the next read drops it before any cleanup.
     onHttp('GET', '/api/rooms/my', () => httpOk(myRooms([], [])))
-    renderRoomsFlow('/rooms/my')
+    renderSquadsFlow('/rooms/my')
 
     expect(await screen.findByText('No squads here yet.')).toBeInTheDocument()
     expect(screen.queryByText('Ready squad')).not.toBeInTheDocument()

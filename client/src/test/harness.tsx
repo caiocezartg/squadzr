@@ -1,13 +1,15 @@
 /**
- * Render harness for the room flows.
+ * Render harness for the squad flows.
  *
  * Composes a TanStack Router tree using only the library's public code-based
- * API (`createRootRoute` + `createRoute` + `addChildren`). The tree mounts the
- * REAL page components and search validation, taken from the public `options`
- * of the imported route files (`/rooms/` index, `/rooms/$code` lobby and
- * `/rooms/my`), so the tests exercise the actual route implementations without
- * any generated internals (`_addFileChildren`, `_addFileTypes`, `update`
- * re-parenting) or details of `routeTree.gen.ts`.
+ * API (`createRootRoute` + `createRoute` + `addChildren`). The tree stands in for
+ * the app's two routers: the Squad Board is an App Router page in the app, and
+ * it mounts here at `/squads` next to the old app's routes, `/rooms/$code` (lobby)
+ * and `/rooms/my` (My Squads). Each route mounts the REAL page component, and
+ * the My Squads route takes its search validation from the imported route file,
+ * so the tests exercise the actual implementations without any generated
+ * internals (`_addFileChildren`, `_addFileTypes`, `update` re-parenting) or
+ * details of `routeTree.gen.ts`.
  *
  * The tree renders with next-intl and the real English messages. Its location
  * is the harness navigation, which `next/navigation` and `next/link` share (see
@@ -30,7 +32,8 @@ import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
 import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
-import { Route as RoomsIndexRoute } from '@/routes/rooms/index'
+import { SquadBoardPage } from '@/features/squad-board/page'
+import { squadsSearchSchema } from '@/features/squad-list'
 import { Route as RoomsCodeRoute } from '@/routes/rooms/$code'
 import { Route as RoomsMyRoute } from '@/routes/rooms/my'
 import { EnglishIntlProvider } from './intl'
@@ -52,14 +55,15 @@ export function createTestQueryClient(): QueryClient {
   })
 }
 
-function buildRoomsRouteTree(): AnyRoute {
+function buildSquadsRouteTree(): AnyRoute {
   const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
-  const roomsIndexRoute = createRoute({
+  const squadBoardRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/rooms/',
-    validateSearch: RoomsIndexRoute.options.validateSearch,
-    component: RoomsIndexRoute.options.component,
+    path: '/squads',
+    // The App Router parses the same search on the server, so the board sees a validated search here too.
+    validateSearch: (raw) => squadsSearchSchema.parse(raw),
+    component: SquadBoardPage,
   })
 
   const roomsCodeRoute = createRoute({
@@ -75,10 +79,10 @@ function buildRoomsRouteTree(): AnyRoute {
     component: RoomsMyRoute.options.component,
   })
 
-  return rootRoute.addChildren([roomsIndexRoute, roomsCodeRoute, roomsMyRoute]) as AnyRoute
+  return rootRoute.addChildren([squadBoardRoute, roomsCodeRoute, roomsMyRoute]) as AnyRoute
 }
 
-export interface RoomsFlow {
+export interface SquadsFlow {
   user: UserEvent
   queryClient: QueryClient
   router: Router<AnyRoute>
@@ -88,7 +92,7 @@ export interface RoomsFlow {
   unmount: () => void
 }
 
-export interface RenderRoomsFlowOptions {
+export interface RenderSquadsFlowOptions {
   /** `undefined` → default signed-in user; `null` → signed-out guest. */
   user?: FakeSessionUser | null
   /** Bring your own client to seed or inspect the query cache. */
@@ -97,7 +101,7 @@ export interface RenderRoomsFlowOptions {
   strictMode?: boolean
 }
 
-export function renderRoomsFlow(url: string, options: RenderRoomsFlowOptions = {}): RoomsFlow {
+export function renderSquadsFlow(url: string, options: RenderSquadsFlowOptions = {}): SquadsFlow {
   const queryClient = options.queryClient ?? createTestQueryClient()
   if (options.user === null) {
     signOutFakeUser()
@@ -107,7 +111,7 @@ export function renderRoomsFlow(url: string, options: RenderRoomsFlowOptions = {
 
   const navigation = createHarnessNavigation(url)
   const router = createRouter({
-    routeTree: buildRoomsRouteTree(),
+    routeTree: buildSquadsRouteTree(),
     history: navigation.history,
   })
 

@@ -10,9 +10,9 @@
 
 import { act, cleanup, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { renderRoomsFlow } from './harness'
+import { renderSquadsFlow } from './harness'
 import { httpOk, onHttp } from './http-router'
-import { catalogGames, catalogRooms, openRoom } from './fixtures'
+import { boardGames, boardSquads, openSquad } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
 import { REALTIME_RELOAD_ATTEMPT_KEY } from '@/lib/realtime-update'
@@ -43,8 +43,8 @@ function sendUnparseableFrame(): void {
 
 beforeEach(() => {
   window.sessionStorage.clear()
-  onHttp('GET', '/api/rooms', () => httpOk(catalogRooms))
-  onHttp('GET', '/api/games', () => httpOk(catalogGames))
+  onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  onHttp('GET', '/api/games', () => httpOk(boardGames))
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
 })
 
@@ -63,8 +63,8 @@ afterEach(() => {
 describe('realtime protocol handshake', () => {
   it('shows a notice and reloads when the announced version differs', async () => {
     const reload = stubReload()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
 
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
@@ -76,8 +76,8 @@ describe('realtime protocol handshake', () => {
 
   it('shows a notice and reloads when the announcement cannot be parsed', async () => {
     const reload = stubReload()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
 
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 'two' } })
@@ -88,8 +88,8 @@ describe('realtime protocol handshake', () => {
 
   it('shows a notice and reloads when a frame cannot be parsed at all', async () => {
     const reload = stubReload()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
 
     sendUnparseableFrame()
 
@@ -99,20 +99,20 @@ describe('realtime protocol handshake', () => {
 
   it('keeps the matching build running without a notice or reload', async () => {
     const reload = stubReload()
-    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    const serverRooms = { rooms: [...boardSquads.rooms] }
     onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
 
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 2 } })
-    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== openRoom.id)
+    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== openSquad.id)
     sendFromServer({
       type: 'room_removed',
-      payload: { roomId: openRoom.id, roomCode: openRoom.code },
+      payload: { roomId: openSquad.id, roomCode: openSquad.code },
     })
 
-    await vi.waitFor(() => expect(screen.queryByText(openRoom.name)).not.toBeInTheDocument())
+    await vi.waitFor(() => expect(screen.queryByText(openSquad.name)).not.toBeInTheDocument())
     expect(reload).not.toHaveBeenCalled()
     expect(screen.queryByText(RELOADING_NOTICE)).not.toBeInTheDocument()
   })
@@ -121,8 +121,8 @@ describe('realtime protocol handshake', () => {
 describe('realtime protocol reload bound', () => {
   it('does not reload again when the version diverges after the reload', async () => {
     const reload = stubReload()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 
@@ -134,8 +134,8 @@ describe('realtime protocol reload bound', () => {
     // the attempt, so the client must not loop.
     cleanup()
     act(() => setRealtimeUpdateNotice(null))
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 
@@ -148,8 +148,8 @@ describe('realtime protocol reload bound', () => {
 
   it('does not reload again when an unparseable frame repeats after the reload', async () => {
     const reload = stubReload()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     sendUnparseableFrame()
 
     expect(await screen.findByText(RELOADING_NOTICE)).toBeInTheDocument()
@@ -157,8 +157,8 @@ describe('realtime protocol reload bound', () => {
 
     cleanup()
     act(() => setRealtimeUpdateNotice(null))
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     sendUnparseableFrame()
 
     expect(await screen.findByText(MANUAL_RELOAD_NOTICE)).toBeInTheDocument()
@@ -176,8 +176,8 @@ describe('realtime protocol reload bound', () => {
       },
     })
 
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 
@@ -189,8 +189,8 @@ describe('realtime protocol reload bound', () => {
   it('reloads from the manual notice button', async () => {
     const reload = stubReload()
     window.sessionStorage.setItem(REALTIME_RELOAD_ATTEMPT_KEY, String(Date.now()))
-    const { user } = renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 

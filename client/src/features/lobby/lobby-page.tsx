@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { AppLink } from '@/components/layout/app-link'
 import { useTranslations } from 'next-intl'
 import { ArrowLeft, Copy, LogOut } from 'lucide-react'
 import { AlertBox } from '@/components/ui/alert-box'
@@ -62,14 +62,13 @@ export function LobbyPage({ roomCode }: LobbyPageProps) {
   if (lobby.membershipRevoked) {
     return (
       <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-12 sm:px-6 lg:px-8">
-        <Link
-          to="/rooms"
-          search={{}}
+        <AppLink
+          href="/squads"
           className="flex w-fit items-center gap-2 rounded-lg border border-border-light bg-surface px-4 py-2 text-sm text-muted hover:border-muted/30 hover:bg-surface-hover hover:text-offwhite transition-all"
         >
           <ArrowLeft className="size-4" />
           {t('rooms.lobby.backToRooms')}
-        </Link>
+        </AppLink>
         <AlertBox
           type="error"
           message={translateErrorCode(lobby.errorCode ?? 'NOT_ROOM_MEMBER', t)}
@@ -82,14 +81,13 @@ export function LobbyPage({ roomCode }: LobbyPageProps) {
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
       {/* Top navigation bar */}
       <div className="flex items-center justify-between mb-6">
-        <Link
-          to="/rooms"
-          search={{}}
+        <AppLink
+          href="/squads"
           className="flex items-center gap-2 rounded-lg border border-border-light bg-surface px-4 py-2 text-sm text-muted hover:text-offwhite hover:border-muted/30 hover:bg-surface-hover transition-all"
         >
           <ArrowLeft className="size-4" />
           {t('rooms.lobby.backToRooms')}
-        </Link>
+        </AppLink>
         <button
           onClick={() => void lobby.leaveRoom()}
           disabled={lobby.isReadyRoom}

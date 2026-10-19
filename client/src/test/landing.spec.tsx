@@ -17,7 +17,7 @@ import { BackgroundRipple } from '@/components/landing/background-ripple'
 import { HeroSquadShowcase } from '@/components/landing/hero-squad-showcase'
 import { ClockProvider } from '@/hooks/use-clock'
 import en from '@/locales/en.json'
-import { catalogGames, gameCs2, gameLol } from './fixtures'
+import { boardGames, gameCs2, gameLol } from './fixtures'
 import { httpOk, onHttp } from './http-router'
 import { EnglishIntlProvider } from './intl'
 import { fakeSession, signInAsFakeUser } from './stubs'
@@ -42,7 +42,7 @@ function rippleCells(container: HTMLElement): HTMLElement[] {
 }
 
 beforeEach(() => {
-  onHttp('GET', '/api/games', () => httpOk(catalogGames))
+  onHttp('GET', '/api/games', () => httpOk(boardGames))
 })
 
 afterEach(() => {

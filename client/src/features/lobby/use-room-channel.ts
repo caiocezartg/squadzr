@@ -19,7 +19,7 @@ interface UseRoomChannelOptions {
   roomCode: string
   /** Only an authenticated member joins; visitors never enter the room channel. */
   enabled: boolean
-  /** A room this tab was watching was removed from the catalog. */
+  /** A room this tab was watching was removed from the board. */
   onRoomRemoved: (roomId: string) => void
 }
 

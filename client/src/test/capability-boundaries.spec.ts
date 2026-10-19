@@ -7,13 +7,13 @@
  * the real source tree and enforces two structural rules:
  *
  * - there are no import cycles between capability modules. The graph is
- *   checked per module (file), not per capability: the deliberate loop
- *   `catalog → room-creation → catalog/commands` is allowed, because the
- *   command-only `commands.ts` entry exists exactly to keep the module graph
- *   acyclic while the catalog page composes create/join/lobby;
+ *   checked per module (file), not per capability, and no loop is allowed: the
+ *   Squad Board's barrel exports only its cache commands and its page is a
+ *   separate `page` entry, so creation and joining reach the board without
+ *   pulling the page back in;
  * - every non-test source file under `src/` (capabilities, routes, components
  *   and the rest) only reaches another capability through a public entry point
- *   (`index.ts`, plus the documented `commands.ts`).
+ *   (`index.ts`, `skeleton` and `page`).
  *
  * The scan is source-level on purpose: it sees every specifier, including the
  * ones TypeScript erases, without a bundler. Specs and test fixtures
@@ -36,9 +36,10 @@ const SOURCE_EXTENSION_SET = new Set(SOURCE_EXTENSIONS)
 const TEST_FILE_PATTERN = /\.(spec|test)\.[^.]+$/
 
 /** Path inside a capability that counts as its public interface. */
-// `skeleton` is the light entry point routes use as their `pendingComponent`,
-// so the page barrel never has to be pulled into the entry chunk.
-const PUBLIC_ENTRY_POINTS = new Set(['', 'index', 'skeleton', 'commands'])
+// `skeleton` is the light entry point the loading states render, so the page is
+// never pulled into a loading chunk. `page` is the page's own entry point; the
+// barrel exports only commands, so the page is never reached through it.
+const PUBLIC_ENTRY_POINTS = new Set(['', 'index', 'skeleton', 'page'])
 
 function toPosix(path: string): string {
   return path.split(sep).join('/')
@@ -177,26 +178,23 @@ describe('capability boundaries', () => {
 
     expect(features).toEqual(
       expect.arrayContaining([
-        'catalog',
+        'squad-board',
         'games',
         'lobby',
         'my-rooms',
         'room-creation',
-        'room-joining',
-        'room-list',
+        'squad-joining',
+        'squad-list',
       ])
     )
   })
 
   it('has no import cycles between capability modules', () => {
-    // Cycles are checked between modules (files), not between capabilities: a
-    // capability-level loop such as `catalog → room-creation →
-    // catalog/commands` is deliberate and allowed. "No cycle" guarantees that
-    // no module can reach itself by following imports, so module evaluation
-    // order stays well-defined. The command-only `commands.ts` entry point is
-    // the foreseen exception that makes the loop safe: room creation, room
-    // joining and the lobby refresh the catalog through it without importing
-    // the barrel, which would pull `CatalogPage` back and close the cycle.
+    // Cycles are checked between modules (files), not between capabilities. "No
+    // cycle" guarantees that no module can reach itself by following imports, so
+    // module evaluation order stays well-defined. There is no exception: the
+    // Squad Board's barrel exports only its cache commands, so room creation,
+    // joining and the lobby refresh the board without reaching its page.
     const scopedFiles = new Set([...featureFiles, ...listSourceFiles(ROUTES_DIR)])
     const graph = new Map<string, Set<string>>()
 
