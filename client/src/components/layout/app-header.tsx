@@ -1,42 +1,22 @@
-import { Link } from '@tanstack/react-router'
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { Menu } from 'lucide-react'
 import { useSession } from '@/hooks/use-session'
 import { signInWithDiscord, signOut } from '@/lib/auth-client'
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { Bell, Menu } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
-import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
+import { AppLink } from '@/components/layout/app-link'
+import { NotificationsMenu } from '@/components/layout/notifications-menu'
 import { UserMenu } from '@/components/layout/user-menu'
 import { MobileSidebar } from '@/components/layout/mobile-sidebar'
-import { useTranslations } from 'next-intl'
 import { LanguageToggle } from '@/components/layout/language-toggle'
-
-// The notifications capability owns polling, the API client and the shared
-// response contracts; only signed-in users need its chunk, so it loads after
-// the header renders instead of padding every first visit.
-const LazyNotificationsMenu = lazy(() =>
-  import('@/components/layout/notifications-menu').then((module) => ({
-    default: module.NotificationsMenu,
-  }))
-)
-
-function NotificationsFallback() {
-  const t = useTranslations()
-
-  return (
-    <button
-      type="button"
-      disabled
-      className="relative flex items-center justify-center rounded-lg p-2 text-muted opacity-60"
-      aria-label={t('notifications.bellLabel')}
-    >
-      <Bell className="size-4" />
-    </button>
-  )
-}
 
 export function AppHeader() {
   const t = useTranslations()
   const session = useSession()
+  const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -87,29 +67,28 @@ export function AppHeader() {
               <Menu className="size-5" />
             </button>
 
-            <Link to="/" className="flex items-center gap-2 group">
+            <AppLink href="/" className="flex items-center gap-2 group">
               <img src="/squadzr-logo.svg" alt="Squadzr logo" className="hidden sm:block w-24" />
-            </Link>
+            </AppLink>
 
             <nav className="hidden md:flex items-center gap-1">
-              <Link
-                to="/rooms"
-                search={{}}
-                activeOptions={{ exact: true }}
-                className="rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite"
-                activeProps={{ className: 'text-accent!' }}
+              <AppLink
+                href="/rooms"
+                className={`rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite ${
+                  pathname === '/rooms' ? 'text-accent!' : ''
+                }`}
               >
-                {t('nav.allRooms')}
-              </Link>
+                {t('nav.allSquads')}
+              </AppLink>
               {session?.user && (
-                <Link
-                  to="/rooms/my"
-                  activeOptions={{ exact: true }}
-                  className="rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite"
-                  activeProps={{ className: 'text-accent!' }}
+                <AppLink
+                  href="/rooms/my"
+                  className={`rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite ${
+                    pathname === '/rooms/my' ? 'text-accent!' : ''
+                  }`}
                 >
-                  {t('nav.myRooms')}
-                </Link>
+                  {t('nav.mySquads')}
+                </AppLink>
               )}
             </nav>
           </div>
@@ -119,19 +98,15 @@ export function AppHeader() {
             <LanguageToggle />
             {session?.user ? (
               <>
-                <LazyIslandBoundary fallback={<NotificationsFallback />}>
-                  <Suspense fallback={<NotificationsFallback />}>
-                    <LazyNotificationsMenu
-                      enabled={!!session?.user}
-                      isOpen={notificationsOpen}
-                      onToggle={() => {
-                        setNotificationsOpen((prev) => !prev)
-                        setMenuOpen(false)
-                      }}
-                      onClose={() => setNotificationsOpen(false)}
-                    />
-                  </Suspense>
-                </LazyIslandBoundary>
+                <NotificationsMenu
+                  enabled={!!session?.user}
+                  isOpen={notificationsOpen}
+                  onToggle={() => {
+                    setNotificationsOpen((prev) => !prev)
+                    setMenuOpen(false)
+                  }}
+                  onClose={() => setNotificationsOpen(false)}
+                />
 
                 <UserMenu
                   session={session}

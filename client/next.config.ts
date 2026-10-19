@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['ngrok-free.dev', '*.ngrok-free.dev'],
   // The root AGENTS.md is the agent guide for this repository; keep Next from adding another.
   agentRules: false,
+  // Discord hosts the player avatars that the header shows through next/image.
+  images: {
+    remotePatterns: [{ protocol: 'https', hostname: 'cdn.discordapp.com' }],
+  },
 }
 
 export default withNextIntl(nextConfig)

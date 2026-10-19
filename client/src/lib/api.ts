@@ -1,4 +1,3 @@
-import axios, { type AxiosRequestConfig } from 'axios'
 import type { z } from 'zod'
 import { errorResponseSchema } from '@squadzr/schemas'
 import { env } from '@/env'
@@ -6,41 +5,59 @@ import { ApiClientError, parseApiResponse } from './api-contract'
 
 export { ApiClientError, ApiContractError } from './api-contract'
 
-const client = axios.create({
-  baseURL: env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
-})
-
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
-client.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (axios.isAxiosError(error) && error.response) {
-      const { status, config, data } = error.response
-      const body = parseApiResponse(
-        errorResponseSchema,
-        { method: (config.method ?? 'get').toUpperCase(), path: config.url ?? '', status },
-        data
-      )
-      throw new ApiClientError(body.message, status, body.error)
-    }
-    throw error
+interface RequestConfig {
+  readonly method: Method
+  readonly url: string
+  readonly data?: unknown
+}
+
+/** The API base URL and a path, joined by a single slash. */
+function absoluteUrl(path: string): string {
+  return `${env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+}
+
+/** The body as the server sent it: the parsed JSON, or the raw text when it is not JSON. */
+async function readBody(response: Response): Promise<unknown> {
+  const text = await response.text()
+  if (text === '') return undefined
+
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return text
   }
-)
+}
 
 /**
- * With a schema, the response body is parsed before it is returned and a
- * mismatch throws `ApiContractError`. Without one, the body is discarded, so
- * unvalidated data never leaves this module.
+ * Sends a request with the session cookie. A non-2xx response throws `ApiClientError` with the
+ * server's error code. With a schema, the response body is parsed before it is returned and a
+ * mismatch throws `ApiContractError`. Without one, the body is discarded, so unvalidated data never
+ * leaves this module.
  */
 async function request<S extends z.ZodType>(
-  config: AxiosRequestConfig & { method: Method; url: string },
+  { method, url, data }: RequestConfig,
   schema: S | undefined
 ): Promise<z.output<S> | void> {
-  const { data, status } = await client.request<unknown>(config)
+  const hasBody = data !== undefined
+  const response = await fetch(absoluteUrl(url), {
+    method,
+    credentials: 'include',
+    headers: hasBody
+      ? { Accept: 'application/json', 'Content-Type': 'application/json' }
+      : { Accept: 'application/json' },
+    body: hasBody ? JSON.stringify(data) : undefined,
+  })
+  const body = await readBody(response)
+  const context = { method, path: url, status: response.status }
+
+  if (!response.ok) {
+    const error = parseApiResponse(errorResponseSchema, context, body)
+    throw new ApiClientError(error.message, response.status, error.error)
+  }
   if (!schema) return
-  return parseApiResponse(schema, { method: config.method, path: config.url, status }, data)
+  return parseApiResponse(schema, context, body)
 }
 
 function get<S extends z.ZodType>(path: string, schema: S): Promise<z.output<S>> {

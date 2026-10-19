@@ -15,13 +15,13 @@
     "close": "Close"
   },
   "nav": {
-    "allRooms": "ALL SQUADS",
-    "myRooms": "MY SQUADS",
+    "allSquads": "ALL SQUADS",
+    "mySquads": "MY SQUADS",
     "closeMenu": "Close menu",
     "openMenu": "Open menu"
   },
   "footer": {
-    "line": "Squadzr — Find your gaming squad"
+    "line": "© {year} Squadzr — Find your gaming squad"
   },
   "hero": {
     "badge": "{count} GAMES SUPPORTED",

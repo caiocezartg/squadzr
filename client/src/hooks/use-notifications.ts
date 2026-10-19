@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { notifyError } from '@/lib/notify'
+import { setUnreadNotifications } from '@/lib/unread-notifications-store'
 import {
   notificationChangeResponseSchema,
   notificationsResponseSchema,
@@ -118,6 +119,12 @@ export function useNotifications(options: UseNotificationsOptions) {
   }, [notifications])
 
   const unreadCount = notifications.filter((n) => n.readAt === null).length
+
+  // The document title shows the unread count, so the hook publishes it while it is mounted.
+  useEffect(() => {
+    setUnreadNotifications(unreadCount)
+  }, [unreadCount])
+  useEffect(() => () => setUnreadNotifications(0), [])
 
   return {
     notifications,

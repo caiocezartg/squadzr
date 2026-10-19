@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
-import { Link } from '@tanstack/react-router'
+import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { AppLink } from '@/components/layout/app-link'
 
 interface MobileSidebarProps {
   readonly isOpen: boolean
@@ -11,6 +12,7 @@ interface MobileSidebarProps {
 
 export function MobileSidebar({ isOpen, onClose, hasUser }: MobileSidebarProps) {
   const t = useTranslations()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!isOpen) return
@@ -42,9 +44,9 @@ export function MobileSidebar({ isOpen, onClose, hasUser }: MobileSidebarProps) 
       >
         {/* Header */}
         <div className="flex items-center justify-between pl-6 pr-4 py-4 border-b border-border">
-          <Link to="/" className="flex items-center gap-2" onClick={onClose}>
+          <AppLink href="/" className="flex items-center gap-2" onClick={onClose}>
             <img src="/squadzr-logo.svg" alt="Squadzr logo" className="w-20" />
-          </Link>
+          </AppLink>
           <button
             onClick={onClose}
             className="rounded-lg p-1.5 text-muted hover:bg-surface-hover hover:text-offwhite transition-colors"
@@ -55,26 +57,25 @@ export function MobileSidebar({ isOpen, onClose, hasUser }: MobileSidebarProps) 
 
         {/* Navigation */}
         <nav className="flex flex-col gap-1 p-3">
-          <Link
-            to="/rooms"
-            search={{}}
-            activeOptions={{ exact: true }}
-            className="rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite"
-            activeProps={{ className: 'text-accent! bg-accent/8!' }}
+          <AppLink
+            href="/rooms"
+            className={`rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite ${
+              pathname === '/rooms' ? 'text-accent! bg-accent/8!' : ''
+            }`}
             onClick={onClose}
           >
-            {t('nav.allRooms')}
-          </Link>
+            {t('nav.allSquads')}
+          </AppLink>
           {hasUser && (
-            <Link
-              to="/rooms/my"
-              activeOptions={{ exact: true }}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite"
-              activeProps={{ className: 'text-accent! bg-accent/8!' }}
+            <AppLink
+              href="/rooms/my"
+              className={`rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite ${
+                pathname === '/rooms/my' ? 'text-accent! bg-accent/8!' : ''
+              }`}
               onClick={onClose}
             >
-              {t('nav.myRooms')}
-            </Link>
+              {t('nav.mySquads')}
+            </AppLink>
           )}
         </nav>
       </div>

@@ -23,6 +23,7 @@ import type { UserNotification } from '@/types'
 import { createTestQueryClient } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import { roomReadyNotification } from './fixtures'
+import { RegisterLegacyNavigator } from './shell'
 import { signInAsFakeUser, toastStore } from './stubs'
 
 const ALPHA_ID = roomReadyNotification.id
@@ -75,6 +76,8 @@ function renderHeader(): UserEvent {
   render(
     <QueryClientProvider client={createTestQueryClient()}>
       <RouterProvider router={router} />
+      {/* The catch-all registers its router while it is mounted; the squad pages here are that router's. */}
+      <RegisterLegacyNavigator router={router} />
     </QueryClientProvider>
   )
 

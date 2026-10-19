@@ -1,9 +1,8 @@
-import { useEffect } from 'react'
 import { useTranslations } from 'next-intl'
-import { useNavigate } from '@tanstack/react-router'
 import { Bell, CheckCheck, Gamepad2, Users, X } from 'lucide-react'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useTimeAgo } from '@/hooks/use-time-ago'
+import { useAppNavigation } from '@/lib/navigation'
 import type { UserNotification } from '@/types'
 
 interface NotificationsMenuProps {
@@ -96,7 +95,7 @@ function NotificationItem({
 
 export function NotificationsMenu({ enabled, isOpen, onToggle, onClose }: NotificationsMenuProps) {
   const t = useTranslations()
-  const navigate = useNavigate()
+  const navigate = useAppNavigation()
   const {
     notifications,
     unreadCount,
@@ -107,13 +106,6 @@ export function NotificationsMenu({ enabled, isOpen, onToggle, onClose }: Notifi
     deleteNotification,
     isDeletingNotification,
   } = useNotifications({ enabled, limit: 10 })
-
-  useEffect(() => {
-    document.title = unreadCount > 0 ? `(${unreadCount}) Squadzr` : 'Squadzr'
-    return () => {
-      document.title = 'Squadzr'
-    }
-  }, [unreadCount])
 
   const isBusy = isMarkingAsRead || isMarkingAllAsRead || isDeletingNotification
 
@@ -128,7 +120,7 @@ export function NotificationsMenu({ enabled, isOpen, onToggle, onClose }: Notifi
       }
     }
     onClose()
-    await navigate({ to: '/rooms/$code', params: { code: notification.payload.roomCode } })
+    navigate(`/rooms/${encodeURIComponent(notification.payload.roomCode)}`)
   }
 
   const handleDismiss = async (e: React.MouseEvent, notificationId: string) => {

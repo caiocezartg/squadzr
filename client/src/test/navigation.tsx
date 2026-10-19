@@ -77,7 +77,9 @@ function currentNavigation(): HarnessNavigation {
 
 function useLocationValue(select: (history: RouterHistory) => string): string {
   const { history } = currentNavigation()
-  return useSyncExternalStore(history.subscribe, () => select(history))
+  const read = () => select(history)
+  // The server render reads the same location, so it takes the same snapshot.
+  return useSyncExternalStore(history.subscribe, read, read)
 }
 
 function useHarnessRouter(): HarnessRouter {
