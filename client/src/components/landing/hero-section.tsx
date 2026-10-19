@@ -1,22 +1,22 @@
-import { lazy, Suspense } from 'react'
-import { Link } from '@tanstack/react-router'
-import { useSession } from '@/hooks/use-session'
-import { signInWithDiscord } from '@/lib/auth-client'
+'use client'
+
 import * as m from 'motion/react-m'
 import { Search } from 'lucide-react'
-import { DiscordIcon } from '@/components/ui/icons'
-import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 import { useLocale, useTranslations } from 'next-intl'
+import { AppLink } from '@/components/layout/app-link'
+import { DiscordIcon } from '@/components/ui/icons'
+import { useSession } from '@/hooks/use-session'
+import { signInWithDiscord } from '@/lib/auth-client'
 import { BackgroundRipple } from './background-ripple'
-import { HeroRoomShowcase } from './hero-room-showcase'
+import { HeroGameBadge } from './hero-game-badge'
+import { HeroSquadShowcase } from './hero-squad-showcase'
 
-// The badge queries the games API; its chunk (and the shared API runtime)
-// arrives after the hero copy instead of blocking the first paint.
-const LazyHeroGameBadge = lazy(() =>
-  import('./hero-game-badge').then((module) => ({ default: module.HeroGameBadge }))
-)
-
-export function HeroSection() {
+/**
+ * The hero. Its badge, headline, copy and calls to action start visible, so the server HTML shows them
+ * before any script runs. Only decoration animates: the underline under the accent word, and the
+ * floating squad cards.
+ */
+export function HeroSection({ gameCount }: { readonly gameCount: number }) {
   const t = useTranslations()
   const lang = useLocale()
   const session = useSession()
@@ -33,24 +33,9 @@ export function HeroSection() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-20 sm:pt-28 sm:pb-24">
         <div className="max-w-full flex flex-col items-center">
-          <m.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <LazyIslandBoundary>
-              <Suspense fallback={null}>
-                <LazyHeroGameBadge />
-              </Suspense>
-            </LazyIslandBoundary>
-          </m.div>
+          <HeroGameBadge count={gameCount} />
 
-          <m.h1
-            className="font-heading text-5xl font-extrabold leading-[0.95] tracking-tight sm:leading-none sm:text-6xl lg:text-7xl xl:text-8xl"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
+          <h1 className="font-heading text-5xl font-extrabold leading-[0.95] tracking-tight sm:leading-none sm:text-6xl lg:text-7xl xl:text-8xl">
             {t('hero.titleLine1')}
             <br />
             {t('hero.titleLine2')}&nbsp;
@@ -63,34 +48,25 @@ export function HeroSection() {
                 transition={{ duration: 0.6, delay: 0.7, ease: 'easeOut' }}
               />
             </span>
-          </m.h1>
+          </h1>
 
-          <m.p
+          <p
             className={`mt-6 text-base text-muted leading-relaxed sm:text-lg sm:leading-7 ${lang === 'pt-BR' ? 'max-w-lg' : 'max-w-md'} text-center`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
           >
             {t.rich('hero.subtitle', {
               bold: (chunks) => <strong className="text-offwhite">{chunks}</strong>,
             })}
-          </m.p>
+          </p>
 
           {/* CTAs */}
-          <m.div
-            className="mt-8 flex flex-col sm:flex-row items-start gap-3"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.45 }}
-          >
-            <Link
-              to="/rooms"
-              search={{}}
+          <div className="mt-8 flex flex-col sm:flex-row items-start gap-3">
+            <AppLink
+              href="/rooms"
               className="btn-accent gap-2 text-base px-7 py-3 w-full md:w-auto"
             >
               <Search className="size-5" strokeWidth={2.5} />
-              {t('hero.exploreRooms')}
-            </Link>
+              {t('hero.exploreSquads')}
+            </AppLink>
             {!session?.user && (
               <button
                 onClick={handleSignIn}
@@ -100,10 +76,10 @@ export function HeroSection() {
                 {t('hero.signInWithDiscord')}
               </button>
             )}
-          </m.div>
+          </div>
 
           <div className="relative w-full max-w-5xl mt-12 -mb-8">
-            <HeroRoomShowcase />
+            <HeroSquadShowcase />
           </div>
         </div>
       </div>

@@ -17,6 +17,8 @@ export const authStore = {
   user: null as FakeSessionUser | null,
   /** Arguments captured from every Discord sign-in (`signInWithDiscord`), in order. */
   signInSocialCalls: [] as Array<{ provider?: string; callbackURL?: string }>,
+  /** The error the server answers the next sign-out with, which keeps the session; `null` ends it. */
+  signOutError: null as { message: string } | null,
 }
 
 export const toastStore = {
@@ -50,5 +52,6 @@ export function fakeSession(): SessionDto | null {
 export function resetStubs(): void {
   authStore.user = null
   authStore.signInSocialCalls = []
+  authStore.signOutError = null
   toastStore.errorCalls = []
 }

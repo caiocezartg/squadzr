@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useTimeAgo } from '@/hooks/use-time-ago'
 import { languageBadgeKey } from '@/lib/language-badge'
@@ -74,6 +74,15 @@ export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: Room
   const [loadedCover, setLoadedCover] = useState<string | null>(null)
   const coverLoaded = coverUrl !== null && loadedCover === coverUrl
 
+  // A server-rendered card puts the `<img>` in the HTML, so the browser can finish loading it before
+  // React attaches `onLoad`. That load never fires again, so the ref checks the image once attached.
+  const markCoverIfAlreadyLoaded = useCallback(
+    (img: HTMLImageElement | null) => {
+      if (coverUrl && img?.complete && img.naturalWidth > 0) setLoadedCover(coverUrl)
+    },
+    [coverUrl]
+  )
+
   const MAX_DOTS = 8
   const visibleSlots = Math.min(room.maxPlayers, MAX_DOTS)
   const extraSlots = room.maxPlayers > MAX_DOTS ? room.maxPlayers - MAX_DOTS : 0
@@ -95,6 +104,7 @@ export function RoomCard({ room, game, onJoin, isLoading, currentMembers }: Room
       <div className="relative h-40 overflow-hidden bg-surface-light">
         {coverUrl ? (
           <img
+            ref={markCoverIfAlreadyLoaded}
             src={coverUrl}
             alt={game?.name ?? ''}
             className={`h-full w-full object-cover transition-opacity duration-300 ease-out ${

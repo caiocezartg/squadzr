@@ -1,6 +1,8 @@
-import { Link } from '@tanstack/react-router'
+'use client'
+
 import { useSession } from '@/hooks/use-session'
 import { signInWithDiscord } from '@/lib/auth-client'
+import { AppLink } from '@/components/layout/app-link'
 import * as m from 'motion/react-m'
 import { DiscordIcon } from '@/components/ui/icons'
 import { useTranslations } from 'next-intl'
@@ -35,9 +37,9 @@ export function CTABanner() {
         <p className="mt-4 text-muted text-lg max-w-xl mx-auto">{t('cta.subtitle')}</p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link to="/rooms" search={{}} className="btn-accent gap-2 text-base px-8 py-3">
-            {t('cta.browseRooms')}
-          </Link>
+          <AppLink href="/rooms" className="btn-accent gap-2 text-base px-8 py-3">
+            {t('cta.browseSquads')}
+          </AppLink>
           {!session?.user && (
             <button onClick={handleSignIn} className="btn-ghost gap-2 text-base px-8 py-3">
               <DiscordIcon className="size-5" />

@@ -3,7 +3,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { gzipSync } from 'node:zlib'
+import { gzip } from 'pako'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { buildBundleReport } from './bundle-report.mjs'
 
@@ -32,13 +32,13 @@ function pageManifests(segment, pageKey, entryFiles, loadableManifest) {
   }
 }
 
-// `/[[...slug]]` loads the app shell through `next/dynamic`; `/_not-found` loads no dynamic import.
+// `/[...slug]` loads the app shell through `next/dynamic`; `/_not-found` loads no dynamic import.
 const FIXTURE = {
   'app-path-routes-manifest.json': {
-    '/[[...slug]]/page': '/[[...slug]]',
+    '/[...slug]/page': '/[...slug]',
     '/_not-found/page': '/_not-found',
   },
-  ...pageManifests('[[...slug]]', '/[[...slug]]/page', ['static/chunks/entry.js'], {
+  ...pageManifests('[...slug]', '/[...slug]/page', ['static/chunks/entry.js'], {
     28991: {
       id: 28991,
       files: [
@@ -80,7 +80,7 @@ function writeFixture(nextDir) {
 /** Gzip size in kB of the given chunks, summed the way the report sums them. */
 function gzipKb(files) {
   const bytes = files.reduce(
-    (total, file) => total + gzipSync(CHUNKS[file], { level: 9 }).byteLength,
+    (total, file) => total + gzip(CHUNKS[file], { level: 9 }).byteLength,
     0
   )
   return Number((bytes / 1000).toFixed(2))
@@ -103,7 +103,7 @@ describe('buildBundleReport', () => {
   })
 
   it('counts the chunks of the dynamic app shell in the initial JavaScript, once each', () => {
-    const route = routeNamed(buildBundleReport(nextDir), '/[[...slug]]')
+    const route = routeNamed(buildBundleReport(nextDir), '/[...slug]')
 
     expect(route.files.map((asset) => asset.file)).toEqual(APP_SHELL_ROUTE)
     expect(route.initialGzipKb).toBe(gzipKb(APP_SHELL_ROUTE))

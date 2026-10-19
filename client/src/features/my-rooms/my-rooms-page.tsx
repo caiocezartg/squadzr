@@ -7,6 +7,7 @@ import { useSession } from '@/hooks/use-session'
 import { AlertBox } from '@/components/ui/alert-box'
 import { ModalLoading } from '@/components/ui/modal-loading'
 import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
+import { useAppNavigation } from '@/lib/navigation'
 import { notifyError } from '@/lib/notify'
 import { RoomCard, RoomFilters, querySquadList, useRoomFilters } from '@/features/room-list'
 import { useGames } from '@/features/games'
@@ -31,15 +32,17 @@ export function MyRoomsPage() {
   const t = useTranslations()
   const session = useSession()
   const navigate = useNavigate()
+  // The landing is an App Router page, so the redirect goes through the shell's navigation helper.
+  const navigateApp = useAppNavigation()
 
   const [modalOpen, setModalOpen] = useState(false)
 
   // Redirect unauthenticated users
   useEffect(() => {
     if (!session?.user) {
-      navigate({ to: '/' })
+      navigateApp('/')
     }
-  }, [session?.user, navigate])
+  }, [session?.user, navigateApp])
 
   const signedIn = !!session?.user
   const {

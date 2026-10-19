@@ -1,13 +1,18 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getSession } from '@/lib/auth-client'
 import { createHarnessNavigation } from '@/test/navigation'
 import { signInAsFakeUser, signOutFakeUser } from '@/test/stubs'
-import { useSession } from './use-session'
+import { useEndSession, useSession } from './use-session'
 
 function SessionProbe() {
   const session = useSession()
   return <p>{session ? `signed in as ${session.user.name}` : 'signed out'}</p>
+}
+
+function EndSessionButton() {
+  const endSession = useEndSession()
+  return <button onClick={endSession}>end session</button>
 }
 
 function focusWindow(): Promise<void> {
@@ -158,5 +163,48 @@ describe('SessionProvider', () => {
 
     expect(screen.getByText('signed out')).toBeInTheDocument()
     expect(navigation.calls.filter((call) => call.method === 'refresh')).toHaveLength(1)
+  })
+})
+
+describe('useEndSession', () => {
+  it('ends the session at once, without asking Better Auth', async () => {
+    signInAsFakeUser({ name: 'Ana' })
+    render(
+      <>
+        <SessionProbe />
+        <EndSessionButton />
+      </>
+    )
+    await settleMountCheck()
+
+    fireEvent.click(screen.getByRole('button', { name: 'end session' }))
+
+    expect(screen.getByText('signed out')).toBeInTheDocument()
+    expect(getSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the session ended when a check that was in flight answers signed in', async () => {
+    signInAsFakeUser({ name: 'Ana' })
+    const navigation = createHarnessNavigation('/')
+    const focusCheck = heldCheck()
+    render(
+      <>
+        <SessionProbe />
+        <EndSessionButton />
+      </>
+    )
+    await settleMountCheck()
+    vi.mocked(getSession).mockReturnValueOnce(focusCheck.promise as never)
+    await focusWindow()
+    await waitFor(() => expect(getSession).toHaveBeenCalledTimes(2))
+
+    fireEvent.click(screen.getByRole('button', { name: 'end session' }))
+    await act(async () => {
+      focusCheck.answer(signedInAnswer('Ana'))
+    })
+    await settleChecks()
+
+    expect(screen.getByText('signed out')).toBeInTheDocument()
+    expect(navigation.calls).not.toContainEqual({ method: 'refresh' })
   })
 })

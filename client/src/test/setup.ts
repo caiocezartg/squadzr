@@ -66,7 +66,13 @@ vi.mock('@/lib/auth-client', async () => {
       })
       return Promise.resolve({ ok: true })
     },
-    signOut: async () => ({ ok: true }),
+    // Better Auth ends the session on the server, so the next session check answers signed out. A
+    // refused sign-out answers with its error and leaves the session as it is.
+    signOut: async () => {
+      if (authStore.signOutError) return { data: null, error: authStore.signOutError }
+      authStore.user = null
+      return { data: { success: true }, error: null }
+    },
   }
 })
 

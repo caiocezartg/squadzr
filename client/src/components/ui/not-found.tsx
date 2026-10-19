@@ -2,6 +2,7 @@ import * as m from 'motion/react-m'
 import { Link } from '@tanstack/react-router'
 import { useTranslations } from 'next-intl'
 import { Compass } from 'lucide-react'
+import { AppLink } from '@/components/layout/app-link'
 
 export function NotFound() {
   const t = useTranslations()
@@ -36,9 +37,9 @@ export function NotFound() {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          <Link to="/" className="btn-accent w-full sm:w-auto text-center">
+          <AppLink href="/" className="btn-accent w-full sm:w-auto text-center">
             {t('notFound.backToHome')}
-          </Link>
+          </AppLink>
           <Link to="/rooms" search={{}} className="btn-ghost w-full sm:w-auto text-center">
             {t('notFound.exploreRooms')}
           </Link>

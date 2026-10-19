@@ -9,9 +9,8 @@ interface AppFooterProps {
 }
 
 /**
- * The shell footer. The landing keeps its own footer, so the shell's stays off `/` until the
- * landing moves to the App Router. The path is the same on the server and in the browser, so the
- * server HTML and the first browser render agree.
+ * The shell footer. The landing renders its own footer, so the shell's stays off `/`. The path is the
+ * same on the server and in the browser, so the server HTML and the first browser render agree.
  */
 export function AppFooter({ year }: AppFooterProps) {
   const t = useTranslations()

@@ -29,7 +29,7 @@
     "titleLine2": "TUDO",
     "titleAccent": "SOZINHO",
     "subtitle": "<bold>Crie</bold> ou <bold>entre em squads</bold>, complete seu time e receba um convite do Discord assim que o time estiver cheio.",
-    "exploreRooms": "Explorar squads",
+    "exploreSquads": "Explorar squads",
     "signInWithDiscord": "Entrar com Discord"
   },
   "faq": {
@@ -94,7 +94,7 @@
   "cta": {
     "title": "Pronto para encontrar seu <accent>squad</accent>?",
     "subtitle": "Junte-se a centenas de jogadores que já usam o Squadzr para montar o time perfeito.",
-    "browseRooms": "Explorar Squads",
+    "browseSquads": "Explorar Squads",
     "createAccount": "Criar Conta"
   },
   "popularGames": {

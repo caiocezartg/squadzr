@@ -29,7 +29,7 @@
     "titleLine2": "GAMES",
     "titleAccent": "ALONE",
     "subtitle": "<bold>Create</bold> or <bold>join squads</bold>, fill your squad, and get a Discord invite the second your team is ready.",
-    "exploreRooms": "Explore squads",
+    "exploreSquads": "Explore squads",
     "signInWithDiscord": "Sign in with Discord"
   },
   "faq": {
@@ -94,7 +94,7 @@
   "cta": {
     "title": "Ready to find your <accent>squad</accent>?",
     "subtitle": "Join hundreds of players already using Squadzr to build the perfect team.",
-    "browseRooms": "Browse Squads",
+    "browseSquads": "Browse Squads",
     "createAccount": "Create Account"
   },
   "popularGames": {

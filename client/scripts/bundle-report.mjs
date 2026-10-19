@@ -9,15 +9,19 @@
  *   code through such an import, so those chunks are initial JavaScript too. Each file is counted once.
  * - The largest emitted JavaScript chunk, by raw bytes.
  *
- * Routes and files are sorted, the report has no timestamps, and gzip uses a fixed level, so the
- * output is deterministic. kB = 1000 bytes. The report describes sizes only; `bundle-limits.mjs`
- * checks it against the limits.
+ * Routes and files are sorted, the report has no timestamps, and gzip is pako's at level 9, so the
+ * output is the same on every platform. kB = 1000 bytes. The report describes sizes only;
+ * `bundle-limits.mjs` checks it against the limits.
+ *
+ * gzip does not use `node:zlib`. Bun's zlib sizes the same bytes about 4% larger on Windows than on
+ * Linux, so the budget passed in CI and failed locally (CCC-77). pako is a port of zlib in plain
+ * JavaScript, and its version is pinned because the sizes depend on it.
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { createContext, runInContext } from 'node:vm'
-import { gzipSync } from 'node:zlib'
+import { gzip } from 'pako'
 
 const KB = 1000
 
@@ -33,7 +37,7 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'))
 }
 
-/** Manifest files of one app page, e.g. `/[[...slug]]/page` in `.next/server/app/[[...slug]]/`. */
+/** Manifest files of one app page, e.g. `/[...slug]/page` in `.next/server/app/[...slug]/`. */
 function pageManifestPaths(nextDir, pageKey) {
   const segmentDir = join(nextDir, 'server', 'app', pageKey.replace(/\/page$/, '').slice(1))
   return {
@@ -74,7 +78,7 @@ function initialJavascriptFiles(nextDir, pageKey) {
 /** Raw and gzip byte sizes of a file in `.next/`. */
 function assetSize(nextDir, file) {
   const raw = readFileSync(join(nextDir, file))
-  return { rawBytes: raw.byteLength, gzipBytes: gzipSync(raw, { level: 9 }).byteLength }
+  return { rawBytes: raw.byteLength, gzipBytes: gzip(raw, { level: 9 }).byteLength }
 }
 
 function measureRoute(nextDir, pageKey, route) {
@@ -129,7 +133,7 @@ export function buildBundleReport(nextDir) {
     tool: 'client/scripts/bundle-budget.mjs',
     definitions: {
       initialJavaScript:
-        'Framework chunks (rootMainFiles, polyfillFiles), the client chunks of the route entry modules (entryJSFiles), and the chunks of its next/dynamic imports (react-loadable-manifest.json), each file counted once, summed after gzip level 9.',
+        'Framework chunks (rootMainFiles, polyfillFiles), the client chunks of the route entry modules (entryJSFiles), and the chunks of its next/dynamic imports (react-loadable-manifest.json), each file counted once, summed after pako gzip level 9.',
       largestChunk: 'The largest JavaScript file under .next/static/chunks, by raw bytes.',
       units: 'kB = 1000 bytes',
     },
