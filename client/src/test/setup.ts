@@ -12,14 +12,14 @@ import { afterEach, vi } from 'vitest'
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import type * as TestingLibrary from '@testing-library/react'
-import { installHttpAdapter, resetHttpRoutes } from './http-router'
+import { installHttpFetch, resetHttpRoutes } from './http-router'
 import { MockWebSocket, resetWebSocketInstances } from './ws-mock'
 import { resetStubs } from './stubs'
 import { resetHarnessNavigation } from './navigation'
 
-// 1. Deterministic HTTP: must run before any import of '@/lib/api' so the
-//    axios instance created there snapshots the mock adapter.
-installHttpAdapter()
+// 1. Deterministic HTTP: `@/lib/api` calls the global `fetch` for each request, which answers from
+//    the route table.
+installHttpFetch()
 
 // 2. Deterministic WebSocket: `WebSocketClient` uses the global constructor.
 vi.stubGlobal('WebSocket', MockWebSocket)

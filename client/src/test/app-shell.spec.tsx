@@ -9,13 +9,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClientProvider } from '@tanstack/react-query'
-import {
-  Outlet,
-  RouterProvider,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from '@tanstack/react-router'
+import { RouterProvider, createRouter } from '@tanstack/react-router'
 import type { AnyRoute, Router } from '@tanstack/react-router'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -29,6 +23,7 @@ import { roomReadyNotification } from './fixtures'
 import { createTestQueryClient } from './harness'
 import { httpOk, onHttp } from './http-router'
 import { EnglishIntlProvider } from './intl'
+import { legacyRouteTree } from './legacy-routes'
 import { createHarnessNavigation } from './navigation'
 import type { HarnessNavigation } from './navigation'
 import { RegisterLegacyNavigator } from './shell'
@@ -47,47 +42,6 @@ function squadNotification(id: string, roomName: string, readAt: string | null):
     readAt,
     payload: { ...roomReadyNotification.payload, roomName },
   }
-}
-
-/**
- * The old app's routes, each page naming itself and filling in its title. Without the landing, `/`
- * is an App Router page in the scene and the old app does not own it.
- */
-function legacyRouteTree({ landing }: { landing: boolean }): AnyRoute {
-  const rootRoute = createRootRoute({ component: () => <Outlet /> })
-  const page = (title: string, label: string) =>
-    function Page() {
-      return (
-        <>
-          <title>{title}</title>
-          <div>{label}</div>
-        </>
-      )
-    }
-
-  const squadsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/rooms/',
-    component: page('Squads · Squadzr', 'Squads page'),
-  })
-  const lobbyRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/rooms/$code',
-    component: page('Lobby · Squadzr', 'Lobby page'),
-  })
-  const mySquadsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/rooms/my',
-    component: page('My squads · Squadzr', 'My squads page'),
-  })
-  const homeRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: page('Squadzr', 'Home page'),
-  })
-
-  const squads = [squadsRoute, lobbyRoute, mySquadsRoute]
-  return rootRoute.addChildren(landing ? [homeRoute, ...squads] : squads) as AnyRoute
 }
 
 interface ShellScene {

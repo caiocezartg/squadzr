@@ -10,6 +10,9 @@ import type { RouterHistory } from '@tanstack/react-router'
  * rejects ("useInsertionEffect must not schedule updates."). The router gets a view of the window
  * whose `history` forwards to the real one instead. Its own writes still reach the real history,
  * so Next keeps its URL state in sync, while Next's writes no longer reach the router.
+ *
+ * The history reads the URL when it is created and keeps its own copy after that, so it does not
+ * see Next's writes at all. Create one per mount of the old app and destroy it when the mount ends.
  */
 export function createRouterHistory(): RouterHistory {
   const realHistory = window.history
