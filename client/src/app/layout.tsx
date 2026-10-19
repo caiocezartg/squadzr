@@ -3,6 +3,11 @@ import { Exo_2, Plus_Jakarta_Sans } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale } from 'next-intl/server'
 import type { ReactNode } from 'react'
+import { Toaster } from 'sonner'
+import { AppFooter } from '@/components/layout/app-footer'
+import { AppHeader } from '@/components/layout/app-header'
+import { DocumentTitle } from '@/components/layout/document-title'
+import { QueryProvider } from '@/components/layout/query-provider'
 import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
 import { ClockProvider } from '@/hooks/use-clock'
 import { SessionProvider } from '@/hooks/use-session'
@@ -25,7 +30,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'Squadzr',
+  // Each route fills in its own title, and the template adds the app name to it.
+  title: { default: 'Squadzr', template: '%s · Squadzr' },
   icons: {
     icon: [
       { url: '/favicon.ico', type: 'image/x-icon' },
@@ -44,6 +50,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // The session is read once per request and seeded into the client, so the first render already
   // knows the viewer.
   const session = await getRequestSession()
+  // The footer's year is read on the server, so the server HTML carries it.
+  const year = new Date().getFullYear()
 
   return (
     <html lang={locale} className={`${exo2.variable} ${plusJakartaSans.variable}`}>
@@ -52,8 +60,20 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {/* The provider inherits the locale, messages and request time from src/i18n/request.ts. */}
           <NextIntlClientProvider>
             <ClockProvider>
-              <div id="root">{children}</div>
-              <RealtimeUpdateNotice />
+              <QueryProvider>
+                <div id="root" className="flex min-h-screen flex-col bg-background">
+                  <AppHeader />
+
+                  <main className="flex-1">{children}</main>
+
+                  <AppFooter year={year} />
+
+                  {/* Eager, so an error toast shows on the first failure instead of waiting for a chunk. */}
+                  <Toaster theme="dark" position="top-center" richColors />
+                </div>
+                <DocumentTitle />
+                <RealtimeUpdateNotice />
+              </QueryProvider>
             </ClockProvider>
           </NextIntlClientProvider>
         </SessionProvider>

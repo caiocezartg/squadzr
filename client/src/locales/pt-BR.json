@@ -15,13 +15,13 @@
     "close": "Fechar"
   },
   "nav": {
-    "allRooms": "TODOS OS SQUADS",
-    "myRooms": "MEUS SQUADS",
+    "allSquads": "TODOS OS SQUADS",
+    "mySquads": "MEUS SQUADS",
     "closeMenu": "Fechar menu",
     "openMenu": "Abrir menu"
   },
   "footer": {
-    "line": "Squadzr — Encontre seu time gamer"
+    "line": "© {year} Squadzr — Encontre seu time gamer"
   },
   "hero": {
     "badge": "{count} JOGOS DISPONÍVEIS",

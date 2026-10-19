@@ -1,8 +1,7 @@
-import { StrictMode, useState } from 'react'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { StrictMode, useEffect } from 'react'
 import { RouterProvider } from '@tanstack/react-router'
 import { MotionProvider } from '@/components/ui/motion-provider'
-import { getQueryClient } from '@/lib/query-client'
+import { legacyNavigatorFor, registerLegacyNavigator } from '@/lib/navigation'
 import { createRouterHistory } from '@/lib/router-history'
 import { createAppRouter } from './router'
 
@@ -15,14 +14,14 @@ declare module '@tanstack/react-router' {
 }
 
 export default function AppShell() {
-  const [queryClient] = useState(getQueryClient)
+  // While this app is mounted, the shell's links and imperative navigation use its router for the
+  // routes it owns.
+  useEffect(() => registerLegacyNavigator(legacyNavigatorFor(router)), [])
 
   return (
     <StrictMode>
       <MotionProvider>
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
+        <RouterProvider router={router} />
       </MotionProvider>
     </StrictMode>
   )

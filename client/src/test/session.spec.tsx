@@ -4,6 +4,7 @@
  * the route refreshes so the server renders the same viewer.
  */
 
+import { QueryClientProvider } from '@tanstack/react-query'
 import {
   Outlet,
   RouterProvider,
@@ -16,6 +17,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppHeader } from '@/components/layout/app-header'
 import { getSession } from '@/lib/auth-client'
+import { createTestQueryClient } from './harness'
 import { httpOk, onHttp } from './http-router'
 import { createHarnessNavigation } from './navigation'
 import type { HarnessNavigation } from './navigation'
@@ -42,7 +44,11 @@ function renderHeader(): HarnessNavigation {
   const navigation = createHarnessNavigation('/')
   const router = createRouter({ routeTree: headerScene(), history: navigation.history })
 
-  render(<RouterProvider router={router} />)
+  render(
+    <QueryClientProvider client={createTestQueryClient()}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  )
 
   return navigation
 }
