@@ -33,7 +33,7 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'))
 }
 
-/** Manifest files of one app page, e.g. `/[[...slug]]/page` in `.next/server/app/[[...slug]]/`. */
+/** Manifest files of one app page, e.g. `/[...slug]/page` in `.next/server/app/[...slug]/`. */
 function pageManifestPaths(nextDir, pageKey) {
   const segmentDir = join(nextDir, 'server', 'app', pageKey.replace(/\/page$/, '').slice(1))
   return {

@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Menu } from 'lucide-react'
 import { useSession } from '@/hooks/use-session'
-import { signInWithDiscord, signOut } from '@/lib/auth-client'
+import { useSignOut } from '@/hooks/use-sign-out'
+import { signInWithDiscord } from '@/lib/auth-client'
 import { DiscordIcon } from '@/components/ui/icons'
 import { AppLink } from '@/components/layout/app-link'
 import { NotificationsMenu } from '@/components/layout/notifications-menu'
@@ -16,6 +17,7 @@ import { LanguageToggle } from '@/components/layout/language-toggle'
 export function AppHeader() {
   const t = useTranslations()
   const session = useSession()
+  const signOutViewer = useSignOut()
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -43,8 +45,7 @@ export function AppHeader() {
 
   const handleSignOut = async () => {
     setMenuOpen(false)
-    await signOut()
-    window.location.href = '/'
+    await signOutViewer()
   }
 
   const handleSignIn = () => {

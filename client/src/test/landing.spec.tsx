@@ -4,7 +4,7 @@
  * island.
  */
 
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -12,7 +12,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionDto } from '@squadzr/schemas'
-import LandingPage, { metadata } from '@/app/page'
+import LandingPage, { metadata } from '@/app/(landing)/page'
 import { BackgroundRipple } from '@/components/landing/background-ripple'
 import { HeroSquadShowcase } from '@/components/landing/hero-squad-showcase'
 import { ClockProvider } from '@/hooks/use-clock'
@@ -27,6 +27,7 @@ vi.mock('next/server', () => ({ connection: () => Promise.resolve() }))
 
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const LANDING_DIR = join(SRC_DIR, 'components/landing')
+const LANDING_ROUTE_DIR = join(SRC_DIR, 'app/(landing)')
 const LAZY_ISLAND = /\blazy\(|next\/dynamic|LazyIslandBoundary|ssr:\s*false/
 const NOW = new Date('2031-06-01T12:00:00Z')
 
@@ -101,9 +102,20 @@ describe('landing page', () => {
     const landingFiles = readdirSync(LANDING_DIR)
       .filter((file) => file.endsWith('.tsx'))
       .map((file) => join(LANDING_DIR, file))
-    const files = [...landingFiles, join(SRC_DIR, 'app/page.tsx'), join(SRC_DIR, 'app/loading.tsx')]
+    const files = [
+      ...landingFiles,
+      join(LANDING_ROUTE_DIR, 'page.tsx'),
+      join(LANDING_ROUTE_DIR, 'loading.tsx'),
+    ]
 
     expect(files.filter((file) => LAZY_ISLAND.test(readFileSync(file, 'utf8')))).toEqual([])
+  })
+
+  it('keeps its loading state to the landing, outside the catch-all', () => {
+    // A loading.tsx at the app root would wrap every segment, so the catch-all would show the landing's skeleton.
+    expect(existsSync(join(SRC_DIR, 'app/loading.tsx'))).toBe(false)
+    expect(existsSync(join(SRC_DIR, 'app/[...slug]/loading.tsx'))).toBe(false)
+    expect(existsSync(join(LANDING_ROUTE_DIR, 'loading.tsx'))).toBe(true)
   })
 })
 

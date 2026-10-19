@@ -32,13 +32,13 @@ function pageManifests(segment, pageKey, entryFiles, loadableManifest) {
   }
 }
 
-// `/[[...slug]]` loads the app shell through `next/dynamic`; `/_not-found` loads no dynamic import.
+// `/[...slug]` loads the app shell through `next/dynamic`; `/_not-found` loads no dynamic import.
 const FIXTURE = {
   'app-path-routes-manifest.json': {
-    '/[[...slug]]/page': '/[[...slug]]',
+    '/[...slug]/page': '/[...slug]',
     '/_not-found/page': '/_not-found',
   },
-  ...pageManifests('[[...slug]]', '/[[...slug]]/page', ['static/chunks/entry.js'], {
+  ...pageManifests('[...slug]', '/[...slug]/page', ['static/chunks/entry.js'], {
     28991: {
       id: 28991,
       files: [
@@ -103,7 +103,7 @@ describe('buildBundleReport', () => {
   })
 
   it('counts the chunks of the dynamic app shell in the initial JavaScript, once each', () => {
-    const route = routeNamed(buildBundleReport(nextDir), '/[[...slug]]')
+    const route = routeNamed(buildBundleReport(nextDir), '/[...slug]')
 
     expect(route.files.map((asset) => asset.file)).toEqual(APP_SHELL_ROUTE)
     expect(route.initialGzipKb).toBe(gzipKb(APP_SHELL_ROUTE))
