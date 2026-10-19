@@ -168,6 +168,48 @@ describe('room card — cover', () => {
     expect(screen.getByRole('button').style.opacity).toBe('')
   })
 
+  describe('when the browser loaded the cover before React attached', () => {
+    function stubImageState(state: { complete: boolean; naturalWidth: number }) {
+      Object.defineProperty(HTMLImageElement.prototype, 'complete', {
+        configurable: true,
+        get: () => state.complete,
+      })
+      Object.defineProperty(HTMLImageElement.prototype, 'naturalWidth', {
+        configurable: true,
+        get: () => state.naturalWidth,
+      })
+    }
+
+    afterEach(() => {
+      Reflect.deleteProperty(HTMLImageElement.prototype, 'complete')
+      Reflect.deleteProperty(HTMLImageElement.prototype, 'naturalWidth')
+    })
+
+    it('shows a cover that is already complete at mount, with no load event', () => {
+      stubImageState({ complete: true, naturalWidth: 460 })
+      render(<RoomCard room={openRoom} game={gameLol} />)
+
+      expect(screen.getByRole('img')).toHaveClass('opacity-100')
+    })
+
+    it('keeps a cover that already failed hidden', () => {
+      stubImageState({ complete: true, naturalWidth: 0 })
+      render(<RoomCard room={openRoom} game={gameLol} />)
+
+      expect(screen.getByRole('img')).toHaveClass('opacity-0')
+    })
+
+    it('keeps a cover that is still loading hidden until it loads', () => {
+      stubImageState({ complete: false, naturalWidth: 0 })
+      render(<RoomCard room={openRoom} game={gameLol} />)
+
+      const cover = screen.getByRole('img')
+      expect(cover).toHaveClass('opacity-0')
+      fireEvent.load(cover)
+      expect(cover).toHaveClass('opacity-100')
+    })
+  })
+
   it('hides the cover again while a new cover URL loads', () => {
     const { rerender } = render(<RoomCard room={openRoom} game={gameLol} />)
     fireEvent.load(screen.getByRole('img'))
