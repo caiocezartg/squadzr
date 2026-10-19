@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest'
 import { findBudgetViolations } from './bundle-limits.mjs'
 
 const KB = 1000
-const LANDING_LIMIT_KB = 355
+const LANDING_LIMIT_KB = 340
 const CATCH_ALL_LIMIT_KB = 440
 
 /** A report shaped like `buildBundleReport`, with the landing, the catch-all and the largest chunk set. */
-function reportWith({ landingGzipKb = 350, catchAllGzipKb = 430, largestChunkRawKb = 355.84 } = {}) {
+function reportWith({ landingGzipKb = 335, catchAllGzipKb = 430, largestChunkRawKb = 355.84 } = {}) {
   return {
     routes: [
       { route: '/', initialGzipKb: landingGzipKb },
@@ -33,8 +33,8 @@ describe('findBudgetViolations', () => {
   })
 
   it('names the landing and both numbers when its initial JavaScript is over the limit', () => {
-    expect(findBudgetViolations(reportWith({ landingGzipKb: 355.5 }))).toEqual([
-      'Initial JavaScript for / is 355.5 kB gzip, above its 355 kB limit.',
+    expect(findBudgetViolations(reportWith({ landingGzipKb: 340.5 }))).toEqual([
+      'Initial JavaScript for / is 340.5 kB gzip, above its 340 kB limit.',
     ])
   })
 
@@ -43,7 +43,7 @@ describe('findBudgetViolations', () => {
     report.routes = report.routes.filter((entry) => entry.route !== '/')
 
     expect(findBudgetViolations(report)).toEqual([
-      'Route / is missing from the bundle report, so its 355 kB limit is not checked.',
+      'Route / is missing from the bundle report, so its 340 kB limit is not checked.',
     ])
   })
 

@@ -3,7 +3,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { gzipSync } from 'node:zlib'
+import { gzip } from 'pako'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { buildBundleReport } from './bundle-report.mjs'
 
@@ -80,7 +80,7 @@ function writeFixture(nextDir) {
 /** Gzip size in kB of the given chunks, summed the way the report sums them. */
 function gzipKb(files) {
   const bytes = files.reduce(
-    (total, file) => total + gzipSync(CHUNKS[file], { level: 9 }).byteLength,
+    (total, file) => total + gzip(CHUNKS[file], { level: 9 }).byteLength,
     0
   )
   return Number((bytes / 1000).toFixed(2))
