@@ -1,3 +1,5 @@
+'use client'
+
 import * as m from 'motion/react-m'
 import { Check, Link as LinkIcon } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
@@ -64,10 +66,10 @@ function DiscordClickIllustration() {
   )
 }
 
-/* ─── Illustration: Step 2 — Browse Rooms ─── */
+/* ─── Illustration: Step 2 — Browse Squads ─── */
 
-function RoomBrowseIllustration() {
-  const rooms = [
+function SquadBrowseIllustration() {
+  const squads = [
     { color: 'bg-red-500/50', name: 'Valorant 5v5', players: '3/5' },
     { color: 'bg-blue-500/50', name: 'LoL Ranked', players: '2/5' },
     { color: 'bg-amber-500/50', name: 'CS2 Comp', players: '4/5' },
@@ -77,9 +79,9 @@ function RoomBrowseIllustration() {
     <div className="relative h-32 sm:h-40 flex flex-col items-center justify-center gap-1.5 overflow-hidden px-5 sm:px-8">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,162,0.04),transparent_70%)]" />
 
-      {rooms.map((room, i) => (
+      {squads.map((squad, i) => (
         <m.div
-          key={room.name}
+          key={squad.name}
           className={`relative z-10 w-full flex items-center gap-2.5 rounded-lg border px-3 py-1.5 text-[10px] ${
             i === 2 ? 'border-accent/25 bg-accent/5' : 'border-border bg-surface/80'
           }`}
@@ -88,9 +90,9 @@ function RoomBrowseIllustration() {
           viewport={{ once: true }}
           transition={{ delay: 0.3 + i * 0.15, duration: 0.35 }}
         >
-          <div className={`size-4 rounded-sm shrink-0 ${room.color}`} />
-          <span className="text-offwhite/80 font-medium truncate">{room.name}</span>
-          <span className="ml-auto text-muted shrink-0">{room.players}</span>
+          <div className={`size-4 rounded-sm shrink-0 ${squad.color}`} />
+          <span className="text-offwhite/80 font-medium truncate">{squad.name}</span>
+          <span className="ml-auto text-muted shrink-0">{squad.players}</span>
         </m.div>
       ))}
 
@@ -128,11 +130,11 @@ function SquadFillIllustration() {
             className="size-7 sm:size-9 rounded-full border-2 flex items-center justify-center"
             initial={{
               borderColor: 'rgba(42, 42, 47, 1)',
-              backgroundColor: 'transparent',
+              backgroundColor: 'rgba(0, 255, 162, 0)',
             }}
             whileInView={{
               borderColor: ['rgba(42, 42, 47, 1)', 'rgba(0, 255, 162, 0.4)'],
-              backgroundColor: ['transparent', 'rgba(0, 255, 162, 0.1)'],
+              backgroundColor: ['rgba(0, 255, 162, 0)', 'rgba(0, 255, 162, 0.1)'],
             }}
             viewport={{ once: true }}
             transition={{ delay: 0.4 + i * 0.3, duration: 0.3 }}
@@ -172,7 +174,7 @@ function SquadFillIllustration() {
 
 const ILLUSTRATIONS = [
   DiscordClickIllustration,
-  RoomBrowseIllustration,
+  SquadBrowseIllustration,
   SquadFillIllustration,
 ] as const
 

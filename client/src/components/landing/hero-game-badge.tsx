@@ -1,21 +1,18 @@
 import { useTranslations } from 'next-intl'
-import { useGames } from '@/features/games'
 
 /**
- * The games-supported badge. It owns the game query so the hero does not have
- * to: on a cold landing load the badge chunk (and the shared API contract
- * runtime it needs) arrives after the hero copy is on screen.
+ * The games-supported badge. The count comes from the page's games loader, so the badge is part of
+ * the server HTML with the rest of the hero.
  */
-export function HeroGameBadge() {
+export function HeroGameBadge({ count }: { readonly count: number }) {
   const t = useTranslations()
-  const { games } = useGames()
 
-  if (games.length === 0) return null
+  if (count === 0) return null
 
   return (
     <span className="inline-flex items-center gap-2 rounded-full bg-accent/5 border border-accent/15 px-4 py-1.5 text-xs font-semibold text-accent mb-2">
       <span className="size-1.5 rounded-full bg-accent animate-pulse" />
-      {t('hero.badge', { count: games.length })}
+      {t('hero.badge', { count })}
     </span>
   )
 }

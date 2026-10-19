@@ -11,7 +11,7 @@ import { navigateTo } from '@/lib/navigation'
 // The shell renders the old app's routes, so the suite's stand-in tree replaces the real route table.
 vi.mock('@/routeTree.gen', async () => {
   const { legacyRouteTree } = await import('./legacy-routes')
-  return { routeTree: legacyRouteTree({ landing: true }) }
+  return { routeTree: legacyRouteTree() }
 })
 
 /** The Next router's push, which writes the URL on the real browser history. */

@@ -54,13 +54,10 @@ interface ShellScene {
  * The root layout's shell around the old app: the header, the routes, the title and, when the scene
  * has one, the old app's navigator. Without the navigator the shell is on an App Router page.
  */
-function renderShell(
-  url: string,
-  options: { landing?: boolean; registered?: boolean } = {}
-): ShellScene {
+function renderShell(url: string, options: { registered?: boolean } = {}): ShellScene {
   const navigation = createHarnessNavigation(url)
   const router = createRouter({
-    routeTree: legacyRouteTree({ landing: options.landing ?? true }),
+    routeTree: legacyRouteTree(),
     history: navigation.history,
   })
 
@@ -107,7 +104,6 @@ beforeEach(() => {
 
 describe('shell navigation to the old app', () => {
   it.each([
-    ['/', 'Home page'],
     ['/rooms', 'Squads page'],
     ['/rooms/ABC123', 'Lobby page'],
     ['/rooms/my', 'My squads page'],
@@ -119,7 +115,6 @@ describe('shell navigation to the old app', () => {
     const destinations: Array<[link: string, path: string, label: string]> = [
       ['ALL SQUADS', '/rooms', 'Squads page'],
       ['MY SQUADS', '/rooms/my', 'My squads page'],
-      ['Squadzr logo', '/', 'Home page'],
     ]
     for (const [link, path, label] of destinations) {
       await user.click(headerLink(link))
@@ -149,7 +144,7 @@ describe('shell navigation to the old app', () => {
   it('opens a squad from its notification through the old-app router', async () => {
     signInAsFakeUser()
     notifications = [squadNotification(ALPHA_ID, 'Alpha squad', null)]
-    const { user, navigation } = renderShell('/', { registered: true })
+    const { user, navigation } = renderShell('/rooms', { registered: true })
 
     await user.click(await screen.findByRole('button', { name: '1' }))
     await user.click(screen.getByRole('button', { name: /Alpha squad/ }))
@@ -160,8 +155,8 @@ describe('shell navigation to the old app', () => {
 
   it('hands a path the old app does not own to the Next router', async () => {
     signInAsFakeUser()
-    // The landing is an App Router page in this scene, so the old app has no `/` route.
-    const { user, navigation } = renderShell('/rooms', { registered: true, landing: false })
+    // The landing is an App Router page, so the old app has no `/` route.
+    const { user, navigation } = renderShell('/rooms', { registered: true })
     expect(await screen.findByText('Squads page')).toBeInTheDocument()
 
     await user.click(headerLink('Squadzr logo'))

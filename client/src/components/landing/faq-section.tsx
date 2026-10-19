@@ -1,3 +1,5 @@
+'use client'
+
 import * as m from 'motion/react-m'
 import { Accordion } from '@base-ui-components/react/accordion'
 import { Plus } from 'lucide-react'

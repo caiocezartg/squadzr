@@ -9,16 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as RoomsIndexRouteImport } from './routes/rooms/index'
 import { Route as RoomsMyRouteImport } from './routes/rooms/my'
 import { Route as RoomsCodeRouteImport } from './routes/rooms/$code'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RoomsIndexRoute = RoomsIndexRouteImport.update({
   id: '/rooms/',
   path: '/rooms/',
@@ -36,34 +30,30 @@ const RoomsCodeRoute = RoomsCodeRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
   '/rooms/$code': typeof RoomsCodeRoute
   '/rooms/my': typeof RoomsMyRoute
   '/rooms/': typeof RoomsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/rooms/$code': typeof RoomsCodeRoute
   '/rooms/my': typeof RoomsMyRoute
   '/rooms': typeof RoomsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/rooms/$code': typeof RoomsCodeRoute
   '/rooms/my': typeof RoomsMyRoute
   '/rooms/': typeof RoomsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/rooms/$code' | '/rooms/my' | '/rooms/'
+  fullPaths: '/rooms/$code' | '/rooms/my' | '/rooms/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/rooms/$code' | '/rooms/my' | '/rooms'
-  id: '__root__' | '/' | '/rooms/$code' | '/rooms/my' | '/rooms/'
+  to: '/rooms/$code' | '/rooms/my' | '/rooms'
+  id: '__root__' | '/rooms/$code' | '/rooms/my' | '/rooms/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   RoomsCodeRoute: typeof RoomsCodeRoute
   RoomsMyRoute: typeof RoomsMyRoute
   RoomsIndexRoute: typeof RoomsIndexRoute
@@ -71,13 +61,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/rooms/': {
       id: '/rooms/'
       path: '/rooms'
@@ -103,7 +86,6 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   RoomsCodeRoute: RoomsCodeRoute,
   RoomsMyRoute: RoomsMyRoute,
   RoomsIndexRoute: RoomsIndexRoute,
