@@ -36,7 +36,7 @@ import { Route as RoomsMyRoute } from '@/routes/rooms/my'
 import { EnglishIntlProvider } from './intl'
 import { createHarnessNavigation } from './navigation'
 import type { HarnessNavigation } from './navigation'
-import { signInAsFakeUser, signOutFakeUser } from './stubs'
+import { fakeSession, signInAsFakeUser, signOutFakeUser } from './stubs'
 import type { FakeSessionUser } from './stubs'
 
 export function createTestQueryClient(): QueryClient {
@@ -111,8 +111,9 @@ export function renderRoomsFlow(url: string, options: RenderRoomsFlowOptions = {
     history: navigation.history,
   })
 
+  // The session provider starts from this test's viewer, as the server's read would for this visit.
   const tree = (
-    <EnglishIntlProvider>
+    <EnglishIntlProvider session={fakeSession()}>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
         <RealtimeUpdateNotice />

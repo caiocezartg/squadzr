@@ -42,7 +42,7 @@ export function LobbyPage({ roomCode }: LobbyPageProps) {
     copyTimeoutRef.current = setTimeout(() => setCodeCopied(false), 2000)
   }
 
-  if (lobby.sessionPending || lobby.roomLoading) {
+  if (lobby.roomLoading) {
     return <LobbySkeleton />
   }
 

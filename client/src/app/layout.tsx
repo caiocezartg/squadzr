@@ -5,6 +5,8 @@ import { getLocale } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
 import { ClockProvider } from '@/hooks/use-clock'
+import { SessionProvider } from '@/hooks/use-session'
+import { getRequestSession } from '@/lib/server/session'
 import '../styles/globals.css'
 
 // Same families and weights as the Google Fonts request that index.html used.
@@ -39,17 +41,22 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // The locale comes from the request (cookie, then Accept-Language), so the first render, the
   // page's language and every date agree before any script runs.
   const locale = await getLocale()
+  // The session is read once per request and seeded into the client, so the first render already
+  // knows the viewer.
+  const session = await getRequestSession()
 
   return (
     <html lang={locale} className={`${exo2.variable} ${plusJakartaSans.variable}`}>
       <body>
-        {/* The provider inherits the locale, messages and request time from src/i18n/request.ts. */}
-        <NextIntlClientProvider>
-          <ClockProvider>
-            <div id="root">{children}</div>
-            <RealtimeUpdateNotice />
-          </ClockProvider>
-        </NextIntlClientProvider>
+        <SessionProvider initialSession={session}>
+          {/* The provider inherits the locale, messages and request time from src/i18n/request.ts. */}
+          <NextIntlClientProvider>
+            <ClockProvider>
+              <div id="root">{children}</div>
+              <RealtimeUpdateNotice />
+            </ClockProvider>
+          </NextIntlClientProvider>
+        </SessionProvider>
       </body>
     </html>
   )

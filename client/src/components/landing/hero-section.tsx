@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Link } from '@tanstack/react-router'
-import { signIn, useSession } from '@/lib/auth-client'
+import { useSession } from '@/hooks/use-session'
+import { signInWithDiscord } from '@/lib/auth-client'
 import * as m from 'motion/react-m'
 import { Search } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
@@ -18,13 +19,10 @@ const LazyHeroGameBadge = lazy(() =>
 export function HeroSection() {
   const t = useTranslations()
   const lang = useLocale()
-  const { data: session } = useSession()
+  const session = useSession()
 
   const handleSignIn = () => {
-    signIn.social({
-      provider: 'discord',
-      callbackURL: window.location.origin + '/rooms',
-    })
+    signInWithDiscord('/rooms')
   }
 
   return (

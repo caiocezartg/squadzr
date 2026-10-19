@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslations } from 'next-intl'
 import { Tabs } from '@base-ui-components/react'
 import { Plus } from 'lucide-react'
-import { useSession } from '@/lib/auth-client'
+import { useSession } from '@/hooks/use-session'
 import { AlertBox } from '@/components/ui/alert-box'
 import { ModalLoading } from '@/components/ui/modal-loading'
 import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
@@ -29,17 +29,17 @@ const LazyCreateRoomModal = lazy(() =>
  */
 export function MyRoomsPage() {
   const t = useTranslations()
-  const { data: session, isPending: sessionLoading } = useSession()
+  const session = useSession()
   const navigate = useNavigate()
 
   const [modalOpen, setModalOpen] = useState(false)
 
   // Redirect unauthenticated users
   useEffect(() => {
-    if (!sessionLoading && !session?.user) {
+    if (!session?.user) {
       navigate({ to: '/' })
     }
-  }, [sessionLoading, session?.user, navigate])
+  }, [session?.user, navigate])
 
   const signedIn = !!session?.user
   const {
@@ -51,7 +51,7 @@ export function MyRoomsPage() {
   } = useMyRoomsData(signedIn)
   const { games, loading: gamesLoading } = useGames({ enabled: signedIn })
 
-  const loading = sessionLoading || myRoomsLoading || gamesLoading
+  const loading = myRoomsLoading || gamesLoading
 
   const gamesMap = useMemo(
     () => new Map<string, Game>(games.map((game) => [game.id, game])),

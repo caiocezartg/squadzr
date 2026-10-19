@@ -8,4 +8,13 @@ const authClient = createAuthClient({
   },
 })
 
-export const { signIn, signOut, useSession } = authClient
+// The session is read through the session provider (`@/hooks/use-session`), not through a hook here.
+export const { signIn, signOut, getSession } = authClient
+
+/** Starts Discord sign-in and returns to `callbackPath` on this origin once the session is set. */
+export function signInWithDiscord(callbackPath: string) {
+  return signIn.social({
+    provider: 'discord',
+    callbackURL: `${window.location.origin}${callbackPath}`,
+  })
+}
