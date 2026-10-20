@@ -5,11 +5,10 @@ import { useTranslations } from 'next-intl'
 import { Plus } from 'lucide-react'
 import { useSession } from '@/hooks/use-session'
 import { AlertBox } from '@/components/ui/alert-box'
-import { SquadFilters, useSquadFilters } from '@/features/squad-list'
+import { SquadFilters, useAppSquadSearch, useSquadFilters } from '@/features/squad-list'
 import { MySquadsErrorBoundary } from './my-squads-error-boundary'
 import { MySquadsResults } from './my-squads-results'
 import { MySquadsSkeleton } from './skeleton'
-import { useAppSquadSearch } from './use-app-squad-search'
 import { useDiscardFailedMySquadsReads, useMySquadsBaseline } from './use-my-squads-data'
 
 /**
