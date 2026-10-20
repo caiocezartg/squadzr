@@ -32,4 +32,29 @@ describe('next.config startup validation', () => {
   it('lets the start continue with the internal API URL unset', async () => {
     await expect(loadConfig(undefined)).resolves.toHaveProperty('default')
   })
+
+  it('redirects /rooms/my to /squads/my permanently before the Lobby redirect', async () => {
+    const config = (await loadConfig('http://squadzr-api:3000')).default
+    const redirects = (await config.redirects?.()) ?? []
+
+    expect(redirects[0]).toMatchObject({
+      source: '/rooms/my',
+      destination: '/squads/my',
+      permanent: true,
+    })
+
+    const mySquadsIndex = redirects.findIndex((redirect) => redirect.source === '/rooms/my')
+    const lobbyIndex = redirects.findIndex((redirect) => redirect.destination === '/squads/:code')
+    expect(mySquadsIndex).toBeGreaterThanOrEqual(0)
+    expect(lobbyIndex).toBeGreaterThan(mySquadsIndex)
+  })
+
+  it('keeps the Lobby redirect excluding My Squads', async () => {
+    const config = (await loadConfig('http://squadzr-api:3000')).default
+    const redirects = (await config.redirects?.()) ?? []
+
+    expect(redirects).toContainEqual(
+      expect.objectContaining({ source: '/rooms/:code((?![Mm][Yy]$)[^/]+)', permanent: true })
+    )
+  })
 })

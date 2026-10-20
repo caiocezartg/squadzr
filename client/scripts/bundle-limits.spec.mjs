@@ -1,19 +1,22 @@
-// Budget limits of the Next build (CCC-71, CCC-77, CCC-79, CCC-80): the landing's, the catch-all's, the Squad
-// Board's and the Lobby's gzip limits and the raw limit of every chunk. The CLI fails CI with these messages.
+// Budget limits of the Next build (CCC-71, CCC-77, CCC-79, CCC-80, CCC-81): the landing's, the catch-all's,
+// the Squad Board's, My Squads' and the Lobby's gzip limits and the raw limit of every chunk. The CLI fails
+// CI with these messages.
 import { describe, expect, it } from 'vitest'
 import { findBudgetViolations } from './bundle-limits.mjs'
 
 const KB = 1000
 const LANDING_LIMIT_KB = 340
 const CATCH_ALL_LIMIT_KB = 440
-const SQUAD_BOARD_LIMIT_KB = 325
+const SQUAD_BOARD_LIMIT_KB = 375
+const MY_SQUADS_LIMIT_KB = 365
 const LOBBY_LIMIT_KB = 335
 
 /** A report shaped like `buildBundleReport`, with the landing, the catch-all, the Squad Board and the largest chunk set. */
 function reportWith({
   landingGzipKb = 335,
   catchAllGzipKb = 430,
-  squadBoardGzipKb = 319.52,
+  squadBoardGzipKb = 373.77,
+  mySquadsGzipKb = 364.26,
   lobbyGzipKb = 332.52,
   largestChunkRawKb = 355.84,
 } = {}) {
@@ -23,6 +26,7 @@ function reportWith({
       { route: '/_not-found', initialGzipKb: 312.79 },
       { route: '/[...slug]', initialGzipKb: catchAllGzipKb },
       { route: '/squads', initialGzipKb: squadBoardGzipKb },
+      { route: '/squads/my', initialGzipKb: mySquadsGzipKb },
       { route: '/squads/[code]', initialGzipKb: lobbyGzipKb },
     ],
     largestChunk: {
@@ -78,8 +82,8 @@ describe('findBudgetViolations', () => {
   })
 
   it('names the Squad Board route and both numbers when its initial JavaScript is over the limit', () => {
-    expect(findBudgetViolations(reportWith({ squadBoardGzipKb: 325.5 }))).toEqual([
-      'Initial JavaScript for /squads is 325.5 kB gzip, above its 325 kB limit.',
+    expect(findBudgetViolations(reportWith({ squadBoardGzipKb: 375.5 }))).toEqual([
+      'Initial JavaScript for /squads is 375.5 kB gzip, above its 375 kB limit.',
     ])
   })
 
@@ -94,7 +98,26 @@ describe('findBudgetViolations', () => {
     report.routes = report.routes.filter((entry) => entry.route !== '/squads')
 
     expect(findBudgetViolations(report)).toEqual([
-      'Route /squads is missing from the bundle report, so its 325 kB limit is not checked.',
+      'Route /squads is missing from the bundle report, so its 375 kB limit is not checked.',
+    ])
+  })
+
+  it('passes when My Squads sits exactly at its limit', () => {
+    expect(findBudgetViolations(reportWith({ mySquadsGzipKb: MY_SQUADS_LIMIT_KB }))).toEqual([])
+  })
+
+  it('names the My Squads route and both numbers when its initial JavaScript is over the limit', () => {
+    expect(findBudgetViolations(reportWith({ mySquadsGzipKb: 365.5 }))).toEqual([
+      'Initial JavaScript for /squads/my is 365.5 kB gzip, above its 365 kB limit.',
+    ])
+  })
+
+  it('fails when the My Squads route is missing from the report, so its limit cannot pass unchecked', () => {
+    const report = reportWith()
+    report.routes = report.routes.filter((entry) => entry.route !== '/squads/my')
+
+    expect(findBudgetViolations(report)).toEqual([
+      'Route /squads/my is missing from the bundle report, so its 365 kB limit is not checked.',
     ])
   })
 

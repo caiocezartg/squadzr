@@ -23,9 +23,9 @@ describe('createRouterHistory', () => {
     const listener = vi.fn()
     history.subscribe(listener)
 
-    window.history.replaceState(null, '', '/rooms/my')
+    window.history.replaceState(null, '', '/squads/my')
 
-    expect(window.location.pathname).toBe('/rooms/my')
+    expect(window.location.pathname).toBe('/squads/my')
     expect(listener).not.toHaveBeenCalled()
     history.destroy()
   })

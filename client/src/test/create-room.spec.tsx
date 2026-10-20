@@ -1,6 +1,6 @@
 /**
  * Characterization tests for the create-room flow on the Squad Board page
- * and on My squads (`/rooms/my`).
+ * and on My Squads (`/squads/my`).
  *
  * Covers the gating of the create button by session state, client-side
  * validation of the form, the payload posted to the API on success (including
@@ -50,7 +50,6 @@ async function openCreateModal(
   user: Awaited<ReturnType<typeof renderSquadsFlow>['user']>
 ): Promise<void> {
   await user.click(await screen.findByText('Create new squad'))
-  // Lazy create dialog: its import and render in the test runner can outlast the 1 s default.
   await screen.findByText('Create a Squad', {}, { timeout: 5000 })
 }
 
@@ -163,9 +162,9 @@ describe('create squad — from my squads', () => {
     onHttp('GET', '/api/rooms/my', () => httpOk(myRooms))
     const { router, user } = renderSquadsFlow('/squads')
 
-    // The board is loaded and fresh when the user leaves for My squads.
+    // The board is loaded and fresh when the user leaves for My Squads.
     await screen.findByText('Ranked grind')
-    await router.navigate({ to: '/rooms/my', search: {} })
+    await router.navigate({ href: '/squads/my' })
     await screen.findByText('My squads')
 
     // The server lists the new room in both lists as soon as it exists.
@@ -174,7 +173,6 @@ describe('create squad — from my squads', () => {
     const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
 
     await user.click(screen.getByRole('button', { name: 'Create new squad' }))
-    // Lazy create dialog: its import and render in the test runner can outlast the 1 s default.
     await screen.findByText('Create a Squad', {}, { timeout: 5000 })
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
     await user.click(screen.getByLabelText('Game'))

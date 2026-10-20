@@ -103,42 +103,30 @@ beforeEach(() => {
 })
 
 describe('shell navigation to the old app', () => {
-  it.each([['/rooms/my', 'My squads page']])(
-    'reaches every old-app route from the header when the page is %s',
-    async (start, page) => {
-      signInAsFakeUser()
-      const { user, navigation, router } = renderShell(start, { registered: true })
-      expect(await screen.findByText(page)).toBeInTheDocument()
-
-      const destinations: Array<[link: string, path: string, label: string]> = [
-        ['MY SQUADS', '/rooms/my', 'My squads page'],
-      ]
-      for (const [link, path, label] of destinations) {
-        await user.click(headerLink(link))
-        await waitFor(() => expect(router.state.location.pathname).toBe(path))
-        expect(await screen.findByText(label)).toBeInTheDocument()
-      }
-
-      expect(navigation.calls).toEqual([])
-    }
-  )
-
-  it('reaches the old-app routes from the mobile sidebar', async () => {
+  it('sends the header My Squads link to the App Router page', async () => {
     signInAsFakeUser()
-    // The Lobby is an App Router page, so the old app renders nothing on its path.
-    const { user, navigation } = renderShell('/squads/ABC123', { registered: true })
+    const { user, navigation } = renderShell('/legacy', { registered: true })
+    expect(await screen.findByText('Legacy page')).toBeInTheDocument()
+
+    await user.click(headerLink('MY SQUADS'))
+
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads/my' }])
+  })
+
+  it('sends the mobile sidebar My Squads link to the App Router page', async () => {
+    signInAsFakeUser()
+    const { user, navigation } = renderShell('/legacy', { registered: true })
 
     await user.click(screen.getByRole('button', { name: 'Open menu' }))
     await user.click(within(sidebarNavigation()).getByRole('link', { name: 'MY SQUADS' }))
-    expect(await screen.findByText('My squads page')).toBeInTheDocument()
 
-    expect(navigation.calls).toEqual([])
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads/my' }])
   })
 
   it('hands a squad notification to the Next router, because the Lobby is an App Router page', async () => {
     signInAsFakeUser()
     notifications = [squadNotification(ALPHA_ID, 'Alpha squad', null)]
-    const { user, navigation } = renderShell('/rooms/my', { registered: true })
+    const { user, navigation } = renderShell('/legacy', { registered: true })
 
     await user.click(await screen.findByRole('button', { name: '1' }))
     await user.click(screen.getByRole('button', { name: /Alpha squad/ }))
@@ -151,8 +139,8 @@ describe('shell navigation to the old app', () => {
   it('hands a path the old app does not own to the Next router', async () => {
     signInAsFakeUser()
     // The landing is an App Router page, so the old app has no `/` route.
-    const { user, navigation } = renderShell('/rooms/my', { registered: true })
-    expect(await screen.findByText('My squads page')).toBeInTheDocument()
+    const { user, navigation } = renderShell('/legacy', { registered: true })
+    expect(await screen.findByText('Legacy page')).toBeInTheDocument()
 
     await user.click(headerLink('Squadzr logo'))
 
@@ -176,28 +164,26 @@ describe('shell navigation to the old app', () => {
 })
 
 describe('shell document title', () => {
-  it('puts the unread count in front of the active route title and follows navigation', async () => {
+  it('puts the unread count in front of the active route title', async () => {
     signInAsFakeUser()
     notifications = [
       squadNotification(ALPHA_ID, 'Alpha squad', null),
       squadNotification(BETA_ID, 'Beta squad', null),
     ]
-    // The Lobby is an App Router page, so the old app renders nothing on its path until the header moves it.
-    const { user } = renderShell('/squads/ABC123', { registered: true })
+    const { user } = renderShell('/legacy', { registered: true })
 
-    await user.click(headerLink('MY SQUADS'))
-    await waitFor(() => expect(document.title).toBe('(2) My squads · Squadzr'))
+    await waitFor(() => expect(document.title).toBe('(2) Legacy page · Squadzr'))
 
     await user.click(await screen.findByRole('button', { name: '2' }))
     await user.click(screen.getByRole('button', { name: 'Mark all read' }))
-    await waitFor(() => expect(document.title).toBe('My squads · Squadzr'))
+    await waitFor(() => expect(document.title).toBe('Legacy page · Squadzr'))
   })
 })
 
 describe('shell account', () => {
   it('shows the initial in the account button when the viewer has no avatar', async () => {
     signInAsFakeUser({ name: 'Caio', image: null })
-    renderShell('/rooms/my', { registered: true })
+    renderShell('/legacy', { registered: true })
 
     const account = await screen.findByRole('button', { name: 'Caio' })
     expect(within(account).getByText('C')).toBeInTheDocument()
@@ -205,7 +191,7 @@ describe('shell account', () => {
 
   it('shows the initial once the avatar image fails to load', async () => {
     signInAsFakeUser({ name: 'Caio', image: 'https://cdn.discordapp.com/avatars/1/broken.png' })
-    renderShell('/rooms/my', { registered: true })
+    renderShell('/legacy', { registered: true })
 
     const account = await screen.findByRole('button', { name: 'Caio' })
     const image = account.querySelector('img')
@@ -282,6 +268,16 @@ describe('shell sources', () => {
     const importers = shellFiles.filter((file) => read(file).includes('@tanstack/react-router'))
 
     expect(importers).toEqual([])
+  })
+
+  it('links My Squads at its App Router path in the header and the mobile sidebar', () => {
+    const header = read('components/layout/app-header.tsx')
+    const sidebar = read('components/layout/mobile-sidebar.tsx')
+
+    expect(header).toContain('href="/squads/my"')
+    expect(sidebar).toContain('href="/squads/my"')
+    expect(header).not.toContain('href="/rooms/my"')
+    expect(sidebar).not.toContain('href="/rooms/my"')
   })
 
   it('imports the notifications menu with the header, with no lazy island or fallback', () => {

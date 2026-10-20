@@ -1,21 +1,12 @@
-import { lazy, Suspense } from 'react'
 import { useTranslations } from 'next-intl'
 import { useSession } from '@/hooks/use-session'
 import { useGamesMap, useSuspenseGames } from '@/features/games'
-import { SquadCard, querySquadList, type SquadListQuery } from '@/features/squad-list'
+import { SquadGrid, querySquadList, type SquadListQuery } from '@/features/squad-list'
 import type { SquadJoining } from '@/features/squad-joining'
 import { Pagination } from '@/components/ui/pagination'
-import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
-import { ModalLoading } from '@/components/ui/modal-loading'
-import { notifyError } from '@/lib/notify'
 import { EmptyState } from './components/empty-state'
+import { CreateSquadDialog } from './create-squad-dialog'
 import { useSquadBoardSquads } from './use-squad-board-data'
-
-// Squad creation (the form contract, resolvers and dialog primitives) is a
-// non-essential capability: its chunk loads when the user opens the dialog.
-const LazyCreateSquadModal = lazy(() =>
-  import('./create-squad-dialog').then((module) => ({ default: module.CreateSquadDialog }))
-)
 
 export interface SquadBoardResultsProps {
   /** The list's update count when the board mounted (see `useSquadBoardBaseline`). */
@@ -84,17 +75,13 @@ export function SquadBoardResults({
         />
       ) : (
         <>
-          <div id="squads-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pageSquads.map((squad) => (
-              <SquadCard
-                key={squad.id}
-                squad={squad}
-                game={gamesMap.get(squad.gameId)}
-                onJoin={() => joining.requestJoin(squad)}
-                isLoading={!squad.isMember && joining.joiningSquadCode === squad.code}
-              />
-            ))}
-          </div>
+          <SquadGrid
+            id="squads-grid"
+            squads={pageSquads}
+            games={gamesMap}
+            onSelect={joining.requestJoin}
+            loadingSquadCode={joining.joiningSquadCode}
+          />
 
           <Pagination
             currentPage={currentPage}
@@ -111,18 +98,7 @@ export function SquadBoardResults({
 
       {/* Create squad modal */}
       {session?.user && createOpen && (
-        <LazyIslandBoundary
-          fallback={null}
-          onError={() => notifyError(t('errors.DIALOG_LOAD_FAILED'))}
-        >
-          <Suspense fallback={<ModalLoading />}>
-            <LazyCreateSquadModal
-              games={games}
-              open={createOpen}
-              onOpenChange={onCreateOpenChange}
-            />
-          </Suspense>
-        </LazyIslandBoundary>
+        <CreateSquadDialog games={games} open={createOpen} onOpenChange={onCreateOpenChange} />
       )}
     </>
   )

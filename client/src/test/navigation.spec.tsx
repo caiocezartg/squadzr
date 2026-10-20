@@ -15,7 +15,7 @@ function NavigationProbe() {
 
   return (
     <>
-      <button type="button" onClick={() => router.push('/rooms/my')}>
+      <button type="button" onClick={() => router.push('/squads/my')}>
         Push my squads
       </button>
       <button type="button" onClick={() => router.replace('/rooms/LOBBY1')}>
@@ -42,12 +42,12 @@ describe('harness navigation', () => {
     render(<NavigationProbe />)
 
     await user.click(screen.getByRole('button', { name: 'Push my squads' }))
-    expect(navigation.history.location.pathname).toBe('/rooms/my')
+    expect(navigation.history.location.pathname).toBe('/squads/my')
 
     await user.click(screen.getByRole('link', { name: 'Open lobby' }))
     expect(navigation.history.location.pathname).toBe('/rooms/LOBBY1')
     expect(navigation.calls).toEqual([
-      { method: 'push', href: '/rooms/my' },
+      { method: 'push', href: '/squads/my' },
       { method: 'push', href: '/rooms/LOBBY1' },
     ])
   })

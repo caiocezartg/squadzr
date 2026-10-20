@@ -33,18 +33,18 @@ describe('the catch-all mounts the old app', () => {
     // The catch-all loads the shell when it mounts, so the shell is imported at the first mount's URL.
     const { default: AppShell } = await import('@/app-shell')
     const first = render(<AppShell />)
-    expect(screen.queryByText('My squads page')).not.toBeInTheDocument()
+    expect(screen.queryByText('Legacy page')).not.toBeInTheDocument()
 
     // A path the old app does not own goes out through the Next router, and the catch-all unmounts.
     navigateTo('/about', nextRouter)
     first.unmount()
 
-    // The Next router moves the URL to the old app's My Squads page, and the catch-all mounts there.
-    nextRouter.push('/rooms/my')
+    // The Next router moves the URL to the old app's route, and the catch-all mounts there.
+    nextRouter.push('/legacy')
     render(<AppShell />)
 
-    expect(await screen.findByText('My squads page')).toBeInTheDocument()
-    expect(window.location.pathname).toBe('/rooms/my')
+    expect(await screen.findByText('Legacy page')).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/legacy')
   })
 
   it('follows the browser history under StrictMode, where effects run twice', async () => {
@@ -54,14 +54,14 @@ describe('the catch-all mounts the old app', () => {
         <AppShell />
       </StrictMode>
     )
-    expect(screen.queryByText('My squads page')).not.toBeInTheDocument()
+    expect(screen.queryByText('Legacy page')).not.toBeInTheDocument()
 
     // The old app owns this path, so its router navigates and writes the URL.
-    navigateTo('/rooms/my', nextRouter)
-    expect(await screen.findByText('My squads page')).toBeInTheDocument()
+    navigateTo('/legacy', nextRouter)
+    expect(await screen.findByText('Legacy page')).toBeInTheDocument()
 
     window.history.back()
-    await waitFor(() => expect(screen.queryByText('My squads page')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Legacy page')).not.toBeInTheDocument())
     expect(window.location.pathname).toBe('/squads/ABC123')
   })
 })

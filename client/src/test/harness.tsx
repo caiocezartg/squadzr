@@ -3,13 +3,12 @@
  *
  * Composes a TanStack Router tree using only the library's public code-based
  * API (`createRootRoute` + `createRoute` + `addChildren`). The tree stands in for
- * the app's two routers: the Squad Board and the Lobby are App Router pages in the
- * app, and they mount here at `/squads` and `/squads/$code`, next to the old app's
- * `/rooms/my` (My Squads). Each route mounts the REAL page component, and
- * the My Squads route takes its search validation from the imported route file,
- * so the tests exercise the actual implementations without any generated
- * internals (`_addFileChildren`, `_addFileTypes`, `update` re-parenting) or
- * details of `routeTree.gen.ts`.
+ * the app's routers: the Squad Board, My Squads and the Lobby are App Router pages
+ * in the app, and they mount here at `/squads`, `/squads/my` and `/squads/$code`.
+ * Each route mounts the REAL page component, and the My Squads route takes its
+ * search validation from the shared contract, so the tests exercise the actual
+ * implementations without any generated internals (`_addFileChildren`,
+ * `_addFileTypes`, `update` re-parenting) or details of `routeTree.gen.ts`.
  *
  * The tree renders with next-intl and the real English messages. Its location
  * is the harness navigation, which `next/navigation` and `next/link` share (see
@@ -34,9 +33,9 @@ import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
 import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
 import { LobbyPage } from '@/features/lobby'
+import { MySquadsPage } from '@/features/my-squads/page'
 import { SquadBoardPage } from '@/features/squad-board/page'
 import { squadsSearchSchema } from '@/features/squad-list'
-import { Route as RoomsMyRoute } from '@/routes/rooms/my'
 import { EnglishIntlProvider } from './intl'
 import { createHarnessNavigation } from './navigation'
 import type { HarnessNavigation } from './navigation'
@@ -73,14 +72,14 @@ function buildSquadsRouteTree(): AnyRoute {
     component: SquadLobbyScene,
   })
 
-  const roomsMyRoute = createRoute({
+  const mySquadsRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/rooms/my',
-    validateSearch: RoomsMyRoute.options.validateSearch,
-    component: RoomsMyRoute.options.component,
+    path: '/squads/my',
+    validateSearch: (raw) => squadsSearchSchema.parse(raw),
+    component: MySquadsPage,
   })
 
-  return rootRoute.addChildren([squadBoardRoute, squadLobbyRoute, roomsMyRoute]) as AnyRoute
+  return rootRoute.addChildren([squadBoardRoute, squadLobbyRoute, mySquadsRoute]) as AnyRoute
 }
 
 /** The Lobby at the Squad code of the URL, as the App Router page renders it. */

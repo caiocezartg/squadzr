@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { joinRoomResponseSchema } from '@squadzr/schemas'
@@ -9,18 +9,11 @@ import { useAppNavigation } from '@/lib/navigation'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { notifyError } from '@/lib/notify'
 import { lobbyHref } from '@/lib/squad-links'
-import { ModalLoading } from '@/components/ui/modal-loading'
-import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 // The board's barrel exports only its cache commands, so this import cannot close a cycle back to the page.
 import { useSquadBoardCommands } from '@/features/squad-board'
 import type { SquadSearchAccess } from '@/features/squad-list'
+import { JoinSquadAuthModal } from './join-squad-auth-modal'
 import { useAutoJoin } from './use-auto-join'
-
-// The guest prompt is a non-essential sub-capability: its dialog primitives
-// and animation runtime load only when a guest actually tries to join.
-const LazyJoinSquadAuthModal = lazy(() =>
-  import('./join-squad-auth-modal').then((module) => ({ default: module.JoinSquadAuthModal }))
-)
 
 /** The squad facts the join flow needs from a board card. */
 export interface JoinableSquad {
@@ -89,21 +82,14 @@ export function useSquadJoining(invite: SquadSearchAccess): SquadJoining {
 
   const authPrompt =
     pendingJoinCode !== null ? (
-      <LazyIslandBoundary
-        fallback={null}
-        onError={() => notifyError(t('errors.DIALOG_LOAD_FAILED'))}
-      >
-        <Suspense fallback={<ModalLoading />}>
-          <LazyJoinSquadAuthModal
-            open
-            squadCode={pendingJoinCode}
-            onOpenChange={(open) => {
-              if (!open) setPendingJoinCode(null)
-            }}
-            onSignIn={handleSignIn}
-          />
-        </Suspense>
-      </LazyIslandBoundary>
+      <JoinSquadAuthModal
+        open
+        squadCode={pendingJoinCode}
+        onOpenChange={(open) => {
+          if (!open) setPendingJoinCode(null)
+        }}
+        onSignIn={handleSignIn}
+      />
     ) : null
 
   return { requestJoin, joiningSquadCode, authPrompt }
