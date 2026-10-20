@@ -20,6 +20,11 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ protocol: 'https', hostname: 'cdn.discordapp.com' }],
   },
+  // The Squad Board moved from /rooms. The redirect is permanent (308) and keeps the query string, so
+  // shared links and sign-in callbacks to the old path still reach the board and its ?join= invite.
+  async redirects() {
+    return [{ source: '/rooms', destination: '/squads', permanent: true }]
+  },
 }
 
 export default withNextIntl(nextConfig)

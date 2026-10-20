@@ -1,6 +1,6 @@
 /**
  * Characterization of the typed realtime client (CCC-38) as seen from the real
- * catalog (`/rooms`) and lobby (`/rooms/$code`) pages: reconnection with
+ * Squad Board (`/squads`) and lobby (`/rooms/$code`) pages: reconnection with
  * backoff, resubscription owned by the transport, snapshot replacement of
  * stale state, duplicate-event idempotency and the HTTP/WebSocket state
  * ownership that removed the old `playersInitialized` race.
@@ -12,19 +12,19 @@
 
 import { act, cleanup, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { renderRoomsFlow } from './harness'
+import { renderSquadsFlow } from './harness'
 import { countHttpCalls, httpOk, onHttp } from './http-router'
 import type { MockHttpResponse } from './http-router'
 import {
-  catalogGames,
-  catalogRooms,
+  boardGames,
+  boardSquads,
   gameLol,
   guestPlayer,
   hostPlayer,
-  lobbyRoom,
+  lobbySquad,
   lobbyRoomResponse,
   lobbySnapshot,
-  openRoom,
+  openSquad,
 } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { MockWebSocket, latestWebSocket } from './ws-mock'
@@ -33,8 +33,8 @@ const DROPPED = 1006
 const FIRST_RECONNECT_DELAY = 3000
 
 function registerRoutes(): void {
-  onHttp('GET', '/api/rooms', () => httpOk(catalogRooms))
-  onHttp('GET', '/api/games', () => httpOk(catalogGames))
+  onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  onHttp('GET', '/api/games', () => httpOk(boardGames))
   onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
   onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
 }
@@ -69,12 +69,12 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('catalog subscription', () => {
+describe('board subscription', () => {
   it('re-sends subscribe_lobby on the new socket and refetches on its events idempotently', async () => {
-    const serverRooms = { rooms: [...catalogRooms.rooms] }
+    const serverRooms = { rooms: [...boardSquads.rooms] }
     onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
-    renderRoomsFlow('/rooms', { user: null })
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads', { user: null })
+    await screen.findByText(openSquad.name)
     openLatestWebSocket()
     expect(frameTypes(latestWebSocket())).toEqual(['subscribe_lobby'])
 
@@ -83,26 +83,26 @@ describe('catalog subscription', () => {
     expect(frameTypes(reconnected)).toEqual(['subscribe_lobby'])
 
     // The authoritative server state no longer has the room; the duplicated
-    // removed events each refetch the catalog and it stays deduplicated.
+    // removed events each refetch the board and it stays deduplicated.
     const fetchesBeforeRemoval = countHttpCalls('GET', '/api/rooms')
-    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== openRoom.id)
+    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== openSquad.id)
     sendFromServer({
       type: 'room_removed',
-      payload: { roomId: openRoom.id, roomCode: openRoom.code },
+      payload: { roomId: openSquad.id, roomCode: openSquad.code },
     })
     sendFromServer({
       type: 'room_removed',
-      payload: { roomId: openRoom.id, roomCode: openRoom.code },
+      payload: { roomId: openSquad.id, roomCode: openSquad.code },
     })
     await vi.waitFor(() =>
       expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeRemoval)
     )
-    await vi.waitFor(() => expect(screen.queryByText(openRoom.name)).not.toBeInTheDocument())
+    await vi.waitFor(() => expect(screen.queryByText(openSquad.name)).not.toBeInTheDocument())
   })
 
-  it('refetches the catalog when the subscription is restored after a reconnect', async () => {
-    renderRoomsFlow('/rooms', { user: null })
-    await screen.findByText(openRoom.name)
+  it('refetches the board when the subscription is restored after a reconnect', async () => {
+    renderSquadsFlow('/squads', { user: null })
+    await screen.findByText(openSquad.name)
     openLatestWebSocket()
     sendFromServer({
       type: 'lobby_subscribed',
@@ -123,8 +123,8 @@ describe('catalog subscription', () => {
   })
 
   it('closes the socket on unmount without unsubscribe_lobby and never reconnects', async () => {
-    renderRoomsFlow('/rooms', { user: null })
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads', { user: null })
+    await screen.findByText(openSquad.name)
     openLatestWebSocket()
     const socket = latestWebSocket()
 
@@ -132,17 +132,17 @@ describe('catalog subscription', () => {
     cleanup()
     vi.runAllTimers()
 
-    // The server-side catalog entry is released by the close, not by a message.
+    // The server-side board entry is released by the close, not by a message.
     expect(socket.readyState).toBe(MockWebSocket.CLOSED)
     expect(frameTypes(socket)).toEqual(['subscribe_lobby'])
     expect(MockWebSocket.instances).toHaveLength(1)
   })
 })
 
-describe('room channel subscription', () => {
+describe('squad channel subscription', () => {
   it('re-sends join_room after reconnecting and replaces the roster from a fresh snapshot', async () => {
-    renderRoomsFlow('/rooms/LOBBY1')
-    await screen.findByText(lobbyRoom.name)
+    renderSquadsFlow('/rooms/LOBBY1')
+    await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
     expect(latestWebSocket().sentFrames()).toEqual([
       { type: 'join_room', payload: { roomCode: 'LOBBY1' } },
@@ -168,9 +168,9 @@ describe('room channel subscription', () => {
     expect(screen.getByText('1/3 players')).toBeInTheDocument()
   })
 
-  it('leaves the previous room on a code switch and ignores its late events', async () => {
+  it('leaves the previous squad on a code switch and ignores its late events', async () => {
     const nextRoom = {
-      ...lobbyRoom,
+      ...lobbySquad,
       id: 'aaaaaaaa-0000-4000-8000-000000000007',
       code: 'NEXT01',
       name: 'Next squad',
@@ -181,8 +181,8 @@ describe('room channel subscription', () => {
       return httpOk(lobbyRoomResponse)
     })
 
-    const { router } = renderRoomsFlow('/rooms/LOBBY1')
-    await screen.findByText(lobbyRoom.name)
+    const { router } = renderSquadsFlow('/rooms/LOBBY1')
+    await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
     const socket = latestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
@@ -220,8 +220,8 @@ describe('room channel subscription', () => {
   })
 
   it('keeps the last roster and Presence frozen while disconnected', async () => {
-    renderRoomsFlow('/rooms/LOBBY1')
-    await screen.findByText(lobbyRoom.name)
+    renderSquadsFlow('/rooms/LOBBY1')
+    await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     await screen.findByText('Ana')
@@ -235,14 +235,14 @@ describe('room channel subscription', () => {
     expect(screen.getByText('Reconnecting…')).toBeInTheDocument()
   })
 
-  it('leaves the room channel by closing the socket, without leave_room, on navigation', async () => {
-    const { router } = renderRoomsFlow('/rooms/LOBBY1')
-    await screen.findByText(lobbyRoom.name)
+  it('leaves the squad channel by closing the socket, without leave_room, on navigation', async () => {
+    const { router } = renderSquadsFlow('/rooms/LOBBY1')
+    await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
     const lobbySocket = latestWebSocket()
 
-    await act(() => router.navigate({ to: '/rooms', search: {} }))
-    await screen.findByText(openRoom.name)
+    await act(() => router.navigate({ href: '/squads' }))
+    await screen.findByText(openSquad.name)
 
     // Leaving the route affects Presence only (server emits presence_updated on close).
     expect(lobbySocket.readyState).toBe(MockWebSocket.CLOSED)
@@ -263,7 +263,7 @@ describe('live state ownership', () => {
         })
     )
 
-    renderRoomsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/rooms/LOBBY1')
     // The page is still loading while the HTTP response is held back, so wait
     // for the route to mount and open its socket.
     await vi.waitFor(() => expect(MockWebSocket.instances.length).toBeGreaterThan(0))

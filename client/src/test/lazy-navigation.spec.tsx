@@ -27,13 +27,13 @@ import type { AnyRoute, Router } from '@tanstack/react-router'
 import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { routerDefaults } from '@/router'
-import { roomsSearchSchema } from '@/features/room-list'
-import type { CatalogPage } from '@/features/catalog'
+import { squadsSearchSchema } from '@/features/squad-list'
+import type { SquadBoardPage } from '@/features/squad-board/page'
 import { createTestQueryClient } from './harness'
 import { httpOk, onHttp } from './http-router'
-import { catalogGames, catalogRooms } from './fixtures'
+import { boardGames, boardSquads } from './fixtures'
 
-type CatalogModule = { CatalogPage: typeof CatalogPage }
+type BoardModule = { SquadBoardPage: typeof SquadBoardPage }
 
 /** TanStack Router defaults; `src/router.tsx` deliberately does not override them. */
 const PENDING_MS = 1_000
@@ -47,7 +47,7 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
-function buildFlowTree(loadCatalog: () => Promise<CatalogModule>): AnyRoute {
+function buildFlowTree(loadBoard: () => Promise<BoardModule>): AnyRoute {
   const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
   const indexRoute = createRoute({
@@ -56,23 +56,23 @@ function buildFlowTree(loadCatalog: () => Promise<CatalogModule>): AnyRoute {
     component: () => <div>Landing stub</div>,
   })
 
-  const catalogRoute = createRoute({
+  const boardRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/rooms/',
-    validateSearch: (raw) => roomsSearchSchema.parse(raw),
-    component: lazyRouteComponent(loadCatalog, 'CatalogPage'),
+    path: '/squads',
+    validateSearch: (raw) => squadsSearchSchema.parse(raw),
+    component: lazyRouteComponent(loadBoard, 'SquadBoardPage'),
   })
 
-  return rootRoute.addChildren([indexRoute, catalogRoute]) as AnyRoute
+  return rootRoute.addChildren([indexRoute, boardRoute]) as AnyRoute
 }
 
 function renderFlow(
-  loadCatalog: () => Promise<CatalogModule>,
+  loadBoard: () => Promise<BoardModule>,
   initialEntry: string
 ): { router: Router<AnyRoute>; queryClient: QueryClient } {
   const queryClient = createTestQueryClient()
   const router = createRouter({
-    routeTree: buildFlowTree(loadCatalog),
+    routeTree: buildFlowTree(loadBoard),
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
     ...routerDefaults,
   })
@@ -89,23 +89,23 @@ function renderFlow(
 }
 
 beforeEach(() => {
-  onHttp('GET', '/api/rooms', () => httpOk(catalogRooms))
-  onHttp('GET', '/api/games', () => httpOk(catalogGames))
+  onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  onHttp('GET', '/api/games', () => httpOk(boardGames))
 })
 
 describe('on-demand route navigation', () => {
   it('shows the pending state while the chunk outlives the default delay, then renders the page', async () => {
-    const catalogModule = await import('@/features/catalog')
+    const boardModule = await import('@/features/squad-board/page')
     vi.useFakeTimers()
     try {
-      const catalogImport = deferred<CatalogModule>()
-      const { router } = renderFlow(() => catalogImport.promise, '/')
+      const boardImport = deferred<BoardModule>()
+      const { router } = renderFlow(() => boardImport.promise, '/')
       await act(async () => {})
       expect(screen.getByText('Landing stub')).toBeInTheDocument()
 
       let navigation: Promise<void> | undefined
       await act(async () => {
-        navigation = router.navigate({ to: '/rooms', search: {} })
+        navigation = router.navigate({ href: '/squads' })
       })
 
       // Below the 1000 ms default the loading state stays hidden.
@@ -120,7 +120,7 @@ describe('on-demand route navigation', () => {
 
       // The chunk lands, but the pending state respects its 500 ms minimum.
       await act(async () => {
-        catalogImport.resolve(catalogModule)
+        boardImport.resolve(boardModule)
         await vi.advanceTimersByTimeAsync(PENDING_MIN_MS)
         await navigation
       })
@@ -137,24 +137,24 @@ describe('on-demand route navigation', () => {
   })
 
   it('renders directly on an on-demand route when its chunk resolves before paint', async () => {
-    const catalogModule = await import('@/features/catalog')
-    renderFlow(() => Promise.resolve(catalogModule), '/rooms')
+    const boardModule = await import('@/features/squad-board/page')
+    renderFlow(() => Promise.resolve(boardModule), '/squads')
 
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
     expect(screen.queryByTestId('route-pending')).not.toBeInTheDocument()
   })
 
   it('does not show the pending state when the chunk resolves below the default delay', async () => {
-    const catalogModule = await import('@/features/catalog')
+    const boardModule = await import('@/features/squad-board/page')
     vi.useFakeTimers()
     try {
-      const { router } = renderFlow(() => Promise.resolve(catalogModule), '/')
+      const { router } = renderFlow(() => Promise.resolve(boardModule), '/')
       await act(async () => {})
       expect(screen.getByText('Landing stub')).toBeInTheDocument()
 
       let navigation: Promise<void> | undefined
       await act(async () => {
-        navigation = router.navigate({ to: '/rooms', search: {} })
+        navigation = router.navigate({ href: '/squads' })
         await navigation
       })
 

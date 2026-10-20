@@ -9,10 +9,10 @@
 import { act, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as RoomCreationModule from '@/features/room-creation'
-import type * as JoinRoomAuthModalModule from '@/features/room-joining/join-room-auth-modal'
-import { renderRoomsFlow } from './harness'
+import type * as JoinSquadAuthModalModule from '@/features/squad-joining/join-squad-auth-modal'
+import { renderSquadsFlow } from './harness'
 import { httpOk, onHttp } from './http-router'
-import { catalogGames, catalogRooms } from './fixtures'
+import { boardGames, boardSquads } from './fixtures'
 
 const gates = vi.hoisted(() => {
   let resolveCreate!: () => void
@@ -35,19 +35,19 @@ vi.mock('@/features/room-creation', async (importOriginal) => {
   return await importOriginal<typeof RoomCreationModule>()
 })
 
-vi.mock('@/features/room-joining/join-room-auth-modal', async (importOriginal) => {
+vi.mock('@/features/squad-joining/join-squad-auth-modal', async (importOriginal) => {
   await gates.join
-  return await importOriginal<typeof JoinRoomAuthModalModule>()
+  return await importOriginal<typeof JoinSquadAuthModalModule>()
 })
 
 beforeEach(() => {
-  onHttp('GET', '/api/rooms', () => httpOk(catalogRooms))
-  onHttp('GET', '/api/games', () => httpOk(catalogGames))
+  onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  onHttp('GET', '/api/games', () => httpOk(boardGames))
 })
 
 describe('on-demand dialogs', () => {
   it('shows ModalLoading while the create dialog chunk is in flight', async () => {
-    const { user } = renderRoomsFlow('/rooms')
+    const { user } = renderSquadsFlow('/squads')
     await screen.findByText('Ranked grind')
 
     await user.click(screen.getByText('Create new squad'))
@@ -65,7 +65,7 @@ describe('on-demand dialogs', () => {
   })
 
   it('shows ModalLoading while the join prompt chunk is in flight', async () => {
-    const { user } = renderRoomsFlow('/rooms', { user: null })
+    const { user } = renderSquadsFlow('/squads', { user: null })
     await screen.findByText('Ranked grind')
 
     await user.click(screen.getByText('Ranked grind'))

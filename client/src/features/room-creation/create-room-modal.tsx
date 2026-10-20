@@ -1,6 +1,5 @@
 import { useForm, Controller } from 'react-hook-form'
 import { useState, useRef, type ChangeEvent, type KeyboardEvent } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -15,11 +14,10 @@ import { getUserFriendlyError } from '@/lib/error-messages'
 import { languageBadgeKey } from '@/lib/language-badge'
 import { translateTagError } from './tag-errors'
 import { notifyError } from '@/lib/notify'
-// The commands entry point is the catalog's cross-capability port. Importing
-// it instead of the barrel keeps the catalog page (which renders this dialog)
-// out of a cycle.
-import { useCatalogCommands } from '@/features/catalog/commands'
-import type { Game, Room } from '@/types'
+import { useAppNavigation } from '@/lib/navigation'
+// The board's barrel exports only its cache commands, so this import cannot close a cycle back to the page that renders this dialog.
+import { useSquadBoardCommands } from '@/features/squad-board'
+import type { Game, Squad } from '@/types'
 import type { CreateRoomInput } from '@squadzr/schemas'
 
 const formSchema = createRoomInputSchema.extend({
@@ -34,10 +32,10 @@ export interface CreateRoomModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   /**
-   * Called with the new room after the catalog refresh was requested and
+   * Called with the new room after the board refresh was requested and
    * before navigating to its lobby, so the caller can refresh its own data.
    */
-  onCreated?: (room: Room) => void
+  onCreated?: (room: Squad) => void
 }
 
 interface TagsChipInputProps {
@@ -138,14 +136,15 @@ const languageOptions = ['pt-br', 'en'] as const
 
 /**
  * The create-room dialog: form values are inferred from the shared contract,
- * and the creation mutation, its typed errors, the catalog refresh and the
+ * and the creation mutation, its typed errors, the board refresh and the
  * navigation to the new lobby stay internal. Callers supply the games they
  * already loaded and control the dialog.
  */
 export function CreateRoomModal({ games, open, onOpenChange, onCreated }: CreateRoomModalProps) {
   const t = useTranslations()
-  const navigate = useNavigate()
-  const { refreshRooms } = useCatalogCommands()
+  // The lobby is still served by the old app, so the navigation goes through the shell's helper.
+  const navigateApp = useAppNavigation()
+  const { refreshSquads } = useSquadBoardCommands()
   const {
     register,
     handleSubmit,
@@ -183,9 +182,9 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
       // after this page unmounts), so the new room is requested explicitly,
       // like the join flow does. The navigate follows immediately; the
       // in-flight refresh survives the unmount.
-      void refreshRooms()
+      void refreshSquads()
       onCreated?.(result.room)
-      navigate({ to: '/rooms/$code', params: { code: result.room.code } })
+      navigateApp(`/rooms/${encodeURIComponent(result.room.code)}`)
     },
   })
 

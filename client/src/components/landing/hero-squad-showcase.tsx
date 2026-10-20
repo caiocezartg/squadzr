@@ -2,11 +2,11 @@
 
 import * as m from 'motion/react-m'
 import { useNow } from 'next-intl'
-import { RoomCard } from '@/features/room-list'
-import type { Game, Room } from '@/types'
+import { SquadCard } from '@/features/squad-list'
+import type { Game, Squad } from '@/types'
 
 interface ShowcaseItem {
-  readonly squad: Room
+  readonly squad: Squad
   readonly game: Game
   readonly floatAmount: number
   readonly floatDuration: number
@@ -136,7 +136,7 @@ export function HeroSquadShowcase() {
             delay: floatDelay,
           }}
         >
-          <RoomCard room={squad} game={game} currentMembers={squad.memberCount} />
+          <SquadCard squad={squad} game={game} />
         </m.div>
       ))}
     </div>

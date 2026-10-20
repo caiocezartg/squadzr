@@ -12,7 +12,7 @@ export function CTABanner() {
   const session = useSession()
 
   const handleSignIn = () => {
-    signInWithDiscord('/rooms')
+    signInWithDiscord('/squads')
   }
 
   return (
@@ -37,7 +37,7 @@ export function CTABanner() {
         <p className="mt-4 text-muted text-lg max-w-xl mx-auto">{t('cta.subtitle')}</p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <AppLink href="/rooms" className="btn-accent gap-2 text-base px-8 py-3">
+          <AppLink href="/squads" className="btn-accent gap-2 text-base px-8 py-3">
             {t('cta.browseSquads')}
           </AppLink>
           {!session?.user && (

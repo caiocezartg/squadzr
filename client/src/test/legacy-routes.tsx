@@ -2,8 +2,8 @@ import { Outlet, createRootRoute, createRoute } from '@tanstack/react-router'
 import type { AnyRoute } from '@tanstack/react-router'
 
 /**
- * The old app's routes, each page naming itself and filling in its title. `/` is not among them: the
- * landing is an App Router page, so the old app does not own that path.
+ * The old app's routes, each page naming itself and filling in its title. `/` and `/squads` are not
+ * among them: the landing and the Squad Board are App Router pages, so the old app does not own those paths.
  */
 export function legacyRouteTree(): AnyRoute {
   const rootRoute = createRootRoute({ component: () => <Outlet /> })
@@ -17,11 +17,6 @@ export function legacyRouteTree(): AnyRoute {
       )
     }
 
-  const squadsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/rooms/',
-    component: page('Squads · Squadzr', 'Squads page'),
-  })
   const lobbyRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/rooms/$code',
@@ -33,5 +28,5 @@ export function legacyRouteTree(): AnyRoute {
     component: page('My squads · Squadzr', 'My squads page'),
   })
 
-  return rootRoute.addChildren([squadsRoute, lobbyRoute, mySquadsRoute]) as AnyRoute
+  return rootRoute.addChildren([lobbyRoute, mySquadsRoute]) as AnyRoute
 }

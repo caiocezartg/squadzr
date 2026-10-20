@@ -104,7 +104,6 @@ beforeEach(() => {
 
 describe('shell navigation to the old app', () => {
   it.each([
-    ['/rooms', 'Squads page'],
     ['/rooms/ABC123', 'Lobby page'],
     ['/rooms/my', 'My squads page'],
   ])('reaches every old-app route from the header when the page is %s', async (start, page) => {
@@ -113,7 +112,6 @@ describe('shell navigation to the old app', () => {
     expect(await screen.findByText(page)).toBeInTheDocument()
 
     const destinations: Array<[link: string, path: string, label: string]> = [
-      ['ALL SQUADS', '/rooms', 'Squads page'],
       ['MY SQUADS', '/rooms/my', 'My squads page'],
     ]
     for (const [link, path, label] of destinations) {
@@ -127,16 +125,12 @@ describe('shell navigation to the old app', () => {
 
   it('reaches the old-app routes from the mobile sidebar', async () => {
     signInAsFakeUser()
-    const { user, navigation } = renderShell('/rooms', { registered: true })
-    expect(await screen.findByText('Squads page')).toBeInTheDocument()
+    const { user, navigation } = renderShell('/rooms/ABC123', { registered: true })
+    expect(await screen.findByText('Lobby page')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Open menu' }))
     await user.click(within(sidebarNavigation()).getByRole('link', { name: 'MY SQUADS' }))
     expect(await screen.findByText('My squads page')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Open menu' }))
-    await user.click(within(sidebarNavigation()).getByRole('link', { name: 'ALL SQUADS' }))
-    expect(await screen.findByText('Squads page')).toBeInTheDocument()
 
     expect(navigation.calls).toEqual([])
   })
@@ -144,7 +138,7 @@ describe('shell navigation to the old app', () => {
   it('opens a squad from its notification through the old-app router', async () => {
     signInAsFakeUser()
     notifications = [squadNotification(ALPHA_ID, 'Alpha squad', null)]
-    const { user, navigation } = renderShell('/rooms', { registered: true })
+    const { user, navigation } = renderShell('/rooms/my', { registered: true })
 
     await user.click(await screen.findByRole('button', { name: '1' }))
     await user.click(screen.getByRole('button', { name: /Alpha squad/ }))
@@ -156,8 +150,8 @@ describe('shell navigation to the old app', () => {
   it('hands a path the old app does not own to the Next router', async () => {
     signInAsFakeUser()
     // The landing is an App Router page, so the old app has no `/` route.
-    const { user, navigation } = renderShell('/rooms', { registered: true })
-    expect(await screen.findByText('Squads page')).toBeInTheDocument()
+    const { user, navigation } = renderShell('/rooms/my', { registered: true })
+    expect(await screen.findByText('My squads page')).toBeInTheDocument()
 
     await user.click(headerLink('Squadzr logo'))
 
@@ -176,7 +170,7 @@ describe('shell navigation to the old app', () => {
 
     await user.click(headerLink('ALL SQUADS'))
 
-    expect(navigation.calls).toEqual([{ method: 'push', href: '/rooms' }])
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads' }])
   })
 })
 
@@ -187,9 +181,9 @@ describe('shell document title', () => {
       squadNotification(ALPHA_ID, 'Alpha squad', null),
       squadNotification(BETA_ID, 'Beta squad', null),
     ]
-    const { user } = renderShell('/rooms', { registered: true })
+    const { user } = renderShell('/rooms/ABC123', { registered: true })
 
-    await waitFor(() => expect(document.title).toBe('(2) Squads · Squadzr'))
+    await waitFor(() => expect(document.title).toBe('(2) Lobby · Squadzr'))
 
     await user.click(headerLink('MY SQUADS'))
     await waitFor(() => expect(document.title).toBe('(2) My squads · Squadzr'))
@@ -203,7 +197,7 @@ describe('shell document title', () => {
 describe('shell account', () => {
   it('shows the initial in the account button when the viewer has no avatar', async () => {
     signInAsFakeUser({ name: 'Caio', image: null })
-    renderShell('/rooms', { registered: true })
+    renderShell('/rooms/my', { registered: true })
 
     const account = await screen.findByRole('button', { name: 'Caio' })
     expect(within(account).getByText('C')).toBeInTheDocument()
@@ -211,7 +205,7 @@ describe('shell account', () => {
 
   it('shows the initial once the avatar image fails to load', async () => {
     signInAsFakeUser({ name: 'Caio', image: 'https://cdn.discordapp.com/avatars/1/broken.png' })
-    renderShell('/rooms', { registered: true })
+    renderShell('/rooms/my', { registered: true })
 
     const account = await screen.findByRole('button', { name: 'Caio' })
     const image = account.querySelector('img')

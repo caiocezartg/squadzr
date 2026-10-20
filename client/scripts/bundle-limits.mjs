@@ -9,6 +9,9 @@
  *   as it is.
  * - The catch-all route's initial JavaScript, gzip: its CCC-70 baseline of 438.07 kB, rounded up to
  *   the next 5 kB. Routes without a limit are reported only.
+ * - The Squad Board's initial JavaScript, gzip: its measured size (CCC-79) rounded up to the next 5 kB.
+ *   It is a regression guard with no fixed ceiling: the create and join dialogs are part of this size
+ *   once ticket 13 renders them eagerly.
  * - Every emitted JavaScript chunk, raw: at most 500 kB. The largest chunk decides it, because no
  *   other chunk can be larger.
  *
@@ -20,6 +23,7 @@
 export const ROUTE_LIMITS_GZIP_KB = {
   '/': 340,
   '/[...slug]': 440,
+  '/squads': 325,
 }
 
 /** Largest raw size of any emitted JavaScript chunk, in kB. */

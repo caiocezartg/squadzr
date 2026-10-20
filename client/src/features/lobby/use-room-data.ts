@@ -26,7 +26,7 @@ export function useRoomData(roomCode: string): RoomData {
     error,
   } = useQuery({
     queryKey: ['room', roomCode],
-    queryFn: () => api.get(`/api/rooms/${roomCode}`, roomResponseSchema),
+    queryFn: () => api.get(`/api/rooms/${encodeURIComponent(roomCode)}`, roomResponseSchema),
   })
 
   const gameId = roomData?.room.gameId

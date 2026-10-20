@@ -1,7 +1,7 @@
 // Transport types inferred from the shared Zod contracts (@squadzr/schemas)
 export type {
-  RoomDto as Room,
-  PublicRoomDto as PublicRoom,
+  RoomDto as Squad,
+  PublicRoomDto as PublicSquad,
   GameDto as Game,
   UserNotificationDto as UserNotification,
   PlayerDto as Player,

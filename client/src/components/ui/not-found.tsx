@@ -1,5 +1,4 @@
 import * as m from 'motion/react-m'
-import { Link } from '@tanstack/react-router'
 import { useTranslations } from 'next-intl'
 import { Compass } from 'lucide-react'
 import { AppLink } from '@/components/layout/app-link'
@@ -40,9 +39,9 @@ export function NotFound() {
           <AppLink href="/" className="btn-accent w-full sm:w-auto text-center">
             {t('notFound.backToHome')}
           </AppLink>
-          <Link to="/rooms" search={{}} className="btn-ghost w-full sm:w-auto text-center">
+          <AppLink href="/squads" className="btn-ghost w-full sm:w-auto text-center">
             {t('notFound.exploreRooms')}
-          </Link>
+          </AppLink>
         </div>
       </m.div>
     </div>

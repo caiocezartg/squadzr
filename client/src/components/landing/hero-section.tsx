@@ -22,7 +22,7 @@ export function HeroSection({ gameCount }: { readonly gameCount: number }) {
   const session = useSession()
 
   const handleSignIn = () => {
-    signInWithDiscord('/rooms')
+    signInWithDiscord('/squads')
   }
 
   return (
@@ -61,7 +61,7 @@ export function HeroSection({ gameCount }: { readonly gameCount: number }) {
           {/* CTAs */}
           <div className="mt-8 flex flex-col sm:flex-row items-start gap-3">
             <AppLink
-              href="/rooms"
+              href="/squads"
               className="btn-accent gap-2 text-base px-7 py-3 w-full md:w-auto"
             >
               <Search className="size-5" strokeWidth={2.5} />

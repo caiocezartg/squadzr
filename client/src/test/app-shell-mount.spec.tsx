@@ -20,7 +20,7 @@ const nextRouter = {
 }
 
 beforeEach(() => {
-  window.history.replaceState(null, '', '/rooms')
+  window.history.replaceState(null, '', '/rooms/ABC123')
 })
 
 afterEach(() => {
@@ -32,7 +32,7 @@ describe('the catch-all mounts the old app', () => {
     // The catch-all loads the shell when it mounts, so the shell is imported at the first mount's URL.
     const { default: AppShell } = await import('@/app-shell')
     const first = render(<AppShell />)
-    expect(await screen.findByText('Squads page')).toBeInTheDocument()
+    expect(await screen.findByText('Lobby page')).toBeInTheDocument()
 
     // A path the old app does not own goes out through the Next router, and the catch-all unmounts.
     navigateTo('/about', nextRouter)
@@ -53,13 +53,13 @@ describe('the catch-all mounts the old app', () => {
         <AppShell />
       </StrictMode>
     )
-    expect(await screen.findByText('Squads page')).toBeInTheDocument()
+    expect(await screen.findByText('Lobby page')).toBeInTheDocument()
 
     // The old app owns this path, so its router navigates and writes the URL.
     navigateTo('/rooms/my', nextRouter)
     expect(await screen.findByText('My squads page')).toBeInTheDocument()
 
     window.history.back()
-    expect(await screen.findByText('Squads page')).toBeInTheDocument()
+    expect(await screen.findByText('Lobby page')).toBeInTheDocument()
   })
 })

@@ -37,7 +37,7 @@ function NavigationProbe() {
 
 describe('harness navigation', () => {
   it('updates the one in-memory location from a next/navigation push and a next/link click', async () => {
-    const navigation = createHarnessNavigation('/rooms')
+    const navigation = createHarnessNavigation('/squads')
     const user = userEvent.setup({ delay: null })
     render(<NavigationProbe />)
 
@@ -53,7 +53,7 @@ describe('harness navigation', () => {
   })
 
   it('records replace, back, forward and a route refresh on the same location', async () => {
-    const navigation = createHarnessNavigation('/rooms')
+    const navigation = createHarnessNavigation('/squads')
     const user = userEvent.setup({ delay: null })
     render(<NavigationProbe />)
 
@@ -74,7 +74,7 @@ describe('harness navigation', () => {
   })
 
   it('leaves a modified click to the browser, as an anchor does', () => {
-    const navigation = createHarnessNavigation('/rooms')
+    const navigation = createHarnessNavigation('/squads')
     render(<NavigationProbe />)
     const link = screen.getByRole('link', { name: 'Open lobby' })
 
@@ -95,6 +95,6 @@ describe('harness navigation', () => {
     expect(link).toHaveAttribute('href', '/rooms/LOBBY1')
     expect(cancelledByHarness).toBe(false)
     expect(navigation.calls).toEqual([])
-    expect(navigation.history.location.pathname).toBe('/rooms')
+    expect(navigation.history.location.pathname).toBe('/squads')
   })
 })
