@@ -115,7 +115,7 @@ describe('create squad — success flow', () => {
     })
 
     await waitFor(() =>
-      expect(router.history.location.pathname).toBe(`/rooms/${createdSquad.code}`)
+      expect(router.history.location.pathname).toBe(`/squads/${createdSquad.code}`)
     )
     expect(screen.getByText('Created squad')).toBeInTheDocument()
   })
@@ -140,7 +140,7 @@ describe('create squad — returning to the board', () => {
 
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
     await waitFor(() =>
-      expect(router.history.location.pathname).toBe(`/rooms/${createdSquad.code}`)
+      expect(router.history.location.pathname).toBe(`/squads/${createdSquad.code}`)
     )
 
     // The create flow refreshes the board before it navigates to the lobby.
@@ -183,7 +183,7 @@ describe('create squad — from my squads', () => {
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
 
     await waitFor(() =>
-      expect(router.history.location.pathname).toBe(`/rooms/${createdSquad.code}`)
+      expect(router.history.location.pathname).toBe(`/squads/${createdSquad.code}`)
     )
 
     // The create capability asked the board to refresh even though the

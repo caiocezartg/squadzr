@@ -1,29 +1,28 @@
-import { useState } from 'react'
 import * as m from 'motion/react-m'
 import { Copy, ExternalLink } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { DiscordIcon } from '@/components/ui/icons'
+import { useCopiedFlag } from '../use-copied-flag'
 
 interface DiscordLinkCardProps {
   discordLink: string
-  isReadyRoom: boolean
+  isReady: boolean
 }
 
-export function DiscordLinkCard({ discordLink, isReadyRoom }: DiscordLinkCardProps) {
+export function DiscordLinkCard({ discordLink, isReady }: DiscordLinkCardProps) {
   const t = useTranslations()
-  const [copied, setCopied] = useState(false)
+  const [copied, markCopied] = useCopiedFlag()
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(discordLink)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    markCopied()
   }
 
   const isValidDiscordLink =
     discordLink.startsWith('https://discord.gg/') ||
     discordLink.startsWith('https://discord.com/invite/')
 
-  if (!isReadyRoom || !isValidDiscordLink) return null
+  if (!isReady || !isValidDiscordLink) return null
 
   return (
     <m.div

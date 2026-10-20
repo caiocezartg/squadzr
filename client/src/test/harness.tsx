@@ -3,9 +3,9 @@
  *
  * Composes a TanStack Router tree using only the library's public code-based
  * API (`createRootRoute` + `createRoute` + `addChildren`). The tree stands in for
- * the app's two routers: the Squad Board is an App Router page in the app, and
- * it mounts here at `/squads` next to the old app's routes, `/rooms/$code` (lobby)
- * and `/rooms/my` (My Squads). Each route mounts the REAL page component, and
+ * the app's two routers: the Squad Board and the Lobby are App Router pages in the
+ * app, and they mount here at `/squads` and `/squads/$code`, next to the old app's
+ * `/rooms/my` (My Squads). Each route mounts the REAL page component, and
  * the My Squads route takes its search validation from the imported route file,
  * so the tests exercise the actual implementations without any generated
  * internals (`_addFileChildren`, `_addFileTypes`, `update` re-parenting) or
@@ -26,15 +26,16 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  useParams,
 } from '@tanstack/react-router'
 import type { AnyRoute, Router } from '@tanstack/react-router'
 import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
 import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
+import { LobbyPage } from '@/features/lobby'
 import { SquadBoardPage } from '@/features/squad-board/page'
 import { squadsSearchSchema } from '@/features/squad-list'
-import { Route as RoomsCodeRoute } from '@/routes/rooms/$code'
 import { Route as RoomsMyRoute } from '@/routes/rooms/my'
 import { EnglishIntlProvider } from './intl'
 import { createHarnessNavigation } from './navigation'
@@ -66,10 +67,10 @@ function buildSquadsRouteTree(): AnyRoute {
     component: SquadBoardPage,
   })
 
-  const roomsCodeRoute = createRoute({
+  const squadLobbyRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/rooms/$code',
-    component: RoomsCodeRoute.options.component,
+    path: '/squads/$code',
+    component: SquadLobbyScene,
   })
 
   const roomsMyRoute = createRoute({
@@ -79,7 +80,14 @@ function buildSquadsRouteTree(): AnyRoute {
     component: RoomsMyRoute.options.component,
   })
 
-  return rootRoute.addChildren([squadBoardRoute, roomsCodeRoute, roomsMyRoute]) as AnyRoute
+  return rootRoute.addChildren([squadBoardRoute, squadLobbyRoute, roomsMyRoute]) as AnyRoute
+}
+
+/** The Lobby at the Squad code of the URL, as the App Router page renders it. */
+function SquadLobbyScene() {
+  const { code = '' } = useParams({ strict: false }) as { code?: string }
+
+  return <LobbyPage squadCode={code} />
 }
 
 export interface SquadsFlow {

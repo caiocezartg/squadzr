@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { useTranslations } from 'next-intl'
 import { Tabs } from '@base-ui-components/react'
 import { Plus } from 'lucide-react'
@@ -8,6 +7,7 @@ import { AlertBox } from '@/components/ui/alert-box'
 import { ModalLoading } from '@/components/ui/modal-loading'
 import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 import { useAppNavigation } from '@/lib/navigation'
+import { lobbyHref } from '@/lib/squad-links'
 import { notifyError } from '@/lib/notify'
 import { SquadCard, SquadFilters, querySquadList, useSquadFilters } from '@/features/squad-list'
 import { useGames } from '@/features/games'
@@ -32,7 +32,6 @@ const LazyCreateRoomModal = lazy(() =>
 export function MyRoomsPage() {
   const t = useTranslations()
   const session = useSession()
-  const navigate = useNavigate()
   // The landing is an App Router page, so the redirect goes through the shell's navigation helper.
   const navigateApp = useAppNavigation()
 
@@ -161,7 +160,7 @@ export function MyRoomsPage() {
                   squad={squad}
                   game={gamesMap.get(squad.gameId)}
                   onJoin={(code) => {
-                    navigate({ to: '/rooms/$code', params: { code } })
+                    navigateApp(lobbyHref(code))
                   }}
                   isLoading={false}
                 />
@@ -186,7 +185,7 @@ export function MyRoomsPage() {
                   squad={squad}
                   game={gamesMap.get(squad.gameId)}
                   onJoin={(code) => {
-                    navigate({ to: '/rooms/$code', params: { code } })
+                    navigateApp(lobbyHref(code))
                   }}
                   isLoading={false}
                 />

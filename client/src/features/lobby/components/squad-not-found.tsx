@@ -3,11 +3,12 @@ import { AppLink } from '@/components/layout/app-link'
 import { useTranslations } from 'next-intl'
 import { SearchX } from 'lucide-react'
 
-interface RoomNotFoundProps {
+interface SquadNotFoundProps {
   code: string
 }
 
-export function RoomNotFound({ code }: RoomNotFoundProps) {
+/** The Lobby's not-found state. Its motion components render under the Lobby's motion provider. */
+export function SquadNotFound({ code }: SquadNotFoundProps) {
   const t = useTranslations()
 
   return (

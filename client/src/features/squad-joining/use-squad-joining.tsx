@@ -8,6 +8,7 @@ import { signInWithDiscord } from '@/lib/auth-client'
 import { useAppNavigation } from '@/lib/navigation'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { notifyError } from '@/lib/notify'
+import { lobbyHref } from '@/lib/squad-links'
 import { ModalLoading } from '@/components/ui/modal-loading'
 import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
 // The board's barrel exports only its cache commands, so this import cannot close a cycle back to the page.
@@ -37,11 +38,6 @@ export interface SquadJoining {
   joiningSquadCode: string | null
   /** The guest sign-in prompt; render once in the page. */
   authPrompt: ReactNode
-}
-
-/** The lobby of a squad, still served by the old app. */
-function lobbyHref(squadCode: string): string {
-  return `/rooms/${encodeURIComponent(squadCode)}`
 }
 
 /**

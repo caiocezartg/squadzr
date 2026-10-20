@@ -3,6 +3,7 @@ import { Bell, CheckCheck, Gamepad2, Users, X } from 'lucide-react'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useTimeAgo } from '@/hooks/use-time-ago'
 import { useAppNavigation } from '@/lib/navigation'
+import { lobbyHref } from '@/lib/squad-links'
 import type { UserNotification } from '@/types'
 
 interface NotificationsMenuProps {
@@ -120,7 +121,7 @@ export function NotificationsMenu({ enabled, isOpen, onToggle, onClose }: Notifi
       }
     }
     onClose()
-    navigate(`/rooms/${encodeURIComponent(notification.payload.roomCode)}`)
+    navigate(lobbyHref(notification.payload.roomCode))
   }
 
   const handleDismiss = async (e: React.MouseEvent, notificationId: string) => {

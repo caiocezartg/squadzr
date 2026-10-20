@@ -1,6 +1,6 @@
 /**
  * Contract enforcement as seen from the real Squad Board (`/squads`) and lobby
- * (`/rooms/$code`) pages (CCC-34): an HTTP response or WebSocket message that
+ * (`/squads/$code`) pages (CCC-34): an HTTP response or WebSocket message that
  * breaks its contract in @squadzr/schemas never reaches the UI state, and the
  * public projection keeps the Discord invite and the roster away from non-members.
  *
@@ -133,7 +133,7 @@ describe('lobby', () => {
     onHttp('GET', '/api/rooms/:code', () =>
       httpOk({ room: { ...lobbySquad, createdAt: 1_769_000_000 }, players: [] })
     )
-    renderSquadsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/squads/LOBBY1')
 
     expect(await screen.findByText('Squad not found')).toBeInTheDocument()
     expect(screen.queryByText(lobbySquad.name)).not.toBeInTheDocument()
@@ -141,7 +141,7 @@ describe('lobby', () => {
 
   it('renders a non-member view from the public projection, without roster or invite', async () => {
     onHttp('GET', '/api/rooms/:code', () => httpOk({ room: publicLobbyRoom }))
-    renderSquadsFlow('/rooms/LOBBY1', {
+    renderSquadsFlow('/squads/LOBBY1', {
       user: { id: 'user-7', name: 'Outsider', email: 'outsider@squadzr.test', image: null },
     })
 
@@ -157,7 +157,7 @@ describe('lobby', () => {
 
   it('ignores a squad snapshot and a presence event that break the contract', async () => {
     onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
-    renderSquadsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
 
