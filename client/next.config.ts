@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['ngrok-free.dev', '*.ngrok-free.dev'],
   // The root AGENTS.md is the agent guide for this repository; keep Next from adding another.
   agentRules: false,
+  // Without it, Turbopack keeps every zod locale in the root layout's JavaScript (about 40 kB gzip).
+  experimental: { optimizePackageImports: ['zod'] },
   // Discord hosts the player avatars that the header shows through next/image.
   images: {
     remotePatterns: [{ protocol: 'https', hostname: 'cdn.discordapp.com' }],
