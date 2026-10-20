@@ -4,7 +4,7 @@
  */
 
 import { StrictMode } from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { navigateTo } from '@/lib/navigation'
 
@@ -20,7 +20,8 @@ const nextRouter = {
 }
 
 beforeEach(() => {
-  window.history.replaceState(null, '', '/rooms/ABC123')
+  // The Lobby's path: the old app owns no route on it.
+  window.history.replaceState(null, '', '/squads/ABC123')
 })
 
 afterEach(() => {
@@ -32,13 +33,13 @@ describe('the catch-all mounts the old app', () => {
     // The catch-all loads the shell when it mounts, so the shell is imported at the first mount's URL.
     const { default: AppShell } = await import('@/app-shell')
     const first = render(<AppShell />)
-    expect(await screen.findByText('Lobby page')).toBeInTheDocument()
+    expect(screen.queryByText('My squads page')).not.toBeInTheDocument()
 
     // A path the old app does not own goes out through the Next router, and the catch-all unmounts.
     navigateTo('/about', nextRouter)
     first.unmount()
 
-    // The Next router moves the URL to another old-app path, and the catch-all mounts there.
+    // The Next router moves the URL to the old app's My Squads page, and the catch-all mounts there.
     nextRouter.push('/rooms/my')
     render(<AppShell />)
 
@@ -53,13 +54,14 @@ describe('the catch-all mounts the old app', () => {
         <AppShell />
       </StrictMode>
     )
-    expect(await screen.findByText('Lobby page')).toBeInTheDocument()
+    expect(screen.queryByText('My squads page')).not.toBeInTheDocument()
 
     // The old app owns this path, so its router navigates and writes the URL.
     navigateTo('/rooms/my', nextRouter)
     expect(await screen.findByText('My squads page')).toBeInTheDocument()
 
     window.history.back()
-    expect(await screen.findByText('Lobby page')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('My squads page')).not.toBeInTheDocument())
+    expect(window.location.pathname).toBe('/squads/ABC123')
   })
 })

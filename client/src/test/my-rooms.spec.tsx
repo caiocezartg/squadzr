@@ -88,7 +88,7 @@ describe('my squads — Ready Room retention', () => {
     await user.click(screen.getByText('Ready squad'))
 
     await waitFor(() =>
-      expect(router.history.location.pathname).toBe(`/rooms/${readyHostedRoom.code}`)
+      expect(router.history.location.pathname).toBe(`/squads/${readyHostedRoom.code}`)
     )
   })
 
@@ -102,7 +102,7 @@ describe('my squads — Ready Room retention', () => {
     expect(await screen.findByText('Joined ready squad')).toBeInTheDocument()
     await user.click(screen.getByText('Joined ready squad'))
 
-    await waitFor(() => expect(router.history.location.pathname).toBe('/rooms/READY2'))
+    await waitFor(() => expect(router.history.location.pathname).toBe('/squads/READY2'))
   })
 
   it('drops a Ready room once the server stops returning it', async () => {

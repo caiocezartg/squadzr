@@ -30,8 +30,8 @@ import {
 import type { AnyRoute } from '@tanstack/react-router'
 import { act, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { LobbySkeleton } from '@/features/lobby/skeleton'
 import { SquadBoardPage } from '@/features/squad-board/page'
-import { Route as RoomsCodeRoute } from '@/routes/rooms/$code'
 import { Route as RoomsMyRoute } from '@/routes/rooms/my'
 import type { LobbyPage } from '@/features/lobby'
 import type { MyRoomsPage } from '@/features/my-rooms'
@@ -90,18 +90,18 @@ function buildLobbyTree(load: () => Promise<LobbyModule>): AnyRoute {
   const rootRoute = createRootRoute({ component: () => <Outlet /> })
   const lobbyRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/rooms/$code',
+    path: '/squads/$code',
     component: lazyRouteComponent(
       () =>
         load().then(({ LobbyPage }) => ({
           LobbyRoute: function LobbyRoute() {
             const { code } = lobbyRoute.useParams()
-            return <LobbyPage roomCode={code} />
+            return <LobbyPage squadCode={code} />
           },
         })),
       'LobbyRoute'
     ),
-    pendingComponent: RoomsCodeRoute.options.pendingComponent,
+    pendingComponent: LobbySkeleton,
   })
   return rootRoute.addChildren([lobbyRoute]) as AnyRoute
 }
@@ -161,7 +161,7 @@ describe('route skeletons', () => {
       const lobbyImport = deferred<LobbyModule>()
       mountFlow(
         buildLobbyTree(() => lobbyImport.promise),
-        `/rooms/${lobbySquad.code}`
+        `/squads/${lobbySquad.code}`
       )
       await reachPendingSkeleton('lobby-skeleton')
 

@@ -15,6 +15,7 @@ import { languageBadgeKey } from '@/lib/language-badge'
 import { translateTagError } from './tag-errors'
 import { notifyError } from '@/lib/notify'
 import { useAppNavigation } from '@/lib/navigation'
+import { lobbyHref } from '@/lib/squad-links'
 // The board's barrel exports only its cache commands, so this import cannot close a cycle back to the page that renders this dialog.
 import { useSquadBoardCommands } from '@/features/squad-board'
 import type { Game, Squad } from '@/types'
@@ -184,7 +185,7 @@ export function CreateRoomModal({ games, open, onOpenChange, onCreated }: Create
       // in-flight refresh survives the unmount.
       void refreshSquads()
       onCreated?.(result.room)
-      navigateApp(`/rooms/${encodeURIComponent(result.room.code)}`)
+      navigateApp(lobbyHref(result.room.code))
     },
   })
 

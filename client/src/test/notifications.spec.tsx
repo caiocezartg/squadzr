@@ -61,7 +61,7 @@ function headerScene(): AnyRoute {
   })
   const lobbyRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/rooms/$code',
+    path: '/squads/$code',
     component: () => <div>Lobby page</div>,
   })
   return rootRoute.addChildren([indexRoute, lobbyRoute]) as AnyRoute

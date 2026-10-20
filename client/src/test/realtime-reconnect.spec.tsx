@@ -1,6 +1,6 @@
 /**
  * Characterization of the typed realtime client (CCC-38) as seen from the real
- * Squad Board (`/squads`) and lobby (`/rooms/$code`) pages: reconnection with
+ * Squad Board (`/squads`) and lobby (`/squads/$code`) pages: reconnection with
  * backoff, resubscription owned by the transport, snapshot replacement of
  * stale state, duplicate-event idempotency and the HTTP/WebSocket state
  * ownership that removed the old `playersInitialized` race.
@@ -141,7 +141,7 @@ describe('board subscription', () => {
 
 describe('squad channel subscription', () => {
   it('re-sends join_room after reconnecting and replaces the roster from a fresh snapshot', async () => {
-    renderSquadsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
     expect(latestWebSocket().sentFrames()).toEqual([
@@ -181,14 +181,14 @@ describe('squad channel subscription', () => {
       return httpOk(lobbyRoomResponse)
     })
 
-    const { router } = renderSquadsFlow('/rooms/LOBBY1')
+    const { router } = renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
     const socket = latestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     expect(await screen.findByText('Ana')).toBeInTheDocument()
 
-    await act(() => router.navigate({ to: '/rooms/$code', params: { code: nextRoom.code } }))
+    await act(() => router.navigate({ href: `/squads/${nextRoom.code}` }))
 
     // The same socket releases the previous room channel before joining the new one.
     await vi.waitFor(() =>
@@ -220,7 +220,7 @@ describe('squad channel subscription', () => {
   })
 
   it('keeps the last roster and Presence frozen while disconnected', async () => {
-    renderSquadsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
@@ -236,7 +236,7 @@ describe('squad channel subscription', () => {
   })
 
   it('leaves the squad channel by closing the socket, without leave_room, on navigation', async () => {
-    const { router } = renderSquadsFlow('/rooms/LOBBY1')
+    const { router } = renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
     const lobbySocket = latestWebSocket()
@@ -263,7 +263,7 @@ describe('live state ownership', () => {
         })
     )
 
-    renderSquadsFlow('/rooms/LOBBY1')
+    renderSquadsFlow('/squads/LOBBY1')
     // The page is still loading while the HTTP response is held back, so wait
     // for the route to mount and open its socket.
     await vi.waitFor(() => expect(MockWebSocket.instances.length).toBeGreaterThan(0))

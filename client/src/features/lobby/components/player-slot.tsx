@@ -1,6 +1,7 @@
 import * as m from 'motion/react-m'
 import { User } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import { PresenceIndicator } from './presence-indicator'
 import type { Player } from '@/types'
 
@@ -32,17 +33,7 @@ export function PlayerSlot({ player, index, online = false }: PlayerSlotProps) {
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
-      {player.image ? (
-        <img
-          src={player.image}
-          alt={player.name}
-          className="size-10 rounded-full border border-accent/20 object-cover shrink-0"
-        />
-      ) : (
-        <div className="size-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-sm font-bold text-accent shrink-0">
-          {player.name.charAt(0).toUpperCase()}
-        </div>
-      )}
+      <UserAvatar name={player.name} image={player.image} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-offwhite truncate">{player.name}</p>
       </div>

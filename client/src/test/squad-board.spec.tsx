@@ -439,7 +439,7 @@ describe('squad board — removal without cached squads', () => {
     onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
     onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
 
-    const { router } = renderSquadsFlow('/rooms/LOBBY1')
+    const { router } = renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
 
@@ -735,7 +735,7 @@ describe('squad board — join flows', () => {
 
     await user.click(await screen.findByText('Ranked grind'))
 
-    await waitFor(() => expect(router.history.location.pathname).toBe('/rooms/ABC123'))
+    await waitFor(() => expect(router.history.location.pathname).toBe('/squads/ABC123'))
     expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1)
     expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
     expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThanOrEqual(2)
@@ -793,7 +793,7 @@ describe('squad board — join flows', () => {
 
     await user.click(await screen.findByText('Casual five stack'))
 
-    await waitFor(() => expect(router.history.location.pathname).toBe('/rooms/MEM111'))
+    await waitFor(() => expect(router.history.location.pathname).toBe('/squads/MEM111'))
     expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(0)
     expect(await screen.findByText('Casual five stack')).toBeInTheDocument()
   })
