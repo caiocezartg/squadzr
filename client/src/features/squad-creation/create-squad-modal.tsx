@@ -76,11 +76,11 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
   const selectedGame = games.find((game) => game.id === selectedGameId)
 
   const maxPlayersHelperText = selectedGame
-    ? t('rooms.createModal.playerLimitHelperWithGame', {
+    ? t('squads.createModal.playerLimitHelperWithGame', {
         maxPlayers: selectedGame.maxPlayers,
         gameName: selectedGame.name,
       })
-    : t('rooms.createModal.playerLimitHelper')
+    : t('squads.createModal.playerLimitHelper')
 
   const createSquad = useMutation({
     mutationFn: (input: CreateRoomInput) => api.post('/api/rooms', input, createRoomResponseSchema),
@@ -123,7 +123,7 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
           >
             <div className="flex items-center justify-between border-b border-border px-6 py-4">
               <Dialog.Title className="font-heading text-lg font-bold">
-                {t('rooms.createModal.title')}
+                {t('squads.createModal.title')}
               </Dialog.Title>
               <Dialog.Close className="flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-offwhite">
                 <X className="size-5" />
@@ -134,12 +134,12 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <FormField
                   htmlFor="modal-squadName"
-                  label={t('rooms.createModal.roomName')}
+                  label={t('squads.createModal.squadName')}
                   error={
                     errors.name
                       ? errors.name.type === 'too_small'
-                        ? t('rooms.createModal.nameRequired')
-                        : t('rooms.createModal.nameTooLong')
+                        ? t('squads.createModal.nameRequired')
+                        : t('squads.createModal.nameTooLong')
                       : undefined
                   }
                   className="lg:col-span-2"
@@ -148,7 +148,7 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
                     id="modal-squadName"
                     type="text"
                     className={errors.name ? 'input-field-error' : 'input-field'}
-                    placeholder={t('rooms.createModal.roomNamePlaceholder')}
+                    placeholder={t('squads.createModal.squadNamePlaceholder')}
                     {...register('name')}
                   />
                 </FormField>
@@ -157,8 +157,8 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_160px]">
                     <FormField
                       htmlFor="modal-gameId"
-                      label={t('rooms.createModal.game')}
-                      error={errors.gameId ? t('rooms.createModal.selectGameError') : undefined}
+                      label={t('squads.createModal.game')}
+                      error={errors.gameId ? t('squads.createModal.selectGameError') : undefined}
                     >
                       {/* The Select adds a hidden input after its trigger; wrapped, it is not the last child of the space-y stack. */}
                       <div>
@@ -182,17 +182,17 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
                       htmlFor="modal-maxPlayers"
                       label={
                         <>
-                          {t('rooms.createModal.playerLimit')}{' '}
+                          {t('squads.createModal.playerLimit')}{' '}
                           <span className="font-normal text-muted">
-                            {t('rooms.createModal.optional')}
+                            {t('squads.createModal.optional')}
                           </span>
                         </>
                       }
                       error={
                         errors.maxPlayers
                           ? errors.maxPlayers.type === 'too_small'
-                            ? t('rooms.createModal.maxPlayersTooFew')
-                            : t('rooms.createModal.maxPlayersTooMany')
+                            ? t('squads.createModal.maxPlayersTooFew')
+                            : t('squads.createModal.maxPlayersTooMany')
                           : undefined
                       }
                     >
@@ -214,13 +214,13 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
 
                 <FormField
                   htmlFor="modal-discordLink"
-                  label={t('rooms.createModal.discordLink')}
-                  hint={t('rooms.createModal.discordLinkHelper')}
+                  label={t('squads.createModal.discordLink')}
+                  hint={t('squads.createModal.discordLinkHelper')}
                   error={
                     errors.discordLink
                       ? errors.discordLink.type === 'custom'
-                        ? t('rooms.createModal.discordLinkNotValid')
-                        : t('rooms.createModal.discordLinkInvalid')
+                        ? t('squads.createModal.discordLinkNotValid')
+                        : t('squads.createModal.discordLinkInvalid')
                       : undefined
                   }
                   className="lg:col-span-2"
@@ -237,13 +237,13 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
                 <FormField
                   label={
                     <>
-                      {t('rooms.createModal.tags')}{' '}
+                      {t('squads.createModal.tags')}{' '}
                       <span className="font-normal text-muted">
-                        {t('rooms.createModal.optional')}
+                        {t('squads.createModal.optional')}
                       </span>
                     </>
                   }
-                  hint={t('rooms.createModal.tagsHelper')}
+                  hint={t('squads.createModal.tagsHelper')}
                   error={
                     errors.tags?.message ? translateTagError(errors.tags.message, t) : undefined
                   }
@@ -264,7 +264,7 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
                 </FormField>
 
                 <FormField
-                  label={t('rooms.createModal.language')}
+                  label={t('squads.createModal.language')}
                   error={errors.language?.message}
                   className="lg:col-span-2"
                 >
@@ -301,10 +301,10 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
                 {createSquad.isPending ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="size-4 animate-spin" />
-                    {t('rooms.createModal.creating')}
+                    {t('squads.createModal.creating')}
                   </span>
                 ) : (
-                  t('rooms.createModal.submit')
+                  t('squads.createModal.submit')
                 )}
               </button>
             </form>

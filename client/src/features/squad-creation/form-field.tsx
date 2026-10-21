@@ -22,13 +22,9 @@ export function FormField({ htmlFor, label, hint, error, className, children }: 
 
   return (
     <div className={className ? `space-y-1.5 ${className}` : 'space-y-1.5'}>
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className={labelClassName}>
-          {label}
-        </label>
-      ) : (
-        <label className={labelClassName}>{label}</label>
-      )}
+      <label htmlFor={htmlFor} className={labelClassName}>
+        {label}
+      </label>
       {children}
       {hint && <p className="text-xs text-muted">{hint}</p>}
       {error && <p className="field-error">{error}</p>}

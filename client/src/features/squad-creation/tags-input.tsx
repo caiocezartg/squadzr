@@ -72,7 +72,7 @@ export function TagsInput({ value: tags, onChange, onBlur, hasError }: TagsInput
               removeTag(tags.indexOf(tag))
             }}
             className="ml-0.5 flex items-center justify-center text-muted transition-colors hover:text-offwhite"
-            aria-label={t('rooms.createModal.removeTag', { tag })}
+            aria-label={t('squads.createModal.removeTag', { tag })}
           >
             <X className="size-[10px]" strokeWidth={3} />
           </button>
@@ -91,10 +91,10 @@ export function TagsInput({ value: tags, onChange, onBlur, hasError }: TagsInput
           className="min-w-[96px] flex-1 bg-transparent text-sm text-offwhite outline-hidden placeholder:text-muted/60"
           placeholder={
             tags.length === 0
-              ? t('rooms.createModal.tagsPlaceholder')
-              : t('rooms.createModal.tagsPlaceholderMore')
+              ? t('squads.createModal.tagsPlaceholder')
+              : t('squads.createModal.tagsPlaceholderMore')
           }
-          aria-label={t('rooms.createModal.addTag')}
+          aria-label={t('squads.createModal.addTag')}
         />
       )}
     </div>

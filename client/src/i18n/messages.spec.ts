@@ -45,7 +45,7 @@ describe('ICU messages', () => {
 
   it('fills single-brace placeholders', () => {
     expect(t('popularGames.playerRange', { min: 5, max: 10 })).toBe('5-10 players')
-    expect(tPtBR('rooms.createModal.removeTag', { tag: 'ranked' })).toBe('Remover tag ranked')
+    expect(tPtBR('squads.createModal.removeTag', { tag: 'ranked' })).toBe('Remover tag ranked')
     expect(tPtBR('timeAgo.minutesAgo', { count: 5 })).toBe('há 5min')
   })
 

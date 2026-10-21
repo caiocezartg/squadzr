@@ -20,7 +20,7 @@ export function GameSelect({ id, games, value, onChange, hasError }: GameSelectP
   const t = useTranslations()
   const selectedGame = games.find((game) => game.id === value)
   const selectedLabel = selectedGame
-    ? t('rooms.createModal.gameWithPlayers', {
+    ? t('squads.createModal.gameWithPlayers', {
         name: selectedGame.name,
         min: selectedGame.minPlayers,
         max: selectedGame.maxPlayers,
@@ -38,7 +38,7 @@ export function GameSelect({ id, games, value, onChange, hasError }: GameSelectP
         } data-popup-open:border-accent/50 data-popup-open:ring-1 data-popup-open:ring-accent/20`}
       >
         <span className={`truncate ${value ? '' : 'text-muted/60'}`}>
-          {selectedLabel ?? t('rooms.createModal.selectGame')}
+          {selectedLabel ?? t('squads.createModal.selectGame')}
         </span>
         <Select.Icon className="flex items-center text-muted">
           <ChevronsUpDown className="size-3" />
@@ -59,7 +59,7 @@ export function GameSelect({ id, games, value, onChange, hasError }: GameSelectP
                     <Check className="size-3.5" />
                   </Select.ItemIndicator>
                   <Select.ItemText className="col-start-2">
-                    {t('rooms.createModal.gameWithPlayers', {
+                    {t('squads.createModal.gameWithPlayers', {
                       name: game.name,
                       min: game.minPlayers,
                       max: game.maxPlayers,
