@@ -5,7 +5,7 @@ import { useSession } from '@/hooks/use-session'
 import { useAppNavigation } from '@/lib/navigation'
 import type { RealtimeStatus } from '@/lib/ws-client'
 import type { Game, Player, PublicSquad } from '@/types'
-import { rosterFromSnapshot, type PresenceState } from './room-snapshot'
+import { rosterFromSnapshot, type PresenceState } from './squad-snapshot'
 import { useSquadChannel, type SquadChannel } from './use-squad-channel'
 import { useSquadData } from './use-squad-data'
 import { useSquadMembership } from './use-squad-membership'
@@ -30,9 +30,9 @@ export interface LobbyView {
 }
 
 /**
- * The Lobby's realtime side, held by the page above the Squad's read: the socket, the room channel and the
+ * The Lobby's realtime side, held by the page above the Squad's read: the socket, the squad channel and the
  * snapshot. The channel joins while the read is still pending, so the snapshot is never held back by HTTP.
- * Only a signed-in viewer joins the room channel.
+ * Only a signed-in viewer joins the squad channel.
  */
 export function useLobbyChannel(squadCode: string): SquadChannel {
   const session = useSession()

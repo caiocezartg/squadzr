@@ -42,9 +42,9 @@ export function DiscordLinkCard({ discordLink, isReady }: DiscordLinkCardProps) 
           </div>
           <div className="min-w-0">
             <h3 className="font-heading text-base font-bold text-offwhite">
-              {t('rooms.discordCard.title')}
+              {t('discordCard.title')}
             </h3>
-            <p className="text-sm text-muted mt-0.5">{t('rooms.discordCard.description')}</p>
+            <p className="text-sm text-muted mt-0.5">{t('discordCard.description')}</p>
           </div>
         </div>
 
@@ -55,7 +55,7 @@ export function DiscordLinkCard({ discordLink, isReady }: DiscordLinkCardProps) 
             className="flex items-center gap-1.5 rounded-lg bg-surface border border-border-light px-5 py-2.5 text-xs font-medium text-muted hover:text-offwhite hover:border-muted/30 transition-colors"
           >
             <Copy className="size-3.5" />
-            {copied ? t('rooms.discordCard.copied') : t('rooms.discordCard.copyLink')}
+            {copied ? t('discordCard.copied') : t('discordCard.copyLink')}
           </button>
           <a
             href={discordLink}
@@ -64,7 +64,7 @@ export function DiscordLinkCard({ discordLink, isReady }: DiscordLinkCardProps) 
             className="btn-discord gap-2 px-5 py-2.5"
           >
             <ExternalLink className="size-4" />
-            {t('rooms.discordCard.joinDiscord')}
+            {t('discordCard.joinDiscord')}
           </a>
         </div>
       </div>

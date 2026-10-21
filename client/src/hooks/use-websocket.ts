@@ -6,35 +6,14 @@ import type {
 } from '@squadzr/schemas/ws'
 import {
   WebSocketClient,
-  type ProtocolFailureReason,
   type RealtimeChannelHandlers,
   type RealtimeStatus,
   type RealtimeSubscription,
 } from '@/lib/ws-client'
 import { reloadToMatchingBuild } from '@/lib/realtime-update'
 
-export interface ReconnectOptions {
-  /** First reconnection delay; each failed attempt doubles it. */
-  baseDelayMs?: number
-  /** Upper bound of the exponential delay before jitter. */
-  maxDelayMs?: number
-  maxAttempts?: number
-  /** Returns a value in [0, 1); injected for deterministic backoff in tests. */
-  random?: () => number
-}
-
-interface UseWebSocketOptions {
-  url: string
-  autoConnect?: boolean
-  reconnect?: ReconnectOptions
-  onProtocolFailure?: (reason: ProtocolFailureReason) => void
-}
-
 interface UseWebSocketReturn {
   status: RealtimeStatus
-  isConnected: boolean
-  connect: () => void
-  disconnect: () => void
   send: (message: WsIncomingMessageInput) => void
   on: <T extends WsServerEventType>(
     type: T,
@@ -47,47 +26,28 @@ const noop = () => {
   // noop
 }
 
-export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
-  const { url, autoConnect = true, reconnect, onProtocolFailure } = options
-  const baseDelayMs = reconnect?.baseDelayMs
-  const maxDelayMs = reconnect?.maxDelayMs
-  const maxAttempts = reconnect?.maxAttempts
-  const random = reconnect?.random
-
+/**
+ * Opens the realtime connection of a screen. The socket lives for the mount and reconnects on its
+ * own; the screen only sends frames and registers handlers. A protocol mismatch reloads the app
+ * into the matching build.
+ */
+export function useWebSocket(url: string): UseWebSocketReturn {
   const [status, setStatus] = useState<RealtimeStatus>('closed')
   const clientRef = useRef<WebSocketClient | null>(null)
 
   useEffect(() => {
-    const client = new WebSocketClient({
-      url,
-      reconnectInterval: baseDelayMs,
-      reconnectMaxDelay: maxDelayMs,
-      maxReconnectAttempts: maxAttempts,
-      random,
-      onProtocolFailure: onProtocolFailure ?? reloadToMatchingBuild,
-    })
+    const client = new WebSocketClient({ url, onProtocolFailure: reloadToMatchingBuild })
 
     clientRef.current = client
     const unsubscribeStatus = client.onStatusChange(setStatus)
-
-    if (autoConnect) {
-      client.connect()
-    }
+    client.connect()
 
     return () => {
       unsubscribeStatus()
       client.disconnect()
       clientRef.current = null
     }
-  }, [url, autoConnect, baseDelayMs, maxDelayMs, maxAttempts, random, onProtocolFailure])
-
-  const connect = useCallback(() => {
-    clientRef.current?.connect()
-  }, [])
-
-  const disconnect = useCallback(() => {
-    clientRef.current?.disconnect()
-  }, [])
+  }, [url])
 
   const send = useCallback((message: WsIncomingMessageInput) => {
     clientRef.current?.send(message)
@@ -110,13 +70,5 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     []
   )
 
-  return {
-    status,
-    isConnected: status === 'open',
-    connect,
-    disconnect,
-    send,
-    on,
-    subscribe,
-  }
+  return { status, send, on, subscribe }
 }

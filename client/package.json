@@ -19,7 +19,6 @@
     "@squadzr/schemas": "workspace:*",
     "@tanstack/query-core": "5.90.20",
     "@tanstack/react-query": "5.90.20",
-    "@tanstack/react-router": "^1.80.0",
     "better-auth": "1.4.18",
     "clsx": "2.1.1",
     "lucide-react": "0.564.0",

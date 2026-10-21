@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  SQUAD_BOARD_REFETCH_DEBOUNCE_MS,
-  SQUAD_BOARD_REFETCH_MAX_WAIT_MS,
-  createSquadBoardRefetchScheduler,
-} from './squad-board-refetch-scheduler'
+import { createSquadBoardRefetchScheduler } from './squad-board-refetch-scheduler'
+
+/** The scheduler's defaults, as the board mounts it. */
+const DEBOUNCE_MS = 300
+const MAX_WAIT_MS = 1_000
 
 describe('board refetch scheduler', () => {
   beforeEach(() => {
@@ -25,7 +25,7 @@ describe('board refetch scheduler', () => {
     scheduler.schedule()
 
     expect(refetch).not.toHaveBeenCalled()
-    vi.advanceTimersByTime(SQUAD_BOARD_REFETCH_DEBOUNCE_MS - 1)
+    vi.advanceTimersByTime(DEBOUNCE_MS - 1)
     expect(refetch).not.toHaveBeenCalled()
     vi.advanceTimersByTime(1)
     expect(refetch).toHaveBeenCalledTimes(1)
@@ -45,7 +45,7 @@ describe('board refetch scheduler', () => {
     expect(refetch).toHaveBeenCalledTimes(2)
 
     // The events stop; the trailing debounce adds one last refetch.
-    vi.advanceTimersByTime(SQUAD_BOARD_REFETCH_DEBOUNCE_MS)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(refetch).toHaveBeenCalledTimes(3)
   })
 
@@ -56,7 +56,7 @@ describe('board refetch scheduler', () => {
     scheduler.schedule()
     scheduler.cancel()
 
-    vi.advanceTimersByTime(SQUAD_BOARD_REFETCH_MAX_WAIT_MS * 2)
+    vi.advanceTimersByTime(MAX_WAIT_MS * 2)
 
     expect(refetch).not.toHaveBeenCalled()
   })
@@ -70,7 +70,7 @@ describe('board refetch scheduler', () => {
     scheduler.schedule()
     scheduler.cancel()
 
-    vi.advanceTimersByTime(SQUAD_BOARD_REFETCH_MAX_WAIT_MS * 2)
+    vi.advanceTimersByTime(MAX_WAIT_MS * 2)
 
     expect(refetch).not.toHaveBeenCalled()
   })
@@ -80,13 +80,13 @@ describe('board refetch scheduler', () => {
     const scheduler = createSquadBoardRefetchScheduler({ refetch })
 
     scheduler.schedule()
-    vi.advanceTimersByTime(SQUAD_BOARD_REFETCH_DEBOUNCE_MS)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(refetch).toHaveBeenCalledTimes(1)
 
     // Nothing to drop: the refetch already ran, so unmounting must not fire
     // a second one.
     scheduler.cancel()
-    vi.advanceTimersByTime(SQUAD_BOARD_REFETCH_MAX_WAIT_MS * 2)
+    vi.advanceTimersByTime(MAX_WAIT_MS * 2)
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 
@@ -95,7 +95,7 @@ describe('board refetch scheduler', () => {
     const scheduler = createSquadBoardRefetchScheduler({ refetch })
 
     scheduler.cancel()
-    vi.advanceTimersByTime(SQUAD_BOARD_REFETCH_MAX_WAIT_MS * 2)
+    vi.advanceTimersByTime(MAX_WAIT_MS * 2)
     expect(refetch).not.toHaveBeenCalled()
   })
 })

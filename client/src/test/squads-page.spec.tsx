@@ -13,7 +13,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import SquadsPage from '@/app/squads/page'
-import { createQueryClient } from '@/lib/query-client'
+import { getQueryClient } from '@/lib/query-client'
 import { boardGames, boardSquads, openSquad } from './fixtures'
 import { createTestQueryClient } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
@@ -79,8 +79,8 @@ describe('squad board on the App Router', () => {
   it('shows the title and the filters while a first visit waits for the list, with the skeleton where the list goes', async () => {
     signInAsFakeUser()
     createHarnessNavigation('/squads')
-    const roomsRead = deferred<MockHttpResponse>()
-    registerBoardReads(() => roomsRead.promise)
+    const squadsRead = deferred<MockHttpResponse>()
+    registerBoardReads(() => squadsRead.promise)
 
     await renderSquadsRoute()
 
@@ -88,7 +88,7 @@ describe('squad board on the App Router', () => {
     expect(screen.getByRole('heading', { name: 'Explore squads' })).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Search by game or squad name...')).toBeInTheDocument()
 
-    roomsRead.resolve(httpOk(boardSquads))
+    squadsRead.resolve(httpOk(boardSquads))
 
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
     expect(screen.queryByTestId('squad-board-skeleton')).not.toBeInTheDocument()
@@ -105,15 +105,15 @@ describe('squad board on the App Router', () => {
       { updatedAt: Date.now() - 120_000 }
     )
     queryClient.setQueryData(['games'], boardGames)
-    const roomsRead = deferred<MockHttpResponse>()
-    registerBoardReads(() => roomsRead.promise)
+    const squadsRead = deferred<MockHttpResponse>()
+    registerBoardReads(() => squadsRead.promise)
 
     await renderSquadsRoute(queryClient)
 
     expect(screen.getByText('Ranked grind')).toBeInTheDocument()
     expect(screen.queryByTestId('squad-board-skeleton')).not.toBeInTheDocument()
 
-    roomsRead.resolve(httpOk(boardSquads))
+    squadsRead.resolve(httpOk(boardSquads))
 
     expect(await screen.findByText('Full lobby')).toBeInTheDocument()
   })
@@ -164,7 +164,7 @@ describe('squad board on the App Router', () => {
     })
 
     // The app's own client, with its retry policy, reads the board once the server's read has failed.
-    await renderSquadsRoute(createQueryClient())
+    await renderSquadsRoute(getQueryClient())
 
     expect(await screen.findByText('Ranked grind', {}, { timeout: 5000 })).toBeInTheDocument()
     expect(countHttpCalls('GET', '/api/rooms')).toBe(2)

@@ -1,7 +1,7 @@
 import type { Game, PublicSquad } from '@/types'
 import type { ResolvedSquadsSearch } from './squads-search'
 
-export const SQUAD_PAGE_SIZE = 6
+const SQUAD_PAGE_SIZE = 6
 
 /** Past this many pages the page links collapse into first, last and the current neighbours. */
 const MAX_LISTED_PAGES = 7

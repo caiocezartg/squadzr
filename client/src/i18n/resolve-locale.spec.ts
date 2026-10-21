@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { parseAcceptLanguage, resolveLocale } from './resolve-locale'
+import { resolveLocale } from './resolve-locale'
 
 describe('resolveLocale', () => {
   it('uses a supported cookie over Accept-Language', () => {
@@ -49,19 +49,18 @@ describe('resolveLocale', () => {
     expect(resolveLocale({ cookie: undefined, acceptLanguage: undefined })).toBe('en')
     expect(resolveLocale({ cookie: undefined, acceptLanguage: '*' })).toBe('en')
   })
-})
-
-describe('parseAcceptLanguage', () => {
-  it('orders the ranges by quality and keeps the header order among equals', () => {
-    expect(parseAcceptLanguage('en;q=0.4, pt-BR, fr;q=0.8, de;q=0.8')).toEqual([
-      'pt-BR',
-      'fr',
-      'de',
-      'en',
-    ])
-  })
-
-  it('drops refused ranges, the wildcard and malformed qualities', () => {
-    expect(parseAcceptLanguage('pt-BR;q=0, *, en;q=abc, fr;q=0.2')).toEqual(['fr'])
+  it('orders the header ranges by quality and ignores refused, wildcard and malformed ones', () => {
+    expect(
+      resolveLocale({
+        cookie: undefined,
+        acceptLanguage: 'en;q=0.4, pt-BR, fr;q=0.8, de;q=0.8',
+      })
+    ).toBe('pt-BR')
+    expect(
+      resolveLocale({
+        cookie: undefined,
+        acceptLanguage: 'pt-BR;q=0, *, en;q=abc, pt-PT;q=0.2',
+      })
+    ).toBe('pt-BR')
   })
 })

@@ -17,7 +17,7 @@ import {
   boardSquads,
   gameLol,
   lobbySquad,
-  lobbyRoomResponse,
+  lobbySquadResponse,
   lobbySnapshot,
   openSquad,
 } from './fixtures'
@@ -25,9 +25,9 @@ import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { toastStore } from './stubs'
 import type { PublicSquad, RoomsResponse } from '@/types'
 
-const { discordLink: _discordLink, ...publicLobbyRoom } = lobbySquad
+const { discordLink: _discordLink, ...publicLobbySquad } = lobbySquad
 
-const newRoom: PublicSquad = {
+const newSquad: PublicSquad = {
   ...openSquad,
   id: 'aaaaaaaa-0000-4000-8000-00000000000b',
   code: 'NEW002',
@@ -77,7 +77,7 @@ describe('board', () => {
 
   it('rejects a join response that breaks the contract instead of entering the lobby', async () => {
     onHttp('POST', '/api/rooms/:code/join', () => httpOk({ ok: true }))
-    const { router, user } = renderSquadsFlow('/squads')
+    const { navigation, user } = renderSquadsFlow('/squads')
     await screen.findByText(openSquad.name)
 
     await user.click(screen.getByText(openSquad.name))
@@ -93,25 +93,25 @@ describe('board', () => {
         ]),
       })
     )
-    expect(router.history.location.pathname).toBe('/squads')
+    expect(navigation.history.location.pathname).toBe('/squads')
     await waitFor(() =>
       expect(toastStore.errorCalls[0]).toBe('Something went wrong. Please try again.')
     )
   })
 
   it('ignores a room_created event that breaks the contract and applies the next valid one', async () => {
-    const serverRooms = { rooms: [...boardSquads.rooms] }
-    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    const serverSquads = { rooms: [...boardSquads.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverSquads))
     const { queryClient } = renderSquadsFlow('/squads', { user: null })
     await screen.findByText(openSquad.name)
     openLatestWebSocket()
 
-    sendFromServer({ type: 'room_created', payload: { room: { ...newRoom, maxPlayers: 'many' } } })
+    sendFromServer({ type: 'room_created', payload: { room: { ...newSquad, maxPlayers: 'many' } } })
     sendFromServer({ type: 'room_updated', payload: { roomId: openSquad.id, memberCount: 'many' } })
 
     // Contract-breaking events never reach the page, so no refetch runs and
     // the cache keeps the authoritative list it already had.
-    expect(screen.queryByText(newRoom.name)).not.toBeInTheDocument()
+    expect(screen.queryByText(newSquad.name)).not.toBeInTheDocument()
     expect(queryClient.getQueryData<RoomsResponse>(['squads'])?.rooms).toHaveLength(
       boardSquads.rooms.length
     )
@@ -120,11 +120,11 @@ describe('board', () => {
       issues: [{ path: 'room.maxPlayers', code: 'invalid_type' }],
     })
 
-    // The next valid event refetches the board, which now carries the room.
-    serverRooms.rooms = [...serverRooms.rooms, newRoom]
-    sendFromServer({ type: 'room_created', payload: { room: newRoom } })
+    // The next valid event refetches the board, which now carries the squad.
+    serverSquads.rooms = [...serverSquads.rooms, newSquad]
+    sendFromServer({ type: 'room_created', payload: { room: newSquad } })
 
-    expect(await screen.findByText(newRoom.name)).toBeInTheDocument()
+    expect(await screen.findByText(newSquad.name)).toBeInTheDocument()
   })
 })
 
@@ -140,7 +140,7 @@ describe('lobby', () => {
   })
 
   it('renders a non-member view from the public projection, without roster or invite', async () => {
-    onHttp('GET', '/api/rooms/:code', () => httpOk({ room: publicLobbyRoom }))
+    onHttp('GET', '/api/rooms/:code', () => httpOk({ room: publicLobbySquad }))
     renderSquadsFlow('/squads/LOBBY1', {
       user: { id: 'user-7', name: 'Outsider', email: 'outsider@squadzr.test', image: null },
     })
@@ -156,7 +156,7 @@ describe('lobby', () => {
   })
 
   it('ignores a squad snapshot and a presence event that break the contract', async () => {
-    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
+    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText(lobbySquad.name)
     openLatestWebSocket()

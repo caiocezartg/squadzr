@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { API_INTERNAL_URL } from '@/env.server'
 import { gameLol, lobbySquad } from '@/test/fixtures'
-import { GENERIC_METADATA, lobbyMetadata } from './lobby-metadata'
+import { lobbyMetadata } from './lobby-metadata'
 
 type RecordedInit = RequestInit & { next?: { revalidate?: number } }
 
@@ -39,6 +39,8 @@ afterEach(() => {
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
+
+const GENERIC = { title: { absolute: 'Squadzr' } }
 
 describe('lobbyMetadata', () => {
   it('gives an Open Squad the full invite preview: name and game, size, language, tags and cover', async () => {
@@ -89,32 +91,28 @@ describe('lobbyMetadata', () => {
   ])('gives %s the generic metadata, and reads no game', async (_label, squad) => {
     const fetchMock = stubReads({ squad })
 
-    await expect(lobbyMetadata(lobbySquad.code)).resolves.toEqual(GENERIC_METADATA)
+    await expect(lobbyMetadata(lobbySquad.code)).resolves.toEqual(GENERIC)
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('gives the generic metadata when the game lookup fails', async () => {
     stubReads({ squad: jsonResponse({ room: publicSquad }), game: notFound() })
 
-    await expect(lobbyMetadata(lobbySquad.code)).resolves.toEqual(GENERIC_METADATA)
+    await expect(lobbyMetadata(lobbySquad.code)).resolves.toEqual(GENERIC)
   })
 
   it('gives the generic metadata when the Squad read fails, and logs the failure', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     stubReads({ squad: jsonResponse({ error: 'INTERNAL', message: 'boom' }, 500) })
 
-    await expect(lobbyMetadata(lobbySquad.code)).resolves.toEqual(GENERIC_METADATA)
+    await expect(lobbyMetadata(lobbySquad.code)).resolves.toEqual(GENERIC)
     expect(consoleError).toHaveBeenCalled()
   })
 
   it('gives the generic metadata for a code the contract rejects, without reading anything', async () => {
     const fetchMock = stubReads({ squad: jsonResponse({ room: publicSquad }) })
 
-    await expect(lobbyMetadata('abc')).resolves.toEqual(GENERIC_METADATA)
+    await expect(lobbyMetadata('abc')).resolves.toEqual(GENERIC)
     expect(fetchMock).not.toHaveBeenCalled()
-  })
-
-  it('uses the Squadzr title as the generic metadata', () => {
-    expect(GENERIC_METADATA).toEqual({ title: { absolute: 'Squadzr' } })
   })
 })

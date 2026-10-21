@@ -20,7 +20,7 @@ function apiError(code: string): ApiClientError {
 }
 
 describe('getUserFriendlyError', () => {
-  it('maps a refused join of a Ready room to the no-longer-accepting message', () => {
+  it('maps a refused join of a Ready squad to the no-longer-accepting message', () => {
     expect(getUserFriendlyError(apiError('ROOM_READY'), t, 'join')).toBe(
       "This squad is already full and ready — it's no longer accepting players."
     )

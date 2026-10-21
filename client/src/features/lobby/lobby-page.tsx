@@ -62,7 +62,7 @@ function SignInPrompt() {
 
   return (
     <div className="flex flex-col items-center justify-center px-4 py-24 text-center">
-      <p className="text-muted">{t('rooms.lobby.pleaseSignIn')}</p>
+      <p className="text-muted">{t('lobby.pleaseSignIn')}</p>
     </div>
   )
 }
@@ -122,10 +122,10 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
           onClick={() => void lobby.leaveSquad()}
           disabled={lobby.isReady}
           className="flex items-center gap-2 rounded-lg border border-danger/20 bg-danger/5 px-4 py-2 text-sm text-danger/80 hover:text-danger hover:bg-danger/10 hover:border-danger/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          title={lobby.isReady ? t('rooms.lobby.cannotLeave') : undefined}
+          title={lobby.isReady ? t('lobby.cannotLeave') : undefined}
         >
           <LogOut className="size-4" />
-          {lobby.isReady ? t('rooms.lobby.squadLocked') : t('rooms.lobby.leaveRoom')}
+          {lobby.isReady ? t('lobby.squadLocked') : t('lobby.leaveSquad')}
         </button>
       </div>
 
@@ -179,12 +179,10 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
                 >
                   <span className="font-mono font-bold text-offwhite">{squadCode}</span>
                   <Copy className="size-3.5" />
-                  {codeCopied && (
-                    <span className="text-xs text-accent">{t('rooms.lobby.copied')}</span>
-                  )}
+                  {codeCopied && <span className="text-xs text-accent">{t('lobby.copied')}</span>}
                 </button>
                 <span className="text-sm text-muted">
-                  {t('rooms.lobby.playerCount', {
+                  {t('lobby.playerCount', {
                     current: lobby.players.length,
                     max: lobby.maxPlayers,
                   })}
@@ -224,7 +222,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
       {/* Players — full width */}
       <div className="card p-5">
         <h2 className="font-heading text-sm font-bold text-muted mb-4 uppercase tracking-wider">
-          {t('rooms.lobby.players', { current: lobby.players.length, max: lobby.maxPlayers })}
+          {t('lobby.players', { current: lobby.players.length, max: lobby.maxPlayers })}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {lobby.players.map((player, i) => (

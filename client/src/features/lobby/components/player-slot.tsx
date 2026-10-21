@@ -8,7 +8,7 @@ import type { Player } from '@/types'
 interface PlayerSlotProps {
   player?: Player
   index: number
-  /** Authoritative Presence from the room snapshot; unknown members read offline. */
+  /** Authoritative Presence from the squad snapshot; unknown members read offline. */
   online?: boolean
 }
 
@@ -21,7 +21,7 @@ export function PlayerSlot({ player, index, online = false }: PlayerSlotProps) {
         <div className="size-10 rounded-full bg-surface-light border border-border flex items-center justify-center">
           <User className="size-4 text-muted" />
         </div>
-        <span className="text-sm text-muted">{t('rooms.lobby.waitingForPlayer')}</span>
+        <span className="text-sm text-muted">{t('lobby.waitingForPlayer')}</span>
       </div>
     )
   }
@@ -39,7 +39,7 @@ export function PlayerSlot({ player, index, online = false }: PlayerSlotProps) {
       </div>
       <PresenceIndicator online={online} />
       {player.isHost && (
-        <span className="badge-accent text-[10px] shrink-0">{t('rooms.lobby.host')}</span>
+        <span className="badge-accent text-[10px] shrink-0">{t('lobby.host')}</span>
       )}
     </m.div>
   )

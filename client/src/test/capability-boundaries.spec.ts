@@ -11,9 +11,9 @@
  *   Squad Board's barrel exports only its cache commands and its page is a
  *   separate `page` entry, so creation and joining reach the board without
  *   pulling the page back in;
- * - every non-test source file under `src/` (capabilities, routes, components
- *   and the rest) only reaches another capability through a public entry point
- *   (`index.ts`, `skeleton` and `page`).
+ * - every non-test source file under `src/` (capabilities, App Router pages,
+ *   components and the rest) only reaches another capability through a public
+ *   entry point (`index.ts`, `skeleton` and `page`).
  *
  * The scan is source-level on purpose: it sees every specifier, including the
  * ones TypeScript erases, without a bundler. Specs and test fixtures
@@ -28,7 +28,7 @@ import { describe, expect, it } from 'vitest'
 
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const FEATURES_DIR = join(SRC_DIR, 'features')
-const ROUTES_DIR = join(SRC_DIR, 'routes')
+const APP_DIR = join(SRC_DIR, 'app')
 const TEST_DIR = join(SRC_DIR, 'test')
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx']
@@ -195,7 +195,7 @@ describe('capability boundaries', () => {
     // module evaluation order stays well-defined. There is no exception: the
     // Squad Board's barrel exports only its cache commands, so squad creation,
     // joining and the lobby refresh the board without reaching its page.
-    const scopedFiles = new Set([...featureFiles, ...listSourceFiles(ROUTES_DIR)])
+    const scopedFiles = new Set([...featureFiles, ...listSourceFiles(APP_DIR)])
     const graph = new Map<string, Set<string>>()
 
     for (const file of scopedFiles) {
@@ -228,14 +228,14 @@ describe('capability boundaries', () => {
     expect(violations).toEqual([])
   })
 
-  it('keeps routes on the public capability interfaces', () => {
+  it('keeps App Router pages on the public capability interfaces', () => {
     const violations: string[] = []
 
-    for (const file of listSourceFiles(ROUTES_DIR)) {
-      const route = toPosix(relative(SRC_DIR, file))
-      for (const { to, entry } of crossCapabilityImports(file, route)) {
+    for (const file of listSourceFiles(APP_DIR)) {
+      const page = toPosix(relative(SRC_DIR, file))
+      for (const { to, entry } of crossCapabilityImports(file, page)) {
         if (!PUBLIC_ENTRY_POINTS.has(entry)) {
-          violations.push(`${route} imports "${to}/${entry}"`)
+          violations.push(`${page} imports "${to}/${entry}"`)
         }
       }
     }

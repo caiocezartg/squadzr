@@ -16,10 +16,10 @@ function lenient<T extends z.ZodMiniType>(schema: T) {
 }
 
 /**
- * A room code as the contract writes it: six letters or digits. The server reads a code without
+ * A squad code as the contract writes it: six letters or digits. The server reads a code without
  * regard to case, so a lowercase invite still joins. Anything else never reaches a request path.
  */
-const roomCodeSchema = z.string().check(z.regex(/^[A-Za-z0-9]{6}$/))
+const squadCodeSchema = z.string().check(z.regex(/^[A-Za-z0-9]{6}$/))
 
 /**
  * The URL search contract of the squad lists. Every parameter is parsed on its
@@ -34,7 +34,7 @@ export const squadsSearchSchema = z.catch(
     language: lenient(languageSchema),
     tag: lenient(z.string()),
     page: lenient(z.coerce.number().check(z.int(), z.gte(1))),
-    join: lenient(roomCodeSchema),
+    join: lenient(squadCodeSchema),
   }),
   {}
 )

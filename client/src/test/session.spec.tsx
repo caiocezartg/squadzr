@@ -5,14 +5,6 @@
  */
 
 import { QueryClientProvider } from '@tanstack/react-query'
-import {
-  Outlet,
-  RouterProvider,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from '@tanstack/react-router'
-import type { AnyRoute } from '@tanstack/react-router'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppHeader } from '@/components/layout/app-header'
@@ -23,30 +15,12 @@ import { createHarnessNavigation } from './navigation'
 import type { HarnessNavigation } from './navigation'
 import { signInAsFakeUser, signOutFakeUser } from './stubs'
 
-function headerScene(): AnyRoute {
-  const rootRoute = createRootRoute({
-    component: () => (
-      <>
-        <AppHeader />
-        <Outlet />
-      </>
-    ),
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => <div>Home page</div>,
-  })
-  return rootRoute.addChildren([indexRoute]) as AnyRoute
-}
-
 function renderHeader(): HarnessNavigation {
   const navigation = createHarnessNavigation('/')
-  const router = createRouter({ routeTree: headerScene(), history: navigation.history })
 
   render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <RouterProvider router={router} />
+      <AppHeader />
     </QueryClientProvider>
   )
 

@@ -7,8 +7,6 @@
  *   measurement rounded up to the next 5 kB (CCC-77). The root layout alone (`/_not-found`, 299.13 kB
  *   in CI) is loaded by every page, so the landing cannot meet a 200 kB cap while the layout stays
  *   as it is.
- * - The catch-all route's initial JavaScript, gzip: its CCC-70 baseline of 438.07 kB, rounded up to
- *   the next 5 kB. Routes without a limit are reported only.
  * - The Squad Board's initial JavaScript, gzip: its measured size rounded up to the next 5 kB. The
  *   create and join dialogs are imported eagerly since CCC-81, so the initial JavaScript carries
  *   them; CCC-82 re-measured 373.83 kB and the limit stays 375 kB.
@@ -25,7 +23,6 @@
 /** Initial JavaScript limit per route, in kB gzip. */
 export const ROUTE_LIMITS_GZIP_KB = {
   '/': 340,
-  '/[...slug]': 440,
   '/squads': 375,
   '/squads/my': 370,
   '/squads/[code]': 335,

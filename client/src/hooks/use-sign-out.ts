@@ -11,7 +11,7 @@ import { notifyError } from '@/lib/notify'
  * Signs the viewer out in place of a full page load. The load used to drop the viewer's session and
  * cached data with the page, so each is cleared here: the session store, then the query cache. The
  * screens that own a realtime connection close it as they leave: the navigation below replaces the
- * catch-all segment, React unmounts it, and the unmount runs the socket's effect cleanup. Next hides
+ * current page, React unmounts it, and the unmount runs the socket's effect cleanup. Next hides
  * a left screen in an Activity only with `cacheComponents`, which this app does not set.
  *
  * The player then goes to the landing through the navigation helper. The refresh comes after that

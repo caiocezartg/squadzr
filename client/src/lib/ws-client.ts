@@ -49,9 +49,6 @@ export interface WebSocketClientOptions {
   maxReconnectAttempts?: number
   /** Returns a value in [0, 1); injected for deterministic backoff in tests. */
   random?: () => number
-  onOpen?: () => void
-  onClose?: () => void
-  onError?: (error: Event) => void
   onStatusChange?: (status: RealtimeStatus) => void
   /** A frame that cannot be parsed or a mismatched announcement; the app reloads. */
   onProtocolFailure?: (reason: ProtocolFailureReason) => void
@@ -98,9 +95,6 @@ export class WebSocketClient {
   private readonly statusHandlers = new Set<(status: RealtimeStatus) => void>()
   private readonly subscriptions: SubscriptionEntry[] = []
 
-  private readonly onOpenCallback?: () => void
-  private readonly onCloseCallback?: () => void
-  private readonly onErrorCallback?: (error: Event) => void
   private readonly onProtocolFailureCallback?: (reason: ProtocolFailureReason) => void
 
   constructor(options: WebSocketClientOptions) {
@@ -109,9 +103,6 @@ export class WebSocketClient {
     this.reconnectMaxDelay = options.reconnectMaxDelay ?? 30_000
     this.maxReconnectAttempts = options.maxReconnectAttempts ?? 5
     this.random = options.random ?? Math.random
-    this.onOpenCallback = options.onOpen
-    this.onCloseCallback = options.onClose
-    this.onErrorCallback = options.onError
     this.onProtocolFailureCallback = options.onProtocolFailure
     if (options.onStatusChange) this.statusHandlers.add(options.onStatusChange)
   }
@@ -121,14 +112,12 @@ export class WebSocketClient {
   }
 
   get isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN
+    return this.isOpen()
   }
 
   connect(): void {
     if (this.protocolFailed) return
-    if (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING) {
-      return
-    }
+    if (this.isOpen() || this.isConnecting()) return
 
     this.setStatus('connecting')
     this.openSocket()
@@ -174,12 +163,12 @@ export class WebSocketClient {
       return
     }
 
-    if (this.ws?.readyState !== WebSocket.OPEN) {
+    if (!this.isOpen()) {
       console.warn('WebSocket is not connected. Message not sent:', { type: parsed.data.type })
       return
     }
 
-    this.ws.send(
+    this.ws?.send(
       JSON.stringify({
         type: parsed.data.type,
         payload: 'payload' in parsed.data ? parsed.data.payload : undefined,
@@ -237,18 +226,12 @@ export class WebSocketClient {
       }
       this.reconnectAttempts = 0
       this.setStatus('open')
-      this.onOpenCallback?.()
       for (const entry of this.subscriptions) this.replaySubscription(entry.message)
     }
 
     socket.onclose = (event: CloseEvent) => {
-      this.onCloseCallback?.()
       if (this.isIntentionalClose) return
       this.scheduleReconnect(event.code)
-    }
-
-    socket.onerror = (error) => {
-      this.onErrorCallback?.(error)
     }
 
     socket.onmessage = (event: MessageEvent<string>) => {
@@ -337,8 +320,8 @@ export class WebSocketClient {
   }
 
   private replaySubscription(message: RealtimeSubscription): void {
-    if (this.ws?.readyState !== WebSocket.OPEN) return
-    this.ws.send(
+    if (!this.isOpen()) return
+    this.ws?.send(
       JSON.stringify({
         type: message.type,
         payload: 'payload' in message ? message.payload : undefined,
@@ -351,9 +334,7 @@ export class WebSocketClient {
 
     // A stale close event from a socket that a newer connection already
     // replaced must not schedule another attempt.
-    if (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING) {
-      return
-    }
+    if (this.isOpen() || this.isConnecting()) return
 
     if (TERMINAL_CLOSE_CODES.has(closeCode)) {
       this.setStatus('closed')
@@ -382,11 +363,17 @@ export class WebSocketClient {
     this.setStatus('reconnecting')
     this.reconnectTimeoutId = setTimeout(() => {
       this.reconnectTimeoutId = null
-      if (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING) {
-        return
-      }
+      if (this.isOpen() || this.isConnecting()) return
       this.openSocket()
     }, delay)
+  }
+
+  private isOpen(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN
+  }
+
+  private isConnecting(): boolean {
+    return this.ws?.readyState === WebSocket.CONNECTING
   }
 
   private setStatus(status: RealtimeStatus): void {

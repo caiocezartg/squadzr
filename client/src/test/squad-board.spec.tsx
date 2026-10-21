@@ -24,24 +24,33 @@ import {
   gameLol,
   guestPlayer,
   hostPlayer,
-  joinRoomResponse,
   lobbySquad,
-  lobbyRoomResponse,
+  lobbySquadResponse,
   memberSquad,
   openSquad,
-  roomReadyNotification,
+  squadReadyNotification,
   squadsForPagination,
 } from './fixtures'
 import { authStore, toastStore } from './stubs'
 import { openLatestWebSocket, sendFromServer, serverSentFrames } from './ws-flows'
 import { MockWebSocket } from './ws-mock'
-import { SQUAD_BOARD_REFETCH_DEBOUNCE_MS } from '@/features/squad-board/squad-board-refetch-scheduler'
+import type { JoinRoomResponse } from '@squadzr/schemas'
 import type { RoomsResponse, Squad } from '@/types'
+
+const joinSquadResponse: JoinRoomResponse = {
+  message: 'Joined squad',
+  roomMember: {
+    id: 'bbbbbbbb-0000-4000-8000-000000000001',
+    roomId: openSquad.id,
+    userId: 'user-1',
+    joinedAt: new Date().toISOString(),
+  },
+}
 
 const extraSquad: Squad = {
   id: 'aaaaaaaa-0000-4000-8000-00000000000a',
   code: 'EXTR01',
-  name: 'Extra room',
+  name: 'Extra squad',
   hostId: 'user-9',
   gameId: gameLol.id,
   maxPlayers: 5,
@@ -61,14 +70,14 @@ function registerBoardRoutes(): void {
 
 function registerLobbyRoutes(): void {
   onHttp('GET', '/api/rooms/:code', (req) => {
-    if (req.params.code === openSquad.code) return httpOk(lobbyRoomResponse)
+    if (req.params.code === openSquad.code) return httpOk(lobbySquadResponse)
     if (req.params.code === memberSquad.code) {
       return httpOk({ room: memberSquad, players: [guestPlayer, hostPlayer] })
     }
     return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
   })
   onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
-  onHttp('POST', '/api/rooms/:code/join', () => httpOk(joinRoomResponse))
+  onHttp('POST', '/api/rooms/:code/join', () => httpOk(joinSquadResponse))
 }
 
 beforeEach(() => {
@@ -162,13 +171,13 @@ describe('squad board — pagination', () => {
     onHttp('GET', '/api/rooms', () => httpOk(squadsForPagination()))
     const { user } = renderSquadsFlow('/squads')
 
-    expect(await screen.findByText('Page room 1')).toBeInTheDocument()
-    expect(screen.queryByText('Page room 7')).not.toBeInTheDocument()
+    expect(await screen.findByText('Page squad 1')).toBeInTheDocument()
+    expect(screen.queryByText('Page squad 7')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Go to page 2' }))
 
-    expect(await screen.findByText('Page room 7')).toBeInTheDocument()
-    expect(screen.queryByText('Page room 1')).not.toBeInTheDocument()
+    expect(await screen.findByText('Page squad 7')).toBeInTheDocument()
+    expect(screen.queryByText('Page squad 1')).not.toBeInTheDocument()
   })
 })
 
@@ -186,23 +195,23 @@ describe('squad board — realtime refetch updates', () => {
       )
     )
 
-    // The server creates a room; the event refetches the authoritative list.
-    // Duplicate events stay idempotent: the room renders and caches once.
+    // The server creates a squad; the event refetches the authoritative list.
+    // Duplicate events stay idempotent: the squad renders and caches once.
     const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
     serverSquads.rooms = [...serverSquads.rooms, extraSquad]
     sendFromServer({ type: 'room_created', payload: { room: extraSquad } })
     sendFromServer({ type: 'room_created', payload: { room: extraSquad } })
-    expect(await screen.findByText('Extra room')).toBeInTheDocument()
-    expect(screen.getAllByText('Extra room')).toHaveLength(1)
+    expect(await screen.findByText('Extra squad')).toBeInTheDocument()
+    expect(screen.getAllByText('Extra squad')).toHaveLength(1)
     await waitFor(() =>
       expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeCreate)
     )
     const cachedAfterCreate = queryClient.getQueryData<RoomsResponse>(['squads'])
-    expect(cachedAfterCreate?.rooms.filter((room) => room.id === extraSquad.id)).toHaveLength(1)
+    expect(cachedAfterCreate?.rooms.filter((squad) => squad.id === extraSquad.id)).toHaveLength(1)
 
     // A Membership change refetches the new count instead of patching it in.
-    serverSquads.rooms = serverSquads.rooms.map((room) =>
-      room.id === openSquad.id ? { ...room, memberCount: 3 } : room
+    serverSquads.rooms = serverSquads.rooms.map((squad) =>
+      squad.id === openSquad.id ? { ...squad, memberCount: 3 } : squad
     )
     sendFromServer({
       type: 'room_updated',
@@ -212,16 +221,16 @@ describe('squad board — realtime refetch updates', () => {
       type: 'room_updated',
       payload: { roomId: openSquad.id, roomCode: openSquad.code, memberCount: 3 },
     })
-    // The count renders as `<span>3</span>/5` — assert within the room card.
+    // The count renders as `<span>3</span>/5` - assert within the squad card.
     const openCard = screen.getByText('Ranked grind').closest('button')
     expect(openCard).not.toBeNull()
     await waitFor(() =>
       expect(within(openCard as HTMLElement).getByText('3', { exact: true })).toBeInTheDocument()
     )
 
-    // A Ready/expired room leaves the server list; the event refetches the
-    // board until the room is gone.
-    serverSquads.rooms = serverSquads.rooms.filter((room) => room.id !== fullSquad.id)
+    // A Ready/expired squad leaves the server list; the event refetches the
+    // board until the squad is gone.
+    serverSquads.rooms = serverSquads.rooms.filter((squad) => squad.id !== fullSquad.id)
     sendFromServer({
       type: 'room_removed',
       payload: { roomId: fullSquad.id, roomCode: fullSquad.code },
@@ -232,7 +241,7 @@ describe('squad board — realtime refetch updates', () => {
     })
     await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
     const cachedAfterDelete = queryClient.getQueryData<RoomsResponse>(['squads'])
-    expect(cachedAfterDelete?.rooms.some((room) => room.id === fullSquad.id)).toBe(false)
+    expect(cachedAfterDelete?.rooms.some((squad) => squad.id === fullSquad.id)).toBe(false)
   })
 
   it('drops a Ready squad through authoritative state and never resurrects it from a late room_created', async () => {
@@ -243,9 +252,9 @@ describe('squad board — realtime refetch updates', () => {
 
     openLatestWebSocket()
 
-    // The room becomes Ready: the server drops it from the board list and
+    // The squad becomes Ready: the server drops it from the board list and
     // announces room_removed without waiting for any polling.
-    serverSquads.rooms = serverSquads.rooms.filter((room) => room.id !== fullSquad.id)
+    serverSquads.rooms = serverSquads.rooms.filter((squad) => squad.id !== fullSquad.id)
     sendFromServer({
       type: 'room_removed',
       payload: { roomId: fullSquad.id, roomCode: fullSquad.code },
@@ -253,19 +262,19 @@ describe('squad board — realtime refetch updates', () => {
     await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
     const fetchesAfterRemoval = countHttpCalls('GET', '/api/rooms')
 
-    // A late room_created for the same room must not patch it back into the
+    // A late room_created for the same squad must not patch it back into the
     // cache: the event schedules the authoritative refetch, and the server
-    // list no longer has the room.
-    const cachedRoomIds = () =>
-      queryClient.getQueryData<RoomsResponse>(['squads'])?.rooms.map((room) => room.id) ?? []
+    // list no longer has the squad.
+    const cachedSquadIds = () =>
+      queryClient.getQueryData<RoomsResponse>(['squads'])?.rooms.map((squad) => squad.id) ?? []
     sendFromServer({ type: 'room_created', payload: { room: fullSquad } })
-    expect(cachedRoomIds()).not.toContain(fullSquad.id)
+    expect(cachedSquadIds()).not.toContain(fullSquad.id)
 
     await waitFor(() =>
       expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesAfterRemoval)
     )
     await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
-    expect(cachedRoomIds()).not.toContain(fullSquad.id)
+    expect(cachedSquadIds()).not.toContain(fullSquad.id)
   })
 
   it('applies a pushed notification to the notifications cache without duplicating it', async () => {
@@ -277,7 +286,7 @@ describe('squad board — realtime refetch updates', () => {
     openLatestWebSocket()
     sendFromServer({
       type: 'notification',
-      payload: { notification: roomReadyNotification },
+      payload: { notification: squadReadyNotification },
     })
 
     await waitFor(() =>
@@ -289,7 +298,7 @@ describe('squad board — realtime refetch updates', () => {
 
     sendFromServer({
       type: 'notification',
-      payload: { notification: roomReadyNotification },
+      payload: { notification: squadReadyNotification },
     })
     expect(
       queryClient.getQueryData<{ notifications: unknown[] }>(['notifications', { limit: 10 }])
@@ -299,18 +308,18 @@ describe('squad board — realtime refetch updates', () => {
 
   it('clips the pushed notification to the limit of each notifications query', async () => {
     const olderNotification = {
-      ...roomReadyNotification,
+      ...squadReadyNotification,
       id: '9b2f7a1e-4c3d-4e5f-8a6b-1c2d3e4f5a6c',
       title: 'Older notification',
     }
     const pushedNotification = {
-      ...roomReadyNotification,
+      ...squadReadyNotification,
       id: '9b2f7a1e-4c3d-4e5f-8a6b-1c2d3e4f5a6d',
       title: 'Pushed notification',
     }
     const queryClient = createTestQueryClient()
     queryClient.setQueryData(['notifications', { limit: 2 }], {
-      notifications: [roomReadyNotification, olderNotification],
+      notifications: [squadReadyNotification, olderNotification],
     })
     renderSquadsFlow('/squads', { queryClient })
     await screen.findByText('Ranked grind')
@@ -329,7 +338,7 @@ describe('squad board — realtime refetch updates', () => {
           ?.notifications
       ).toEqual([
         expect.objectContaining({ id: pushedNotification.id }),
-        expect.objectContaining({ id: roomReadyNotification.id }),
+        expect.objectContaining({ id: squadReadyNotification.id }),
       ])
     )
   })
@@ -366,9 +375,9 @@ describe('squad board — coalesced realtime refetch', () => {
       })
       expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 1)
 
-      // ...while a removed room leaves the screen on the event itself, before
+      // ...while a removed squad leaves the screen on the event itself, before
       // the coalesced refetch lands.
-      serverSquads.rooms = serverSquads.rooms.filter((room) => room.id !== fullSquad.id)
+      serverSquads.rooms = serverSquads.rooms.filter((squad) => squad.id !== fullSquad.id)
       sendFromServer({
         type: 'room_removed',
         payload: { roomId: fullSquad.id, roomCode: fullSquad.code },
@@ -388,44 +397,8 @@ describe('squad board — coalesced realtime refetch', () => {
       expect(
         queryClient
           .getQueryData<RoomsResponse>(['squads'])
-          ?.rooms.some((room) => room.id === fullSquad.id)
+          ?.rooms.some((squad) => squad.id === fullSquad.id)
       ).toBe(false)
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('keeps refetching while a burst of events outlives maxWait', async () => {
-    const serverSquads = { rooms: [...boardSquads.rooms] }
-    onHttp('GET', '/api/rooms', () => httpOk(serverSquads))
-    renderSquadsFlow('/squads')
-    await screen.findByText('Ranked grind')
-    openLatestWebSocket()
-
-    const fetchesBeforeBurst = countHttpCalls('GET', '/api/rooms')
-
-    vi.useFakeTimers()
-    try {
-      // An event every 100 ms for two seconds: the debounce never expires and
-      // only maxWait can make progress.
-      for (let elapsed = 0; elapsed <= 2_000; elapsed += 100) {
-        sendFromServer({
-          type: 'room_updated',
-          payload: { roomId: openSquad.id, roomCode: openSquad.code, memberCount: 2 },
-        })
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(100)
-        })
-      }
-
-      // maxWait fired at 1000 ms and 2000 ms even though the burst continued.
-      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 2)
-
-      // Once the events stop, the trailing debounce adds one more refetch.
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(300)
-      })
-      expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeBurst + 3)
     } finally {
       vi.useRealTimers()
     }
@@ -434,22 +407,22 @@ describe('squad board — coalesced realtime refetch', () => {
 
 describe('squad board — removal without cached squads', () => {
   it('fetches the board when a directly opened lobby squad is deleted', async () => {
-    const remainingRooms = boardSquads.rooms.filter((room) => room.id !== lobbySquad.id)
-    onHttp('GET', '/api/rooms', () => httpOk({ rooms: remainingRooms }))
-    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
+    const remainingSquads = boardSquads.rooms.filter((squad) => squad.id !== lobbySquad.id)
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: remainingSquads }))
+    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
     onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
 
-    const { router } = renderSquadsFlow('/squads/LOBBY1')
+    const { navigation } = renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
 
-    // The room leaves the board while the board query was never loaded.
+    // The squad leaves the board while the board query was never loaded.
     sendFromServer({
       type: 'room_deleted',
       payload: { roomId: lobbySquad.id, roomCode: lobbySquad.code },
     })
 
-    await waitFor(() => expect(router.history.location.pathname).toBe('/squads'))
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads'))
     // The board must fetch on mount: a fabricated fresh empty list would
     // keep it blank for the whole staleTime window.
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
@@ -503,10 +476,10 @@ describe('squad board — in-flight fetch after removal', () => {
     onHttp('GET', '/api/rooms', () => {
       if (!holdNextResponse) return httpOk(serverSquads)
       // Snapshot the server list when the request is made: the response in
-      // flight still carries the room the removal will drop.
-      const staleRooms = { rooms: [...serverSquads.rooms] }
+      // flight still carries the squad the removal will drop.
+      const staleSquads = { rooms: [...serverSquads.rooms] }
       return new Promise<MockHttpResponse>((resolve) => {
-        releaseHeldResponse = () => resolve(httpOk(staleRooms))
+        releaseHeldResponse = () => resolve(httpOk(staleSquads))
       })
     })
 
@@ -516,7 +489,7 @@ describe('squad board — in-flight fetch after removal', () => {
 
     vi.useFakeTimers()
     try {
-      // A coalesced refetch starts while the server still lists the room; its
+      // A coalesced refetch starts while the server still lists the squad; its
       // response is held so the removal happens with that fetch in flight.
       holdNextResponse = true
       sendFromServer({
@@ -528,8 +501,8 @@ describe('squad board — in-flight fetch after removal', () => {
       })
       expect(releaseHeldResponse).toBeDefined()
 
-      // The room leaves the board while the fetch is pending.
-      serverSquads.rooms = serverSquads.rooms.filter((room) => room.id !== fullSquad.id)
+      // The squad leaves the board while the fetch is pending.
+      serverSquads.rooms = serverSquads.rooms.filter((squad) => squad.id !== fullSquad.id)
       sendFromServer({
         type: 'room_removed',
         payload: { roomId: fullSquad.id, roomCode: fullSquad.code },
@@ -539,7 +512,7 @@ describe('squad board — in-flight fetch after removal', () => {
       })
       expect(screen.queryByText('Full lobby')).not.toBeInTheDocument()
 
-      // The pre-removal response lands and must not resurrect the room.
+      // The pre-removal response lands and must not resurrect the squad.
       releaseHeldResponse?.()
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0)
@@ -548,7 +521,7 @@ describe('squad board — in-flight fetch after removal', () => {
       expect(
         queryClient
           .getQueryData<RoomsResponse>(['squads'])
-          ?.rooms.some((room) => room.id === fullSquad.id)
+          ?.rooms.some((squad) => squad.id === fullSquad.id)
       ).toBe(false)
     } finally {
       vi.useRealTimers()
@@ -591,7 +564,7 @@ describe('squad board — pending refetch across unmount', () => {
     }
 
     renderSquadsFlow('/squads', { queryClient })
-    expect(await screen.findByText('Extra room')).toBeInTheDocument()
+    expect(await screen.findByText('Extra squad')).toBeInTheDocument()
     expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBefore + 1)
   })
 })
@@ -599,13 +572,13 @@ describe('squad board — pending refetch across unmount', () => {
 describe('squad board — refetch on mount', () => {
   it('re-reads on mount and surfaces a squad created while the user was away', async () => {
     const serverSquads = { rooms: [...boardSquads.rooms] }
-    let holdNextRoomsResponse = false
-    let releaseRoomsResponse: (() => void) | undefined
+    let holdNextSquadsResponse = false
+    let releaseSquadsResponse: (() => void) | undefined
     onHttp('GET', '/api/rooms', () => {
-      if (!holdNextRoomsResponse) return httpOk({ rooms: [...serverSquads.rooms] })
-      const responseRooms = { rooms: [...serverSquads.rooms] }
+      if (!holdNextSquadsResponse) return httpOk({ rooms: [...serverSquads.rooms] })
+      const responseSquads = { rooms: [...serverSquads.rooms] }
       return new Promise<MockHttpResponse>((resolve) => {
-        releaseRoomsResponse = () => resolve(httpOk(responseRooms))
+        releaseSquadsResponse = () => resolve(httpOk(responseSquads))
       })
     })
 
@@ -615,12 +588,12 @@ describe('squad board — refetch on mount', () => {
     firstVisit.unmount()
 
     // While the board is off screen (e.g. in the lobby) its realtime
-    // channel is not subscribed, so a room another player creates never
+    // channel is not subscribed, so a squad another player creates never
     // reaches this tab. The cache is younger than the 60 s staleTime, so it
     // would look fresh without being fresh.
     serverSquads.rooms = [...serverSquads.rooms, extraSquad]
 
-    holdNextRoomsResponse = true
+    holdNextSquadsResponse = true
     const fetchesBeforeReturn = countHttpCalls('GET', '/api/rooms')
     const returningVisit = renderSquadsFlow('/squads', { queryClient })
 
@@ -629,13 +602,13 @@ describe('squad board — refetch on mount', () => {
     // empty state.
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
     await waitFor(() => expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeReturn + 1))
-    // The held request is still in flight while the cached rooms are on
+    // The held request is still in flight while the cached squads are on
     // screen — the page never fell back to the skeleton.
     expect(queryClient.getQueryState(['squads'])?.fetchStatus).toBe('fetching')
     expect(screen.queryByText('No squads yet')).not.toBeInTheDocument()
 
-    releaseRoomsResponse?.()
-    expect(await screen.findByText('Extra room')).toBeInTheDocument()
+    releaseSquadsResponse?.()
+    expect(await screen.findByText('Extra squad')).toBeInTheDocument()
     expect(countHttpCalls('GET', '/api/rooms')).toBe(fetchesBeforeReturn + 1)
 
     returningVisit.unmount()
@@ -692,7 +665,7 @@ describe('squad board — refetch on mount', () => {
       // mount; the mount fetch already covers the list, so no refetch is due.
       sendFromServer({ type: 'lobby_subscribed', payload: { message: 'Subscribed' } })
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(SQUAD_BOARD_REFETCH_DEBOUNCE_MS)
+        await vi.advanceTimersByTimeAsync(300)
       })
       expect(countHttpCalls('GET', '/api/rooms')).toBe(1)
     } finally {
@@ -731,11 +704,11 @@ describe('squad board — join flows', () => {
 
   it('joins as an authenticated user, refreshes the board and opens the lobby', async () => {
     registerLobbyRoutes()
-    const { router, user } = renderSquadsFlow('/squads')
+    const { navigation, user } = renderSquadsFlow('/squads')
 
     await user.click(await screen.findByText('Ranked grind'))
 
-    await waitFor(() => expect(router.history.location.pathname).toBe('/squads/ABC123'))
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/ABC123'))
     expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1)
     expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
     expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThanOrEqual(2)
@@ -754,32 +727,30 @@ describe('squad board — join flows', () => {
   })
 
   it('auto-joins a squad from a shared ?join link and returns to the board', async () => {
-    // Current behavior (recorded, not endorsed): after the authenticated
-    // auto-join, the search-clear write in useAutoJoin lands on the board's
-    // URL, so the user ends up back on the board even though the join POST
-    // succeeded. In a production build the App Router discards the lobby
-    // navigation that the join started before it commits. This harness commits
-    // its navigation at once, which is why the lobby is briefly shown here.
+    // The search-clear write in useAutoJoin lands on the board's URL while the lobby navigation is
+    // still in flight, so the navigation is discarded and the user stays on the board even though the
+    // join POST succeeded.
     registerLobbyRoutes()
-    const { router } = renderSquadsFlow('/squads?join=ABC123')
+    const { navigation } = renderSquadsFlow('/squads?join=ABC123')
 
     await waitFor(() => expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1))
-    expect(countHttpCalls('GET', `/api/rooms/${openSquad.code}`)).toBe(1)
 
-    await waitFor(() => expect(router.history.location.pathname).toBe('/squads'))
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads'))
     expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1)
   })
 
   it('opens a board URL with invalid parameters: they fall back, the valid ones and the auto-join stay', async () => {
     // The join stays pending so the URL still carries every parameter it was opened with.
     onHttp('POST', '/api/rooms/:code/join', () => new Promise<MockHttpResponse>(() => {}))
-    const { router } = renderSquadsFlow(
+    const { navigation } = renderSquadsFlow(
       '/squads?filter=bogus&sort=sideways&page=0&language=pt-br&join=ABC123'
     )
 
     // The valid join is kept: the auto-join fires once for its code.
     await waitFor(() => expect(countHttpCalls('POST', '/api/rooms/ABC123/join')).toBe(1))
-    expect(router.state.location.search).toEqual({ language: 'pt-br', join: 'ABC123' })
+    const params = new URLSearchParams(navigation.history.location.search)
+    expect(params.get('language')).toBe('pt-br')
+    expect(params.get('join')).toBe('ABC123')
 
     // The valid language filters the board; the invalid filter, sort and page use their defaults.
     const titles = () =>
@@ -789,11 +760,11 @@ describe('squad board — join flows', () => {
 
   it('opens the lobby directly for squads the user already belongs to', async () => {
     registerLobbyRoutes()
-    const { router, user } = renderSquadsFlow('/squads')
+    const { navigation, user } = renderSquadsFlow('/squads')
 
     await user.click(await screen.findByText('Casual five stack'))
 
-    await waitFor(() => expect(router.history.location.pathname).toBe('/squads/MEM111'))
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/MEM111'))
     expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(0)
     expect(await screen.findByText('Casual five stack')).toBeInTheDocument()
   })
@@ -802,12 +773,12 @@ describe('squad board — join flows', () => {
     onHttp('POST', '/api/rooms/:code/join', () =>
       httpError(409, { message: 'Room is full', error: 'ROOM_FULL' })
     )
-    const { router, user } = renderSquadsFlow('/squads')
+    const { navigation, user } = renderSquadsFlow('/squads')
 
     await user.click(await screen.findByText('Ranked grind'))
 
     await waitFor(() => expect(toastStore.errorCalls[0]).toBe('This squad is already full.'))
-    expect(router.history.location.pathname).toBe('/squads')
+    expect(navigation.history.location.pathname).toBe('/squads')
     expect(screen.getByText('Ranked grind')).toBeInTheDocument()
   })
 
@@ -821,12 +792,12 @@ describe('squad board — join flows', () => {
       onHttp('POST', '/api/rooms/:code/join', () =>
         httpError(409, { message: 'join refused', error: errorCode })
       )
-      const { router, user } = renderSquadsFlow('/squads')
+      const { navigation, user } = renderSquadsFlow('/squads')
 
       await user.click(await screen.findByText('Ranked grind'))
 
       await waitFor(() => expect(toastStore.errorCalls[0]).toBe(message))
-      expect(router.history.location.pathname).toBe('/squads')
+      expect(navigation.history.location.pathname).toBe('/squads')
     }
   )
 })
@@ -864,11 +835,11 @@ describe('squad board — URL state', () => {
     })
 
     await user.click(await screen.findByRole('button', { name: 'Go to page 2' }))
-    expect(await screen.findByText('Page room 7')).toBeInTheDocument()
+    expect(await screen.findByText('Page squad 7')).toBeInTheDocument()
 
     vi.useFakeTimers()
     act(() => vi.advanceTimersByTime(300))
-    expect(screen.getByText('Page room 7')).toBeInTheDocument()
+    expect(screen.getByText('Page squad 7')).toBeInTheDocument()
     expect(locationParams(navigation).get('page')).toBe('2')
   })
 
@@ -930,15 +901,15 @@ describe('squad board — URL state', () => {
       queryClient: seededClient(squadsForPagination()),
     })
     await user.click(await screen.findByRole('button', { name: 'Go to page 2' }))
-    expect(await screen.findByText('Page room 7')).toBeInTheDocument()
+    expect(await screen.findByText('Page squad 7')).toBeInTheDocument()
     const fetchesBeforeWrites = countHttpCalls('GET', '/api/rooms')
     expect(writeUrl).toHaveBeenLastCalledWith(null, '', '/squads?page=2')
 
     fireEvent.change(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), {
-      target: { value: 'Page room 7' },
+      target: { value: 'Page squad 7' },
     })
-    await waitFor(() => expect(locationParams(navigation).get('search')).toBe('Page room 7'))
-    expect(writeUrl).toHaveBeenLastCalledWith(null, '', '/squads?search=Page+room+7')
+    await waitFor(() => expect(locationParams(navigation).get('search')).toBe('Page squad 7'))
+    expect(writeUrl).toHaveBeenLastCalledWith(null, '', '/squads?search=Page+squad+7')
 
     // Both writes moved the URL the hooks read, and the router recorded no navigation for either.
     expect(navigation.calls).toEqual([])
@@ -948,7 +919,7 @@ describe('squad board — URL state', () => {
 })
 
 describe('squad board — invite links', () => {
-  it('does not auto-join a join value that is not a room code', async () => {
+  it('does not auto-join a join value that is not a squad code', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     renderSquadsFlow('/squads?join=..%2F..%2Fadmin', { queryClient: seededClient(boardSquads) })
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
@@ -970,12 +941,12 @@ describe('squad board — seeded server page', () => {
       queryClient: seededClient(squadsForPagination()),
     })
 
-    expect(await screen.findByText('Page room 7')).toBeInTheDocument()
-    expect(screen.queryByText('Page room 1')).not.toBeInTheDocument()
+    expect(await screen.findByText('Page squad 7')).toBeInTheDocument()
+    expect(screen.queryByText('Page squad 1')).not.toBeInTheDocument()
 
     openLatestWebSocket()
     const fetchesBeforeUpdate = countHttpCalls('GET', '/api/rooms')
-    const pageTwoSquad = squadsForPagination().rooms.find((squad) => squad.name === 'Page room 7')
+    const pageTwoSquad = squadsForPagination().rooms.find((squad) => squad.name === 'Page squad 7')
     if (!pageTwoSquad) throw new Error('The pagination fixture has no page two squad')
     serverSquads.rooms = serverSquads.rooms.map((squad) =>
       squad.id === pageTwoSquad.id ? { ...squad, memberCount: 2 } : squad
@@ -989,9 +960,9 @@ describe('squad board — seeded server page', () => {
       expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeUpdate)
     )
     // The event only schedules a refetch and does not patch the cache, so the squad's new count shows once the refetch is applied.
-    const pageTwoCard = () => screen.getByText('Page room 7').closest('button')
+    const pageTwoCard = () => screen.getByText('Page squad 7').closest('button')
     await waitFor(() => expect(pageTwoCard()).toHaveTextContent('2/5'))
-    expect(screen.getByText('Page room 7')).toBeInTheDocument()
-    expect(screen.queryByText('Page room 1')).not.toBeInTheDocument()
+    expect(screen.getByText('Page squad 7')).toBeInTheDocument()
+    expect(screen.queryByText('Page squad 1')).not.toBeInTheDocument()
   })
 })

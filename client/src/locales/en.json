@@ -174,48 +174,46 @@
       "maxPlayersTooMany": "Max 20 players"
     }
   },
-  "rooms": {
-    "myRooms": {
-      "title": "My squads",
-      "subtitle": "Squads you created or joined",
-      "loadError": "Failed to load your squads. Please refresh the page.",
-      "tabCreated": "Created ({count})",
-      "tabJoined": "Joined ({count})",
-      "noRoomsYet": "No squads here yet.",
-      "noRoomsFiltered": "No squads match your filters."
-    },
-    "notFound": {
-      "title": "Squad not found",
-      "description": "This squad no longer exists or the code is invalid. Check the code and try again.",
-      "codeLabel": "Code entered:",
-      "backToRooms": "Back to Squads",
-      "createRoom": "Create New Squad"
-    },
-    "lobby": {
-      "backToRooms": "Back to squads",
-      "leaveRoom": "Leave squad",
-      "squadLocked": "Squad locked",
-      "cannotLeave": "Cannot leave a full squad",
-      "pleaseSignIn": "Please sign in to view this squad.",
-      "playerCount": "{current}/{max} players",
-      "players": "Players ({current}/{max})",
-      "copied": "Copied!",
-      "waitingForPlayer": "Waiting for player...",
-      "host": "Host"
-    },
-    "discordCard": {
-      "title": "Your squad is ready!",
-      "description": "Join the Discord server to start playing together.",
-      "copied": "Copied!",
-      "copyLink": "Copy link",
-      "joinDiscord": "Join Discord"
-    }
+  "mySquads": {
+    "title": "My squads",
+    "subtitle": "Squads you created or joined",
+    "loadError": "Failed to load your squads. Please refresh the page.",
+    "tabCreated": "Created ({count})",
+    "tabJoined": "Joined ({count})",
+    "noSquadsYet": "No squads here yet.",
+    "noSquadsFiltered": "No squads match your filters."
+  },
+  "squadNotFound": {
+    "title": "Squad not found",
+    "description": "This squad no longer exists or the code is invalid. Check the code and try again.",
+    "codeLabel": "Code entered:",
+    "backToSquads": "Back to Squads",
+    "createSquad": "Create New Squad"
+  },
+  "lobby": {
+    "backToSquads": "Back to squads",
+    "leaveSquad": "Leave squad",
+    "squadLocked": "Squad locked",
+    "cannotLeave": "Cannot leave a full squad",
+    "pleaseSignIn": "Please sign in to view this squad.",
+    "playerCount": "{current}/{max} players",
+    "players": "Players ({current}/{max})",
+    "copied": "Copied!",
+    "waitingForPlayer": "Waiting for player...",
+    "host": "Host"
+  },
+  "discordCard": {
+    "title": "Your squad is ready!",
+    "description": "Join the Discord server to start playing together.",
+    "copied": "Copied!",
+    "copyLink": "Copy link",
+    "joinDiscord": "Join Discord"
   },
   "notFound": {
     "title": "Page not found",
     "description": "Looks like you've wandered off the map. The page you're looking for doesn't exist or has been moved.",
     "backToHome": "Back to Home",
-    "exploreRooms": "Explore Squads"
+    "exploreSquads": "Explore Squads"
   },
   "notifications": {
     "title": "Notifications",

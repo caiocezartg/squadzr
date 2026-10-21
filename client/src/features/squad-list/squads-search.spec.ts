@@ -23,13 +23,13 @@ describe('squadsSearchSchema', () => {
   })
 
   it.each(['../../admin', 'ABC12', 'ABC1234', 'ABC 12', '%2F%2E%2E'])(
-    'drops a join value that is not a room code: %s',
+    'drops a join value that is not a squad code: %s',
     (join) => {
       expect(squadsSearchSchema.parse({ join }).join).toBeUndefined()
     }
   )
 
-  it('keeps a lowercase room code, which the server reads without regard to case', () => {
+  it('keeps a lowercase squad code, which the server reads without regard to case', () => {
     expect(squadsSearchSchema.parse({ join: 'abc123' }).join).toBe('abc123')
   })
 

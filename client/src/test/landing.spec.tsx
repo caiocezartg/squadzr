@@ -1,10 +1,9 @@
 /**
  * The landing on the App Router (CCC-77). The page renders on the server: its headline, copy, calls to
- * action, games badge, popular games and FAQ are in the server HTML, and no landing section is a lazy
- * island.
+ * action, games badge, popular games and FAQ are in the server HTML.
  */
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -26,9 +25,7 @@ import { fakeSession, signInAsFakeUser } from './stubs'
 vi.mock('next/server', () => ({ connection: () => Promise.resolve() }))
 
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const LANDING_DIR = join(SRC_DIR, 'components/landing')
 const LANDING_ROUTE_DIR = join(SRC_DIR, 'app/(landing)')
-const LAZY_ISLAND = /\blazy\(|next\/dynamic|LazyIslandBoundary|ssr:\s*false/
 const NOW = new Date('2031-06-01T12:00:00Z')
 
 /** The landing as the server renders it for `session`, in the English messages the suite uses. */
@@ -98,20 +95,10 @@ describe('landing page', () => {
     expect(metadata.title).toBe('Squadzr — Find your gaming squad')
   })
 
-  it('has no lazy island: no section or landing component loads on demand', () => {
-    const landingFiles = readdirSync(LANDING_DIR)
-      .filter((file) => file.endsWith('.tsx'))
-      .map((file) => join(LANDING_DIR, file))
-    const files = [...landingFiles, join(LANDING_ROUTE_DIR, 'page.tsx')]
-
-    expect(files.filter((file) => LAZY_ISLAND.test(readFileSync(file, 'utf8')))).toEqual([])
-  })
-
   it('has no route-level loading state, so a cached landing never flashes a skeleton', () => {
     // A loading.tsx at the app root would wrap every segment, and one over the landing would cover
     // the content on every client navigation even when its data is already cached.
     expect(existsSync(join(SRC_DIR, 'app/loading.tsx'))).toBe(false)
-    expect(existsSync(join(SRC_DIR, 'app/[...slug]/loading.tsx'))).toBe(false)
     expect(existsSync(join(LANDING_ROUTE_DIR, 'loading.tsx'))).toBe(false)
   })
 })

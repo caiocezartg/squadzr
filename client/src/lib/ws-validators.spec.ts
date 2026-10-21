@@ -1,12 +1,12 @@
 /**
- * The WebSocket transport seam: `onServerEvent` only hands a handler a payload that
- * parsed against its contract from @squadzr/schemas. The socket is the deterministic
+ * The WebSocket transport seam: a handler only receives a payload that parsed
+ * against its contract from @squadzr/schemas. The socket is the deterministic
  * `MockWebSocket` (src/test/setup.ts).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocketClient } from './ws-client'
-import { onServerEvent, parseServerEvent } from './ws-validators'
+import { parseServerEvent } from './ws-validators'
 import { latestWebSocket } from '@/test/ws-mock'
 import { hostPlayer, openSquad } from '@/test/fixtures'
 
@@ -27,11 +27,11 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('onServerEvent', () => {
+describe('typed server events', () => {
   it('hands the handler the validated payload of a valid message', () => {
     const { on, socket } = connectedClient()
     const handler = vi.fn()
-    onServerEvent(on, 'room_updated', handler)
+    on('room_updated', handler)
 
     socket.serverSend({
       type: 'room_updated',
@@ -62,7 +62,7 @@ describe('onServerEvent', () => {
   ] as const)('drops an invalid %s payload before it reaches the handler', (type, payload) => {
     const { on, socket } = connectedClient()
     const handler = vi.fn()
-    onServerEvent(on, type, handler)
+    on(type, handler)
 
     socket.serverSend({ type, payload })
 
@@ -76,7 +76,7 @@ describe('onServerEvent', () => {
   it('strips the invite from a guest catalog event', () => {
     const { on, socket } = connectedClient()
     const handler = vi.fn()
-    onServerEvent(on, 'room_created', handler)
+    on('room_created', handler)
 
     socket.serverSend({
       type: 'room_created',
@@ -90,7 +90,7 @@ describe('onServerEvent', () => {
   it('stops delivering after unsubscribe', () => {
     const { on, socket } = connectedClient()
     const handler = vi.fn()
-    const unsubscribe = onServerEvent(on, 'presence_updated', handler)
+    const unsubscribe = on('presence_updated', handler)
 
     unsubscribe()
     socket.serverSend({
@@ -126,7 +126,7 @@ describe('diagnostics', () => {
     expect(client.status).toBe('closed')
   })
 
-  it('reports a throwing handler by event type only and keeps the connection', () => {
+  it('reports a throwing handler by event type only, without payload content, and keeps the connection', () => {
     const { client, socket } = connectedClient()
     client.on('presence_updated', () => {
       throw new Error(`cannot handle ${SECRET_INVITE}`)

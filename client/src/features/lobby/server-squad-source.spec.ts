@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { API_INTERNAL_URL } from '@/env.server'
-import { gameLol, lobbySquad, lobbyRoomResponse } from '@/test/fixtures'
+import { gameLol, lobbySquad, lobbySquadResponse } from '@/test/fixtures'
 import { prefetchLobby } from './prefetch-lobby'
 import { viewerSquadSource } from './server-squad-source'
 import { readSquadDetails, squadQueryKey } from './squad-details'
@@ -40,7 +40,7 @@ afterEach(() => {
 
 describe('the Lobby loader for a viewer', () => {
   it("forwards the viewer's cookie and address on the Squad read", async () => {
-    const fetchMock = stubReads(jsonResponse(lobbyRoomResponse))
+    const fetchMock = stubReads(jsonResponse(lobbySquadResponse))
 
     await readSquadDetails(viewerSquadSource(viewer), lobbySquad.code)
 
@@ -50,7 +50,7 @@ describe('the Lobby loader for a viewer', () => {
   })
 
   it('sends the game read anonymously, with no cookie', async () => {
-    const fetchMock = stubReads(jsonResponse(lobbyRoomResponse))
+    const fetchMock = stubReads(jsonResponse(lobbySquadResponse))
 
     await readSquadDetails(viewerSquadSource(viewer), lobbySquad.code)
 
@@ -58,7 +58,7 @@ describe('the Lobby loader for a viewer', () => {
   })
 
   it('never caches either read', async () => {
-    const fetchMock = stubReads(jsonResponse(lobbyRoomResponse))
+    const fetchMock = stubReads(jsonResponse(lobbySquadResponse))
 
     await readSquadDetails(viewerSquadSource(viewer), lobbySquad.code)
 
@@ -75,14 +75,14 @@ describe('the Lobby loader for a viewer', () => {
   })
 
   it('starts the read in the query client, so the Squad is in the cache once it settles', async () => {
-    stubReads(jsonResponse(lobbyRoomResponse))
+    stubReads(jsonResponse(lobbySquadResponse))
     const queryClient = new QueryClient()
 
     prefetchLobby(queryClient, viewer, lobbySquad.code)
 
     await vi.waitFor(() =>
       expect(queryClient.getQueryData(squadQueryKey(lobbySquad.code))).toEqual({
-        response: lobbyRoomResponse,
+        response: lobbySquadResponse,
         game: gameLol,
       })
     )

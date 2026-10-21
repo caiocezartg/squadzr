@@ -1,23 +1,45 @@
 import { act, render, renderHook, waitFor } from '@testing-library/react'
 import {
   HydrationBoundary,
+  QueryClient,
   QueryClientProvider,
   dehydrate,
   type DehydratedState,
-  type QueryClient,
 } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
-import { createQueryClient, getQueryClient } from './query-client'
+import { ApiClientError } from './api-contract'
+import { getQueryClient } from './query-client'
 
-const ROOMS_KEY = ['rooms'] as const
+const SQUADS_KEY = ['squads'] as const
 
-function dehydratedRooms(value: string, updatedAt: number): DehydratedState {
-  const source = createQueryClient()
-  source.setQueryData(ROOMS_KEY, value, { updatedAt })
+describe('query retry policy', () => {
+  const retry = getQueryClient().getDefaultOptions().queries?.retry as (
+    failureCount: number,
+    error: unknown
+  ) => boolean
+
+  it('does not retry a 4xx API error', () => {
+    expect(retry(0, new ApiClientError('Not found', 404))).toBe(false)
+  })
+
+  it('retries a 5xx API error up to three times', () => {
+    expect(retry(0, new ApiClientError('Unavailable', 503))).toBe(true)
+    expect(retry(2, new ApiClientError('Unavailable', 503))).toBe(true)
+    expect(retry(3, new ApiClientError('Unavailable', 503))).toBe(false)
+  })
+
+  it('retries a failure that is not an API error', () => {
+    expect(retry(0, new Error('network'))).toBe(true)
+  })
+})
+
+function dehydratedSquads(value: string, updatedAt: number): DehydratedState {
+  const source = new QueryClient()
+  source.setQueryData(SQUADS_KEY, value, { updatedAt })
   return dehydrate(source)
 }
 
-function HydratedRooms({
+function HydratedSquads({
   client,
   state,
 }: {
@@ -27,7 +49,7 @@ function HydratedRooms({
   return (
     <QueryClientProvider client={client}>
       <HydrationBoundary state={state}>
-        <span>rooms</span>
+        <span>squads</span>
       </HydrationBoundary>
     </QueryClientProvider>
   )
@@ -47,22 +69,22 @@ describe('getQueryClient in the browser', () => {
 
 describe('hydrating a dehydrated route', () => {
   it('replaces older cached data with a fresher dehydrated result', async () => {
-    const client = createQueryClient()
-    client.setQueryData(ROOMS_KEY, 'stale', { updatedAt: 1_000 })
-    const view = render(<HydratedRooms client={client} />)
+    const client = new QueryClient()
+    client.setQueryData(SQUADS_KEY, 'stale', { updatedAt: 1_000 })
+    const view = render(<HydratedSquads client={client} />)
 
-    view.rerender(<HydratedRooms client={client} state={dehydratedRooms('fresh', 2_000)} />)
+    view.rerender(<HydratedSquads client={client} state={dehydratedSquads('fresh', 2_000)} />)
 
-    await waitFor(() => expect(client.getQueryData(ROOMS_KEY)).toBe('fresh'))
+    await waitFor(() => expect(client.getQueryData(SQUADS_KEY)).toBe('fresh'))
   })
 
   it('keeps newer cached data over an older dehydrated result', async () => {
-    const client = createQueryClient()
-    client.setQueryData(ROOMS_KEY, 'current', { updatedAt: 2_000 })
+    const client = new QueryClient()
+    client.setQueryData(SQUADS_KEY, 'current', { updatedAt: 2_000 })
 
-    render(<HydratedRooms client={client} state={dehydratedRooms('older', 1_000)} />)
+    render(<HydratedSquads client={client} state={dehydratedSquads('older', 1_000)} />)
     await act(async () => {})
 
-    expect(client.getQueryData(ROOMS_KEY)).toBe('current')
+    expect(client.getQueryData(SQUADS_KEY)).toBe('current')
   })
 })

@@ -50,13 +50,13 @@ export function MySquadsResults({
             value="created"
             className="px-4 py-2.5 text-sm font-medium text-white/50 transition-colors cursor-pointer data-selected:text-accent data-selected:border-b-2 data-selected:border-accent hover:text-white/80 -mb-px outline-hidden"
           >
-            {t('rooms.myRooms.tabCreated', { count: hosted.length })}
+            {t('mySquads.tabCreated', { count: hosted.length })}
           </Tabs.Tab>
           <Tabs.Tab
             value="joined"
             className="px-4 py-2.5 text-sm font-medium text-white/50 transition-colors cursor-pointer data-selected:text-accent data-selected:border-b-2 data-selected:border-accent hover:text-white/80 -mb-px outline-hidden"
           >
-            {t('rooms.myRooms.tabJoined', { count: joined.length })}
+            {t('mySquads.tabJoined', { count: joined.length })}
           </Tabs.Tab>
         </Tabs.List>
 
@@ -64,9 +64,7 @@ export function MySquadsResults({
         <Tabs.Panel value="created" keepMounted>
           {hostedSquads.length === 0 ? (
             <p className="text-white/40 text-sm py-6">
-              {hasActiveFilters
-                ? t('rooms.myRooms.noRoomsFiltered')
-                : t('rooms.myRooms.noRoomsYet')}
+              {hasActiveFilters ? t('mySquads.noSquadsFiltered') : t('mySquads.noSquadsYet')}
             </p>
           ) : (
             <SquadGrid
@@ -81,9 +79,7 @@ export function MySquadsResults({
         <Tabs.Panel value="joined" keepMounted>
           {joinedSquads.length === 0 ? (
             <p className="text-white/40 text-sm py-6">
-              {hasActiveFilters
-                ? t('rooms.myRooms.noRoomsFiltered')
-                : t('rooms.myRooms.noRoomsYet')}
+              {hasActiveFilters ? t('mySquads.noSquadsFiltered') : t('mySquads.noSquadsYet')}
             </p>
           ) : (
             <SquadGrid

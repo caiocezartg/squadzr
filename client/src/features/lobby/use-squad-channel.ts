@@ -7,17 +7,17 @@ import {
   applyPresence,
   presenceFromSnapshot,
   type PresenceState,
-  type RoomSnapshot,
-} from './room-snapshot'
+  type SquadSnapshot,
+} from './squad-snapshot'
 
-/** Room codes travel uppercased by contract; URLs may still arrive lowercase. */
+/** Squad codes travel uppercased by contract; URLs may still arrive lowercase. */
 function matchesSquadCode(eventCode: string, squadCode: string): boolean {
   return eventCode.toUpperCase() === squadCode.toUpperCase()
 }
 
 interface UseSquadChannelOptions {
   squadCode: string
-  /** Only an authenticated member joins; visitors never enter the room channel. */
+  /** Only an authenticated member joins; visitors never enter the squad channel. */
   enabled: boolean
   /** A Squad this tab was watching was removed from the board. */
   onSquadRemoved: (squadId: string) => void
@@ -25,18 +25,18 @@ interface UseSquadChannelOptions {
 
 export interface SquadChannel {
   status: RealtimeStatus
-  snapshot: RoomSnapshot | null
+  snapshot: SquadSnapshot | null
   presence: PresenceState
   /** The code of the latest realtime error. The page translates it; the server's text is not shown. */
   errorCode: string | null
   membershipRevoked: boolean
   dismissError: () => void
-  /** Tells the server this tab is leaving the room channel (Presence only). */
+  /** Tells the server this tab is leaving the squad channel (Presence only). */
   notifySquadLeave: (squadCode: string) => void
 }
 
 /**
- * The Lobby's realtime channel. Owns the socket, the join/leave lifecycle of the room channel, the
+ * The Lobby's realtime channel. Owns the socket, the join/leave lifecycle of the squad channel, the
  * authoritative snapshot, Presence and the membership error state.
  *
  * Unmounting the Lobby only closes the channel: the server then drops this tab's Presence. Leaving the
@@ -47,18 +47,18 @@ export function useSquadChannel({
   enabled,
   onSquadRemoved,
 }: UseSquadChannelOptions): SquadChannel {
-  const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null)
+  const [snapshot, setSnapshot] = useState<SquadSnapshot | null>(null)
   const [presence, setPresence] = useState<PresenceState>({})
   const [errorCode, setErrorCode] = useState<string | null>(null)
   const [membershipRevoked, setMembershipRevoked] = useState(false)
 
-  const { status, send, on, subscribe } = useWebSocket({ url: WS_URL, autoConnect: true })
+  const { status, send, on, subscribe } = useWebSocket(WS_URL)
 
   // This page's socket is also where user-targeted notification pushes arrive.
   useNotificationEvents({ on })
 
   // The code this page last asked the server to join. When it changes, the socket must release the
-  // previous room channel before joining the new one.
+  // previous squad channel before joining the new one.
   const joinedCodeRef = useRef<string | null>(null)
   // The Squad code currently rendered. It updates in the commit phase, before the transport can hand
   // another frame to the previous Squad's handlers, so a late error from a Squad this page has already

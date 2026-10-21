@@ -1,33 +1,17 @@
 /**
  * Render harness for the squad flows.
  *
- * Composes a TanStack Router tree using only the library's public code-based
- * API (`createRootRoute` + `createRoute` + `addChildren`). The tree stands in for
- * the app's routers: the Squad Board, My Squads and the Lobby are App Router pages
- * in the app, and they mount here at `/squads`, `/squads/my` and `/squads/$code`.
- * Each route mounts the REAL page component, and the My Squads route takes its
- * search validation from the shared contract, so the tests exercise the actual
- * implementations without any generated internals (`_addFileChildren`,
- * `_addFileTypes`, `update` re-parenting) or details of `routeTree.gen.ts`.
- *
- * The tree renders with next-intl and the real English messages. Its location
- * is the harness navigation, which `next/navigation` and `next/link` share (see
- * ./navigation). The tree is mounted inside a fresh TanStack Query client so
- * cache updates are observable through public query APIs. The realtime update
+ * Renders the real App Router page component for the harness location: the Squad Board at `/squads`,
+ * My Squads at `/squads/my` and the Lobby at `/squads/<code>`. The location is the harness navigation,
+ * which `next/navigation` and `next/link` share (see ./navigation), so a navigation swaps the page as
+ * the App Router would. The tree renders with next-intl and the real English messages, inside a fresh
+ * TanStack Query client so cache updates are observable through public query APIs. The realtime update
  * notice is mounted beside it, as the root layout mounts it beside the app.
  */
 
 import { StrictMode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  Outlet,
-  RouterProvider,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  useParams,
-} from '@tanstack/react-router'
-import type { AnyRoute, Router } from '@tanstack/react-router'
+import { usePathname } from 'next/navigation'
 import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
@@ -35,7 +19,6 @@ import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice
 import { LobbyPage } from '@/features/lobby'
 import { MySquadsPage } from '@/features/my-squads/page'
 import { SquadBoardPage } from '@/features/squad-board/page'
-import { squadsSearchSchema } from '@/features/squad-list'
 import { EnglishIntlProvider } from './intl'
 import { createHarnessNavigation } from './navigation'
 import type { HarnessNavigation } from './navigation'
@@ -55,45 +38,23 @@ export function createTestQueryClient(): QueryClient {
   })
 }
 
-function buildSquadsRouteTree(): AnyRoute {
-  const rootRoute = createRootRoute({ component: () => <Outlet /> })
+/** The page the App Router renders at the harness location. */
+function SquadsScene() {
+  const pathname = usePathname()
 
-  const squadBoardRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/squads',
-    // The App Router parses the same search on the server, so the board sees a validated search here too.
-    validateSearch: (raw) => squadsSearchSchema.parse(raw),
-    component: SquadBoardPage,
-  })
+  if (pathname === '/squads') return <SquadBoardPage />
+  if (pathname === '/squads/my') return <MySquadsPage />
 
-  const squadLobbyRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/squads/$code',
-    component: SquadLobbyScene,
-  })
+  const code = /^\/squads\/([^/]+)$/.exec(pathname)?.[1]
+  if (code) return <LobbyPage squadCode={decodeURIComponent(code)} />
 
-  const mySquadsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/squads/my',
-    validateSearch: (raw) => squadsSearchSchema.parse(raw),
-    component: MySquadsPage,
-  })
-
-  return rootRoute.addChildren([squadBoardRoute, squadLobbyRoute, mySquadsRoute]) as AnyRoute
-}
-
-/** The Lobby at the Squad code of the URL, as the App Router page renders it. */
-function SquadLobbyScene() {
-  const { code = '' } = useParams({ strict: false }) as { code?: string }
-
-  return <LobbyPage squadCode={code} />
+  return null
 }
 
 export interface SquadsFlow {
   user: UserEvent
   queryClient: QueryClient
-  router: Router<AnyRoute>
-  /** The in-memory location the router and the Next hooks share, with the calls recorded on it. */
+  /** The in-memory location the Next hooks and links share, with the calls recorded on it. */
   navigation: HarnessNavigation
   /** Unmounts the tree; remount by rendering again with the same queryClient. */
   unmount: () => void
@@ -117,16 +78,12 @@ export function renderSquadsFlow(url: string, options: RenderSquadsFlowOptions =
   }
 
   const navigation = createHarnessNavigation(url)
-  const router = createRouter({
-    routeTree: buildSquadsRouteTree(),
-    history: navigation.history,
-  })
 
   // The session provider starts from this test's viewer, as the server's read would for this visit.
   const tree = (
     <EnglishIntlProvider session={fakeSession()}>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <SquadsScene />
         <RealtimeUpdateNotice />
       </QueryClientProvider>
     </EnglishIntlProvider>
@@ -137,7 +94,6 @@ export function renderSquadsFlow(url: string, options: RenderSquadsFlowOptions =
   return {
     user: userEvent.setup({ delay: null }),
     queryClient,
-    router,
     navigation,
     unmount: () => view.unmount(),
   }
