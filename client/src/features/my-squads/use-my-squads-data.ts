@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react'
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { myRoomsResponseSchema } from '@squadzr/schemas'
-import { api } from '@/lib/api'
+import { api, ApiClientError, ApiContractError } from '@/lib/api'
 import type { MyRoomsResponse, Squad } from '@/types'
 import { discardFailedMySquadsRead, mySquadsQueryKey } from './my-squads-cache'
 
@@ -13,6 +14,55 @@ export interface MySquadsData {
   readonly joined: Squad[]
   /** Re-reads the authoritative lists, e.g. after creating a Squad. */
   readonly refetch: () => Promise<unknown>
+}
+
+/** A 401, whatever body it carried, is the API saying the viewer has no session. */
+function isUnauthorized(error: unknown): boolean {
+  return (
+    (error instanceof ApiClientError || error instanceof ApiContractError) && error.status === 401
+  )
+}
+
+/** The browser's read of the lists. A 401 reads as `null` (signed out), as the server's read does. */
+async function readMySquads(): Promise<MyRoomsResponse | null> {
+  try {
+    return await api.get('/api/rooms/my', myRoomsResponseSchema)
+  } catch (error) {
+    if (isUnauthorized(error)) return null
+    throw error
+  }
+}
+
+/**
+ * Sends a viewer whose session the API refused to the landing. The server only turns away a request
+ * with no session cookie, so an expired or forged cookie reaches the page, and the list's read (the
+ * server's, dehydrated, or the browser's own) answers 401 and stores `null`. This watches that
+ * answer without reading anything itself, and returns `true` once it is `null` so the page renders
+ * nothing while the router replaces the route. The `null` is dropped when the page leaves, so
+ * signing in again and coming back reads the lists instead of redirecting on the old answer.
+ */
+export function useSignedOutRedirect(): boolean {
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { data } = useQuery({ queryKey: mySquadsQueryKey, queryFn: readMySquads, enabled: false })
+  const signedOut = data === null
+
+  useEffect(() => {
+    if (signedOut) router.replace('/')
+  }, [signedOut, router])
+
+  // Dropping the `null` while the page is mounted would make the list read again, so it goes when
+  // the page leaves.
+  useEffect(
+    () => () => {
+      if (queryClient.getQueryData(mySquadsQueryKey) === null) {
+        queryClient.removeQueries({ queryKey: mySquadsQueryKey, exact: true })
+      }
+    },
+    [queryClient]
+  )
+
+  return signedOut
 }
 
 /**
@@ -54,13 +104,13 @@ export function useMySquadsBaseline(): number {
 export function useMySquads(baseline: number): MySquadsData {
   const query = useSuspenseQuery({
     queryKey: mySquadsQueryKey,
-    queryFn: () => api.get('/api/rooms/my', myRoomsResponseSchema),
+    queryFn: readMySquads,
     refetchOnMount: (query) => (query.state.dataUpdateCount === baseline ? 'always' : false),
     refetchOnWindowFocus: true,
   })
 
-  // A 401 from the server read is stored as `null` (signed out); the route redirects before this
-  // page renders, but a client refresh can observe it until the session check refreshes the route.
+  // A 401 is stored as `null` (signed out); `useSignedOutRedirect` sends the viewer away, and
+  // until the route changes there is nothing to list.
   const data = query.data ?? NO_SQUADS
 
   return { hosted: data.hosted, joined: data.joined, refetch: query.refetch }

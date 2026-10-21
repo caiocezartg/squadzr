@@ -9,13 +9,18 @@ import { SquadFilters, useAppSquadSearch, useSquadFilters } from '@/features/squ
 import { MySquadsErrorBoundary } from './my-squads-error-boundary'
 import { MySquadsResults } from './my-squads-results'
 import { MySquadsSkeleton } from './skeleton'
-import { useDiscardFailedMySquadsReads, useMySquadsBaseline } from './use-my-squads-data'
+import {
+  useDiscardFailedMySquadsReads,
+  useMySquadsBaseline,
+  useSignedOutRedirect,
+} from './use-my-squads-data'
 
 /**
  * The My Squads page. It owns the public search and the create dialog's open state; the list reads
  * the data in its own component behind a Suspense boundary, so the title and the filters render
- * while the list loads. A signed-out viewer never reaches this page: the route redirects before
- * rendering (and the session provider refreshes it if the session ends while open).
+ * while the list loads. A request with no session cookie never reaches this page (the route
+ * redirects it). When the API refuses the viewer's session, the page renders nothing and sends the
+ * viewer to the landing.
  */
 export function MySquadsView() {
   const t = useTranslations()
@@ -23,6 +28,7 @@ export function MySquadsView() {
   const [createOpen, setCreateOpen] = useState(false)
   const discardFailedReads = useDiscardFailedMySquadsReads()
   const baseline = useMySquadsBaseline()
+  const signedOut = useSignedOutRedirect()
   // A new attempt remounts the list's error boundary, so it leaves the failure it showed.
   const [attempt, setAttempt] = useState(0)
   const retry = () => {
@@ -46,7 +52,7 @@ export function MySquadsView() {
     query,
   } = useSquadFilters(search)
 
-  if (!session?.user) {
+  if (signedOut || !session?.user) {
     return null
   }
 

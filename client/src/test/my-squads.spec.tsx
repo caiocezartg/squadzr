@@ -13,7 +13,7 @@
 import { act, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
-import { countHttpCalls, httpOk, onHttp } from './http-router'
+import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import { boardGames, createdSquad, gameLol, guestPlayer, hostPlayer } from './fixtures'
 import type { MyRoomsResponse, Squad } from '@/types'
 
@@ -137,6 +137,38 @@ describe('my squads — refresh behavior', () => {
 
     await router.navigate({ href: '/squads/my' })
     expect(await screen.findByText('Created squad')).toBeInTheDocument()
+  })
+})
+
+describe('my squads — expired session', () => {
+  it('sends the viewer to the landing, with no My Squads content, when the browser read answers 401', async () => {
+    onHttp('GET', '/api/rooms/my', () => httpError(401, { error: 'UNAUTHORIZED', message: 'No' }))
+    const { navigation, queryClient } = renderSquadsFlow('/squads/my')
+
+    await waitFor(() => expect(navigation.calls).toContainEqual({ method: 'replace', href: '/' }))
+
+    expect(screen.queryByRole('heading', { name: 'My squads' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
+    expect(screen.queryByText('No squads here yet.')).not.toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(1)
+    // The 401 is not kept once the page is gone, so signing in again reads the lists instead of
+    // redirecting on it.
+    await waitFor(() => expect(queryClient.getQueryData(['my-squads'])).toBeUndefined())
+  })
+
+  it('reads the lists again when the viewer signs back in and returns', async () => {
+    onHttp('GET', '/api/rooms/my', () => httpError(401, { error: 'UNAUTHORIZED', message: 'No' }))
+    const firstVisit = renderSquadsFlow('/squads/my')
+    await waitFor(() =>
+      expect(firstVisit.navigation.calls).toContainEqual({ method: 'replace', href: '/' })
+    )
+    firstVisit.unmount()
+
+    onHttp('GET', '/api/rooms/my', () => httpOk(myRooms([readyHostedRoom], [])))
+    const secondVisit = renderSquadsFlow('/squads/my', { queryClient: firstVisit.queryClient })
+
+    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
+    expect(secondVisit.navigation.calls).toEqual([])
   })
 })
 

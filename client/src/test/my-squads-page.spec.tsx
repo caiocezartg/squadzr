@@ -1,26 +1,25 @@
 /**
  * My Squads on the App Router (CCC-81). These tests render the route's own server component,
  * `app/squads/my/page.tsx`, inside the providers the root layout gives it. The request's session
- * decides the redirect, and the route hands the server reads to the browser through the query
- * client without waiting for them.
+ * cookie decides the redirect (no API call), and the route hands the server reads to the browser
+ * through the query client without waiting for them.
  */
 
 import type { ReactNode } from 'react'
 import { renderToReadableStream } from 'react-dom/server'
 import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MySquadsRoute from '@/app/squads/my/page'
 import { mySquadsQueryKey } from '@/features/my-squads/my-squads-cache'
-import { getRequestSession } from '@/lib/server/session'
 import { boardGames, memberSquad, openSquad } from './fixtures'
 import { createTestQueryClient } from './harness'
-import { countHttpCalls, getHttpLog, httpOk, onHttp } from './http-router'
+import { countHttpCalls, getHttpLog, httpError, httpOk, onHttp } from './http-router'
 import type { MockHttpResponse } from './http-router'
 import { EnglishIntlProvider } from './intl'
 import { createHarnessNavigation, RedirectError } from './navigation'
-import { fakeSession, signInAsFakeUser } from './stubs'
+import { fakeSession, signInAsFakeUser, signOutFakeUser } from './stubs'
 
 // The server gives each request its own query client, which React's cache scopes to one request. The
 // suite renders as a server does, so each read of the page gets a client of its own.
@@ -30,16 +29,11 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
 }))
 
 // The viewer's cookies and address come from a request, which the suite does not have.
-vi.mock('@/lib/server/viewer', () => ({
-  getRequestViewer: async () => ({
-    cookie: 'better-auth.session_token=abc',
-    forwardedFor: '203.0.113.7',
-  }),
+const viewer = vi.hoisted(() => ({
+  current: { cookie: null as string | null, forwardedFor: '203.0.113.7' as string | null },
 }))
-
-// The root layout reads the session for the request; the page reuses that read.
-vi.mock('@/lib/server/session', () => ({
-  getRequestSession: vi.fn(),
+vi.mock('@/lib/server/viewer', () => ({
+  getRequestViewer: async () => viewer.current,
 }))
 
 /** A promise the test settles by hand, for a read the test holds back. */
@@ -77,23 +71,46 @@ async function renderRouteHtml(page: ReactNode): Promise<string> {
 
 function signIn(): void {
   signInAsFakeUser()
-  vi.mocked(getRequestSession).mockResolvedValue(fakeSession())
+  viewer.current = { ...viewer.current, cookie: 'NEXT_LOCALE=en; better-auth.session_token=abc' }
 }
 
 beforeEach(() => {
-  vi.mocked(getRequestSession).mockReset()
+  viewer.current = { ...viewer.current, cookie: null }
   onHttp('GET', '/api/games', () => httpOk(boardGames))
 })
 
 describe('My Squads on the App Router', () => {
-  it('redirects a signed-out viewer to the landing before any content renders', async () => {
-    vi.mocked(getRequestSession).mockResolvedValue(null)
+  it('redirects a request with no session cookie to the landing before any content renders, with no API call', async () => {
+    viewer.current = { ...viewer.current, cookie: 'NEXT_LOCALE=en' }
     const navigation = createHarnessNavigation('/squads/my')
 
     await expect(MySquadsRoute()).rejects.toBeInstanceOf(RedirectError)
 
     expect(navigation.calls).toEqual([{ method: 'redirect', href: '/' }])
     expect(getHttpLog()).toEqual([])
+  })
+
+  it('accepts the HTTPS session cookie', async () => {
+    createHarnessNavigation('/squads/my')
+    viewer.current = { ...viewer.current, cookie: '__Secure-better-auth.session_token=abc' }
+    onHttp('GET', '/api/rooms/my', () => httpOk({ hosted: [], joined: [] }))
+
+    await expect(MySquadsRoute()).resolves.toBeDefined()
+  })
+
+  it('redirects in the browser, with no content, when the dehydrated read says the session is expired', async () => {
+    // The cookie is present, so the route does not redirect; the root layout's session read found it
+    // expired, and so did the list's.
+    signOutFakeUser()
+    viewer.current = { ...viewer.current, cookie: 'better-auth.session_token=expired' }
+    const navigation = createHarnessNavigation('/squads/my')
+    onHttp('GET', '/api/rooms/my', () => httpError(401, { error: 'UNAUTHORIZED', message: 'No' }))
+
+    await renderRoute()
+
+    await waitFor(() => expect(navigation.calls).toContainEqual({ method: 'replace', href: '/' }))
+    expect(screen.queryByRole('heading', { name: 'My squads' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
   })
 
   it('returns without waiting for the server read', async () => {
