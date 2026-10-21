@@ -3,8 +3,8 @@
  * translation of each limit it knows, and any other message as the schema wrote it.
  */
 const TAG_ERROR_KEYS = {
-  'Max 5 tags': 'rooms.createModal.tagsMax',
-  'Tag too long': 'rooms.createModal.tagTooLong',
+  'Max 5 tags': 'squads.createModal.tagsMax',
+  'Tag too long': 'squads.createModal.tagTooLong',
 } as const
 
 type TagErrorMessage = keyof typeof TAG_ERROR_KEYS

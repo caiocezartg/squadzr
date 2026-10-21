@@ -1,5 +1,5 @@
 /**
- * Characterization tests for the create-room flow on the Squad Board page
+ * Characterization tests for the create-squad flow on the Squad Board page
  * and on My Squads (`/squads/my`).
  *
  * Covers the gating of the create button by session state, client-side
@@ -77,6 +77,22 @@ describe('create squad — client validation', () => {
     expect(screen.getByText('Please select a game')).toBeInTheDocument()
     expect(screen.getByText('Please enter a valid URL')).toBeInTheDocument()
     expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
+  })
+})
+
+describe('create squad — reopening', () => {
+  it('starts from an empty form after the dialog closes', async () => {
+    const { user } = renderSquadsFlow('/squads')
+    await openCreateModal(user)
+
+    await user.type(screen.getByLabelText('Squad Name'), 'Draft squad')
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument())
+
+    await user.click(screen.getByText('Create new squad'))
+    expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
+    expect(screen.getByLabelText('Squad Name')).toHaveValue('')
   })
 })
 

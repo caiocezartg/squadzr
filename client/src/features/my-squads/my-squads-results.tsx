@@ -1,8 +1,7 @@
 import { Tabs } from '@base-ui-components/react'
 import { useTranslations } from 'next-intl'
-import { DialogMotionProvider } from '@/components/ui/dialog-motion-provider'
 import { useSuspenseGames, useGamesMap } from '@/features/games'
-import { CreateRoomModal } from '@/features/room-creation'
+import { CreateSquadDialog } from '@/features/squad-creation'
 import { querySquadList, SquadGrid, type SquadListQuery } from '@/features/squad-list'
 import { useAppNavigation } from '@/lib/navigation'
 import { lobbyHref } from '@/lib/squad-links'
@@ -96,18 +95,15 @@ export function MySquadsResults({
         </Tabs.Panel>
       </Tabs.Root>
 
-      {/* Create squad modal, with the animation features its card plays. */}
+      {/* The one create squad dialog, mounted only while it is open. */}
       {createOpen && (
-        <DialogMotionProvider>
-          <CreateRoomModal
-            games={games}
-            open={createOpen}
-            onOpenChange={onCreateOpenChange}
-            onCreated={() => {
-              void refetch()
-            }}
-          />
-        </DialogMotionProvider>
+        <CreateSquadDialog
+          games={games}
+          onClose={() => onCreateOpenChange(false)}
+          onCreated={() => {
+            void refetch()
+          }}
+        />
       )}
     </>
   )
