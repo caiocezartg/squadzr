@@ -3,9 +3,9 @@ import { useSession } from '@/hooks/use-session'
 import { useGamesMap, useSuspenseGames } from '@/features/games'
 import { SquadGrid, querySquadList, type SquadListQuery } from '@/features/squad-list'
 import type { SquadJoining } from '@/features/squad-joining'
+import { CreateSquadDialog } from '@/features/squad-creation'
 import { Pagination } from '@/components/ui/pagination'
 import { EmptyState } from './components/empty-state'
-import { CreateSquadDialog } from './create-squad-dialog'
 import { useSquadBoardSquads } from './use-squad-board-data'
 
 export interface SquadBoardResultsProps {
@@ -96,9 +96,9 @@ export function SquadBoardResults({
         </>
       )}
 
-      {/* Create squad modal */}
+      {/* Create squad dialog, mounted only while it is open */}
       {session?.user && createOpen && (
-        <CreateSquadDialog games={games} open={createOpen} onOpenChange={onCreateOpenChange} />
+        <CreateSquadDialog games={games} onClose={() => onCreateOpenChange(false)} />
       )}
     </>
   )

@@ -14,7 +14,7 @@ interface JoinSquadAuthModalProps {
 
 /**
  * The guest's sign-in prompt. It carries the animation features its card plays, so it animates on every
- * route, and it loads with this chunk, outside the route's initial JavaScript.
+ * route, and it is imported with the page, so the first open shows it at once.
  */
 export function JoinSquadAuthModal(props: JoinSquadAuthModalProps) {
   return (

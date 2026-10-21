@@ -1,7 +1,7 @@
 /**
- * The dialogs load with their pages (CCC-81). The create and join dialogs used to be on-demand
- * chunks with a loading fallback; they are imported eagerly now, so the first open shows the dialog's
- * content at once.
+ * The dialogs load with their pages (CCC-81, CCC-82). The create and join dialogs are imported
+ * eagerly, so the first open shows the dialog's content at once. Squad creation owns the one create
+ * dialog both the Squad Board and My Squads mount.
  */
 
 import { readFileSync } from 'node:fs'
@@ -61,12 +61,23 @@ describe('eager dialogs', () => {
     const mySquads = read('features/my-squads/my-squads-results.tsx')
     const joining = read('features/squad-joining/use-squad-joining.tsx')
 
-    expect(board).toContain("from './create-squad-dialog'")
-    expect(mySquads).toContain("from '@/features/room-creation'")
+    expect(board).toContain("from '@/features/squad-creation'")
+    expect(mySquads).toContain("from '@/features/squad-creation'")
     expect(joining).toContain("from './join-squad-auth-modal'")
 
     for (const source of [board, mySquads, joining]) {
-      expect(source).not.toMatch(/\blazy\(|LazyIslandBoundary|ModalLoading/)
+      expect(source).not.toMatch(/\blazy\(|next\/dynamic|LazyIslandBoundary|ModalLoading/)
+    }
+  })
+
+  it('renders the one create dialog from squad creation on both pages', () => {
+    const board = read('features/squad-board/squad-board-results.tsx')
+    const mySquads = read('features/my-squads/my-squads-results.tsx')
+
+    for (const source of [board, mySquads]) {
+      expect(source).toContain('<CreateSquadDialog')
+      expect(source).not.toContain('CreateSquadModal')
+      expect(source).not.toContain('DialogMotionProvider')
     }
   })
 })

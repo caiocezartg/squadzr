@@ -11,8 +11,9 @@
  *   the next 5 kB. Routes without a limit are reported only.
  * - The Squad Board's initial JavaScript, gzip: its measured size rounded up to the next 5 kB. The
  *   create and join dialogs are imported eagerly since CCC-81, so the initial JavaScript carries
- *   them and the limit moved from 325 kB to the new measurement.
- * - My Squads' initial JavaScript, gzip: its measured size (CCC-81) rounded up to the next 5 kB.
+ *   them; CCC-82 re-measured 373.83 kB and the limit stays 375 kB.
+ * - My Squads' initial JavaScript, gzip: its measured size (CCC-82: 364.50 kB) rounded up to the
+ *   next 5 kB, moved one step up to 370 kB because the measurement sits within 0.5 kB below 365 kB.
  * - The Lobby's initial JavaScript, gzip: its measured size (CCC-80) rounded up to the next 5 kB.
  * - Every emitted JavaScript chunk, raw: at most 500 kB. The largest chunk decides it, because no
  *   other chunk can be larger.
@@ -26,7 +27,7 @@ export const ROUTE_LIMITS_GZIP_KB = {
   '/': 340,
   '/[...slug]': 440,
   '/squads': 375,
-  '/squads/my': 365,
+  '/squads/my': 370,
   '/squads/[code]': 335,
 }
 

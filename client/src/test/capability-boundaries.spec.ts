@@ -182,7 +182,7 @@ describe('capability boundaries', () => {
         'games',
         'lobby',
         'my-squads',
-        'room-creation',
+        'squad-creation',
         'squad-joining',
         'squad-list',
       ])
@@ -193,7 +193,7 @@ describe('capability boundaries', () => {
     // Cycles are checked between modules (files), not between capabilities. "No
     // cycle" guarantees that no module can reach itself by following imports, so
     // module evaluation order stays well-defined. There is no exception: the
-    // Squad Board's barrel exports only its cache commands, so room creation,
+    // Squad Board's barrel exports only its cache commands, so squad creation,
     // joining and the lobby refresh the board without reaching its page.
     const scopedFiles = new Set([...featureFiles, ...listSourceFiles(ROUTES_DIR)])
     const graph = new Map<string, Set<string>>()

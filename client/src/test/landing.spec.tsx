@@ -102,20 +102,17 @@ describe('landing page', () => {
     const landingFiles = readdirSync(LANDING_DIR)
       .filter((file) => file.endsWith('.tsx'))
       .map((file) => join(LANDING_DIR, file))
-    const files = [
-      ...landingFiles,
-      join(LANDING_ROUTE_DIR, 'page.tsx'),
-      join(LANDING_ROUTE_DIR, 'loading.tsx'),
-    ]
+    const files = [...landingFiles, join(LANDING_ROUTE_DIR, 'page.tsx')]
 
     expect(files.filter((file) => LAZY_ISLAND.test(readFileSync(file, 'utf8')))).toEqual([])
   })
 
-  it('keeps its loading state to the landing, outside the catch-all', () => {
-    // A loading.tsx at the app root would wrap every segment, so the catch-all would show the landing's skeleton.
+  it('has no route-level loading state, so a cached landing never flashes a skeleton', () => {
+    // A loading.tsx at the app root would wrap every segment, and one over the landing would cover
+    // the content on every client navigation even when its data is already cached.
     expect(existsSync(join(SRC_DIR, 'app/loading.tsx'))).toBe(false)
     expect(existsSync(join(SRC_DIR, 'app/[...slug]/loading.tsx'))).toBe(false)
-    expect(existsSync(join(LANDING_ROUTE_DIR, 'loading.tsx'))).toBe(true)
+    expect(existsSync(join(LANDING_ROUTE_DIR, 'loading.tsx'))).toBe(false)
   })
 })
 
