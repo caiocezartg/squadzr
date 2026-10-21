@@ -30,7 +30,6 @@ import {
 import type { AnyRoute } from '@tanstack/react-router'
 import { act, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import MySquadsLoading from '@/app/squads/my/loading'
 import { LobbySkeleton } from '@/features/lobby/skeleton'
 import { MySquadsPage } from '@/features/my-squads/page'
 import { SquadBoardPage } from '@/features/squad-board/page'
@@ -127,8 +126,10 @@ async function reachPendingSkeleton(testId: string): Promise<void> {
 }
 
 describe('route skeletons', () => {
-  it('has no route-level loading state, so the skeleton never covers squads the cache holds', () => {
+  it('has no route-level loading state, so the skeleton never covers data the cache holds', () => {
     expect(existsSync(join(SRC_DIR, 'app/squads/loading.tsx'))).toBe(false)
+    expect(existsSync(join(SRC_DIR, 'app/squads/my/loading.tsx'))).toBe(false)
+    expect(existsSync(join(SRC_DIR, 'app/squads/[code]/loading.tsx'))).toBe(false)
   })
 
   it('keeps the board skeleton through the data load, then shows the board', async () => {
@@ -186,12 +187,6 @@ describe('route skeletons', () => {
     } finally {
       vi.useRealTimers()
     }
-  })
-
-  it("shows My Squads' loading UI with the skeleton the page also uses", async () => {
-    render(<MySquadsLoading />)
-
-    expect(screen.getByTestId('my-squads-skeleton')).toBeInTheDocument()
   })
 
   it('keeps the My Squads skeleton through the data load, then shows the lists', async () => {

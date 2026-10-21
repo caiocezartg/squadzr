@@ -7,9 +7,12 @@
 
 import type { ReactNode } from 'react'
 import { renderToReadableStream } from 'react-dom/server'
+import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MySquadsRoute from '@/app/squads/my/page'
+import { mySquadsQueryKey } from '@/features/my-squads/my-squads-cache'
 import { getRequestSession } from '@/lib/server/session'
 import { boardGames, memberSquad, openSquad } from './fixtures'
 import { createTestQueryClient } from './harness'
@@ -46,6 +49,17 @@ function deferred<T>() {
     resolve = res
   })
   return { promise, resolve }
+}
+
+/** Renders the route as Next does in the browser: the server component's output inside the root providers. */
+async function renderRoute(queryClient: QueryClient = createTestQueryClient()) {
+  const page = await MySquadsRoute()
+
+  return render(
+    <EnglishIntlProvider session={fakeSession()}>
+      <QueryClientProvider client={queryClient}>{page}</QueryClientProvider>
+    </EnglishIntlProvider>
+  )
 }
 
 /** Renders the page's element as a server does, waiting for the streamed content to finish. */
@@ -95,6 +109,42 @@ describe('My Squads on the App Router', () => {
 
     expect(outcome).toBe('rendered')
     expect(countHttpCalls('GET', '/api/rooms/my')).toBe(1)
+  })
+
+  it('shows the title and the filters while a first visit waits for the lists, with the skeleton where they go', async () => {
+    signIn()
+    createHarnessNavigation('/squads/my')
+    const roomsRead = deferred<MockHttpResponse>()
+    onHttp('GET', '/api/rooms/my', () => roomsRead.promise)
+
+    await renderRoute()
+
+    expect(await screen.findByTestId('my-squads-skeleton')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'My squads' })).toBeInTheDocument()
+
+    roomsRead.resolve(httpOk({ hosted: [memberSquad], joined: [openSquad] }))
+
+    expect(await screen.findByText(memberSquad.name)).toBeInTheDocument()
+    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
+  })
+
+  it('renders the lists the cache holds at once on a client navigation, with no skeleton', async () => {
+    signIn()
+    createHarnessNavigation('/squads/my')
+    const queryClient = createTestQueryClient()
+    // The cache is older than the read, so the read is still running when the page renders.
+    queryClient.setQueryData(
+      mySquadsQueryKey,
+      { hosted: [memberSquad], joined: [openSquad] },
+      { updatedAt: Date.now() - 120_000 }
+    )
+    queryClient.setQueryData(['games'], boardGames)
+    onHttp('GET', '/api/rooms/my', () => deferred<MockHttpResponse>().promise)
+
+    await renderRoute(queryClient)
+
+    expect(screen.getByText(memberSquad.name)).toBeInTheDocument()
+    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
   })
 
   it("lists the viewer's hosted and joined Squads in the server HTML", async () => {
