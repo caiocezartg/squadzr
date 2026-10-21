@@ -31,10 +31,10 @@ import type { AnyRoute } from '@tanstack/react-router'
 import { act, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { LobbySkeleton } from '@/features/lobby/skeleton'
+import { MySquadsPage } from '@/features/my-squads/page'
 import { SquadBoardPage } from '@/features/squad-board/page'
-import { Route as RoomsMyRoute } from '@/routes/rooms/my'
+import { squadsSearchSchema } from '@/features/squad-list'
 import type { LobbyPage } from '@/features/lobby'
-import type { MyRoomsPage } from '@/features/my-rooms'
 import { createTestQueryClient } from './harness'
 import { httpOk, onHttp } from './http-router'
 import type { MockHttpResponse } from './http-router'
@@ -43,7 +43,6 @@ import { createHarnessNavigation } from './navigation'
 import { signInAsFakeUser } from './stubs'
 
 type LobbyModule = { LobbyPage: typeof LobbyPage }
-type MyRoomsModule = { MyRoomsPage: typeof MyRoomsPage }
 
 /** TanStack Router defaults the app relies on (`src/router.tsx` keeps them). */
 const PENDING_MS = 1_000
@@ -106,16 +105,15 @@ function buildLobbyTree(load: () => Promise<LobbyModule>): AnyRoute {
   return rootRoute.addChildren([lobbyRoute]) as AnyRoute
 }
 
-function buildMyRoomsTree(load: () => Promise<MyRoomsModule>): AnyRoute {
+function buildMySquadsTree(): AnyRoute {
   const rootRoute = createRootRoute({ component: () => <Outlet /> })
-  const myRoomsRoute = createRoute({
+  const mySquadsRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/rooms/my',
-    validateSearch: RoomsMyRoute.options.validateSearch,
-    component: lazyRouteComponent(load, 'MyRoomsPage'),
-    pendingComponent: RoomsMyRoute.options.pendingComponent,
+    path: '/squads/my',
+    validateSearch: (raw) => squadsSearchSchema.parse(raw),
+    component: MySquadsPage,
   })
-  return rootRoute.addChildren([myRoomsRoute]) as AnyRoute
+  return rootRoute.addChildren([mySquadsRoute]) as AnyRoute
 }
 
 /** Mounts at a held route and drives the pending delay so the skeleton shows. */
@@ -128,8 +126,10 @@ async function reachPendingSkeleton(testId: string): Promise<void> {
 }
 
 describe('route skeletons', () => {
-  it('has no route-level loading state, so the skeleton never covers squads the cache holds', () => {
+  it('has no route-level loading state, so the skeleton never covers data the cache holds', () => {
     expect(existsSync(join(SRC_DIR, 'app/squads/loading.tsx'))).toBe(false)
+    expect(existsSync(join(SRC_DIR, 'app/squads/my/loading.tsx'))).toBe(false)
+    expect(existsSync(join(SRC_DIR, 'app/squads/[code]/loading.tsx'))).toBe(false)
   })
 
   it('keeps the board skeleton through the data load, then shows the board', async () => {
@@ -189,42 +189,25 @@ describe('route skeletons', () => {
     }
   })
 
-  it('keeps the My squads skeleton from the route pending state through the data load', async () => {
-    const myRoomsModule = await import('@/features/my-rooms')
-    const myRoomsResponse = deferred<MockHttpResponse>()
+  it('keeps the My Squads skeleton through the data load, then shows the lists', async () => {
+    const mySquadsResponse = deferred<MockHttpResponse>()
     const gamesResponse = deferred<MockHttpResponse>()
-    onHttp('GET', '/api/rooms/my', () => myRoomsResponse.promise)
+    onHttp('GET', '/api/rooms/my', () => mySquadsResponse.promise)
     onHttp('GET', '/api/games', () => gamesResponse.promise)
 
-    vi.useFakeTimers()
-    try {
-      signInAsFakeUser()
-      const myRoomsImport = deferred<MyRoomsModule>()
-      mountFlow(
-        buildMyRoomsTree(() => myRoomsImport.promise),
-        '/rooms/my'
-      )
-      await reachPendingSkeleton('my-rooms-skeleton')
+    signInAsFakeUser()
+    mountFlow(buildMySquadsTree(), '/squads/my')
 
-      await act(async () => {
-        myRoomsImport.resolve(myRoomsModule)
-        await vi.advanceTimersByTimeAsync(PENDING_MIN_MS)
-      })
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0)
-      })
-      expect(screen.getByTestId('my-rooms-skeleton')).toBeInTheDocument()
-      expect(screen.queryByText('My squads')).not.toBeInTheDocument()
+    expect(await screen.findByTestId('my-squads-skeleton')).toBeInTheDocument()
+    expect(screen.queryByText('Created (0)')).not.toBeInTheDocument()
 
-      await act(async () => {
-        myRoomsResponse.resolve(httpOk({ hosted: [], joined: [] }))
-        gamesResponse.resolve(httpOk(boardGames))
-        await vi.advanceTimersByTimeAsync(0)
-      })
-      expect(screen.getByText('My squads')).toBeInTheDocument()
-      expect(screen.queryByTestId('my-rooms-skeleton')).not.toBeInTheDocument()
-    } finally {
-      vi.useRealTimers()
-    }
+    await act(async () => {
+      mySquadsResponse.resolve(httpOk({ hosted: [], joined: [] }))
+      gamesResponse.resolve(httpOk(boardGames))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(await screen.findByText('My squads')).toBeInTheDocument()
+    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
   })
 })

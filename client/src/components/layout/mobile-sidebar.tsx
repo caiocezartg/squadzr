@@ -68,9 +68,9 @@ export function MobileSidebar({ isOpen, onClose, hasUser }: MobileSidebarProps) 
           </AppLink>
           {hasUser && (
             <AppLink
-              href="/rooms/my"
+              href="/squads/my"
               className={`rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite ${
-                pathname === '/rooms/my' ? 'text-accent! bg-accent/8!' : ''
+                pathname === '/squads/my' ? 'text-accent! bg-accent/8!' : ''
               }`}
               onClick={onClose}
             >

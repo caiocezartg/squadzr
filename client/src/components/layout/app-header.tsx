@@ -83,9 +83,9 @@ export function AppHeader() {
               </AppLink>
               {session?.user && (
                 <AppLink
-                  href="/rooms/my"
+                  href="/squads/my"
                   className={`rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors text-muted hover:bg-surface-hover hover:text-offwhite ${
-                    pathname === '/rooms/my' ? 'text-accent!' : ''
+                    pathname === '/squads/my' ? 'text-accent!' : ''
                   }`}
                 >
                   {t('nav.mySquads')}

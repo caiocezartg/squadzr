@@ -9,7 +9,6 @@ import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import LobbyLoading from '@/app/squads/[code]/loading'
 import LobbyRoute from '@/app/squads/[code]/page'
 import {
   gameLol,
@@ -20,7 +19,9 @@ import {
   readyLobbySnapshot,
 } from './fixtures'
 import { createTestQueryClient } from './harness'
+import { squadQueryKey } from '@/features/lobby/squad-details'
 import { httpError, httpOk, onHttp } from './http-router'
+import type { MockHttpResponse } from './http-router'
 import { EnglishIntlProvider } from './intl'
 import { createHarnessNavigation } from './navigation'
 import { fakeSession, signInAsFakeUser, signOutFakeUser } from './stubs'
@@ -37,6 +38,15 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
 vi.mock('@/lib/server/viewer', () => ({
   getRequestViewer: async () => ({ cookie: null, forwardedFor: null }),
 }))
+
+/** A promise the test settles by hand, for a read the test holds back. */
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((res) => {
+    resolve = res
+  })
+  return { promise, resolve }
+}
 
 /** The Squad as a visitor or a non-member reads it: the public projection, with no Discord invite. */
 const { discordLink: _discordLink, ...publicLobbySquad } = lobbySquad
@@ -166,9 +176,36 @@ describe('the Lobby on the App Router', () => {
     expect(slot.querySelector('img')).toBeNull()
   })
 
-  it('loads with the lobby skeleton, which the route shows while the page renders', () => {
-    render(<LobbyLoading />)
+  it('shows the lobby skeleton while a first visit waits for the Squad', async () => {
+    signInAsFakeUser()
+    const squadRead = deferred<MockHttpResponse>()
+    onHttp('GET', '/api/rooms/:code', () => squadRead.promise)
 
-    expect(screen.getByTestId('lobby-skeleton')).toBeInTheDocument()
+    await renderLobbyRoute(lobbySquad.code)
+
+    expect(await screen.findByTestId('lobby-skeleton')).toBeInTheDocument()
+    expect(screen.queryByText(lobbySquad.name)).not.toBeInTheDocument()
+
+    squadRead.resolve(httpOk(lobbyRoomResponse))
+
+    expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
+    expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()
+  })
+
+  it('renders the Squad the cache holds at once on a client navigation, with no skeleton', async () => {
+    signInAsFakeUser()
+    const queryClient = createTestQueryClient()
+    // The cache is older than the read, so the read is still running when the page renders.
+    queryClient.setQueryData(
+      squadQueryKey(lobbySquad.code),
+      { response: lobbyRoomResponse, game: gameLol },
+      { updatedAt: Date.now() - 120_000 }
+    )
+    onHttp('GET', '/api/rooms/:code', () => deferred<MockHttpResponse>().promise)
+
+    await renderLobbyRoute(lobbySquad.code, queryClient)
+
+    expect(screen.getByText(lobbySquad.name)).toBeInTheDocument()
+    expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()
   })
 })

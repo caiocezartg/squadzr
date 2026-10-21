@@ -13,6 +13,7 @@ import type { RouterHistory } from '@tanstack/react-router'
 
 export type NavigationCall =
   | { readonly method: 'push' | 'replace'; readonly href: string }
+  | { readonly method: 'redirect'; readonly href: string }
   | { readonly method: 'back' | 'forward' | 'refresh' }
 
 /** The router object that `next/navigation`'s `useRouter` returns. */
@@ -121,11 +122,29 @@ function useHarnessSearchParams(): URLSearchParams {
   return useMemo(() => new URLSearchParams(search), [search])
 }
 
+/** The error Next's `redirect` throws once it has recorded the destination. */
+export class RedirectError extends Error {
+  constructor(readonly href: string) {
+    super(`Redirected to ${href}`)
+    this.name = 'RedirectError'
+  }
+}
+
+/**
+ * `next/navigation`'s `redirect` for the suite: records the destination on the active location and
+ * throws, as Next does, so the caller stops rendering where the real redirect would.
+ */
+export function redirect(href: string): never {
+  active?.calls.push({ method: 'redirect', href })
+  throw new RedirectError(href)
+}
+
 /** What the suite's `next/navigation` mock exports. */
 export const nextNavigationMock = {
   useRouter: useHarnessRouter,
   usePathname: useHarnessPathname,
   useSearchParams: useHarnessSearchParams,
+  redirect,
 }
 
 interface HarnessLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {

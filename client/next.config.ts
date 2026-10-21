@@ -24,11 +24,12 @@ const nextConfig: NextConfig = {
   },
   // The Squad Board moved from /rooms. The redirect is permanent (308) and keeps the query string, so
   // shared links and sign-in callbacks to the old path still reach the board and its ?join= invite.
-  // The Lobby moved from /rooms/:code to /squads/:code. `/rooms/my`, in any casing, stays excluded: it is the
-  // My Squads page, which still lives on the old app. Next applies redirects before routes, so without the
-  // exclusion `/rooms/my` would land on a Lobby.
+  // My Squads moved from /rooms/my to /squads/my. Its exact redirect comes before the Lobby's general
+  // one, so the old path reaches My Squads with its query string; the Lobby redirect keeps excluding
+  // `my` so it can never take that path.
   async redirects() {
     return [
+      { source: '/rooms/my', destination: '/squads/my', permanent: true },
       { source: '/rooms', destination: '/squads', permanent: true },
       { source: '/rooms/:code((?![Mm][Yy]$)[^/]+)', destination: '/squads/:code', permanent: true },
     ]

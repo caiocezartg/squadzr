@@ -181,7 +181,7 @@ describe('capability boundaries', () => {
         'squad-board',
         'games',
         'lobby',
-        'my-rooms',
+        'my-squads',
         'room-creation',
         'squad-joining',
         'squad-list',
