@@ -1,33 +1,35 @@
 {
   "timeAgo": {
     "justNow": "just now",
-    "minutesAgo": "{{count}}m ago",
-    "hoursAgo": "{{count}}h ago",
-    "daysAgo": "{{count}}d ago"
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago"
   },
   "common": {
     "signIn": "Sign In",
     "signOut": "Sign Out",
-    "createRoom": "Create Squad",
-    "createNewRoom": "Create new squad",
-    "loading": "Loading…"
+    "createSquad": "Create Squad",
+    "createNewSquad": "Create new squad",
+    "loading": "Loading…",
+    "language": "Language",
+    "close": "Close"
   },
   "nav": {
-    "allRooms": "ALL SQUADS",
-    "myRooms": "MY SQUADS",
+    "allSquads": "ALL SQUADS",
+    "mySquads": "MY SQUADS",
     "closeMenu": "Close menu",
     "openMenu": "Open menu"
   },
   "footer": {
-    "tagline": "Find your gaming squad"
+    "line": "© {year} Squadzr — Find your gaming squad"
   },
   "hero": {
-    "badge": "{{count}} GAMES SUPPORTED",
+    "badge": "{count} GAMES SUPPORTED",
     "titleLine1": "STOP PLAYING",
     "titleLine2": "GAMES",
     "titleAccent": "ALONE",
     "subtitle": "<bold>Create</bold> or <bold>join squads</bold>, fill your squad, and get a Discord invite the second your team is ready.",
-    "exploreRooms": "Explore squads",
+    "exploreSquads": "Explore squads",
     "signInWithDiscord": "Sign in with Discord"
   },
   "faq": {
@@ -92,58 +94,31 @@
   "cta": {
     "title": "Ready to find your <accent>squad</accent>?",
     "subtitle": "Join hundreds of players already using Squadzr to build the perfect team.",
-    "browseRooms": "Browse Squads",
+    "browseSquads": "Browse Squads",
     "createAccount": "Create Account"
   },
   "popularGames": {
     "label": "Supported Games",
     "title": "Play what you love",
     "subtitle": "Find teammates across the most popular multiplayer titles.",
-    "playerRange": "{{min}}-{{max}} players",
+    "playerRange": "{min}-{max} players",
     "moreGames": "And many other games!"
   },
-  "rooms": {
+  "squads": {
     "page": {
       "title": "Explore squads",
-      "subtitle_one": "{{count}} squad available",
-      "subtitle_other": "{{count}} squads available",
+      "subtitle": "{count, plural, one {{count} squad available} other {{count} squads available}}",
+      "retry": "Try again",
       "loadError": "Failed to load squads. Please refresh the page.",
       "emptyTitle": "No squads yet",
       "emptyTitleFiltered": "No squads found",
       "emptyDescription": "Be the first to create a squad and start playing!",
       "emptyDescriptionFiltered": "No squads match your filters. Try adjusting your search or filters."
     },
-    "myRooms": {
-      "title": "My squads",
-      "subtitle": "Squads you created or joined",
-      "loadError": "Failed to load your squads. Please refresh the page.",
-      "tabCreated": "Created ({{count}})",
-      "tabJoined": "Joined ({{count}})",
-      "noRoomsYet": "No squads here yet.",
-      "noRoomsFiltered": "No squads match your filters."
-    },
-    "notFound": {
-      "title": "Squad not found",
-      "description": "This squad no longer exists or the code is invalid. Check the code and try again.",
-      "codeLabel": "Code entered:",
-      "backToRooms": "Back to Squads",
-      "createRoom": "Create New Squad"
-    },
-    "lobby": {
-      "backToRooms": "Back to squads",
-      "leaveRoom": "Leave squad",
-      "squadLocked": "Squad locked",
-      "cannotLeave": "Cannot leave a full squad",
-      "pleaseSignIn": "Please sign in to view this squad.",
-      "playerCount": "{{current}}/{{max}} players",
-      "players": "Players ({{current}}/{{max}})",
-      "copied": "Copied!",
-      "waitingForPlayer": "Waiting for player..."
-    },
     "card": {
       "joined": "Joined",
-      "seeRoom": "SEE SQUAD",
-      "joinRoom": "JOIN SQUAD",
+      "seeSquad": "SEE SQUAD",
+      "joinSquad": "JOIN SQUAD",
       "full": "Full"
     },
     "filters": {
@@ -159,16 +134,23 @@
       "langPtBr": "PT-BR",
       "langEn": "EN-US"
     },
+    "authModal": {
+      "title": "Sign in required",
+      "description": "You can explore squads list as a guest, but joining a squad and viewing full details requires signing in with Discord.",
+      "squadCode": "Squad you are trying to join:",
+      "maybeLater": "Maybe later",
+      "continueWithDiscord": "Continue with Discord"
+    },
     "createModal": {
       "title": "Create a Squad",
-      "roomName": "Squad Name",
-      "roomNamePlaceholder": "e.g. Ranked grind tonight",
+      "squadName": "Squad Name",
+      "squadNamePlaceholder": "e.g. Ranked grind tonight",
       "game": "Game",
       "selectGame": "Select a game",
-      "gameWithPlayers": "{{name}} ({{min}}-{{max}} players)",
+      "gameWithPlayers": "{name} ({min}-{max} players)",
       "playerLimit": "Player Limit",
       "optional": "(optional)",
-      "playerLimitHelperWithGame": "Leave empty to use {{maxPlayers}} players ({{gameName}} default).",
+      "playerLimitHelperWithGame": "Leave empty to use {maxPlayers} players ({gameName} default).",
       "playerLimitHelper": "Leave empty to use the selected game max players.",
       "discordLink": "Discord Invite Link",
       "discordLinkHelper": "Shared with all players when the squad is full.",
@@ -176,7 +158,10 @@
       "tagsHelper": "Press Enter or comma to add - max 5 tags",
       "tagsPlaceholder": "Type a tag...",
       "tagsPlaceholderMore": "Add more...",
-      "removeTag": "Remove tag {{tag}}",
+      "removeTag": "Remove tag {tag}",
+      "addTag": "Add tag",
+      "tagsMax": "Max 5 tags",
+      "tagTooLong": "Tag too long",
       "language": "Language",
       "creating": "Creating...",
       "submit": "Create Squad",
@@ -187,27 +172,48 @@
       "discordLinkNotValid": "Must be a valid Discord invite (discord.gg or discord.com/invite)",
       "maxPlayersTooFew": "Must be at least 2 players",
       "maxPlayersTooMany": "Max 20 players"
-    },
-    "authModal": {
-      "title": "Sign in required",
-      "description": "You can explore squads list as a guest, but joining a squad and viewing full details requires signing in with Discord.",
-      "roomCode": "Squad you are trying to join:",
-      "maybeLater": "Maybe later",
-      "continueWithDiscord": "Continue with Discord"
-    },
-    "discordCard": {
-      "title": "Your squad is ready!",
-      "description": "Join the Discord server to start playing together.",
-      "copied": "Copied!",
-      "copyLink": "Copy link",
-      "joinDiscord": "Join Discord"
     }
+  },
+  "mySquads": {
+    "title": "My squads",
+    "subtitle": "Squads you created or joined",
+    "loadError": "Failed to load your squads. Please refresh the page.",
+    "tabCreated": "Created ({count})",
+    "tabJoined": "Joined ({count})",
+    "noSquadsYet": "No squads here yet.",
+    "noSquadsFiltered": "No squads match your filters."
+  },
+  "squadNotFound": {
+    "title": "Squad not found",
+    "description": "This squad no longer exists or the code is invalid. Check the code and try again.",
+    "codeLabel": "Code entered:",
+    "backToSquads": "Back to Squads",
+    "createSquad": "Create New Squad"
+  },
+  "lobby": {
+    "backToSquads": "Back to squads",
+    "leaveSquad": "Leave squad",
+    "squadLocked": "Squad locked",
+    "cannotLeave": "Cannot leave a full squad",
+    "pleaseSignIn": "Please sign in to view this squad.",
+    "playerCount": "{current}/{max} players",
+    "players": "Players ({current}/{max})",
+    "copied": "Copied!",
+    "waitingForPlayer": "Waiting for player...",
+    "host": "Host"
+  },
+  "discordCard": {
+    "title": "Your squad is ready!",
+    "description": "Join the Discord server to start playing together.",
+    "copied": "Copied!",
+    "copyLink": "Copy link",
+    "joinDiscord": "Join Discord"
   },
   "notFound": {
     "title": "Page not found",
     "description": "Looks like you've wandered off the map. The page you're looking for doesn't exist or has been moved.",
     "backToHome": "Back to Home",
-    "exploreRooms": "Explore Squads"
+    "exploreSquads": "Explore Squads"
   },
   "notifications": {
     "title": "Notifications",
@@ -217,8 +223,7 @@
     "emptySubtitle": "You'll be notified when your squad is ready",
     "squadReady": "Your squad is ready — Discord invite available",
     "dismiss": "Dismiss",
-    "showing_one": "Showing last {{count}} notification",
-    "showing_other": "Showing last {{count}} notifications"
+    "showing": "{count, plural, one {Showing last {count} notification} other {Showing last {count} notifications}}"
   },
   "realtime": {
     "updating": "A new version is available. Reloading…",
@@ -231,19 +236,28 @@
     "online": "Online",
     "offline": "Offline"
   },
+  "languages": {
+    "ptBr": "PT-BR",
+    "enUs": "EN-US"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Go to previous page",
+    "next": "Go to next page",
+    "page": "Go to page {page}"
+  },
   "errors": {
     "GAME_NOT_FOUND": "This game could not be found.",
     "ROOM_NOT_FOUND": "This squad no longer exists or the code is invalid.",
     "ROOM_FULL": "This squad is already full.",
     "ROOM_READY": "This squad is ready — members cannot leave.",
-    "ROOM_READY_JOIN": "This squad is already full and ready — it's no longer accepting players.",
+    "SQUAD_READY_JOIN": "This squad is already full and ready — it's no longer accepting players.",
     "NOT_ROOM_MEMBER": "You are not a member of this squad.",
     "ROOM_CREATE_LIMIT_REACHED": "You have reached the maximum number of active squads.",
     "ROOM_JOIN_LIMIT_REACHED": "You have reached the maximum number of squads you can join.",
     "VALIDATION_ERROR": "Please check the form fields and try again.",
     "UNAUTHORIZED": "You need to sign in to do this.",
     "INTERNAL_ERROR": "Something went wrong. Please try again later.",
-    "DIALOG_LOAD_FAILED": "The dialog failed to load. Please try again.",
     "DEFAULT": "Something went wrong. Please try again."
   }
 }

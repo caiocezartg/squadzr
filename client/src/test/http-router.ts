@@ -1,22 +1,13 @@
 /**
- * Deterministic HTTP adapter for client tests.
+ * Deterministic HTTP for client tests.
  *
- * `src/lib/api.ts` builds its axios instance from `axios.create`, which
- * snapshots the global defaults at module load. `installHttpAdapter()` swaps
- * the global default adapter BEFORE any component imports `@/lib/api`, so
- * every request is answered from an in-memory route table instead of the
- * network. Responses are returned as JSON strings exactly like the real
- * transport, and errors are surfaced as `AxiosError` instances carrying a
- * response so the existing `ApiClientError` interceptor behaves unchanged.
+ * `src/lib/api.ts` sends every request through the global `fetch`. `installHttpFetch()` replaces it
+ * with an in-memory route table, so every request is answered from the table instead of the network.
+ * Responses carry JSON bodies, as the real transport does, and a status of 400 or more is an error
+ * response that the API layer parses against its contract.
  */
 
-import axios, { AxiosError, AxiosHeaders } from 'axios'
-import type {
-  AxiosAdapter,
-  AxiosResponse,
-  InternalAxiosRequestConfig,
-  RawAxiosRequestHeaders,
-} from 'axios'
+import { vi } from 'vitest'
 
 export interface MockHttpRequest {
   method: string
@@ -79,9 +70,9 @@ export function countHttpCalls(method: string, pattern: string): number {
   ).length
 }
 
-/** Installs the mock adapter as axios' global default. */
-export function installHttpAdapter(): void {
-  axios.defaults.adapter = httpAdapter
+/** Installs the route table as the global `fetch`. */
+export function installHttpFetch(): void {
+  vi.stubGlobal('fetch', httpFetch)
 }
 
 function splitPattern(pattern: string): string[] {
@@ -104,13 +95,13 @@ function extractParams(pathSegments: string[], patternSegments: string[]): Recor
   return params
 }
 
-const httpAdapter: AxiosAdapter = async (config) => {
-  const request = buildRequest(config)
+const httpFetch = async (input: string | URL, init: RequestInit = {}): Promise<Response> => {
+  const request = buildRequest(input, init)
   requestLog.push(request)
 
   const match = findRoute(request)
   if (!match) {
-    throw responseError(config, 500, {
+    return jsonResponse(500, {
       message: `No HTTP mock registered for ${request.method} ${request.path} (use onHttp in the test).`,
       error: 'TEST_HTTP_ADAPTER_MISSING_ROUTE',
     })
@@ -120,17 +111,8 @@ const httpAdapter: AxiosAdapter = async (config) => {
   const result = await route.handler({ ...request, params })
   const status = result.status ?? 200
 
-  if (status >= 400) {
-    throw responseError(config, status, result.body)
-  }
-
-  return {
-    data: JSON.stringify(result.body ?? {}),
-    status,
-    statusText: statusTextFor(status),
-    headers: new AxiosHeaders(),
-    config,
-  }
+  // A successful response always has a body; an error keeps exactly the body the test gave it.
+  return jsonResponse(status, status >= 400 ? result.body : (result.body ?? {}))
 }
 
 function findRoute(
@@ -147,15 +129,15 @@ function findRoute(
   return null
 }
 
-function buildRequest(config: InternalAxiosRequestConfig): MockHttpRequest {
-  const url = new URL(config.url ?? '/', config.baseURL ?? 'http://localhost:3000')
-  const method = (config.method ?? 'get').toUpperCase()
+function buildRequest(input: string | URL, init: RequestInit): MockHttpRequest {
+  const url = new URL(String(input), 'http://localhost:3000')
+  const method = (init.method ?? 'GET').toUpperCase()
   return {
     method,
     path: url.pathname,
     query: url.searchParams,
     params: {},
-    body: parseBody(config.data, method),
+    body: parseBody(init.body, method),
   }
 }
 
@@ -169,19 +151,14 @@ function parseBody(data: unknown, method: string): unknown {
   }
 }
 
-function responseError(
-  config: InternalAxiosRequestConfig,
-  status: number,
-  body: unknown
-): AxiosError {
-  const response: AxiosResponse = {
-    data: body,
+/** A JSON response, or one without a body when the handler gave none. */
+function jsonResponse(status: number, body: unknown): Response {
+  const hasNoBody = status === 204 || status === 205 || status === 304
+  return new Response(hasNoBody || body === undefined ? null : JSON.stringify(body), {
     status,
     statusText: statusTextFor(status),
-    headers: new AxiosHeaders() as unknown as RawAxiosRequestHeaders,
-    config,
-  }
-  return new AxiosError(statusTextFor(status), String(status), config, {}, response)
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 function statusTextFor(status: number): string {

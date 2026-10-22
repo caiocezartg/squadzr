@@ -4,6 +4,8 @@
  * never leaks across files.
  */
 
+import type { SessionDto } from '@squadzr/schemas'
+
 export interface FakeSessionUser {
   id: string
   name: string
@@ -13,20 +15,15 @@ export interface FakeSessionUser {
 
 export const authStore = {
   user: null as FakeSessionUser | null,
-  /** Arguments captured from every `signIn.social` call, in order. */
+  /** Arguments captured from every Discord sign-in (`signInWithDiscord`), in order. */
   signInSocialCalls: [] as Array<{ provider?: string; callbackURL?: string }>,
-}
-
-export interface FakeToastCall {
-  message: unknown
-  id?: string
+  /** The error the server answers the next sign-out with, which keeps the session; `null` ends it. */
+  signOutError: null as { message: string } | null,
 }
 
 export const toastStore = {
   /** Messages passed to `toast.error`, in order. */
   errorCalls: [] as unknown[],
-  /** Every `toast.error` call with the options Sonner received, in order. */
-  errorToasts: [] as FakeToastCall[],
 }
 
 const defaultFakeUser: FakeSessionUser = {
@@ -44,9 +41,17 @@ export function signOutFakeUser(): void {
   authStore.user = null
 }
 
+/** The session the fake store describes, in the shape the session provider holds. */
+export function fakeSession(): SessionDto | null {
+  const user = authStore.user
+  if (!user) return null
+
+  return { user: { id: user.id, name: user.name, email: user.email, image: user.image } }
+}
+
 export function resetStubs(): void {
   authStore.user = null
   authStore.signInSocialCalls = []
+  authStore.signOutError = null
   toastStore.errorCalls = []
-  toastStore.errorToasts = []
 }

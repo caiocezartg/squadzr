@@ -1,33 +1,35 @@
 {
   "timeAgo": {
     "justNow": "agora mesmo",
-    "minutesAgo": "há {{count}}min",
-    "hoursAgo": "há {{count}}h",
-    "daysAgo": "há {{count}}d"
+    "minutesAgo": "há {count}min",
+    "hoursAgo": "há {count}h",
+    "daysAgo": "há {count}d"
   },
   "common": {
     "signIn": "Entrar",
     "signOut": "Sair",
-    "createRoom": "Criar novo squad",
-    "createNewRoom": "Criar novo squad",
-    "loading": "Carregando…"
+    "createSquad": "Criar novo squad",
+    "createNewSquad": "Criar novo squad",
+    "loading": "Carregando…",
+    "language": "Idioma",
+    "close": "Fechar"
   },
   "nav": {
-    "allRooms": "TODOS OS SQUADS",
-    "myRooms": "MEUS SQUADS",
+    "allSquads": "TODOS OS SQUADS",
+    "mySquads": "MEUS SQUADS",
     "closeMenu": "Fechar menu",
     "openMenu": "Abrir menu"
   },
   "footer": {
-    "tagline": "Encontre seu time gamer"
+    "line": "© {year} Squadzr — Encontre seu time gamer"
   },
   "hero": {
-    "badge": "{{count}} JOGOS DISPONÍVEIS",
+    "badge": "{count} JOGOS DISPONÍVEIS",
     "titleLine1": "PARE DE JOGAR",
     "titleLine2": "TUDO",
     "titleAccent": "SOZINHO",
     "subtitle": "<bold>Crie</bold> ou <bold>entre em squads</bold>, complete seu time e receba um convite do Discord assim que o time estiver cheio.",
-    "exploreRooms": "Explorar squads",
+    "exploreSquads": "Explorar squads",
     "signInWithDiscord": "Entrar com Discord"
   },
   "faq": {
@@ -92,58 +94,31 @@
   "cta": {
     "title": "Pronto para encontrar seu <accent>squad</accent>?",
     "subtitle": "Junte-se a centenas de jogadores que já usam o Squadzr para montar o time perfeito.",
-    "browseRooms": "Explorar Squads",
+    "browseSquads": "Explorar Squads",
     "createAccount": "Criar Conta"
   },
   "popularGames": {
     "label": "Jogos Disponíveis",
     "title": "Jogue o que você ama",
     "subtitle": "Encontre companheiros nos títulos multiplayer mais populares.",
-    "playerRange": "{{min}}-{{max}} jogadores",
+    "playerRange": "{min}-{max} jogadores",
     "moreGames": "E muitos outros jogos!"
   },
-  "rooms": {
+  "squads": {
     "page": {
       "title": "Explorar squads",
-      "subtitle_one": "{{count}} squad disponível",
-      "subtitle_other": "{{count}} squads disponíveis",
+      "subtitle": "{count, plural, one {{count} squad disponível} other {{count} squads disponíveis}}",
+      "retry": "Tentar novamente",
       "loadError": "Falha ao carregar squads. Por favor, atualize a página.",
       "emptyTitle": "Nenhum squad ainda",
       "emptyTitleFiltered": "Nenhum squad encontrado",
       "emptyDescription": "Seja o primeiro a criar um squad e montar um time!",
       "emptyDescriptionFiltered": "Nenhum squad corresponde aos seus filtros. Tente ajustar sua busca."
     },
-    "myRooms": {
-      "title": "Meus squads",
-      "subtitle": "Squads que você criou ou entrou",
-      "loadError": "Falha ao carregar seus squads. Por favor, atualize a página.",
-      "tabCreated": "Criados ({{count}})",
-      "tabJoined": "Participando ({{count}})",
-      "noRoomsYet": "Nenhum squad aqui ainda.",
-      "noRoomsFiltered": "Nenhum squad corresponde aos seus filtros."
-    },
-    "notFound": {
-      "title": "Squad não encontrado",
-      "description": "Este squad não existe mais ou o código é inválido. Verifique o código e tente novamente.",
-      "codeLabel": "Código informado:",
-      "backToRooms": "Voltar para Squads",
-      "createRoom": "Criar squad"
-    },
-    "lobby": {
-      "backToRooms": "Voltar aos squads",
-      "leaveRoom": "Sair do squad",
-      "squadLocked": "Time fechado",
-      "cannotLeave": "Não é possível sair de um squad cheio",
-      "pleaseSignIn": "Por favor, entre com sua conta para ver este squad.",
-      "playerCount": "{{current}}/{{max}} jogadores",
-      "players": "Jogadores ({{current}}/{{max}})",
-      "copied": "Copiado!",
-      "waitingForPlayer": "Aguardando jogador..."
-    },
     "card": {
       "joined": "Entrou",
-      "seeRoom": "VER SQUAD",
-      "joinRoom": "ENTRAR",
+      "seeSquad": "VER SQUAD",
+      "joinSquad": "ENTRAR",
       "full": "Cheio"
     },
     "filters": {
@@ -159,16 +134,23 @@
       "langPtBr": "PT-BR",
       "langEn": "EN-US"
     },
+    "authModal": {
+      "title": "Login necessário",
+      "description": "Você pode explorar a lista de squads como convidado, mas entrar em um squad e ver detalhes completos requer login com Discord.",
+      "squadCode": "Squad que você está tentando entrar:",
+      "maybeLater": "Talvez mais tarde",
+      "continueWithDiscord": "Continuar com Discord"
+    },
     "createModal": {
       "title": "Criar um Squad",
-      "roomName": "Nome do Squad",
-      "roomNamePlaceholder": "ex: Grind ranked hoje à noite",
+      "squadName": "Nome do Squad",
+      "squadNamePlaceholder": "ex: Grind ranked hoje à noite",
       "game": "Jogo",
       "selectGame": "Selecione um jogo",
-      "gameWithPlayers": "{{name}} ({{min}}-{{max}} jogadores)",
+      "gameWithPlayers": "{name} ({min}-{max} jogadores)",
       "playerLimit": "Jogadores",
       "optional": "(opcional)",
-      "playerLimitHelperWithGame": "Deixe vazio para usar {{maxPlayers}} jogadores (padrão do {{gameName}}).",
+      "playerLimitHelperWithGame": "Deixe vazio para usar {maxPlayers} jogadores (padrão do {gameName}).",
       "playerLimitHelper": "Deixe vazio para usar o máximo do jogo selecionado.",
       "discordLink": "Link de Convite do Discord",
       "discordLinkHelper": "Compartilhado com todos os jogadores quando o squad estiver cheio.",
@@ -176,7 +158,10 @@
       "tagsHelper": "Pressione Enter ou vírgula para adicionar - máx. 5 tags",
       "tagsPlaceholder": "Digite uma tag...",
       "tagsPlaceholderMore": "Adicionar mais...",
-      "removeTag": "Remover tag {{tag}}",
+      "removeTag": "Remover tag {tag}",
+      "addTag": "Adicionar tag",
+      "tagsMax": "Máximo de 5 tags",
+      "tagTooLong": "Tag muito longa",
       "language": "Idioma",
       "creating": "Criando...",
       "submit": "Criar Squad",
@@ -187,27 +172,48 @@
       "discordLinkNotValid": "Deve ser um convite válido do Discord (discord.gg ou discord.com/invite)",
       "maxPlayersTooFew": "Mínimo de 2 jogadores",
       "maxPlayersTooMany": "Máximo de 20 jogadores"
-    },
-    "authModal": {
-      "title": "Login necessário",
-      "description": "Você pode explorar a lista de squads como convidado, mas entrar em um squad e ver detalhes completos requer login com Discord.",
-      "roomCode": "Squad que você está tentando entrar:",
-      "maybeLater": "Talvez mais tarde",
-      "continueWithDiscord": "Continuar com Discord"
-    },
-    "discordCard": {
-      "title": "Seu time está pronto!",
-      "description": "Entre no servidor do Discord para começar a jogar juntos.",
-      "copied": "Copiado!",
-      "copyLink": "Copiar link",
-      "joinDiscord": "Entrar no Discord"
     }
+  },
+  "mySquads": {
+    "title": "Meus squads",
+    "subtitle": "Squads que você criou ou entrou",
+    "loadError": "Falha ao carregar seus squads. Por favor, atualize a página.",
+    "tabCreated": "Criados ({count})",
+    "tabJoined": "Participando ({count})",
+    "noSquadsYet": "Nenhum squad aqui ainda.",
+    "noSquadsFiltered": "Nenhum squad corresponde aos seus filtros."
+  },
+  "squadNotFound": {
+    "title": "Squad não encontrado",
+    "description": "Este squad não existe mais ou o código é inválido. Verifique o código e tente novamente.",
+    "codeLabel": "Código informado:",
+    "backToSquads": "Voltar para Squads",
+    "createSquad": "Criar squad"
+  },
+  "lobby": {
+    "backToSquads": "Voltar aos squads",
+    "leaveSquad": "Sair do squad",
+    "squadLocked": "Time fechado",
+    "cannotLeave": "Não é possível sair de um squad cheio",
+    "pleaseSignIn": "Por favor, entre com sua conta para ver este squad.",
+    "playerCount": "{current}/{max} jogadores",
+    "players": "Jogadores ({current}/{max})",
+    "copied": "Copiado!",
+    "waitingForPlayer": "Aguardando jogador...",
+    "host": "Anfitrião"
+  },
+  "discordCard": {
+    "title": "Seu time está pronto!",
+    "description": "Entre no servidor do Discord para começar a jogar juntos.",
+    "copied": "Copiado!",
+    "copyLink": "Copiar link",
+    "joinDiscord": "Entrar no Discord"
   },
   "notFound": {
     "title": "Página não encontrada",
     "description": "Parece que você saiu do mapa. A página que você procura não existe ou foi movida.",
     "backToHome": "Voltar ao Início",
-    "exploreRooms": "Explorar Squads"
+    "exploreSquads": "Explorar Squads"
   },
   "notifications": {
     "title": "Notificações",
@@ -217,8 +223,7 @@
     "emptySubtitle": "Você será notificado quando seu time estiver pronto",
     "squadReady": "Seu time está pronto — convite do Discord disponível",
     "dismiss": "Dispensar",
-    "showing_one": "Mostrando última {{count}} notificação",
-    "showing_other": "Mostrando últimas {{count}} notificações"
+    "showing": "{count, plural, one {Mostrando última {count} notificação} other {Mostrando últimas {count} notificações}}"
   },
   "realtime": {
     "updating": "Uma nova versão está disponível. Recarregando…",
@@ -231,19 +236,28 @@
     "online": "Online",
     "offline": "Offline"
   },
+  "languages": {
+    "ptBr": "PT-BR",
+    "enUs": "EN-US"
+  },
+  "pagination": {
+    "label": "Paginação",
+    "previous": "Ir para a página anterior",
+    "next": "Ir para a próxima página",
+    "page": "Ir para a página {page}"
+  },
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",
     "ROOM_NOT_FOUND": "Este squad não existe mais ou o código é inválido.",
     "ROOM_FULL": "Este squad já está cheio.",
     "ROOM_READY": "Este squad está pronto — membros não podem sair.",
-    "ROOM_READY_JOIN": "Este squad já está cheio e pronto — não aceita mais jogadores.",
+    "SQUAD_READY_JOIN": "Este squad já está cheio e pronto — não aceita mais jogadores.",
     "NOT_ROOM_MEMBER": "Você não é membro deste squad.",
     "ROOM_CREATE_LIMIT_REACHED": "Você atingiu o número máximo de squads ativos.",
     "ROOM_JOIN_LIMIT_REACHED": "Você atingiu o número máximo de squads que pode participar.",
     "VALIDATION_ERROR": "Por favor, verifique os campos do formulário e tente novamente.",
     "UNAUTHORIZED": "Você precisa fazer login para fazer isso.",
     "INTERNAL_ERROR": "Algo deu errado. Por favor, tente novamente mais tarde.",
-    "DIALOG_LOAD_FAILED": "Não foi possível carregar o diálogo. Tente novamente.",
     "DEFAULT": "Algo deu errado. Por favor, tente novamente."
   }
 }

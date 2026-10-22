@@ -1,9 +1,9 @@
 /**
  * Loading skeleton of the lobby capability. It is the light public entry point
- * (`features/lobby/skeleton`) used as the `/rooms/$code` route
- * `pendingComponent`, so the markup stays identical while the route chunk and
- * then the page data load. It must stay free of page dependencies (queries,
- * realtime, i18n): the route definition chunk has to remain small.
+ * (`features/lobby/skeleton`) used by the `/squads/[code]` loading state and by
+ * the Lobby's own Suspense fallback, so the markup stays identical while the
+ * Squad loads. It must stay free of page dependencies (queries, realtime, i18n):
+ * the loading chunk has to remain small.
  */
 export function LobbySkeleton() {
   return (

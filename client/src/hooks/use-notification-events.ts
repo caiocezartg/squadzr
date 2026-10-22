@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { onServerEvent } from '@/lib/ws-validators'
 import type { RealtimeEventSubscribe } from '@/lib/ws-client'
 import type { NotificationsResponse } from '@/types'
 
@@ -30,7 +29,7 @@ export function useNotificationEvents({ on }: UseNotificationEventsOptions): voi
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    return onServerEvent(on, 'notification', ({ notification }) => {
+    return on('notification', ({ notification }) => {
       for (const [queryKey, current] of queryClient.getQueriesData<NotificationsResponse>({
         queryKey: ['notifications'],
       })) {

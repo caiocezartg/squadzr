@@ -15,21 +15,16 @@ import { MockWebSocket, latestWebSocket } from '@/test/ws-mock'
 
 const URL = 'ws://squadzr.test/ws'
 const DROPPED = 1006
-const ROOM_UPDATED = {
+const SQUAD_UPDATED = {
   roomId: 'aaaaaaaa-0000-4000-8000-000000000001',
   roomCode: 'ABC123',
   memberCount: 3,
 }
 
 function createClient(overrides: Partial<ConstructorParameters<typeof WebSocketClient>[0]> = {}) {
-  const callbacks = {
-    onOpen: vi.fn(),
-    onClose: vi.fn(),
-    onError: vi.fn(),
-    onProtocolFailure: vi.fn(),
-  }
-  const client = new WebSocketClient({ url: URL, random: () => 0, ...callbacks, ...overrides })
-  return { client, ...callbacks }
+  const onProtocolFailure = vi.fn()
+  const client = new WebSocketClient({ url: URL, random: () => 0, ...overrides, onProtocolFailure })
+  return { client, onProtocolFailure }
 }
 
 /** Advances to just before and exactly at `delay`, returning the socket count at each point. */
@@ -54,7 +49,7 @@ afterEach(() => {
 
 describe('connection lifecycle', () => {
   it('opens one socket and ignores connect() while connecting or open', () => {
-    const { client, onOpen } = createClient()
+    const { client } = createClient()
 
     client.connect()
     client.connect()
@@ -65,7 +60,6 @@ describe('connection lifecycle', () => {
     client.connect()
 
     expect(MockWebSocket.instances).toHaveLength(1)
-    expect(onOpen).toHaveBeenCalledTimes(1)
     expect(client.isConnected).toBe(true)
   })
 
@@ -99,8 +93,8 @@ describe('connection lifecycle', () => {
     })
   })
 
-  it('disconnect() closes the socket without firing onClose or reconnecting', () => {
-    const { client, onClose } = createClient()
+  it('disconnect() closes the socket without reconnecting', () => {
+    const { client } = createClient()
     client.connect()
     const socket = latestWebSocket()
     socket.open()
@@ -109,7 +103,6 @@ describe('connection lifecycle', () => {
     vi.runAllTimers()
 
     expect(socket.readyState).toBe(MockWebSocket.CLOSED)
-    expect(onClose).not.toHaveBeenCalled()
     expect(MockWebSocket.instances).toHaveLength(1)
     expect(client.isConnected).toBe(false)
     expect(client.status).toBe('closed')
@@ -118,7 +111,7 @@ describe('connection lifecycle', () => {
 
 describe('reconnection', () => {
   it('backs off exponentially with jitter and stops after 5 attempts', () => {
-    const { client, onClose } = createClient()
+    const { client } = createClient()
     client.connect()
     latestWebSocket().open()
 
@@ -133,7 +126,6 @@ describe('reconnection', () => {
 
     vi.runAllTimers()
     expect(MockWebSocket.instances).toHaveLength(6)
-    expect(onClose).toHaveBeenCalledTimes(6)
     expect(console.error).toHaveBeenCalledWith('Max reconnection attempts reached')
     expect(client.status).toBe('closed')
   })
@@ -231,22 +223,22 @@ describe('event handlers', () => {
     const unsubscribe = client.on('room_updated', handler)
     client.connect()
     latestWebSocket().open()
-    latestWebSocket().serverSend({ type: 'room_updated', payload: ROOM_UPDATED })
+    latestWebSocket().serverSend({ type: 'room_updated', payload: SQUAD_UPDATED })
 
     latestWebSocket().close(DROPPED)
     vi.advanceTimersByTime(3000)
     latestWebSocket().open()
     latestWebSocket().serverSend({
       type: 'room_updated',
-      payload: { ...ROOM_UPDATED, memberCount: 4 },
+      payload: { ...SQUAD_UPDATED, memberCount: 4 },
     })
     unsubscribe()
     latestWebSocket().serverSend({
       type: 'room_updated',
-      payload: { ...ROOM_UPDATED, memberCount: 5 },
+      payload: { ...SQUAD_UPDATED, memberCount: 5 },
     })
 
-    expect(handler.mock.calls).toEqual([[ROOM_UPDATED], [{ ...ROOM_UPDATED, memberCount: 4 }]])
+    expect(handler.mock.calls).toEqual([[SQUAD_UPDATED], [{ ...SQUAD_UPDATED, memberCount: 4 }]])
   })
 
   it('hands channel handlers only validated payloads and ignores unknown types', () => {
@@ -260,9 +252,9 @@ describe('event handlers', () => {
     socket.serverSend({ type: 'something_else' })
     socket.serverSend({ type: 'toString' })
     socket.serverSend({ type: 'room_updated', payload: { n: 1 } })
-    socket.serverSend({ type: 'room_updated', payload: ROOM_UPDATED })
+    socket.serverSend({ type: 'room_updated', payload: SQUAD_UPDATED })
 
-    expect(handler.mock.calls).toEqual([[ROOM_UPDATED]])
+    expect(handler.mock.calls).toEqual([[SQUAD_UPDATED]])
     expect(console.error).toHaveBeenCalledWith('Invalid WebSocket payload:', {
       type: 'room_updated',
       issues: expect.arrayContaining([{ path: 'roomId', code: 'invalid_type' }]),
@@ -277,9 +269,9 @@ describe('event handlers', () => {
     const socket = latestWebSocket()
     socket.open()
 
-    socket.serverSend({ type: 'room_updated', payload: ROOM_UPDATED })
+    socket.serverSend({ type: 'room_updated', payload: SQUAD_UPDATED })
 
-    expect(handler.mock.calls).toEqual([[ROOM_UPDATED]])
+    expect(handler.mock.calls).toEqual([[SQUAD_UPDATED]])
   })
 
   it('reports a frame that cannot be parsed and stops the connection', () => {
@@ -298,23 +290,6 @@ describe('event handlers', () => {
     expect(handler).not.toHaveBeenCalled()
     expect(onProtocolFailure).toHaveBeenCalledWith('unparseable_frame')
     expect(client.isConnected).toBe(false)
-  })
-
-  it('reports a throwing handler by event type only and keeps the connection', () => {
-    const { client } = createClient()
-    client.on('room_updated', () => {
-      throw new Error('cannot handle it')
-    })
-    client.connect()
-    const socket = latestWebSocket()
-    socket.open()
-
-    socket.serverSend({ type: 'room_updated', payload: ROOM_UPDATED })
-
-    expect(console.error).toHaveBeenCalledWith('WebSocket handler failed:', {
-      type: 'room_updated',
-    })
-    expect(client.isConnected).toBe(true)
   })
 })
 

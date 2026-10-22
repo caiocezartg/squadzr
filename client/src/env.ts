@@ -1,17 +1,14 @@
 import * as z from 'zod/mini'
 
-const envSchema = z.object({
+const publicEnvSchema = z.object({
   // `_default` is zod/mini's export for defaults (the name `default` is
   // reserved): missing values fall back, present ones must be a URL.
-  VITE_API_URL: z._default(z.optional(z.url()), 'http://localhost:3000'),
+  NEXT_PUBLIC_API_URL: z._default(z.optional(z.url()), 'http://localhost:3000'),
 })
 
-function validateEnv() {
-  const env = {
-    VITE_API_URL: import.meta.env['VITE_API_URL'],
-  }
-
-  const result = envSchema.safeParse(env)
+/** Validates the public variables and throws when one is invalid. `next.config.ts` calls it while the build loads the config, so a bad value fails the build. */
+function parsePublicEnv(source: { NEXT_PUBLIC_API_URL?: string | undefined }) {
+  const result = publicEnvSchema.safeParse(source)
 
   if (!result.success) {
     console.error('Invalid environment variables:', z.treeifyError(result.error))
@@ -21,6 +18,7 @@ function validateEnv() {
   return result.data
 }
 
-export const env = validateEnv()
+// Next inlines NEXT_PUBLIC_* values only where the variable is read by its literal name.
+export const env = parsePublicEnv({ NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL })
 
-export const WS_URL = env.VITE_API_URL.replace(/^http/, 'ws') + '/ws'
+export const WS_URL = env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws') + '/ws'

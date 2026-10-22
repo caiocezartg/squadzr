@@ -3,11 +3,13 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": ["API_INTERNAL_URL"]
     },
     "dev": {
       "persistent": true,
-      "cache": false
+      "cache": false,
+      "env": ["API_INTERNAL_URL"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]

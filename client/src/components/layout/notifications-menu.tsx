@@ -1,9 +1,9 @@
-import { useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from '@tanstack/react-router'
+import { useTranslations } from 'next-intl'
 import { Bell, CheckCheck, Gamepad2, Users, X } from 'lucide-react'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useTimeAgo } from '@/hooks/use-time-ago'
+import { useAppNavigation } from '@/lib/navigation'
+import { lobbyHref } from '@/lib/squad-links'
 import type { UserNotification } from '@/types'
 
 interface NotificationsMenuProps {
@@ -24,7 +24,7 @@ function NotificationItem({
   onDismiss: (e: React.MouseEvent) => void
   disabled: boolean
 }) {
-  const { t } = useTranslation()
+  const t = useTranslations()
   const timeAgo = useTimeAgo(notification.createdAt)
   const isUnread = !notification.readAt
   const playerCount = notification.payload.players?.length ?? 0
@@ -35,7 +35,7 @@ function NotificationItem({
         disabled={disabled}
         onClick={onNavigate}
         className={`w-full rounded-lg px-3 py-2.5 text-left transition-all duration-200 ${
-          isUnread ? 'bg-accent/[0.06] hover:bg-accent/[0.1]' : 'hover:bg-surface-hover'
+          isUnread ? 'bg-accent/6 hover:bg-accent/10' : 'hover:bg-surface-hover'
         }`}
       >
         <div className="flex gap-2.5">
@@ -95,8 +95,8 @@ function NotificationItem({
 }
 
 export function NotificationsMenu({ enabled, isOpen, onToggle, onClose }: NotificationsMenuProps) {
-  const { t } = useTranslation()
-  const navigate = useNavigate()
+  const t = useTranslations()
+  const navigate = useAppNavigation()
   const {
     notifications,
     unreadCount,
@@ -108,30 +108,29 @@ export function NotificationsMenu({ enabled, isOpen, onToggle, onClose }: Notifi
     isDeletingNotification,
   } = useNotifications({ enabled, limit: 10 })
 
-  useEffect(() => {
-    document.title = unreadCount > 0 ? `(${unreadCount}) Squadzr` : 'Squadzr'
-    return () => {
-      document.title = 'Squadzr'
-    }
-  }, [unreadCount])
-
   const isBusy = isMarkingAsRead || isMarkingAllAsRead || isDeletingNotification
 
+  // A failed change is already shown as an error toast by its mutation, so the handlers only stop
+  // there; the rejection is not left unhandled.
   const handleNotificationClick = async (notification: UserNotification) => {
     if (!notification.readAt) {
-      await markAsRead(notification.id)
+      try {
+        await markAsRead(notification.id)
+      } catch {
+        return
+      }
     }
     onClose()
-    await navigate({ to: '/rooms/$code', params: { code: notification.payload.roomCode } })
+    navigate(lobbyHref(notification.payload.roomCode))
   }
 
   const handleDismiss = async (e: React.MouseEvent, notificationId: string) => {
     e.stopPropagation()
-    await deleteNotification(notificationId)
+    await deleteNotification(notificationId).catch(() => undefined)
   }
 
   const handleMarkAllAsRead = async () => {
-    await markAllAsRead()
+    await markAllAsRead().catch(() => undefined)
   }
 
   return (

@@ -23,14 +23,17 @@ inventory (see the equivalence proof below).
 
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
-| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 22 | 97 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 19 | 211 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}` | 24 | 186 |
+| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 25 | 109 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 23 | 227 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 27 | 195 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 3 | 69 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
-Suites are test files. The counts above are the current inventory, recounted on 2026-10-09 after
-CCC-59; the CCC-28 numbers are kept as a historical record in the equivalence proof below.
+Suites are test files. The counts above are the current inventory, recounted on 2026-10-15 for
+CCC-70. That ticket adds `src/env.spec.ts`, `src/lib/router-history.spec.ts` and
+`scripts/bundle-report.spec.mjs` to `client:unit`, corrects the server and client unit rows that had
+drifted since the 2026-10-09 recount, and corrects the `server:integration` row, which had drifted
+since CCC-59. The CCC-28 numbers are kept as a historical record in the equivalence proof below.
 
 `@squadzr/typescript-config` ships only shared TypeScript configuration files, so no test project is
 expected there. Every other workspace must keep at least one test file: the configs deliberately do
@@ -50,7 +53,9 @@ mock/in-memory dependencies:
   `create-user` (2 tests) and `update-user` (3 tests) specs together with their use cases. The
   CCC-28 baseline of 39 tests across 10 specs is historical; see the equivalence proof below.
 - `client:unit` — runs in jsdom; the environment is proven by an assertion on `document`, which
-  fails under a Node environment.
+  fails under a Node environment. `scripts/bundle-report.spec.mjs` checks the bundle report of the
+  Next build (`client/scripts/bundle-report.mjs`) against a fixture of manifests; it stays in this
+  project because the shared setup file needs jsdom globals.
 - `schemas:unit` — runtime contract tests for the shared Zod schemas.
 
 Integration projects follow the same naming convention:
@@ -116,25 +121,26 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 
 ## Equivalence proof (CCC-28, CCC-58, CCC-59)
 
-### Current counts (recounted 2026-10-09, CCC-59)
+### Current counts (recounted 2026-10-15, CCC-70)
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 49 | 352 |
-| `bunx vitest run` (direct root composition) | 49 | 352 |
-| `bunx turbo test --filter=server` | 22 | 97 |
-| `bunx turbo test --filter=client` | 24 | 186 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 55 | 373 |
+| `bunx vitest run` (direct root composition) | 55 | 373 |
+| `bunx turbo test --filter=server` | 25 | 109 |
+| `bunx turbo test --filter=client` | 27 | 195 |
 | `bunx turbo test --filter=@squadzr/schemas` | 3 | 69 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
 numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
 specs together with their use cases, so the server unit suite has 5 fewer tests than before that
 change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
-16 files / 202 tests at the CCC-58 recount; CCC-59 measured 19 files / 211 tests, and this ticket
-does not touch `server/tests`, so that drift predates it. CCC-59 removed the `types:unit` project
-(1 file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 69 tests,
-not the 74 recorded by the CCC-58 recount; this ticket does not touch `packages/schemas`, so that
-drift predates CCC-59 and is corrected here.
+16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
+current run passes 23 files / 227 tests (measured 2026-10-15 against the test PostgreSQL on port
+5433), and this ticket does not touch `server/tests`, so that drift predates it. CCC-59 removed the
+`types:unit` project (1 file, 1 test) together with the `@squadzr/types` workspace. The schemas suite
+measures 69 tests, not the 74 recorded by the CCC-58 recount; this ticket does not touch
+`packages/schemas`, so that drift predates CCC-59 and is corrected here.
 
 ### Historical record (CCC-28, 2026-09-25)
 

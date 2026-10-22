@@ -1,14 +1,14 @@
 /**
- * The WebSocket transport seam: `onServerEvent` only hands a handler a payload that
- * parsed against its contract from @squadzr/schemas. The socket is the deterministic
+ * The WebSocket transport seam: a handler only receives a payload that parsed
+ * against its contract from @squadzr/schemas. The socket is the deterministic
  * `MockWebSocket` (src/test/setup.ts).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocketClient } from './ws-client'
-import { onServerEvent, parseServerEvent } from './ws-validators'
+import { parseServerEvent } from './ws-validators'
 import { latestWebSocket } from '@/test/ws-mock'
-import { hostPlayer, openRoom } from '@/test/fixtures'
+import { hostPlayer, openSquad } from '@/test/fixtures'
 
 const SECRET_INVITE = 'https://discord.gg/secret-invite'
 
@@ -27,33 +27,33 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('onServerEvent', () => {
+describe('typed server events', () => {
   it('hands the handler the validated payload of a valid message', () => {
     const { on, socket } = connectedClient()
     const handler = vi.fn()
-    onServerEvent(on, 'room_updated', handler)
+    on('room_updated', handler)
 
     socket.serverSend({
       type: 'room_updated',
-      payload: { roomId: openRoom.id, roomCode: openRoom.code, memberCount: 3 },
+      payload: { roomId: openSquad.id, roomCode: openSquad.code, memberCount: 3 },
     })
 
     expect(handler.mock.calls).toEqual([
-      [{ roomId: openRoom.id, roomCode: openRoom.code, memberCount: 3 }],
+      [{ roomId: openSquad.id, roomCode: openSquad.code, memberCount: 3 }],
     ])
     expect(console.error).not.toHaveBeenCalled()
   })
 
   it.each([
-    ['room_updated', { roomId: openRoom.id, roomCode: openRoom.code, memberCount: -1 }],
-    ['room_created', { room: { ...openRoom, createdAt: 1_769_000_000 } }],
+    ['room_updated', { roomId: openSquad.id, roomCode: openSquad.code, memberCount: -1 }],
+    ['room_created', { room: { ...openSquad, createdAt: 1_769_000_000 } }],
     [
       'room_snapshot',
       {
-        room: openRoom,
+        room: openSquad,
         players: [{ id: 'user-1' }],
         readyAt: null,
-        expiresAt: openRoom.updatedAt,
+        expiresAt: openSquad.updatedAt,
         presence: [],
       },
     ],
@@ -62,7 +62,7 @@ describe('onServerEvent', () => {
   ] as const)('drops an invalid %s payload before it reaches the handler', (type, payload) => {
     const { on, socket } = connectedClient()
     const handler = vi.fn()
-    onServerEvent(on, type, handler)
+    on(type, handler)
 
     socket.serverSend({ type, payload })
 
@@ -76,11 +76,11 @@ describe('onServerEvent', () => {
   it('strips the invite from a guest catalog event', () => {
     const { on, socket } = connectedClient()
     const handler = vi.fn()
-    onServerEvent(on, 'room_created', handler)
+    on('room_created', handler)
 
     socket.serverSend({
       type: 'room_created',
-      payload: { room: { ...openRoom, discordLink: SECRET_INVITE } },
+      payload: { room: { ...openSquad, discordLink: SECRET_INVITE } },
     })
 
     expect(handler).toHaveBeenCalledTimes(1)
@@ -90,12 +90,12 @@ describe('onServerEvent', () => {
   it('stops delivering after unsubscribe', () => {
     const { on, socket } = connectedClient()
     const handler = vi.fn()
-    const unsubscribe = onServerEvent(on, 'presence_updated', handler)
+    const unsubscribe = on('presence_updated', handler)
 
     unsubscribe()
     socket.serverSend({
       type: 'presence_updated',
-      payload: { roomCode: openRoom.code, playerId: 'user-2', online: true },
+      payload: { roomCode: openSquad.code, playerId: 'user-2', online: true },
     })
 
     expect(handler).not.toHaveBeenCalled()
@@ -126,7 +126,7 @@ describe('diagnostics', () => {
     expect(client.status).toBe('closed')
   })
 
-  it('reports a throwing handler by event type only and keeps the connection', () => {
+  it('reports a throwing handler by event type only, without payload content, and keeps the connection', () => {
     const { client, socket } = connectedClient()
     client.on('presence_updated', () => {
       throw new Error(`cannot handle ${SECRET_INVITE}`)
@@ -134,7 +134,7 @@ describe('diagnostics', () => {
 
     socket.serverSend({
       type: 'presence_updated',
-      payload: { roomCode: openRoom.code, playerId: SECRET_INVITE, online: true },
+      payload: { roomCode: openSquad.code, playerId: SECRET_INVITE, online: true },
     })
 
     expect(vi.mocked(console.error).mock.calls).toEqual([
@@ -145,10 +145,10 @@ describe('diagnostics', () => {
 
   it('reports issue paths and codes without any payload content', () => {
     const payload = {
-      room: { ...openRoom, discordLink: SECRET_INVITE },
+      room: { ...openSquad, discordLink: SECRET_INVITE },
       players: [{ ...hostPlayer, name: 42, sessionToken: 'session-secret' }],
       readyAt: null,
-      expiresAt: openRoom.updatedAt,
+      expiresAt: openSquad.updatedAt,
       presence: [],
     }
 

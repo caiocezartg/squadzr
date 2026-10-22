@@ -1,8 +1,9 @@
 # CI quality gates and branch protection
 
 Repository-owned GitHub Actions checks (CCC-30). They run from a clean checkout on every pull
-request into `development` or `main` (including an existing pull request retargeted to one of them,
-via the `edited` event), on pushes to those branches, and on manual dispatch. **CI never deploys.**
+request into `development` or `main` (including an existing pull request retargeted
+to one of them, via the `edited` event), on pushes to those branches, and on manual dispatch. **CI
+never deploys.**
 
 ## Branch model
 
@@ -45,9 +46,12 @@ so no other app or commit status can satisfy them.
   The harness itself refuses any major version other than 16. On failure, the job prints the
   PostgreSQL container logs; no secrets are used by any job.
 - **Least privilege.** `CI` runs with `contents: read`; `Promotion` runs with no token permissions.
-- **Known non-blocking output.** The client build prints Vite's "chunks larger than 500 kB" advisory.
-  It is a pre-existing baseline item owned by roadmap issue 17 (bundle budgets) and does not fail
-  `build` today.
+- **Zero build warnings.** The client builds with `next build` (Next.js 16), and its log must show no
+  warning, Browserslist notice included; no build advisory is accepted as known output. `build` does
+  not fail on a warning by itself, so a warning in the log is a defect to fix at its root.
+  `bun run bundle:budget` writes the bundle report from the Next output and fails when the
+  catch-all route's initial JavaScript exceeds its gzip limit or a chunk exceeds 500 kB raw. The
+  limits live in `client/scripts/bundle-limits.mjs` (CCC-71).
 
 ## Required GitHub settings (owner action)
 

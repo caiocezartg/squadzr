@@ -10,12 +10,12 @@
 
 import { act, cleanup, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { renderRoomsFlow } from './harness'
+import { renderSquadsFlow } from './harness'
 import { httpOk, onHttp } from './http-router'
-import { catalogGames, catalogRooms, openRoom } from './fixtures'
+import { boardGames, boardSquads, openSquad } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
-import { REALTIME_UPDATE_NOTICE_ID } from '@/lib/realtime-update'
+import { setRealtimeUpdateNotice } from '@/lib/realtime-update-store'
 
 const originalLocation = window.location
 const realSessionStorage = window.sessionStorage
@@ -42,14 +42,14 @@ function sendUnparseableFrame(): void {
 
 beforeEach(() => {
   window.sessionStorage.clear()
-  onHttp('GET', '/api/rooms', () => httpOk(catalogRooms))
-  onHttp('GET', '/api/games', () => httpOk(catalogGames))
+  onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  onHttp('GET', '/api/games', () => httpOk(boardGames))
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
 })
 
 afterEach(() => {
   vi.stubGlobal('sessionStorage', realSessionStorage)
-  document.getElementById(REALTIME_UPDATE_NOTICE_ID)?.remove()
+  act(() => setRealtimeUpdateNotice(null))
   window.sessionStorage.clear()
   Object.defineProperty(window, 'location', {
     value: originalLocation,
@@ -62,20 +62,21 @@ afterEach(() => {
 describe('realtime protocol handshake', () => {
   it('shows a notice and reloads when the announced version differs', async () => {
     const reload = stubReload()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
 
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 
     expect(await screen.findByText(RELOADING_NOTICE)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(RELOADING_NOTICE)
     expect(reload).toHaveBeenCalledTimes(1)
   })
 
   it('shows a notice and reloads when the announcement cannot be parsed', async () => {
     const reload = stubReload()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
 
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 'two' } })
@@ -86,8 +87,8 @@ describe('realtime protocol handshake', () => {
 
   it('shows a notice and reloads when a frame cannot be parsed at all', async () => {
     const reload = stubReload()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
 
     sendUnparseableFrame()
 
@@ -97,20 +98,20 @@ describe('realtime protocol handshake', () => {
 
   it('keeps the matching build running without a notice or reload', async () => {
     const reload = stubReload()
-    const serverRooms = { rooms: [...catalogRooms.rooms] }
-    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    const serverSquads = { rooms: [...boardSquads.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverSquads))
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
 
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 2 } })
-    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== openRoom.id)
+    serverSquads.rooms = serverSquads.rooms.filter((squad) => squad.id !== openSquad.id)
     sendFromServer({
       type: 'room_removed',
-      payload: { roomId: openRoom.id, roomCode: openRoom.code },
+      payload: { roomId: openSquad.id, roomCode: openSquad.code },
     })
 
-    await vi.waitFor(() => expect(screen.queryByText(openRoom.name)).not.toBeInTheDocument())
+    await vi.waitFor(() => expect(screen.queryByText(openSquad.name)).not.toBeInTheDocument())
     expect(reload).not.toHaveBeenCalled()
     expect(screen.queryByText(RELOADING_NOTICE)).not.toBeInTheDocument()
   })
@@ -119,8 +120,8 @@ describe('realtime protocol handshake', () => {
 describe('realtime protocol reload bound', () => {
   it('does not reload again when the version diverges after the reload', async () => {
     const reload = stubReload()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 
@@ -131,12 +132,14 @@ describe('realtime protocol reload bound', () => {
     // the server still announces the other version. sessionStorage remembers
     // the attempt, so the client must not loop.
     cleanup()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    act(() => setRealtimeUpdateNotice(null))
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 
     expect(await screen.findByText(MANUAL_RELOAD_NOTICE)).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(MANUAL_RELOAD_NOTICE)
     expect(screen.queryByText(RELOADING_NOTICE)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument()
     expect(reload).toHaveBeenCalledTimes(1)
@@ -144,16 +147,17 @@ describe('realtime protocol reload bound', () => {
 
   it('does not reload again when an unparseable frame repeats after the reload', async () => {
     const reload = stubReload()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     sendUnparseableFrame()
 
     expect(await screen.findByText(RELOADING_NOTICE)).toBeInTheDocument()
     expect(reload).toHaveBeenCalledTimes(1)
 
     cleanup()
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    act(() => setRealtimeUpdateNotice(null))
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     sendUnparseableFrame()
 
     expect(await screen.findByText(MANUAL_RELOAD_NOTICE)).toBeInTheDocument()
@@ -171,12 +175,36 @@ describe('realtime protocol reload bound', () => {
       },
     })
 
-    renderRoomsFlow('/rooms')
-    await screen.findByText(openRoom.name)
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
 
     expect(await screen.findByText(MANUAL_RELOAD_NOTICE)).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(reload).not.toHaveBeenCalled()
+  })
+
+  it('reloads from the manual notice button', async () => {
+    const reload = stubReload()
+    // The first divergence reloads the page; the simulated remount still sees the other version.
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
+    openLatestWebSocket()
+    sendFromServer({ type: 'protocol', payload: { version: 99 } })
+    expect(await screen.findByText(RELOADING_NOTICE)).toBeInTheDocument()
+    expect(reload).toHaveBeenCalledTimes(1)
+
+    cleanup()
+    act(() => setRealtimeUpdateNotice(null))
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
+    openLatestWebSocket()
+    sendFromServer({ type: 'protocol', payload: { version: 99 } })
+    await screen.findByText(MANUAL_RELOAD_NOTICE)
+
+    await user.click(screen.getByRole('button', { name: 'Reload' }))
+
+    expect(reload).toHaveBeenCalledTimes(2)
   })
 })

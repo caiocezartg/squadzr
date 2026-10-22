@@ -2,20 +2,24 @@
  * Global setup for the client unit/UI project.
  *
  * Contract of the suite (CCC-32): HTTP and WebSocket are isolated behind
- * deterministic adapters, auth and toasts are module mocks, and i18n is
- * pinned to English. No test reaches the network.
+ * deterministic adapters, auth and toasts are module mocks, and the messages
+ * are pinned to English. The Next navigation modules share the harness location.
+ * No test reaches the network.
  */
 
+import type { ReactElement } from 'react'
 import { afterEach, vi } from 'vitest'
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
-import { installHttpAdapter, resetHttpRoutes } from './http-router'
+import type * as TestingLibrary from '@testing-library/react'
+import { installHttpFetch, resetHttpRoutes } from './http-router'
 import { MockWebSocket, resetWebSocketInstances } from './ws-mock'
 import { resetStubs } from './stubs'
+import { bridgeWindowHistory, resetHarnessNavigation } from './navigation'
 
-// 1. Deterministic HTTP: must run before any import of '@/lib/api' so the
-//    axios instance created there snapshots the mock adapter.
-installHttpAdapter()
+// 1. Deterministic HTTP: `@/lib/api` calls the global `fetch` for each request, which answers from
+//    the route table.
+installHttpFetch()
 
 // 2. Deterministic WebSocket: `WebSocketClient` uses the global constructor.
 vi.stubGlobal('WebSocket', MockWebSocket)
@@ -46,24 +50,29 @@ Object.defineProperty(navigator, 'clipboard', {
   configurable: true,
 })
 
-// 4. Session and toasts as module mocks with shared mutable state (./stubs).
+// 4. Auth and toasts as module mocks with shared mutable state (./stubs). The browser's session
+//    check answers from the same store the session provider is seeded from.
 vi.mock('@/lib/auth-client', async () => {
   const { authStore } = await import('./stubs')
   return {
-    useSession: () => ({
-      data: authStore.user
-        ? { user: authStore.user, session: { userId: authStore.user.id } }
-        : null,
+    getSession: vi.fn(async () => ({
+      data: authStore.user ? { user: authStore.user, session: { id: 'session-1' } } : null,
       error: null,
-      isPending: false,
-    }),
-    signIn: {
-      social: (input: { provider?: string; callbackURL?: string }) => {
-        authStore.signInSocialCalls.push(input)
-        return Promise.resolve({ ok: true })
-      },
+    })),
+    signInWithDiscord: (callbackPath: string) => {
+      authStore.signInSocialCalls.push({
+        provider: 'discord',
+        callbackURL: window.location.origin + callbackPath,
+      })
+      return Promise.resolve({ ok: true })
     },
-    signOut: async () => ({ ok: true }),
+    // Better Auth ends the session on the server, so the next session check answers signed out. A
+    // refused sign-out answers with its error and leaves the session as it is.
+    signOut: async () => {
+      if (authStore.signOutError) return { data: null, error: authStore.signOutError }
+      authStore.user = null
+      return { data: { success: true }, error: null }
+    },
   }
 })
 
@@ -71,11 +80,8 @@ vi.mock('sonner', async () => {
   const { toastStore } = await import('./stubs')
   return {
     toast: {
-      error: (message: unknown, options?: { id?: string }) => {
+      error: (message: unknown) => {
         toastStore.errorCalls.push(message)
-        // Preserve the id: the replay must reach Sonner as an update of the
-        // same toast, not as a second one.
-        toastStore.errorToasts.push({ message, id: options?.id })
       },
       success: () => undefined,
       dismiss: () => undefined,
@@ -84,16 +90,33 @@ vi.mock('sonner', async () => {
   }
 })
 
-// 5. i18n pinned to English so text assertions are deterministic regardless
-//    of the host machine's navigator language.
-import i18n from '@/lib/i18n'
+// 5. Messages pinned to English: every render gets the English provider, as the
+//    app root provides it, so a spec needs no wrapper of its own.
+vi.mock('@testing-library/react', async (importOriginal) => {
+  const testing = await importOriginal<typeof TestingLibrary>()
+  const { withEnglishIntl } = await import('./intl')
+  return {
+    ...testing,
+    render: (ui: ReactElement, options: Parameters<typeof testing.render>[1] = {}) =>
+      testing.render(ui, { ...options, wrapper: withEnglishIntl(options.wrapper) }),
+  }
+})
 
-void i18n.changeLanguage('en')
+// 6. next/navigation and next/link read and write the harness location (./navigation). A write through
+//    window.history moves that location too, as the App Router's patch of the window does.
+vi.mock('next/navigation', async () => (await import('./navigation')).nextNavigationMock)
+vi.mock('next/link', async () => (await import('./navigation')).nextLinkMock)
+bridgeWindowHistory()
 
-// 6. Per-test isolation: unmount, clear route table, sockets and stub state.
+// 7. Per-test isolation: unmount, clear route table, sockets, stub state and the location.
 afterEach(() => {
   cleanup()
   resetHttpRoutes()
   resetWebSocketInstances()
   resetStubs()
+  resetHarnessNavigation()
 })
+
+// 8. Server-only modules (the server env and the Next server API) are imported by specs. The real
+//    guard throws outside a React Server Component, so the suite replaces it with an empty module.
+vi.mock('server-only', () => ({}))

@@ -1,5 +1,4 @@
 import { ApiClientError } from './api'
-import i18n from './i18n'
 
 const ERROR_CODE_KEYS = [
   'GAME_NOT_FOUND',
@@ -23,8 +22,14 @@ type ErrorCode = (typeof ERROR_CODE_KEYS)[number]
  */
 export type MembershipAction = 'join' | 'leave'
 
-/** A translation key under `errors.`: the code itself or its action override. */
-type ErrorTranslationKey = ErrorCode | 'ROOM_READY_JOIN'
+/** A translation key under `errors.`: the code itself, its action override or the generic message. */
+type ErrorTranslationKey = ErrorCode | 'SQUAD_READY_JOIN' | 'DEFAULT'
+
+/**
+ * The translator a caller passes in (`useTranslations()` in a component). Code outside React gets
+ * its messages as an argument, so the mapping never reads a locale of its own.
+ */
+export type ErrorTranslator = (key: `errors.${ErrorTranslationKey}`) => string
 
 /**
  * Translation keys for error codes whose message depends on the Membership
@@ -34,7 +39,7 @@ const ACTION_ERROR_KEYS: Partial<
   Record<ErrorCode, Partial<Record<MembershipAction, ErrorTranslationKey>>>
 > = {
   ROOM_READY: {
-    join: 'ROOM_READY_JOIN',
+    join: 'SQUAD_READY_JOIN',
     leave: 'ROOM_READY',
   },
 }
@@ -49,12 +54,29 @@ function errorTranslationKey(code: ErrorCode, action?: MembershipAction): ErrorT
 }
 
 /**
+ * The message of an error code, translated. The action selects the message of the codes whose
+ * meaning depends on it. A code the app does not know reads as the generic message.
+ */
+export function translateErrorCode(
+  code: string,
+  t: ErrorTranslator,
+  action?: MembershipAction
+): string {
+  if (!isKnownErrorCode(code)) return t('errors.DEFAULT')
+  return t(`errors.${errorTranslationKey(code, action)}`)
+}
+
+/**
  * Maps a typed application error to its friendly, localized message. The
  * action selects the message of the codes whose meaning depends on it.
  */
-export function getUserFriendlyError(error: unknown, action?: MembershipAction): string {
-  if (error instanceof ApiClientError && error.code && isKnownErrorCode(error.code)) {
-    return i18n.t(`errors.${errorTranslationKey(error.code, action)}`)
+export function getUserFriendlyError(
+  error: unknown,
+  t: ErrorTranslator,
+  action?: MembershipAction
+): string {
+  if (error instanceof ApiClientError && error.code) {
+    return translateErrorCode(error.code, t, action)
   }
-  return i18n.t('errors.DEFAULT')
+  return t('errors.DEFAULT')
 }

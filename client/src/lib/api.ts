@@ -1,94 +1,63 @@
-import axios, { type AxiosRequestConfig } from 'axios'
 import type { z } from 'zod'
-import { describeContractIssues, errorResponseSchema, type ContractIssue } from '@squadzr/schemas'
+import { errorResponseSchema } from '@squadzr/schemas'
 import { env } from '@/env'
+import { ApiClientError, parseApiResponse } from './api-contract'
 
-export class ApiClientError extends Error {
-  public readonly status: number
-  public readonly code?: string
-
-  constructor(message: string, status: number, code?: string) {
-    super(message)
-    this.name = 'ApiClientError'
-    this.status = status
-    this.code = code
-  }
-}
-
-/** A response, successful or not, whose body does not match its contract in @squadzr/schemas. */
-export class ApiContractError extends Error {
-  public readonly code = 'INVALID_RESPONSE'
-  public readonly method: string
-  public readonly path: string
-  public readonly status: number
-  public readonly issues: ContractIssue[]
-
-  constructor(method: string, path: string, status: number, issues: ContractIssue[]) {
-    super(`Invalid response for ${method} ${path}`)
-    this.name = 'ApiContractError'
-    this.method = method
-    this.path = path
-    this.status = status
-    this.issues = issues
-  }
-}
-
-const client = axios.create({
-  baseURL: env.VITE_API_URL,
-  withCredentials: true,
-})
+export { ApiClientError, ApiContractError } from './api-contract'
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
-interface ResponseContext {
-  method: string
-  path: string
-  status: number
+interface RequestConfig {
+  readonly method: Method
+  readonly url: string
+  readonly data?: unknown
 }
 
-function parseResponse<S extends z.ZodType>(
-  schema: S,
-  { method, path, status }: ResponseContext,
-  data: unknown
-): z.output<S> {
-  const result = schema.safeParse(data)
-  if (result.success) return result.data
-
-  // The query string and the response body stay out of the diagnostics.
-  const [pathname = path] = path.split('?')
-  const issues = describeContractIssues(result.error)
-  console.error('Invalid API response:', { method, path: pathname, status, issues })
-  throw new ApiContractError(method, pathname, status, issues)
+/** The API base URL and a path, joined by a single slash. */
+function absoluteUrl(path: string): string {
+  return `${env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
-client.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (axios.isAxiosError(error) && error.response) {
-      const { status, config, data } = error.response
-      const body = parseResponse(
-        errorResponseSchema,
-        { method: (config.method ?? 'get').toUpperCase(), path: config.url ?? '', status },
-        data
-      )
-      throw new ApiClientError(body.message, status, body.error)
-    }
-    throw error
+/** The body as the server sent it: the parsed JSON, or the raw text when it is not JSON. */
+async function readBody(response: Response): Promise<unknown> {
+  const text = await response.text()
+  if (text === '') return undefined
+
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return text
   }
-)
+}
 
 /**
- * With a schema, the response body is parsed before it is returned and a
- * mismatch throws `ApiContractError`. Without one, the body is discarded, so
- * unvalidated data never leaves this module.
+ * Sends a request with the session cookie. A non-2xx response throws `ApiClientError` with the
+ * server's error code. With a schema, the response body is parsed before it is returned and a
+ * mismatch throws `ApiContractError`. Without one, the body is discarded, so unvalidated data never
+ * leaves this module.
  */
 async function request<S extends z.ZodType>(
-  config: AxiosRequestConfig & { method: Method; url: string },
+  { method, url, data }: RequestConfig,
   schema: S | undefined
 ): Promise<z.output<S> | void> {
-  const { data, status } = await client.request<unknown>(config)
+  const hasBody = data !== undefined
+  const response = await fetch(absoluteUrl(url), {
+    method,
+    credentials: 'include',
+    headers: hasBody
+      ? { Accept: 'application/json', 'Content-Type': 'application/json' }
+      : { Accept: 'application/json' },
+    body: hasBody ? JSON.stringify(data) : undefined,
+  })
+  const body = await readBody(response)
+  const context = { method, path: url, status: response.status }
+
+  if (!response.ok) {
+    const error = parseApiResponse(errorResponseSchema, context, body)
+    throw new ApiClientError(error.message, response.status, error.error)
+  }
   if (!schema) return
-  return parseResponse(schema, { method: config.method, path: config.url, status }, data)
+  return parseApiResponse(schema, context, body)
 }
 
 function get<S extends z.ZodType>(path: string, schema: S): Promise<z.output<S>> {

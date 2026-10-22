@@ -1,29 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 
 const CELL_SIZE = 48
+/** Cells within this distance, in cells, of the click ripple. */
+const RIPPLE_RADIUS = 15
+/** Each cell one cell further from the click starts its ripple this many seconds later. */
+const RIPPLE_STEP_SECONDS = 0.05
+
+interface Ripple {
+  readonly id: number
+  readonly left: number
+  readonly top: number
+  readonly delaySeconds: number
+}
 
 export function BackgroundRipple() {
   const containerRef = useRef<HTMLDivElement>(null)
   const spotlightRef = useRef<HTMLDivElement>(null)
-  const [dimensions, setDimensions] = useState({ rows: 0, cols: 0 })
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-
-    const update = () => {
-      const { width, height } = el.getBoundingClientRect()
-      setDimensions({
-        rows: Math.ceil(height / CELL_SIZE) + 1,
-        cols: Math.ceil(width / CELL_SIZE) + 1,
-      })
-    }
-
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+  // A click replaces the list with new ids, so React mounts the cells afresh and each ripple starts over.
+  const [ripples, setRipples] = useState<Ripple[]>([])
+  const nextRippleId = useRef(0)
 
   useEffect(() => {
     const parent = containerRef.current?.parentElement
@@ -42,24 +40,31 @@ export function BackgroundRipple() {
     return () => parent.removeEventListener('mousemove', onMove)
   }, [])
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (!containerRef.current) return
-    const rect = containerRef.current.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    const clickCol = Math.floor(x / CELL_SIZE)
-    const clickRow = Math.floor(y / CELL_SIZE)
+  const handleClick = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
+    const container = containerRef.current
+    if (!container) return
 
-    const cells = containerRef.current.querySelectorAll<HTMLElement>('[data-ripple]')
-    cells.forEach((cell) => {
-      const r = Number(cell.dataset.row)
-      const c = Number(cell.dataset.col)
-      const distance = Math.sqrt((clickRow - r) ** 2 + (clickCol - c) ** 2)
-      if (distance > 15) return
-      cell.style.animation = 'none'
-      void cell.offsetHeight
-      cell.style.animation = `cell-ripple 0.8s ease-out ${distance * 0.05}s`
-    })
+    const rect = container.getBoundingClientRect()
+    const clickCol = Math.floor((e.clientX - rect.left) / CELL_SIZE)
+    const clickRow = Math.floor((e.clientY - rect.top) / CELL_SIZE)
+    const rows = Math.ceil(rect.height / CELL_SIZE) + 1
+    const cols = Math.ceil(rect.width / CELL_SIZE) + 1
+
+    const next: Ripple[] = []
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const distance = Math.sqrt((clickRow - row) ** 2 + (clickCol - col) ** 2)
+        if (distance > RIPPLE_RADIUS) continue
+
+        next.push({
+          id: nextRippleId.current++,
+          left: col * CELL_SIZE,
+          top: row * CELL_SIZE,
+          delaySeconds: distance * RIPPLE_STEP_SECONDS,
+        })
+      }
+    }
+    setRipples(next)
   }, [])
 
   const gridLine = 'rgba(31, 31, 35, 0.4)'
@@ -75,39 +80,11 @@ export function BackgroundRipple() {
     `repeating-linear-gradient(90deg, transparent, transparent ${CELL_SIZE - 1}px, ${accentLine} ${CELL_SIZE - 1}px, ${accentLine} ${CELL_SIZE}px)`,
   ].join(', ')
 
-  const cells = useMemo(() => {
-    const result = []
-    for (let r = 0; r < dimensions.rows; r++) {
-      for (let c = 0; c < dimensions.cols; c++) {
-        result.push(
-          <div
-            key={`${r}-${c}`}
-            data-ripple=""
-            data-row={r}
-            data-col={c}
-            className="absolute opacity-0"
-            style={{
-              left: c * CELL_SIZE,
-              top: r * CELL_SIZE,
-              width: CELL_SIZE,
-              height: CELL_SIZE,
-              backgroundColor: 'rgba(0, 255, 162, 0.12)',
-            }}
-          />
-        )
-      }
-    }
-    return result
-  }, [dimensions])
-
   return (
     <div
       ref={containerRef}
       role="presentation"
       onClick={handleClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') handleClick(e as unknown as React.MouseEvent)
-      }}
       className="absolute inset-0 overflow-hidden"
       style={{
         maskImage: 'linear-gradient(to bottom, black 40%, transparent 85%)',
@@ -130,8 +107,23 @@ export function BackgroundRipple() {
         }}
       />
 
-      {/* Ripple cells - invisible until animated on click */}
-      <div className="absolute inset-0 z-20 pointer-events-none">{cells}</div>
+      {/* Ripple cells, invisible until a click animates them */}
+      <div className="absolute inset-0 z-20 pointer-events-none">
+        {ripples.map((ripple) => (
+          <div
+            key={ripple.id}
+            className="absolute opacity-0"
+            style={{
+              left: ripple.left,
+              top: ripple.top,
+              width: CELL_SIZE,
+              height: CELL_SIZE,
+              backgroundColor: 'rgba(0, 255, 162, 0.12)',
+              animation: `cell-ripple 0.8s ease-out ${ripple.delaySeconds}s`,
+            }}
+          />
+        ))}
+      </div>
     </div>
   )
 }

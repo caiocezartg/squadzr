@@ -1,5 +1,6 @@
 import { ChevronDown, LogOut } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from 'next-intl'
+import { UserAvatar } from '@/components/ui/user-avatar'
 
 interface UserMenuProps {
   readonly session: {
@@ -11,7 +12,7 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ session, menuOpen, onToggle, onSignOut }: UserMenuProps) {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   return (
     <div className="relative">
@@ -19,13 +20,7 @@ export function UserMenu({ session, menuOpen, onToggle, onSignOut }: UserMenuPro
         onClick={onToggle}
         className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface-hover transition-colors"
       >
-        {session.user.image ? (
-          <img src={session.user.image} alt="" className="size-7 rounded-full ring-1 ring-border" />
-        ) : (
-          <div className="size-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-bold text-accent">
-            {session.user.name?.charAt(0)?.toUpperCase()}
-          </div>
-        )}
+        <UserAvatar name={session.user.name} image={session.user.image} />
         <span className="hidden sm:block text-sm font-medium text-offwhite">
           {session.user.name}
         </span>

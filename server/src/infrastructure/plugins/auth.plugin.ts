@@ -69,7 +69,8 @@ async function authPlugin(fastify: FastifyInstance, options: AuthPluginOptions):
     },
   })
 
-  // Session hook for API and WebSocket routes
+  // Session hook for API and WebSocket routes. It reads the session without renewing it: only
+  // Better Auth's own endpoints renew it, because only their responses carry the renewed cookie.
   const sessionRoutes = ['/api/', '/ws']
   fastify.addHook('preHandler', async (request: FastifyRequest) => {
     if (!sessionRoutes.some((prefix) => request.url.startsWith(prefix))) return
@@ -77,6 +78,7 @@ async function authPlugin(fastify: FastifyInstance, options: AuthPluginOptions):
 
     const session = await auth.api.getSession({
       headers: request.headers as Record<string, string>,
+      query: { disableRefresh: true },
     })
     request.session = session
   })

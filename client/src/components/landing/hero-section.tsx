@@ -1,30 +1,28 @@
-import { lazy, Suspense } from 'react'
-import { Link } from '@tanstack/react-router'
-import { signIn, useSession } from '@/lib/auth-client'
-import * as motion from 'motion/react-client'
+'use client'
+
+import * as m from 'motion/react-m'
 import { Search } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
+import { AppLink } from '@/components/layout/app-link'
 import { DiscordIcon } from '@/components/ui/icons'
-import { LazyIslandBoundary } from '@/components/ui/lazy-island-boundary'
-import { useTranslation, Trans } from 'react-i18next'
+import { useSession } from '@/hooks/use-session'
+import { signInWithDiscord } from '@/lib/auth-client'
 import { BackgroundRipple } from './background-ripple'
-import { HeroRoomShowcase } from './hero-room-showcase'
+import { HeroGameBadge } from './hero-game-badge'
+import { HeroSquadShowcase } from './hero-squad-showcase'
 
-// The badge queries the games API; its chunk (and the shared API runtime)
-// arrives after the hero copy instead of blocking the first paint.
-const LazyHeroGameBadge = lazy(() =>
-  import('./hero-game-badge').then((module) => ({ default: module.HeroGameBadge }))
-)
-
-export function HeroSection() {
-  const { t, i18n } = useTranslation()
-  const lang = i18n.resolvedLanguage || i18n.language
-  const { data: session } = useSession()
+/**
+ * The hero. Its badge, headline, copy and calls to action start visible, so the server HTML shows them
+ * before any script runs. Only decoration animates: the underline under the accent word, and the
+ * floating squad cards.
+ */
+export function HeroSection({ gameCount }: { readonly gameCount: number }) {
+  const t = useTranslations()
+  const lang = useLocale()
+  const session = useSession()
 
   const handleSignIn = () => {
-    signIn.social({
-      provider: 'discord',
-      callbackURL: window.location.origin + '/rooms',
-    })
+    signInWithDiscord('/squads')
   }
 
   return (
@@ -35,65 +33,40 @@ export function HeroSection() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-20 sm:pt-28 sm:pb-24">
         <div className="max-w-full flex flex-col items-center">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <LazyIslandBoundary>
-              <Suspense fallback={null}>
-                <LazyHeroGameBadge />
-              </Suspense>
-            </LazyIslandBoundary>
-          </motion.div>
+          <HeroGameBadge count={gameCount} />
 
-          <motion.h1
-            className="font-heading text-5xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl xl:text-8xl"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
+          <h1 className="font-heading text-5xl font-extrabold leading-[0.95] tracking-tight sm:leading-none sm:text-6xl lg:text-7xl xl:text-8xl">
             {t('hero.titleLine1')}
             <br />
             {t('hero.titleLine2')}&nbsp;
             <span className="relative text-accent">
               {t('hero.titleAccent')}
-              <motion.span
+              <m.span
                 className="absolute bottom-0 left-0 h-[3px] bg-accent/60 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: '100%' }}
                 transition={{ duration: 0.6, delay: 0.7, ease: 'easeOut' }}
               />
             </span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            className={`mt-6 text-base text-muted leading-relaxed sm:text-lg ${lang === 'pt-BR' ? 'max-w-lg' : 'max-w-md'} text-center`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
+          <p
+            className={`mt-6 text-base text-muted leading-relaxed sm:text-lg sm:leading-7 ${lang === 'pt-BR' ? 'max-w-lg' : 'max-w-md'} text-center`}
           >
-            <Trans
-              i18nKey="hero.subtitle"
-              components={{ bold: <strong className="text-offwhite" /> }}
-            />
-          </motion.p>
+            {t.rich('hero.subtitle', {
+              bold: (chunks) => <strong className="text-offwhite">{chunks}</strong>,
+            })}
+          </p>
 
           {/* CTAs */}
-          <motion.div
-            className="mt-8 flex flex-col sm:flex-row items-start gap-3"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.45 }}
-          >
-            <Link
-              to="/rooms"
-              search={{}}
+          <div className="mt-8 flex flex-col sm:flex-row items-start gap-3">
+            <AppLink
+              href="/squads"
               className="btn-accent gap-2 text-base px-7 py-3 w-full md:w-auto"
             >
               <Search className="size-5" strokeWidth={2.5} />
-              {t('hero.exploreRooms')}
-            </Link>
+              {t('hero.exploreSquads')}
+            </AppLink>
             {!session?.user && (
               <button
                 onClick={handleSignIn}
@@ -103,15 +76,15 @@ export function HeroSection() {
                 {t('hero.signInWithDiscord')}
               </button>
             )}
-          </motion.div>
+          </div>
 
           <div className="relative w-full max-w-5xl mt-12 -mb-8">
-            <HeroRoomShowcase />
+            <HeroSquadShowcase />
           </div>
         </div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 h-20 lg:h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-20 lg:h-32 bg-linear-to-t from-background to-transparent pointer-events-none" />
     </section>
   )
 }
