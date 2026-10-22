@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Convite do Discord</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="color: #F2F3F5; font-family: 'Plus Jakarta Sans', sans-serif">
+  <!-- Locked while the squad is forming -->
+  <sc-if value="{{locked}}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; background: #0F1013; padding: 18px 22px">
+      <span style="width: 46px; height: 46px; flex-shrink: 0; background: #17181D; color: #8B93F5; display: flex; align-items: center; justify-content: center">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="1"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+      </span>
+      <span style="flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 15px; font-weight: 800">Convite do Discord</span>
+        <span style="font-size: 13px; line-height: 1.5; color: #A9ABB3">Liberado quando o squad completar</span>
+      </span>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #4A4C54; letter-spacing: 0.04em">discord.gg/••••••••</span>
+    </div>
+  </sc-if>
+
+  <!-- Unlocked when the last slot closes -->
+  <sc-if value="{{open}}" hint-placeholder-val="{{ true }}">
+    <div class="ds-pop" style="position: relative; overflow: hidden; background: #4E5AE8; color: #FFFFFF">
+      <span aria-hidden="true" class="ds-sheen" style="position: absolute; top: 0; bottom: 0; left: 0; width: 24%; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.14), rgba(255,255,255,0))"></span>
+      <svg aria-hidden="true" style="position: absolute; right: -30px; bottom: -56px; opacity: 0.16" width="270" height="270" viewBox="0 0 24 24" fill="#FFFFFF"><path d="{{discordD}}"></path></svg>
+
+      <div style="position: relative; padding: 28px; display: flex; flex-wrap: wrap; gap: 0 40px">
+        <div style="flex: 1 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 22px">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em; background: rgba(7,8,10,0.25); padding: 6px 10px">
+              <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+              SQUAD FECHADO
+            </span>
+            <span style="font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 72px; line-height: 1; text-transform: uppercase">Bora pro Discord</span>
+          </div>
+
+          <!-- The invite, read like Discord's own invite card: server, who's there, the link -->
+          <div style="display: flex; flex-direction: column; background: rgba(7,8,10,0.3); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14)">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px 18px; padding: 18px">
+              <span style="position: relative; width: 64px; height: 64px; flex-shrink: 0">
+                <img src="{{s.cover}}" alt="" style="width: 64px; height: 64px; object-fit: cover; display: block; border-radius: 16px">
+                <span style="position: absolute; right: -5px; bottom: -5px; width: 24px; height: 24px; border-radius: 50%; background: #4E5AE8; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #3941A5">
+                  <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="{{discordD}}"></path></svg>
+                </span>
+              </span>
+              <span style="flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: rgba(255,255,255,0.75)">CONVITE DO SERVIDOR</span>
+                <span style="font-size: 20px; font-weight: 800; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.name}}</span>
+                <span style="display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85)">
+                  <span style="display: inline-flex; align-items: center; gap: 7px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #00FFA2"></span>{{s.inRoom}} na sala agora</span>
+                  <span style="display: inline-flex; align-items: center; gap: 7px"><span style="width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.55)"></span>{{s.members}} jogadores</span>
+                </span>
+              </span>
+              <dc-import name="Button" variant="light" size="lg" label="Abrir no Discord" icon="external" icon-pos="end" href="{{href}}" hint-size="224px,56px"></dc-import>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 18px; background: rgba(7,8,10,0.26); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1)">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              <span style="flex: 1; min-width: 0; font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="color: rgba(255,255,255,0.6)">{{prefix}}</span>{{slug}}</span>
+              <dc-import name="Button" variant="glass" size="md" label="{{copyLabel}}" icon="{{copyIcon}}" on-click="{{copy}}" hint-size="140px,44px"></dc-import>
+            </div>
+          </div>
+        </div>
+        <!-- Keeps the right side for the Discord mark; drops away on narrow screens -->
+        <span aria-hidden="true" style="flex: 0 1 160px"></span>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"estado":{"editor":"enum","options":["bloqueado","liberado"],"default":"liberado"},"squad":{"editor":null},"$preview":{"width":1100,"height":360}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { copied: false };
+  }
+  componentWillUnmount() {
+    clearTimeout(this.timer);
+  }
+  renderVals() {
+    const DEMO = { name: 'Premier quinta à noite', cover: '/_blob/48d569e7ccecf944cc19cb2d19ae7720', invite: 'discord.gg/premier-qui', members: 5, inRoom: 4 };
+    const s = Object.assign({}, DEMO, this.props.squad || {});
+    const open = (this.props.estado ?? 'liberado') === 'liberado';
+    const url = 'https://' + s.invite;
+    const slash = s.invite.indexOf('/');
+    const copy = () => {
+      try {
+        if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
+      } catch (e) {}
+      this.setState({ copied: true });
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => this.setState({ copied: false }), 1800);
+    };
+    return {
+      s,
+      open,
+      locked: !open,
+      href: url,
+      prefix: slash === -1 ? '' : s.invite.slice(0, slash + 1),
+      slug: slash === -1 ? s.invite : s.invite.slice(slash + 1),
+      copy,
+      copyLabel: this.state.copied ? 'Copiado' : 'Copiar link',
+      copyIcon: this.state.copied ? 'check' : 'copy',
+      discordD: 'M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.319 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.011c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z'
+    };
+  }
+}
+</script>
+</body>
+</html>

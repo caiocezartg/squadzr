@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Menu lateral</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<aside aria-label="Menu" style="width: 100%; min-height: 100%; box-sizing: border-box; background: #0B0C0F; color: #F2F3F5; font-family: 'Plus Jakarta Sans', sans-serif; padding: 24px 16px 20px; display: flex; flex-direction: column; gap: 26px; box-shadow: inset -1px 0 0 #16171B">
+  <a href="Main.dc.html" aria-label="Squadzr — início" style="padding: 0 8px"><img src="/_blob/a53a58cb1aebfcc434e14d442843d8c5" alt="Squadzr" style="width: 104px; display: block"></a>
+
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <dc-import name="Button" variant="primary" label="Criar squad" icon="plus" href="CriarSquad.dc.html" full="{{ true }}" hint-size="100%,44px"></dc-import>
+    <form style="display: flex; align-items: center; gap: 6px; background: #121317; padding: 3px 3px 3px 12px">
+      <label for="side-code" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Entrar por código</label>
+      <span aria-hidden="true" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #80838C">#</span>
+      <input id="side-code" type="text" placeholder="CÓDIGO" maxlength="5" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: #F2F3F5; font: 700 13px 'JetBrains Mono', monospace; letter-spacing: 0.1em; padding: 10px 0">
+      <button type="submit" aria-label="Entrar no squad pelo código" style="width: 38px; height: 38px; border: 0; cursor: pointer; background: #1F2026; color: #F2F3F5; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg></button>
+    </form>
+  </div>
+
+  <nav aria-label="Squads" style="display: flex; flex-direction: column; gap: 2px">
+    <a href="Board.dc.html" aria-current="{{allCurrent}}" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: {{allFg}}; background: {{allBg}}; font-size: 14px; font-weight: 700; padding: 12px; min-height: 44px; box-sizing: border-box; box-shadow: {{allBar}}">
+      <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+      Todos os squads
+      <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #A9ABB3">48</span>
+    </a>
+  </nav>
+
+  <section aria-labelledby="mine-h" style="display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 8px">
+      <h2 id="mine-h" style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #80838C">MEUS SQUADS</h2>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #80838C">3</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <sc-for list="{{mine}}" as="m" hint-placeholder-count="3">
+        <a href="Squad.dc.html" aria-current="{{m.current}}" style="position: relative; display: flex; gap: 11px; text-decoration: none; color: #F2F3F5; background: {{m.bg}}; padding: 8px 10px 8px 8px; box-shadow: {{m.bar}}">
+          <img src="{{m.cover}}" alt="" style="width: 42px; height: 56px; object-fit: cover; display: block; flex-shrink: 0">
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; justify-content: center">
+            <span style="display: flex; align-items: center; gap: 6px; min-width: 0; padding-right: {{m.namePad}}">
+              <sc-if value="{{m.host}}" hint-placeholder-val="{{ false }}">
+                <span role="img" aria-label="Você é o dono" style="flex-shrink: 0; width: 15px; height: 15px; border-radius: 50%; background: #FFB547; color: #2A1A00; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5L3 7z"></path></svg></span>
+              </sc-if>
+              <span style="min-width: 0; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</span>
+            </span>
+            <span style="display: flex; align-items: center; gap: 8px">
+              <span style="flex: 1; min-width: 0; display: block">
+                <dc-import name="SlotMeter" variant="line" filled="{{m.members}}" total="{{m.max}}" tone="{{m.tone}}" hint-size="100%,4px"></dc-import>
+              </span>
+              <span style="flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; color: {{m.countFg}}">{{m.count}}</span>
+            </span>
+          </span>
+          <sc-if value="{{m.ready}}" hint-placeholder-val="{{ false }}">
+            <span aria-label="Convite liberado" style="position: absolute; right: 8px; top: 8px; width: 18px; height: 18px; background: #4E5AE8; display: flex; align-items: center; justify-content: center; color: #FFFFFF">
+              <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.319 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.011c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"></path></svg>
+            </span>
+          </sc-if>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+
+  <div style="flex-grow: 1"></div>
+
+  <div style="display: flex; flex-direction: column; gap: 10px">
+    <div style="align-self: flex-start; display: flex; margin-left: 8px">
+      <dc-import name="Segmented" size="sm" label="Idioma" options="{{langs}}" value="pt" hint-size="76px,32px"></dc-import>
+    </div>
+    <button type="button" style="display: flex; align-items: center; gap: 10px; border: 0; cursor: pointer; text-align: left; background: #121317; color: #F2F3F5; padding: 8px 12px 8px 8px; font-family: 'Plus Jakarta Sans', sans-serif">
+      <span style="position: relative; width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: #0E4D3A; color: #B9FFE4; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center">CC<span style="position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: #00FFA2; box-shadow: 0 0 0 2px #121317"></span></span>
+      <span style="flex: 1; min-width: 0; font-size: 13px; font-weight: 700">caiocezar</span>
+      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80838C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+    </button>
+  </div>
+</aside>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["all","VLR77","MCX10"],"default":"all"},"$preview":{"width":280,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active ?? 'all';
+    const mk = (o) => {
+      const current = active === o.code;
+      const missing = o.max - o.members;
+      return Object.assign({}, o, {
+        tone: o.ready ? 'discord' : 'mint',
+        count: o.members + '/' + o.max,
+        countFg: o.ready ? '#8B93F5' : missing === 1 ? '#FFB547' : '#A9ABB3',
+        current: current ? 'page' : 'false',
+        bg: current ? '#17181D' : '#101114',
+        bar: current ? 'inset 2px 0 0 #00FFA2' : 'none',
+        namePad: o.ready ? '22px' : '0'
+      });
+    };
+    return {
+      langs: [{ value: 'pt', label: 'PT' }, { value: 'en', label: 'EN' }],
+      allCurrent: active === 'all' ? 'page' : 'false',
+      allFg: active === 'all' ? '#F2F3F5' : '#A9ABB3',
+      allBg: active === 'all' ? '#17181D' : 'transparent',
+      allBar: active === 'all' ? 'inset 2px 0 0 #00FFA2' : 'none',
+      mine: [
+        mk({ code: 'VLR77', game: 'VALORANT', name: 'Premier quinta à noite', cover: '/_blob/48d569e7ccecf944cc19cb2d19ae7720', members: 4, max: 5, host: true, ready: false }),
+        mk({ code: 'OW2X1', game: 'OVERWATCH', name: 'Comp role queue — Diamond+', cover: '/_blob/828fcf6511c34f6726bd1bd2e3b4f956', members: 5, max: 5, host: false, ready: true }),
+        mk({ code: 'MCX10', game: 'MINECRAFT', name: 'SMP survival hardcore', cover: '/_blob/27f1b58c3da08be4ee09f50b803963d5', members: 8, max: 10, host: true, ready: false })
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

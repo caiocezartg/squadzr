@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Criar squad</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080A}
+a{color:#00FFA2}a:hover{color:#7CFFCF}
+.opt{transition:background-color .15s}
+.opt:hover{background-color:#1F2026 !important}
+.pick{transition:transform .2s cubic-bezier(.22,1,.36,1)}
+.pick:hover{transform:translateY(-3px)}
+/* Design system states: components keep inline styles, so hover and motion live here */
+.ds-btn{transition:background-color .2s,box-shadow .25s,color .2s,transform .15s}
+.ds-btn:active{transform:scale(.97)}
+.ds-btn-primary:hover{background-color:#5CFFC4 !important}
+.ds-btn-secondary:hover{background-color:#24252B !important}
+.ds-btn-ghost:hover{background-color:#1A1B20 !important}
+.ds-btn-link:hover{color:#7CFFCF !important}
+.ds-btn-danger:hover{background-color:rgba(239,68,68,0.18) !important}
+.ds-btn-discord:hover{background-color:#5D68F0 !important}
+.ds-btn-light:hover{box-shadow:0 0 0 5px rgba(255,255,255,0.18) !important}
+.ds-btn-dark:hover{background-color:#1A1B20 !important}
+.ds-btn-glass:hover{background-color:rgba(255,255,255,0.24) !important}
+.ds-btn-off:active{transform:none}
+.ds-chip{transition:background-color .15s}
+.ds-chip-removable:hover{background-color:#2A2B31 !important}
+.ds-chip-suggest:hover,.ds-chip-toggle[aria-pressed="false"]:hover{background-color:rgba(0,255,162,0.16) !important}
+.ds-chip-toggle[aria-pressed="true"]:hover{background-color:#5CFFC4 !important}
+.ds-seg{transition:background-color .15s,color .15s}
+.ds-seg[aria-pressed="false"]:hover{color:#F2F3F5 !important}
+.ds-pg{transition:background-color .15s}
+.ds-pg-idle:hover{background-color:#1F2026 !important}
+.ds-notif{transition:background-color .15s}
+.ds-notif:hover{background-color:#1F2026 !important}
+.ds-notif-row .ds-notif-x{opacity:0;transition:opacity .15s}
+.ds-notif-row:hover .ds-notif-x,.ds-notif-x:focus-visible{opacity:1}
+@keyframes ds-halo{0%{box-shadow:0 0 0 2px #00FFA2,0 0 0 2px rgba(0,255,162,0.45)}70%,100%{box-shadow:0 0 0 2px #00FFA2,0 0 0 9px rgba(0,255,162,0)}}
+.ds-in-room{animation:ds-halo 2.4s ease-out infinite}
+@keyframes ds-wait{0%,100%{opacity:.55}50%{opacity:1}}
+.ds-wait{animation:ds-wait 2.4s ease-in-out infinite}
+@keyframes ds-sheen{0%,55%{transform:translateX(-120%) skewX(-18deg)}85%,100%{transform:translateX(420%) skewX(-18deg)}}
+.ds-sheen{animation:ds-sheen 5s ease-in-out infinite}
+@keyframes ds-pop{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+.ds-pop{animation:ds-pop .5s cubic-bezier(.22,1,.36,1) both}
+input::placeholder{color:#5F626B}
+@media (prefers-reduced-motion:reduce){.ds-in-room,.ds-wait,.ds-sheen,.ds-pop{animation:none !important}}
+@keyframes modalIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+.modal{animation:modalIn .32s cubic-bezier(.22,1,.36,1) both}
+@keyframes stepIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+.step{animation:stepIn .26s cubic-bezier(.22,1,.36,1) both}
+@media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="position: relative; min-height: 1240px; background: #07080A; color: #F2F3F5; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden">
+  <!-- The board sits in its own stacking layer, so none of its raised rows can paint over the modal -->
+  <div aria-hidden="true" style="position: relative; z-index: 0; isolation: isolate">
+    <dc-import name="Board" hint-size="100%,1240px"></dc-import>
+  </div>
+
+  <div style="position: absolute; inset: 0; z-index: 10; background: rgba(4,5,7,0.84); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-start; padding: 64px 16px; box-sizing: border-box">
+    <section role="dialog" aria-modal="true" aria-labelledby="cs-title" class="modal" style="width: 680px; max-width: 100%; background: #121317; box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 50px 120px -30px rgba(0,0,0,0.95); display: flex; flex-direction: column">
+      <!-- Header + stepper -->
+      <div style="padding: 24px 28px 20px; display: flex; flex-direction: column; gap: 20px">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <h2 id="cs-title" style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 40px; line-height: 1; text-transform: uppercase">{{stepTitle}}</h2>
+          </div>
+          <dc-import name="Button" variant="secondary" label="" icon="close" aria-label="Fechar" href="Board.dc.html" hint-size="44px,44px"></dc-import>
+        </div>
+        <dc-import name="Steps" steps="{{stepLabels}}" current="{{step}}" hint-size="100%,26px"></dc-import>
+      </div>
+
+      <!-- ===== Step 1: Jogo ===== -->
+      <sc-if value="{{isStep1}}" hint-placeholder-val="{{ true }}">
+        <div class="step" style="padding: 4px 28px 26px; display: flex; flex-direction: column; gap: 14px; min-height: 380px; box-sizing: border-box">
+          <sc-if value="{{noGame}}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <label for="game-search" style="font-size: 15px; font-weight: 700">Qual jogo vocês vão jogar?</label>
+              <dc-import name="SearchField" variant="field" combobox="{{ true }}" input-id="game-search" controls="game-list" expanded="{{hasResults}}" placeholder="Buscar no catálogo de jogos…" value="{{query}}" on-change="{{onQuery}}" on-clear="{{clearQuery}}" hint-size="100%,54px"></dc-import>
+            </div>
+
+            <!-- Suggestions as you type -->
+            <sc-if value="{{hasResults}}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <ul id="game-list" role="listbox" aria-label="Jogos encontrados" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px">
+                  <sc-for list="{{results}}" as="g" hint-placeholder-count="4">
+                    <li role="presentation">
+                      <button type="button" role="option" aria-selected="{{g.selected}}" class="opt" onClick="{{g.pick}}" style="width: 100%; display: flex; align-items: center; gap: 14px; border: 0; cursor: pointer; text-align: left; background: {{g.bg}}; color: #F2F3F5; padding: 8px 14px 8px 8px; min-height: 60px; font-family: 'Plus Jakarta Sans', sans-serif; box-shadow: {{g.edge}}">
+                        <sc-if value="{{g.hasCover}}" hint-placeholder-val="{{ true }}">
+                          <img src="{{g.cover}}" alt="" style="width: 33px; height: 44px; object-fit: cover; display: block; flex-shrink: 0">
+                        </sc-if>
+                        <sc-if value="{{g.noCover}}" hint-placeholder-val="{{ false }}">
+                          <span style="width: 33px; height: 44px; flex-shrink: 0; background: #24252B; color: #A9ABB3; font: 800 11px 'JetBrains Mono', monospace; display: flex; align-items: center; justify-content: center">{{g.ini}}</span>
+                        </sc-if>
+                        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                          <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{g.pre}}<span style="color: #00FFA2; text-decoration: underline; text-underline-offset: 3px">{{g.hit}}</span>{{g.post}}</span>
+                          <span style="font-size: 12px; color: #80838C">{{g.genre}} · {{g.range}} jogadores</span>
+                        </span>
+                      </button>
+                    </li>
+                  </sc-for>
+                </ul>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{noResults}}" hint-placeholder-val="{{ false }}">
+              <div style="background: #0C0D10; padding: 22px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start">
+                <span style="font-size: 15px; font-weight: 700">Nenhum jogo encontrado para “{{query}}”</span>
+                <span style="font-size: 13px; line-height: 1.5; color: #A9ABB3">Confira a grafia ou procure pelo nome curto (ex: “CS”, “LoL”). Se o jogo ainda não está no catálogo, avise a gente.</span>
+                <a href="Board.dc.html" style="font-size: 13px; font-weight: 700; text-decoration: none">Sugerir um jogo →</a>
+              </div>
+            </sc-if>
+
+            <!-- Empty query: popular picks -->
+            <sc-if value="{{showPopular}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #80838C">POPULARES AGORA</span>
+                <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px">
+                  <sc-for list="{{popular}}" as="p" hint-placeholder-count="6">
+                    <button type="button" class="pick" onClick="{{p.pick}}" style="border: 0; cursor: pointer; background: transparent; padding: 0; color: #C9CBD1; display: flex; flex-direction: column; gap: 8px; text-align: left; font: 700 12px 'Plus Jakarta Sans', sans-serif">
+                      <img src="{{p.cover}}" alt="" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block">
+                      <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%">{{p.name}}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+          </sc-if>
+
+          <!-- Game chosen -->
+          <sc-if value="{{hasGame}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; gap: 20px; background: #0C0D10; padding: 14px; box-shadow: inset 0 0 0 1.5px #00FFA2">
+              <img src="{{g.cover}}" alt="Capa de {{g.name}}" style="width: 96px; aspect-ratio: 3 / 4; object-fit: cover; display: block; flex-shrink: 0">
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; justify-content: center">
+                <span style="font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 40px; line-height: 1; text-transform: uppercase">{{g.name}}</span>
+                <span style="font-size: 13px; color: #A9ABB3">{{g.genre}} · squads de {{g.min}} a {{g.max}} jogadores</span>
+              </span>
+              <span style="align-self: flex-start; display: flex">
+                <dc-import name="Button" variant="secondary" size="sm" label="Trocar" icon="none" on-click="{{changeGame}}" hint-size="70px,36px"></dc-import>
+              </span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ===== Step 2: Detalhes ===== -->
+      <sc-if value="{{isStep2}}" hint-placeholder-val="{{ false }}">
+        <div class="step" style="padding: 4px 28px 26px; display: flex; flex-direction: column; gap: 20px; min-height: 380px; box-sizing: border-box">
+          <div style="display: flex; align-items: center; gap: 12px; background: #0C0D10; padding: 8px 8px 8px 8px">
+            <img src="{{g.cover}}" alt="" style="width: 30px; height: 40px; object-fit: cover; display: block">
+            <span style="flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase">{{g.name}}</span>
+            <dc-import name="Button" variant="secondary" size="sm" label="Trocar jogo" icon="none" on-click="{{changeGame}}" hint-size="100px,36px"></dc-import>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="display: flex; justify-content: space-between; align-items: baseline">
+              <label for="sq-name" style="font-size: 14px; font-weight: 700">Nome do squad</label>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #80838C">{{nameLen}}/40</span>
+            </span>
+            <input id="sq-name" type="text" value="{{name}}" onChange="{{onName}}" placeholder="ex: Ranked à noite, sem tilt" style="border: 0; outline: none; background: #0C0D10; color: #F2F3F5; font: 600 15px 'Plus Jakarta Sans', sans-serif; padding: 0 16px; min-height: 50px; box-shadow: inset 0 0 0 1px #1F2026">
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <span id="players-l" style="font-size: 14px; font-weight: 700">Jogadores</span>
+              <span role="group" aria-labelledby="players-l" style="display: flex; align-items: stretch; background: #0C0D10; box-shadow: inset 0 0 0 1px #1F2026">
+                <button type="button" onClick="{{dec}}" aria-label="Menos um jogador" style="width: 50px; border: 0; cursor: pointer; background: transparent; color: #F2F3F5; font: 700 20px 'Plus Jakarta Sans', sans-serif">−</button>
+                <span aria-live="polite" style="flex: 1; display: flex; align-items: center; justify-content: center; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 30px; min-height: 50px">{{players}}</span>
+                <button type="button" onClick="{{inc}}" aria-label="Mais um jogador" style="width: 50px; border: 0; cursor: pointer; background: transparent; color: #F2F3F5; font: 700 20px 'Plus Jakarta Sans', sans-serif">+</button>
+              </span>            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <span id="lang-l" style="font-size: 14px; font-weight: 700">Idioma do squad</span>
+              <dc-import name="Segmented" fluid="{{ true }}" label="Idioma do squad" options="{{langOpts}}" value="{{lang}}" on-change="{{setLang}}" hint-size="100%,48px"></dc-import>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label for="sq-tag" style="font-size: 14px; font-weight: 700">Tags <span style="font-weight: 500; color: #80838C">(opcional)</span></label>
+            <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: #0C0D10; padding: 7px; min-height: 50px; box-sizing: border-box; box-shadow: inset 0 0 0 1px #1F2026">
+              <sc-for list="{{tagChips}}" as="t" hint-placeholder-count="2">
+                <dc-import name="Tag" variant="removable" label="#{{t.label}}" on-click="{{t.remove}}" hint-size="96px,34px"></dc-import>
+              </sc-for>
+              <input id="sq-tag" type="text" value="{{tagDraft}}" onChange="{{onTagDraft}}" placeholder="adicionar tag…" style="flex: 1; min-width: 120px; border: 0; outline: none; background: transparent; color: #F2F3F5; font: 500 14px 'Plus Jakarta Sans', sans-serif; padding: 0 6px">
+              <dc-import name="Button" variant="secondary" size="sm" label="Adicionar" icon="none" on-click="{{addDraft}}" hint-size="90px,36px"></dc-import>
+            </span>
+            <span style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center">
+              <sc-for list="{{tagSuggest}}" as="t" hint-placeholder-count="4">
+                <dc-import name="Tag" variant="suggest" label="{{t.label}}" on-click="{{t.add}}" hint-size="80px,30px"></dc-import>
+              </sc-for>
+            </span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== Step 3: Discord ===== -->
+      <sc-if value="{{isStep3}}" hint-placeholder-val="{{ false }}">
+        <div class="step" style="padding: 4px 28px 26px; display: flex; flex-direction: column; gap: 20px; min-height: 380px; box-sizing: border-box">
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <label for="sq-link" style="font-size: 14px; font-weight: 700">Link de convite do Discord</label>
+            <span style="display: flex; align-items: center; gap: 10px; background: #0C0D10; padding: 0 14px; min-height: 52px; box-shadow: inset 0 0 0 1.5px {{linkRing}}">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="#8B93F5"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.319 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.011c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"></path></svg>
+              <input id="sq-link" type="url" value="{{link}}" onChange="{{onLink}}" placeholder="https://discord.gg/seu-convite" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: #F2F3F5; font: 600 14px 'JetBrains Mono', monospace">
+              <sc-if value="{{linkOk}}" hint-placeholder-val="{{ true }}">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #00FFA2"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>VÁLIDO</span>
+              </sc-if>
+            </span>
+            <span style="display: flex; gap: 8px; font-size: 12.5px; line-height: 1.5; color: #A9ABB3">
+              <svg aria-hidden="true" style="flex-shrink: 0; margin-top: 2px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80838C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="1"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+              Só aparece pros membros quando o squad completar. Use um convite sem expiração.
+            </span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #80838C">PRÉVIA</span>
+            <dc-import name="SquadCard" squad="{{preview}}" size="lg" hint-size="100%,214px"></dc-import>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- Footer -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #0F1013; padding: 16px 28px">
+        <sc-if value="{{isStep1}}" hint-placeholder-val="{{ true }}">
+          <dc-import name="Button" variant="ghost" label="Cancelar" icon="none" href="Board.dc.html" hint-size="100px,44px"></dc-import>
+        </sc-if>
+        <sc-if value="{{notStep1}}" hint-placeholder-val="{{ false }}">
+          <dc-import name="Button" variant="ghost" label="Voltar" icon="back" on-click="{{back}}" hint-size="100px,44px"></dc-import>
+        </sc-if>
+        <sc-if value="{{notLast}}" hint-placeholder-val="{{ true }}">
+          <dc-import name="Button" variant="primary" size="lg" label="Continuar" icon="arrow" icon-pos="end" disabled="{{noNext}}" on-click="{{next}}" hint-size="160px,56px"></dc-import>
+        </sc-if>
+        <sc-if value="{{isStep3}}" hint-placeholder-val="{{ false }}">
+          <dc-import name="Button" variant="primary" size="lg" label="Criar squad" icon="check" icon-pos="end" disabled="{{noNext}}" href="Squad.dc.html" hint-size="170px,56px"></dc-import>
+        </sc-if>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"etapa":{"editor":"enum","options":["1","2","3"],"default":"1"},"busca":{"editor":"text","default":"le"},"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const etapa = Number(props.etapa ?? 1);
+    const filled = etapa > 1;
+    this.state = {
+      step: etapa,
+      query: props.busca ?? 'le',
+      game: filled ? 'Valorant' : null,
+      name: filled ? 'Premier quinta à noite' : '',
+      players: 5,
+      lang: 'pt',
+      tags: filled ? ['premier', 'mic'] : [],
+      tagDraft: '',
+      link: etapa > 2 ? 'https://discord.gg/premier-qui' : ''
+    };
+  }
+  renderVals() {
+    const st = this.state;
+    const C = {
+      val: '/_blob/48d569e7ccecf944cc19cb2d19ae7720',
+      lol: '/_blob/8df3967d6379fe20d30cbe81ffa8f1d7',
+      cs2: '/_blob/e99d5c165ccede7035df3d33d9ff414d',
+      dota: '/_blob/e8d23f4989fa54ac73bc2796502155ee',
+      fn: '/_blob/a3d71f50b7601b33d7801a2798b59bf8',
+      apex: '/_blob/54ef0dd62a2c3285ea217f850f06e169',
+      r6: '/_blob/16df06ac0181241d0eed0a32ac9805a4',
+      ow: '/_blob/828fcf6511c34f6726bd1bd2e3b4f956',
+      rl: '/_blob/3da18b4f80fcb7241cfffd5337ec7c83',
+      mc: '/_blob/27f1b58c3da08be4ee09f50b803963d5'
+    };
+    // The Squadzr game catalog, as the games API returns it.
+    const CATALOG = [
+      ['Valorant', 'FPS tático', 2, 5, C.val], ['League of Legends', 'MOBA', 2, 5, C.lol],
+      ['Counter-Strike 2', 'FPS tático', 2, 5, C.cs2], ['Dota 2', 'MOBA', 2, 5, C.dota],
+      ['Fortnite', 'Battle royale', 2, 4, C.fn], ['Apex Legends', 'Battle royale', 2, 3, C.apex],
+      ['Rainbow Six Siege', 'FPS tático', 2, 5, C.r6], ['Overwatch', 'Hero shooter', 2, 5, C.ow],
+      ['Rocket League', 'Esporte', 2, 4, C.rl], ['Minecraft', 'Sandbox', 2, 10, C.mc],
+      ['Roblox', 'Sandbox', 2, 50, null], ['PUBG: Battlegrounds', 'Battle royale', 2, 4, null],
+      ['Free Fire', 'Battle royale', 2, 4, null], ['Call of Duty: Warzone', 'Battle royale', 2, 4, null],
+      ['GTA Online', 'Mundo aberto', 2, 30, null], ['Among Us', 'Dedução social', 4, 15, null],
+      ['World of Warcraft', 'MMORPG', 2, 40, null], ['EA Sports FC', 'Esporte', 2, 22, null],
+      ['Dead by Daylight', 'Terror', 2, 5, null]
+    ].map(([name, genre, min, max, cover]) => ({ name, genre, min, max, cover }));
+    const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const q = norm(st.query.trim());
+    const startsWord = (n) => n.split(/[\s:-]+/).some((w) => w.startsWith(q));
+    const matches = q
+      ? CATALOG.filter((g) => norm(g.name).includes(q))
+          .sort((a, b) => Number(startsWord(norm(b.name))) - Number(startsWord(norm(a.name))))
+          .slice(0, 6)
+      : [];
+    const pickGame = (g) => () => this.setState({ game: g.name, players: g.max, query: '' });
+    const results = matches.map((g, i) => {
+      const at = norm(g.name).indexOf(q);
+      return {
+        pre: g.name.slice(0, at),
+        hit: g.name.slice(at, at + q.length),
+        post: g.name.slice(at + q.length),
+        genre: g.genre,
+        range: g.min + '–' + g.max,
+        cover: g.cover,
+        hasCover: !!g.cover,
+        noCover: !g.cover,
+        ini: g.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(),
+        first: i === 0,
+        selected: i === 0 ? 'true' : 'false',
+        bg: i === 0 ? '#1A1B20' : 'transparent',
+        edge: i === 0 ? 'inset 2px 0 0 #00FFA2' : 'none',
+        pick: pickGame(g)
+      };
+    });
+    const game = CATALOG.find((g) => g.name === st.game) || null;
+    const step = st.step;
+    const linkOk = /^(https?:\/\/)?(www\.)?(discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]+$/.test(st.link.trim());
+    const nameOk = st.name.trim().length >= 3;
+    const canNext = step === 1 ? !!game : step === 2 ? nameOk : linkOk;
+    const TITLES = ['Escolha o jogo', 'Detalhes do squad', 'Convite do Discord'];
+    const LABELS = ['01 · JOGO', '02 · DETALHES', '03 · DISCORD'];
+    const addTag = (t) => {
+      const clean = t.trim().replace(/^#/, '').toLowerCase();
+      if (!clean || this.state.tags.indexOf(clean) !== -1 || this.state.tags.length >= 5) return;
+      this.setState({ tags: this.state.tags.concat([clean]), tagDraft: '' });
+    };
+    const g = game || { name: '', genre: '', min: 2, max: 5, cover: '' };
+    return {
+      step,
+      stepTitle: TITLES[step - 1],
+      stepLabels: LABELS,
+      isStep1: step === 1,
+      isStep2: step === 2,
+      isStep3: step === 3,
+      notStep1: step > 1,
+      notLast: step < 3,
+      // Step 1
+      query: st.query,
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      clearQuery: () => this.setState({ query: '' }),
+      hasQuery: st.query.length > 0,
+      noGame: !game,
+      hasGame: !!game,
+      searchRing: q ? '#00FFA2' : '#24252B',
+      listOpen: results.length > 0 ? 'true' : 'false',
+      results,
+      hasResults: results.length > 0,
+      noResults: !!q && results.length === 0,
+      resultLabel: results.length === 1 ? '1 JOGO ENCONTRADO' : results.length + ' JOGOS ENCONTRADOS',
+      showPopular: !q,
+      popular: CATALOG.filter((x) => ['Valorant', 'League of Legends', 'Counter-Strike 2', 'Fortnite', 'Minecraft', 'Overwatch'].indexOf(x.name) !== -1)
+        .map((x) => ({ name: x.name, cover: x.cover, pick: pickGame(x) })),
+      g,
+      changeGame: () => this.setState({ game: null, step: 1, query: '' }),
+      // Step 2
+      name: st.name,
+      nameLen: st.name.length,
+      onName: (e) => this.setState({ name: e.target.value.slice(0, 40) }),
+      players: st.players,
+      dec: () => this.setState({ players: Math.max(2, this.state.players - 1) }),
+      inc: () => this.setState({ players: Math.min(20, this.state.players + 1) }),
+      lang: st.lang,
+      setLang: (v) => this.setState({ lang: v }),
+      langOpts: [{ value: 'pt', label: 'PT-BR' }, { value: 'en', label: 'EN-US' }],
+      tagCount: st.tags.length,
+      tagChips: st.tags.map((t) => ({ label: t, remove: () => this.setState({ tags: this.state.tags.filter((x) => x !== t) }) })),
+      tagDraft: st.tagDraft,
+      onTagDraft: (e) => this.setState({ tagDraft: e.target.value }),
+      addDraft: () => addTag(this.state.tagDraft),
+      tagSuggest: ['ranked', 'casual', 'chill', 'tryhard', 'fun'].filter((t) => st.tags.indexOf(t) === -1).slice(0, 4)
+        .map((t) => ({ label: t, add: () => addTag(t) })),
+      // Step 3
+      link: st.link,
+      onLink: (e) => this.setState({ link: e.target.value }),
+      linkOk,
+      linkRing: st.link ? (linkOk ? '#00FFA2' : '#FF8A8A') : '#24252B',
+      preview: {
+        name: st.name || 'Nome do squad',
+        game: g.name,
+        cover: g.cover,
+        tags: st.tags,
+        lang: st.lang === 'pt' ? 'PT-BR' : 'EN-US',
+        code: '•••••',
+        members: 1,
+        max: st.players,
+        state: 'member'
+      },
+      // Footer
+      next: () => { if (canNext) this.setState({ step: Math.min(3, step + 1) }); },
+      back: () => this.setState({ step: Math.max(1, step - 1) }),
+      noNext: !canNext
+    };
+  }
+}
+</script>
+</body>
+</html>

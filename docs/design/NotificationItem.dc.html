@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Notificação</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div role="listitem" class="ds-notif-row" style="position: relative; font-family: 'Plus Jakarta Sans', sans-serif">
+  <a href="{{href}}" class="ds-notif" style="display: flex; align-items: center; gap: 14px; text-decoration: none; color: #F2F3F5; background: {{bg}}; padding: 10px 44px 10px 10px; box-shadow: {{bar}}">
+    <span style="position: relative; width: 38px; height: 50px; flex-shrink: 0">
+      <img src="{{n.cover}}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block; filter: {{posterFilter}}">
+      <span style="position: absolute; right: -5px; bottom: -5px; width: 20px; height: 20px; background: #4E5AE8; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px {{bg}}">
+        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="{{discordD}}"></path></svg>
+      </span>
+    </span>
+    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+      <span style="font-size: 14px; font-weight: {{weight}}; color: {{nameFg}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{n.room}}</span>
+      <span style="font-size: 12.5px; color: {{msgFg}}">Convite do Discord liberado</span>
+      <span style="font-size: 11.5px; color: #80838C">{{n.game}} · {{n.ago}}</span>
+    </span>
+    <sc-if value="{{unread}}" hint-placeholder-val="{{ true }}">
+      <span role="img" aria-label="Não lida" style="width: 8px; height: 8px; border-radius: 50%; background: #00FFA2; flex-shrink: 0"></span>
+    </sc-if>
+  </a>
+  <sc-if value="{{canDismiss}}" hint-placeholder-val="{{ false }}">
+    <button type="button" class="ds-notif-x" onClick="{{dismiss}}" aria-label="Dispensar notificação de {{n.room}}" style="position: absolute; right: 8px; top: 8px; width: 30px; height: 30px; border: 0; cursor: pointer; background: #24252B; color: #C9CBD1; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"notif":{"editor":null},"href":{"editor":null},"onDismiss":{"editor":null},"$preview":{"width":384,"height":70}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // A squad-ready notification, as the API sends it: room, game, and when the last slot closed.
+    const n = this.props.notif || { room: 'Comp role queue — Diamond+', game: 'Overwatch', cover: '/_blob/828fcf6511c34f6726bd1bd2e3b4f956', ago: 'há 2 min', unread: true };
+    const unread = !!n.unread;
+    return {
+      n,
+      unread,
+      href: this.props.href ?? 'SquadCompleto.dc.html',
+      canDismiss: typeof this.props.onDismiss === 'function',
+      dismiss: this.props.onDismiss,
+      bg: unread ? '#1A1B20' : '#17181D',
+      bar: unread ? 'inset 2px 0 0 #00FFA2' : 'none',
+      weight: unread ? '700' : '600',
+      nameFg: unread ? '#F2F3F5' : '#A9ABB3',
+      msgFg: unread ? '#C9CBD1' : '#80838C',
+      posterFilter: unread ? 'none' : 'grayscale(0.6)',
+      discordD: 'M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.319 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.011c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z'
+    };
+  }
+}
+</script>
+</body>
+</html>

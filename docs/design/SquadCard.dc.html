@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Card de squad</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<a href="Squad.dc.html" class="sqc {{s.stateClass}}" aria-label="{{s.aria}}" aria-disabled="{{s.disabledAttr}}" style="position: relative; display: grid; grid-template-columns: {{s.cols}}; width: 100%; min-height: {{s.minH}}; background: {{s.bg}}; box-shadow: {{s.ring}}; color: #F2F3F5; text-decoration: none; font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; overflow: hidden; opacity: {{s.opacity}}">
+  <!-- Poster -->
+  <span style="position: relative; display: block; overflow: hidden; background: #1A1B20">
+    <img class="sqc-poster" src="{{s.cover}}" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; filter: {{s.posterFilter}}; transform: {{s.posterScale}}">
+    <sc-if value="{{s.isMember}}" hint-placeholder-val="{{ false }}">
+      <span style="position: absolute; left: 8px; top: 8px; display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; color: #03140D; background: #00FFA2; padding: 4px 6px">
+        <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+        ENTROU
+      </span>
+    </sc-if>
+    <sc-if value="{{s.isReady}}" hint-placeholder-val="{{ false }}">
+      <span style="position: absolute; left: 8px; top: 8px; display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; color: #FFFFFF; background: #4E5AE8; padding: 4px 6px">PRONTO</span>
+    </sc-if>
+    <sc-if value="{{s.isFull}}" hint-placeholder-val="{{ false }}">
+      <span style="position: absolute; inset: 0; background: rgba(7,8,10,0.55); display: flex; align-items: center; justify-content: center">
+        <span style="font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 24px; letter-spacing: 0.12em; color: #F2F3F5">CHEIO</span>
+      </span>
+    </sc-if>
+  </span>
+
+  <!-- Info -->
+  <span style="position: relative; display: flex; flex-direction: column; gap: {{s.gap}}; padding: {{s.pad}}; min-width: 0">
+    <span style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+      <dc-import name="Tag" variant="lang" label="{{s.lang}}" hint-size="64px,22px"></dc-import>
+      <span style="flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #5F626B">#{{s.code}}</span>
+    </span>
+
+    <span style="font-family: 'Big Shoulders', sans-serif; font-weight: 800; font-size: {{s.nameSize}}; line-height: 1.1; letter-spacing: 0.005em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden">{{s.name}}</span>
+
+    <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0">
+      <sc-for list="{{s.tagChips}}" as="t" hint-placeholder-count="2">
+        <dc-import name="Tag" variant="tag" label="{{t}}" hint-size="72px,24px"></dc-import>
+      </sc-for>
+      <sc-if value="{{s.hasMoreTags}}" hint-placeholder-val="{{ false }}">
+        <span style="font-size: 12px; font-weight: 600; color: #80838C; padding: 4px 2px">+{{s.moreTags}}</span>
+      </sc-if>
+    </span>
+
+    <span style="flex-grow: 1"></span>
+
+    <span style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+      <span style="display: flex; align-items: center">
+        <sc-for list="{{s.slots}}" as="a" hint-placeholder-count="5">
+          <span style="display: flex; margin-right: -6px">
+            <dc-import name="Avatar" ini="{{a.ini}}" bg="{{a.bg}}" fg="{{a.fg}}" status="{{a.status}}" size="{{s.avSize}}" cutout="{{s.bg}}" hint-size="34px,34px"></dc-import>
+          </span>
+        </sc-for>
+        <sc-if value="{{s.hasExtra}}" hint-placeholder-val="{{ false }}">
+          <span style="flex-shrink: 0; margin-left: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #A9ABB3">+{{s.extra}}</span>
+        </sc-if>
+      </span>
+      <span class="sqc-count" style="flex-shrink: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 800; font-size: {{s.countSize}}; line-height: 1; opacity: {{s.countOpacity}}"><span style="color: {{s.countColor}}">{{s.members}}</span><span style="color: #5F626B">/{{s.max}}</span></span>
+    </span>
+
+    <!-- Hover call to action, revealed over the counter -->
+    <sc-if value="{{s.hasCta}}" hint-placeholder-val="{{ true }}">
+      <span class="sqc-cta" aria-hidden="true" style="position: absolute; right: {{s.ctaInset}}; bottom: {{s.ctaBottom}}; display: inline-flex; align-items: center; gap: 7px; background: #00FFA2; color: #03140D; font-size: 13px; font-weight: 800; padding: 0 12px; height: 34px; opacity: {{s.ctaOpacity}}; transform: {{s.ctaTransform}}">
+        {{s.ctaLabel}}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+      </span>
+    </sc-if>
+  </span>
+</a>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"squad":{"editor":null},"size":{"editor":"enum","options":["md","lg"],"default":"md"},"hover":{"editor":"boolean","default":false},"$preview":{"width":380,"height":176}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const DEFAULT = {
+      name: 'Ranked climbing — Gold+',
+      game: 'League of Legends',
+      cover: '/_blob/8df3967d6379fe20d30cbe81ffa8f1d7',
+      tags: ['ranked', 'chill', 'mic'],
+      lang: 'PT-BR',
+      code: 'ABC12',
+      members: 3,
+      max: 5,
+      state: 'open'
+    };
+    const s = Object.assign({}, DEFAULT, this.props.squad || {});
+    const lg = (this.props.size ?? 'md') === 'lg';
+    const PALETTE = [
+      { ini: 'CC', bg: '#0E4D3A', fg: '#B9FFE4' }, { ini: 'MF', bg: '#3A2A5C', fg: '#E7DBFF' },
+      { ini: 'BR', bg: '#5C3A1E', fg: '#FFE2C7' }, { ini: 'KZ', bg: '#1E3A5C', fg: '#CFE6FF' },
+      { ini: 'LU', bg: '#5C1E3A', fg: '#FFD1E6' }, { ini: 'TA', bg: '#4A4A1E', fg: '#F4F4C2' },
+      { ini: 'JP', bg: '#1E4A4A', fg: '#C6F4F4' }
+    ];
+    // The rail shows at most 5 circles: members first, then grey open slots; the remaining slots become "+N".
+    const RAIL = 5;
+    const filled = Math.min(s.members, s.max);
+    const shown = Math.min(s.max, RAIL);
+    const seed = s.code.charCodeAt(0) + s.code.charCodeAt(1);
+    const slots = Array.from({ length: shown }, (_, i) => {
+      if (i < filled) {
+        const p = PALETTE[(i + seed) % PALETTE.length];
+        return { ini: p.ini, bg: p.bg, fg: p.fg, status: 'none' };
+      }
+      return { ini: '', bg: '#2A2B31', fg: '#2A2B31', status: 'vacant' };
+    });
+    const isFull = s.state === 'full';
+    const inside = s.state === 'member' || s.state === 'ready';
+    // `hover` pins the hover look, so the canvas can show it without a pointer.
+    const hover = !!this.props.hover && !isFull;
+    const tags = s.tags || [];
+    return {
+      s: Object.assign({}, s, {
+        slots,
+        hasExtra: s.max > RAIL,
+        extra: s.max - RAIL,
+        countColor: isFull ? '#A9ABB3' : '#F2F3F5',
+        tagChips: tags.slice(0, 2),
+        hasMoreTags: tags.length > 2,
+        moreTags: tags.length - 2,
+        isMember: s.state === 'member',
+        isReady: s.state === 'ready',
+        isFull,
+        stateClass: isFull ? 'sqc-off' : '',
+        disabledAttr: isFull ? 'true' : 'false',
+        opacity: isFull ? '0.62' : '1',
+        posterFilter: isFull ? 'grayscale(1)' : 'none',
+        bg: hover ? '#17181D' : '#121317',
+        ring: hover ? 'inset 0 0 0 1.5px #00FFA2' : 'none',
+        posterScale: hover ? 'scale(1.06)' : 'none',
+        hasCta: !isFull,
+        ctaLabel: inside ? 'Abrir sala' : 'Entrar',
+        ctaOpacity: hover ? '1' : '0',
+        ctaTransform: hover ? 'none' : 'translateX(10px)',
+        countOpacity: hover ? '0' : '1',
+        ctaInset: lg ? '22px' : '16px',
+        ctaBottom: lg ? '16px' : '12px',
+        cols: lg ? '160px minmax(0, 1fr)' : '118px minmax(0, 1fr)',
+        minH: lg ? '214px' : '176px',
+        pad: lg ? '18px 22px 18px 22px' : '14px 16px',
+        gap: lg ? '10px' : '8px',
+        nameSize: lg ? '30px' : '23px',
+        avSize: lg ? 'sm' : 'xs',
+        countSize: lg ? '24px' : '20px',
+        aria: s.name + ' — ' + s.game + ', ' + s.lang + ', ' + s.members + ' de ' + s.max + ' jogadores'
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

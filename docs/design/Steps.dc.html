@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Etapas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<ol style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat({{count}}, minmax(0, 1fr)); gap: 6px">
+  <sc-for list="{{items}}" as="s" hint-placeholder-count="3">
+    <li aria-current="{{s.current}}" style="display: flex; flex-direction: column; gap: 9px">
+      <span style="height: 3px; background: {{s.bar}}"></span>
+      <span style="display: inline-flex; align-items: center; gap: 7px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: {{s.fg}}">
+        <sc-if value="{{s.done}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+        {{s.label}}
+      </span>
+    </li>
+  </sc-for>
+</ol>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"current":{"editor":"int","default":1,"min":1,"max":3},"steps":{"editor":null},"$preview":{"width":560,"height":40}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const labels = this.props.steps || ['01 · JOGO', '02 · DETALHES', '03 · DISCORD'];
+    const cur = Number(this.props.current ?? 1);
+    return {
+      count: labels.length,
+      items: labels.map((label, i) => ({
+        label,
+        done: i + 1 < cur,
+        current: i + 1 === cur ? 'step' : 'false',
+        bar: i + 1 <= cur ? '#00FFA2' : '#24252B',
+        fg: i + 1 === cur ? '#F2F3F5' : i + 1 < cur ? '#00FFA2' : '#5F626B'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

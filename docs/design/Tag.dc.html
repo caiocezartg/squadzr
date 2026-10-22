@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Tag</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<sc-if value="{{isStatic}}" hint-placeholder-val="{{ true }}">
+  <span style="display: inline-flex; align-items: center; gap: 5px; box-sizing: border-box; white-space: nowrap; background: {{bg}}; color: {{fg}}; font-family: 'Plus Jakarta Sans', sans-serif; font-size: {{fs}}; font-weight: {{fw}}; line-height: 1.3; padding: {{pad}}">
+    <sc-if value="{{globe}}" hint-placeholder-val="{{ false }}">
+      <svg aria-hidden="true" width="{{gs}}" height="{{gs}}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a14 14 0 0 1 0 18"></path><path d="M12 3a14 14 0 0 0 0 18"></path></svg>
+    </sc-if>
+    {{text}}
+  </span>
+</sc-if>
+<sc-if value="{{isButton}}" hint-placeholder-val="{{ false }}">
+  <button type="button" class="ds-chip {{cls}}" onClick="{{click}}" aria-pressed="{{pressed}}" aria-label="{{aria}}" style="display: inline-flex; align-items: center; gap: 7px; box-sizing: border-box; border: 0; cursor: pointer; white-space: nowrap; background: {{bg}}; color: {{fg}}; font: 700 {{fs}} 'Plus Jakarta Sans', sans-serif; padding: {{pad}}; min-height: {{h}}">
+    {{text}}
+    <sc-if value="{{removable}}" hint-placeholder-val="{{ false }}">
+      <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#A9ABB3" stroke-width="2.8" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+    </sc-if>
+  </button>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"variant":{"editor":"enum","options":["tag","glass","lang","lang-light","toggle","suggest","removable"],"default":"tag"},"size":{"editor":"enum","options":["sm","md"],"default":"sm"},"label":{"editor":"text","default":"ranked"},"on":{"editor":"boolean","default":false},"onClick":{"editor":null},"$preview":{"width":120,"height":40}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const md = p.size === 'md';
+    const label = p.label ?? 'ranked';
+    const on = !!p.on;
+    // Read-only chips: tags and the squad language.
+    const STATIC = {
+      tag: { bg: '#1A1B20', fg: '#C9CBD1', fw: '600', text: '#' + label },
+      glass: { bg: 'rgba(255,255,255,0.08)', fg: '#C9CBD1', fw: '600', text: '#' + label },
+      lang: { bg: '#1F2026', fg: '#F2F3F5', fw: '700', text: label, globe: true },
+      'lang-light': { bg: '#F2F3F5', fg: '#07080A', fw: '700', text: label, globe: true }
+    };
+    // Clickable chips: filter toggles, suggestions and removable picks.
+    const BUTTONS = {
+      toggle: { bg: on ? '#00FFA2' : 'rgba(0,255,162,0.08)', fg: on ? '#03140D' : '#00FFA2', text: '#' + label, pad: '0 11px', h: '32px', fs: '12px' },
+      suggest: { bg: 'rgba(0,255,162,0.08)', fg: '#00FFA2', text: '+ #' + label, pad: '0 10px', h: '30px', fs: '12px' },
+      removable: { bg: '#1F2026', fg: '#F2F3F5', text: label, pad: '0 9px 0 11px', h: '34px', fs: '12.5px', x: true }
+    };
+    const variant = STATIC[p.variant] || BUTTONS[p.variant] ? p.variant : 'tag';
+    const s = STATIC[variant];
+    const b = BUTTONS[variant];
+    if (s) {
+      const lang = !!s.globe;
+      return {
+        isStatic: true,
+        isButton: false,
+        bg: s.bg,
+        fg: s.fg,
+        fw: s.fw,
+        text: s.text,
+        globe: lang,
+        gs: md ? '13px' : '11px',
+        fs: md ? '13px' : '12px',
+        pad: md ? '5px 10px' : lang ? '3px 8px' : '4px 9px'
+      };
+    }
+    return {
+      isStatic: false,
+      isButton: true,
+      cls: 'ds-chip-' + variant,
+      click: p.onClick,
+      pressed: variant === 'toggle' ? (on ? 'true' : 'false') : undefined,
+      aria: b.x ? 'Remover ' + label : undefined,
+      bg: b.bg,
+      fg: b.fg,
+      text: b.text,
+      pad: b.pad,
+      h: b.h,
+      fs: b.fs,
+      removable: !!b.x
+    };
+  }
+}
+</script>
+</body>
+</html>

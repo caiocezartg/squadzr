@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Explorar squads</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080A}
+a{color:#00FFA2}a:hover{color:#7CFFCF}
+.sqc{transition:background-color .2s,box-shadow .2s}
+.sqc:hover{background-color:#17181D !important;box-shadow:inset 0 0 0 1.5px #00FFA2 !important}
+.sqc .sqc-poster{transition:transform .5s cubic-bezier(.22,1,.36,1)}
+.sqc:hover .sqc-poster{transform:scale(1.06) !important}
+.sqc .sqc-count{transition:opacity .15s}
+.sqc .sqc-cta{transition:opacity .2s,transform .25s cubic-bezier(.22,1,.36,1)}
+.sqc:hover .sqc-count{opacity:0 !important}
+.sqc:hover .sqc-cta{opacity:1 !important;transform:none !important}
+.sqc-off:hover{background-color:#121317 !important;box-shadow:none !important;cursor:not-allowed}
+.sqc-off:hover .sqc-poster{transform:none !important}
+.sqc-off:hover .sqc-count{opacity:1 !important}
+/* Design system states: components keep inline styles, so hover and motion live here */
+.ds-btn{transition:background-color .2s,box-shadow .25s,color .2s,transform .15s}
+.ds-btn:active{transform:scale(.97)}
+.ds-btn-primary:hover{background-color:#5CFFC4 !important}
+.ds-btn-secondary:hover{background-color:#24252B !important}
+.ds-btn-ghost:hover{background-color:#1A1B20 !important}
+.ds-btn-link:hover{color:#7CFFCF !important}
+.ds-btn-danger:hover{background-color:rgba(239,68,68,0.18) !important}
+.ds-btn-discord:hover{background-color:#5D68F0 !important}
+.ds-btn-light:hover{box-shadow:0 0 0 5px rgba(255,255,255,0.18) !important}
+.ds-btn-dark:hover{background-color:#1A1B20 !important}
+.ds-btn-glass:hover{background-color:rgba(255,255,255,0.24) !important}
+.ds-btn-off:active{transform:none}
+.ds-chip{transition:background-color .15s}
+.ds-chip-removable:hover{background-color:#2A2B31 !important}
+.ds-chip-suggest:hover,.ds-chip-toggle[aria-pressed="false"]:hover{background-color:rgba(0,255,162,0.16) !important}
+.ds-chip-toggle[aria-pressed="true"]:hover{background-color:#5CFFC4 !important}
+.ds-seg{transition:background-color .15s,color .15s}
+.ds-seg[aria-pressed="false"]:hover{color:#F2F3F5 !important}
+.ds-pg{transition:background-color .15s}
+.ds-pg-idle:hover{background-color:#1F2026 !important}
+.ds-notif{transition:background-color .15s}
+.ds-notif:hover{background-color:#1F2026 !important}
+.ds-notif-row .ds-notif-x{opacity:0;transition:opacity .15s}
+.ds-notif-row:hover .ds-notif-x,.ds-notif-x:focus-visible{opacity:1}
+@keyframes ds-halo{0%{box-shadow:0 0 0 2px #00FFA2,0 0 0 2px rgba(0,255,162,0.45)}70%,100%{box-shadow:0 0 0 2px #00FFA2,0 0 0 9px rgba(0,255,162,0)}}
+.ds-in-room{animation:ds-halo 2.4s ease-out infinite}
+@keyframes ds-wait{0%,100%{opacity:.55}50%{opacity:1}}
+.ds-wait{animation:ds-wait 2.4s ease-in-out infinite}
+@keyframes ds-sheen{0%,55%{transform:translateX(-120%) skewX(-18deg)}85%,100%{transform:translateX(420%) skewX(-18deg)}}
+.ds-sheen{animation:ds-sheen 5s ease-in-out infinite}
+@keyframes ds-pop{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+.ds-pop{animation:ds-pop .5s cubic-bezier(.22,1,.36,1) both}
+input::placeholder{color:#5F626B}
+@media (prefers-reduced-motion:reduce){.ds-in-room,.ds-wait,.ds-sheen,.ds-pop{animation:none !important}}
+@keyframes live{0%,100%{opacity:1}50%{opacity:.35}}
+.live{animation:live 1.6s ease-in-out infinite}
+@keyframes pop{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}
+.pop{animation:pop .22s cubic-bezier(.22,1,.36,1);transform-origin:top right}
+@media (max-width:900px){.sq-grid{grid-template-columns:minmax(0,1fr) !important}}
+@media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1240px; background: #07080A; color: #F2F3F5; font-family: 'Plus Jakarta Sans', sans-serif">
+  <div style="flex: 1 1 260px; max-width: 100%; display: flex">
+    <dc-import name="Sidebar" active="all" hint-size="100%,1240px"></dc-import>
+  </div>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 30px 40px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+    <!-- Title row -->
+    <div style="position: relative; z-index: 6; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <h1 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 60px; line-height: 0.96; letter-spacing: 0.005em; text-transform: uppercase">Explorar squads</h1>
+        <span style="display: inline-flex; align-items: center; gap: 9px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #A9ABB3"><span class="live" style="width: 7px; height: 7px; border-radius: 50%; background: #00FFA2"></span>48 SQUADS ABERTOS</span>
+      </div>
+      <div style="position: relative">
+      <button type="button" onClick="{{toggleNotif}}" aria-expanded="{{notifAttr}}" aria-haspopup="dialog" aria-label="Notificações, 2 novas" style="position: relative; width: 46px; height: 46px; border: 0; cursor: pointer; background: {{bellBg}}; color: {{bellFg}}; display: flex; align-items: center; justify-content: center">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+        <span aria-hidden="true" style="position: absolute; right: -6px; top: -6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: #00FFA2; color: #03140D; font: 800 10.5px 'JetBrains Mono', monospace; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #07080A">2</span>
+      </button>
+
+      <!-- Notifications -->
+      <sc-if value="{{notifOpen}}" hint-placeholder-val="{{ false }}">
+        <section role="dialog" aria-labelledby="notif-h" class="pop" style="position: absolute; right: 0; top: calc(100% + 10px); width: 400px; max-width: calc(100vw - 32px); box-sizing: border-box; background: #17181D; box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 40px 90px -20px rgba(0,0,0,0.95); display: flex; flex-direction: column">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 18px 14px 20px">
+            <h2 id="notif-h" style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 28px; line-height: 1; text-transform: uppercase">Notificações</h2>
+            <button type="button" onClick="{{readAll}}" aria-label="Marcar todas como lidas" title="Marcar todas como lidas" style="width: 40px; height: 40px; border: 0; cursor: pointer; background: #1F2026; color: {{readAllFg}}; display: flex; align-items: center; justify-content: center">
+              <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"></path><path d="m22 10-7.5 7.5L13 16"></path></svg>
+            </button>
+          </div>
+          <div role="list" style="padding: 0 8px 8px; display: flex; flex-direction: column; gap: 2px">
+            <sc-for list="{{notifs}}" as="n" hint-placeholder-count="4">
+              <dc-import name="NotificationItem" notif="{{n}}" on-dismiss="{{n.dismiss}}" hint-size="100%,70px"></dc-import>
+            </sc-for>
+          </div>
+          <sc-if value="{{notifEmpty}}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 28px 24px 34px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+              <span style="width: 52px; height: 52px; background: #1F2026; color: #80838C; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg></span>
+              <span style="font-size: 15px; font-weight: 700">Tudo em dia</span>
+              <span style="max-width: 260px; font-size: 13px; line-height: 1.5; color: #A9ABB3">Quando um squad seu completar, o convite chega aqui.</span>
+            </div>
+          </sc-if>
+        </section>
+      </sc-if>
+      </div>
+    </div>
+
+    <!-- Search + one filter entry point; the filters open in a floating panel -->
+    <div style="position: relative; z-index: 5">
+      <div style="display: flex; align-items: center; gap: 6px; background: #121317; padding: 6px">
+        <div style="flex: 1; min-width: 0">
+          <dc-import name="SearchField" variant="bare" input-id="board-search" label="Buscar squads" placeholder="Buscar por jogo ou nome do squad…" hint-size="100%,46px"></dc-import>
+        </div>
+        <span aria-hidden="true" style="width: 1px; height: 26px; background: #24252B; margin: 0 6px"></span>
+        <button type="button" onClick="{{toggle}}" aria-expanded="{{openAttr}}" aria-haspopup="dialog" style="display: inline-flex; align-items: center; gap: 9px; border: 0; cursor: pointer; background: {{fBtnBg}}; color: {{fBtnFg}}; font: 700 14px 'Plus Jakarta Sans', sans-serif; padding: 0 16px; min-height: 46px">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10"></path><path d="M18 6h2"></path><circle cx="16" cy="6" r="2"></circle><path d="M4 12h4"></path><path d="M12 12h8"></path><circle cx="10" cy="12" r="2"></circle><path d="M4 18h12"></path><circle cx="18" cy="18" r="2"></circle></svg>
+          Filtros
+          <sc-if value="{{hasActive}}" hint-placeholder-val="{{ true }}">
+            <span style="background: {{fBadgeBg}}; color: {{fBadgeFg}}; font: 800 11px 'JetBrains Mono', monospace; padding: 2px 6px">{{activeCount}}</span>
+          </sc-if>
+        </button>
+      </div>
+
+      <sc-if value="{{open}}" hint-placeholder-val="{{ false }}">
+        <section role="dialog" aria-label="Filtros" class="pop" style="position: absolute; right: 0; top: calc(100% + 10px); width: 420px; max-width: 100%; box-sizing: border-box; background: #17181D; padding: 22px; display: flex; flex-direction: column; gap: 22px; box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 40px 90px -20px rgba(0,0,0,0.95)">
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 28px; line-height: 1; text-transform: uppercase">Filtros</h2>
+            <dc-import name="Button" variant="ghost" size="sm" label="Limpar tudo" on-click="{{clear}}" hint-size="96px,36px"></dc-import>
+          </div>
+
+          <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px">
+            <legend style="padding: 0; margin-bottom: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #80838C">DISPONIBILIDADE</legend>
+            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+              <sc-for list="{{statusOpts}}" as="o" hint-placeholder-count="3">
+                <button type="button" onClick="{{o.pick}}" aria-pressed="{{o.on}}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; border: 0; cursor: pointer; text-align: left; padding: 12px; background: {{o.bg}}; color: {{o.fg}}; font: 700 12.5px 'Plus Jakarta Sans', sans-serif; box-shadow: {{o.ring}}">
+                  <dc-import name="SlotMeter" variant="pips" filled="{{o.n}}" total="5" empty="#34353C" hint-size="58px,5px"></dc-import>
+                  {{o.label}}
+                </button>
+              </sc-for>
+            </div>
+          </fieldset>
+
+          <fieldset style="margin: 0; padding: 0; border: 0">
+            <legend style="padding: 0; margin-bottom: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #80838C">IDIOMA</legend>
+            <dc-import name="Segmented" fluid="{{ true }}" options="{{langOpts}}" value="{{lang}}" on-change="{{setLang}}" hint-size="100%,48px"></dc-import>
+          </fieldset>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <label for="tag-filter" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #80838C">TAGS</label>
+            <span style="display: flex; align-items: center; gap: 8px; background: #0F1013; padding: 0 14px; min-height: 44px">
+              <span aria-hidden="true" style="font-family: 'JetBrains Mono', monospace; color: #80838C">#</span>
+              <input id="tag-filter" type="text" placeholder="digite uma tag…" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: #F2F3F5; font: 500 14px 'Plus Jakarta Sans', sans-serif">
+            </span>
+            <span style="display: flex; flex-wrap: wrap; gap: 6px">
+              <sc-for list="{{tagOpts}}" as="t" hint-placeholder-count="8">
+                <dc-import name="Tag" variant="toggle" label="{{t.label}}" on="{{t.yes}}" on-click="{{t.pick}}" hint-size="80px,32px"></dc-import>
+              </sc-for>
+            </span>
+          </div>
+
+          <fieldset style="margin: 0; padding: 0; border: 0">
+            <legend style="padding: 0; margin-bottom: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #80838C">ORDENAR POR</legend>
+            <dc-import name="Segmented" fluid="{{ true }}" options="{{sortOpts}}" value="{{sort}}" on-change="{{setSort}}" hint-size="100%,48px"></dc-import>
+          </fieldset>
+
+          <dc-import name="Button" variant="primary" size="lg" label="Mostrar 21 squads" icon="none" full="{{ true }}" on-click="{{toggle}}" hint-size="100%,56px"></dc-import>
+        </section>
+      </sc-if>
+    </div>
+
+    <!-- Active filters, removable -->
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 34px">
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="3">
+        <dc-import name="Tag" variant="removable" label="{{c.label}}" on-click="{{c.remove}}" hint-size="96px,34px"></dc-import>
+      </sc-for>
+      <sc-if value="{{hasActive}}" hint-placeholder-val="{{ true }}">
+        <dc-import name="Button" variant="link" size="sm" label="Limpar" on-click="{{clear}}" hint-size="60px,36px"></dc-import>
+      </sc-if>
+    </div>
+
+    <!-- Grid -->
+    <div class="sq-grid" style="display: grid; grid-template-columns: {{gridCols}}; gap: 16px">
+      <sc-for list="{{squads}}" as="s" hint-placeholder-count="6">
+        <dc-import name="SquadCard" squad="{{s}}" size="{{cardSize}}" hint-size="100%,214px"></dc-import>
+      </sc-for>
+    </div>
+
+    <!-- Pagination -->
+    <div style="display: flex; justify-content: center; margin-top: 8px">
+      <dc-import name="Pagination" total="{{pageCount}}" current="1" hint-size="284px,44px"></dc-import>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"grade":{"editor":"enum","options":["2x3","3x3"],"default":"2x3"},"filtrosAbertos":{"editor":"boolean","default":false},"notificacoesAbertas":{"editor":"boolean","default":false},"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      open: !!props.filtrosAbertos,
+      notif: !!props.notificacoesAbertas,
+      read: [],
+      dismissed: [],
+      status: 'space',
+      lang: 'pt',
+      sort: 'new',
+      tags: ['ranked']
+    };
+  }
+  renderVals() {
+    const st = this.state;
+    const big = (this.props.grade ?? '2x3') === '2x3';
+    const C = {
+      val: '/_blob/48d569e7ccecf944cc19cb2d19ae7720',
+      lol: '/_blob/8df3967d6379fe20d30cbe81ffa8f1d7',
+      cs2: '/_blob/e99d5c165ccede7035df3d33d9ff414d',
+      dota: '/_blob/e8d23f4989fa54ac73bc2796502155ee',
+      fn: '/_blob/a3d71f50b7601b33d7801a2798b59bf8',
+      apex: '/_blob/54ef0dd62a2c3285ea217f850f06e169',
+      r6: '/_blob/16df06ac0181241d0eed0a32ac9805a4',
+      rl: '/_blob/3da18b4f80fcb7241cfffd5337ec7c83',
+      mc: '/_blob/27f1b58c3da08be4ee09f50b803963d5'
+    };
+    const statusOpts = [['all', 'Todos', 5], ['space', 'Com vaga', 2], ['almost', 'Quase cheio', 4]].map(([v, label, n]) => {
+      const yes = st.status === v;
+      return {
+        label,
+        n,
+        on: yes ? 'true' : 'false',
+        bg: yes ? 'rgba(0,255,162,0.10)' : '#0F1013',
+        fg: yes ? '#00FFA2' : '#A9ABB3',
+        ring: yes ? 'inset 0 0 0 2px #00FFA2' : 'none',
+        pick: () => this.setState({ status: v })
+      };
+    });
+    const tagOpts = ['ranked', 'casual', 'chill', 'competitive', 'mic', 'fun', 'premier', 'tryhard'].map((t) => {
+      const yes = st.tags.indexOf(t) !== -1;
+      return {
+        label: t,
+        yes,
+        pick: () => this.setState({ tags: yes ? this.state.tags.filter((x) => x !== t) : this.state.tags.concat([t]) })
+      };
+    });
+    const statusLabel = { all: null, space: 'Com vaga', almost: 'Quase cheio' };
+    const langLabel = { all: null, pt: 'PT-BR', en: 'EN-US' };
+    const chips = [];
+    if (statusLabel[st.status]) chips.push({ label: statusLabel[st.status], remove: () => this.setState({ status: 'all' }) });
+    if (langLabel[st.lang]) chips.push({ label: langLabel[st.lang], remove: () => this.setState({ lang: 'all' }) });
+    st.tags.forEach((t) => chips.push({ label: '#' + t, remove: () => this.setState({ tags: this.state.tags.filter((x) => x !== t) }) }));
+    const n = chips.length;
+    const open = st.open;
+    const all = [
+      { name: 'Premier quinta à noite', game: 'Valorant', cover: C.val, tags: ['premier', 'mic', 'ranked'], lang: 'PT-BR', code: 'VLR77', members: 4, max: 5, state: 'member' },
+      { name: 'Competitive 5v5 tryhard', game: 'Counter-Strike 2', cover: C.cs2, tags: ['ranked', 'competitive'], lang: 'PT-BR', code: 'XYZ99', members: 4, max: 5, state: 'open' },
+      { name: 'SMP survival hardcore — temporada nova', game: 'Minecraft', cover: C.mc, tags: ['ranked', 'survival', 'build', 'mic'], lang: 'PT-BR', code: 'MCX10', members: 3, max: 10, state: 'open' },
+      { name: 'Ranked climbing — Gold+', game: 'League of Legends', cover: C.lol, tags: ['ranked', 'chill'], lang: 'PT-BR', code: 'ABC12', members: 3, max: 5, state: 'open' },
+      { name: 'Zero build até o top 1', game: 'Fortnite', cover: C.fn, tags: ['ranked', 'zerobuild'], lang: 'PT-BR', code: 'FNT21', members: 1, max: 4, state: 'open' },
+      { name: 'Siege ranked com call', game: 'Rainbow Six Siege', cover: C.r6, tags: ['ranked', 'tático'], lang: 'PT-BR', code: 'R6S55', members: 2, max: 5, state: 'open' },
+      { name: 'Trio ranked Plat → Diamond', game: 'Apex Legends', cover: C.apex, tags: ['ranked'], lang: 'PT-BR', code: 'APX03', members: 3, max: 3, state: 'full' },
+      { name: 'Turbo sem stress', game: 'Dota 2', cover: C.dota, tags: ['ranked', 'fun'], lang: 'PT-BR', code: 'QWE34', members: 2, max: 5, state: 'open' },
+      { name: '2v2 ranked até Champion', game: 'Rocket League', cover: C.rl, tags: ['ranked', '2v2'], lang: 'PT-BR', code: 'RKT88', members: 1, max: 2, state: 'open' }
+    ];
+    const perPage = big ? 6 : 9;
+    const pageCount = Math.ceil(21 / perPage);
+    // Squad-ready notifications, as the API sends them: room, game, and when the last slot closed.
+    const NOTIFS = [
+      { id: 'n1', room: 'Comp role queue — Diamond+', game: 'Overwatch', cover: '/_blob/828fcf6511c34f6726bd1bd2e3b4f956', ago: 'há 2 min', unread: true },
+      { id: 'n2', room: 'Trio ranked Plat → Diamond', game: 'Apex Legends', cover: C.apex, ago: 'há 18 min', unread: true },
+      { id: 'n3', room: '2v2 ranked até Champion', game: 'Rocket League', cover: C.rl, ago: 'ontem', unread: false },
+      { id: 'n4', room: 'Turbo sem stress', game: 'Dota 2', cover: C.dota, ago: 'há 2 dias', unread: false }
+    ];
+    const notifs = NOTIFS.filter((x) => st.dismissed.indexOf(x.id) === -1).map((x) => {
+      const unread = x.unread && st.read.indexOf(x.id) === -1;
+      return {
+        room: x.room, game: x.game, cover: x.cover, ago: x.ago, unread,
+        dismiss: () => this.setState({ dismissed: this.state.dismissed.concat([x.id]) })
+      };
+    });
+    const notifOpen = st.notif;
+    return {
+      notifOpen,
+      notifAttr: notifOpen ? 'true' : 'false',
+      toggleNotif: () => this.setState({ notif: !this.state.notif, open: false }),
+      bellBg: notifOpen ? '#F2F3F5' : '#121317',
+      bellFg: notifOpen ? '#07080A' : '#C9CBD1',
+      notifs,
+      notifEmpty: notifs.length === 0,
+      readAll: () => this.setState({ read: NOTIFS.map((x) => x.id) }),
+      readAllFg: notifs.some((x) => x.unread) ? '#00FFA2' : '#5F626B',
+      open,
+      openAttr: open ? 'true' : 'false',
+      toggle: () => this.setState({ open: !this.state.open, notif: false }),
+      clear: () => this.setState({ status: 'all', lang: 'all', tags: [], sort: 'new' }),
+      fBtnBg: open ? '#F2F3F5' : '#1A1B20',
+      fBtnFg: open ? '#07080A' : '#F2F3F5',
+      fBadgeBg: open ? '#07080A' : '#00FFA2',
+      fBadgeFg: open ? '#00FFA2' : '#03140D',
+      hasActive: n > 0,
+      activeCount: n,
+      chips,
+      sortLabel: st.sort === 'new' ? 'MAIS RECENTES' : 'MAIS ANTIGOS',
+      statusOpts,
+      tagOpts,
+      lang: st.lang,
+      sort: st.sort,
+      setLang: (v) => this.setState({ lang: v }),
+      setSort: (v) => this.setState({ sort: v }),
+      langOpts: [{ value: 'all', label: 'Todos' }, { value: 'pt', label: 'PT-BR' }, { value: 'en', label: 'EN-US' }],
+      sortOpts: [{ value: 'new', label: 'Mais recentes' }, { value: 'old', label: 'Mais antigos' }],
+      gridCols: big ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))',
+      cardSize: big ? 'lg' : 'md',
+      squads: all.slice(0, perPage),
+      pageCount: Math.min(pageCount, 4)
+    };
+  }
+}
+</script>
+</body>
+</html>

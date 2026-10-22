@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Campo de busca</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<span style="display: flex; align-items: center; gap: 10px; box-sizing: border-box; width: 100%; min-height: {{h}}; padding: {{pad}}; background: {{bg}}; box-shadow: {{ring}}; font-family: 'Plus Jakarta Sans', sans-serif">
+  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#80838C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+  <sc-if value="{{hasLabel}}" hint-placeholder-val="{{ false }}">
+    <label for="{{id}}" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">{{label}}</label>
+  </sc-if>
+  <sc-if value="{{combobox}}" hint-placeholder-val="{{ false }}">
+    <input id="{{id}}" type="text" role="combobox" aria-expanded="{{expanded}}" aria-controls="{{controls}}" aria-autocomplete="list" autocomplete="off" value="{{value}}" onChange="{{change}}" placeholder="{{placeholder}}" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: #F2F3F5; font: {{font}}; padding: 13px 0">
+  </sc-if>
+  <sc-if value="{{plain}}" hint-placeholder-val="{{ true }}">
+    <input id="{{id}}" type="search" value="{{value}}" onChange="{{change}}" placeholder="{{placeholder}}" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: #F2F3F5; font: {{font}}; padding: 13px 0">
+  </sc-if>
+  <sc-if value="{{canClear}}" hint-placeholder-val="{{ false }}">
+    <button type="button" onClick="{{clear}}" aria-label="Limpar busca" style="width: 38px; height: 38px; flex-shrink: 0; border: 0; cursor: pointer; background: #1A1B20; color: #A9ABB3; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+  </sc-if>
+</span>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"variant":{"editor":"enum","options":["field","bare"],"default":"field"},"placeholder":{"editor":"text","default":"Buscar no catálogo de jogos…"},"inputId":{"editor":null},"label":{"editor":null},"value":{"editor":null},"onChange":{"editor":null},"onClear":{"editor":null},"combobox":{"editor":null},"expanded":{"editor":null},"controls":{"editor":null},"$preview":{"width":520,"height":54}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    // field: a standalone input with its own ground · bare: sits inside a bar that already has one
+    const field = (p.variant ?? 'field') === 'field';
+    const hasValue = typeof p.value === 'string' && p.value.length > 0;
+    return {
+      id: p.inputId ?? 'search',
+      label: p.label,
+      hasLabel: !!p.label,
+      placeholder: p.placeholder ?? 'Buscar…',
+      value: p.value,
+      change: p.onChange,
+      combobox: !!p.combobox,
+      plain: !p.combobox,
+      expanded: p.expanded ? 'true' : 'false',
+      controls: p.controls,
+      canClear: hasValue && typeof p.onClear === 'function',
+      clear: p.onClear,
+      bg: field ? '#0C0D10' : 'transparent',
+      pad: field ? '0 8px 0 16px' : '0 6px 0 12px',
+      h: field ? '54px' : '46px',
+      ring: field ? 'inset 0 0 0 1.5px ' + (hasValue ? '#00FFA2' : '#24252B') : 'none',
+      font: field ? "600 16px 'Plus Jakarta Sans', sans-serif" : "500 15px 'Plus Jakarta Sans', sans-serif"
+    };
+  }
+}
+</script>
+</body>
+</html>
