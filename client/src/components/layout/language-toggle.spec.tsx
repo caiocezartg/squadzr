@@ -21,7 +21,7 @@ afterEach(() => {
 
 describe('LanguageToggle', () => {
   it('writes the chosen locale to the cookie and refreshes the route', async () => {
-    const navigation = createHarnessNavigation('/rooms')
+    const navigation = createHarnessNavigation('/squads')
     const user = userEvent.setup({ delay: null })
     render(<LanguageToggle />)
 
@@ -32,7 +32,7 @@ describe('LanguageToggle', () => {
   })
 
   it('does nothing when the current language is chosen again', async () => {
-    const navigation = createHarnessNavigation('/rooms')
+    const navigation = createHarnessNavigation('/squads')
     const user = userEvent.setup({ delay: null })
     render(<LanguageToggle />)
 

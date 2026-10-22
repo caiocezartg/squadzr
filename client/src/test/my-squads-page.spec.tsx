@@ -116,8 +116,8 @@ describe('My Squads on the App Router', () => {
   it('returns without waiting for the server read', async () => {
     signIn()
     createHarnessNavigation('/squads/my')
-    const roomsRead = deferred<MockHttpResponse>()
-    onHttp('GET', '/api/rooms/my', () => roomsRead.promise)
+    const squadsRead = deferred<MockHttpResponse>()
+    onHttp('GET', '/api/rooms/my', () => squadsRead.promise)
 
     const outcome = await Promise.race([
       MySquadsRoute().then(() => 'rendered'),
@@ -131,15 +131,15 @@ describe('My Squads on the App Router', () => {
   it('shows the title and the filters while a first visit waits for the lists, with the skeleton where they go', async () => {
     signIn()
     createHarnessNavigation('/squads/my')
-    const roomsRead = deferred<MockHttpResponse>()
-    onHttp('GET', '/api/rooms/my', () => roomsRead.promise)
+    const squadsRead = deferred<MockHttpResponse>()
+    onHttp('GET', '/api/rooms/my', () => squadsRead.promise)
 
     await renderRoute()
 
     expect(await screen.findByTestId('my-squads-skeleton')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'My squads' })).toBeInTheDocument()
 
-    roomsRead.resolve(httpOk({ hosted: [memberSquad], joined: [openSquad] }))
+    squadsRead.resolve(httpOk({ hosted: [memberSquad], joined: [openSquad] }))
 
     expect(await screen.findByText(memberSquad.name)).toBeInTheDocument()
     expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()

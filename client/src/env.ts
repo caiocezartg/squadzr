@@ -6,11 +6,8 @@ const publicEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: z._default(z.optional(z.url()), 'http://localhost:3000'),
 })
 
-/**
- * Validates the public variables and throws when one is invalid. `next.config.ts`
- * calls it while the build loads the config, so a bad value fails the build.
- */
-export function parsePublicEnv(source: { NEXT_PUBLIC_API_URL?: string | undefined }) {
+/** Validates the public variables and throws when one is invalid. `next.config.ts` calls it while the build loads the config, so a bad value fails the build. */
+function parsePublicEnv(source: { NEXT_PUBLIC_API_URL?: string | undefined }) {
   const result = publicEnvSchema.safeParse(source)
 
   if (!result.success) {

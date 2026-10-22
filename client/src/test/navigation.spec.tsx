@@ -1,10 +1,10 @@
 /**
- * The harness location: `next/navigation` and `next/link` read and write the one in-memory location
- * the legacy router also uses, and every call made through the Next router is recorded in order.
+ * The harness location: `next/navigation` and `next/link` read and write the one in-memory location,
+ * and every call made through the Next router is recorded in order.
  */
 
 import { describe, expect, it } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -18,7 +18,7 @@ function NavigationProbe() {
       <button type="button" onClick={() => router.push('/squads/my')}>
         Push my squads
       </button>
-      <button type="button" onClick={() => router.replace('/rooms/LOBBY1')}>
+      <button type="button" onClick={() => router.replace('/squads/LOBBY1')}>
         Replace with lobby
       </button>
       <button type="button" onClick={() => router.back()}>
@@ -30,7 +30,7 @@ function NavigationProbe() {
       <button type="button" onClick={() => router.refresh()}>
         Refresh route
       </button>
-      <Link href="/rooms/LOBBY1">Open lobby</Link>
+      <Link href="/squads/LOBBY1">Open lobby</Link>
     </>
   )
 }
@@ -42,13 +42,13 @@ describe('harness navigation', () => {
     render(<NavigationProbe />)
 
     await user.click(screen.getByRole('button', { name: 'Push my squads' }))
-    expect(navigation.history.location.pathname).toBe('/squads/my')
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/my'))
 
     await user.click(screen.getByRole('link', { name: 'Open lobby' }))
-    expect(navigation.history.location.pathname).toBe('/rooms/LOBBY1')
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/LOBBY1'))
     expect(navigation.calls).toEqual([
       { method: 'push', href: '/squads/my' },
-      { method: 'push', href: '/rooms/LOBBY1' },
+      { method: 'push', href: '/squads/LOBBY1' },
     ])
   })
 
@@ -70,7 +70,7 @@ describe('harness navigation', () => {
       'forward',
       'refresh',
     ])
-    expect(navigation.history.location.pathname).toBe('/rooms/LOBBY1')
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/LOBBY1'))
   })
 
   it('leaves a modified click to the browser, as an anchor does', () => {
@@ -92,7 +92,7 @@ describe('harness navigation', () => {
 
     fireEvent.click(link, { ctrlKey: true })
 
-    expect(link).toHaveAttribute('href', '/rooms/LOBBY1')
+    expect(link).toHaveAttribute('href', '/squads/LOBBY1')
     expect(cancelledByHarness).toBe(false)
     expect(navigation.calls).toEqual([])
     expect(navigation.history.location.pathname).toBe('/squads')

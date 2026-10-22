@@ -10,10 +10,10 @@
  */
 
 /** Quiet period after the last event before the coalesced refetch runs. */
-export const SQUAD_BOARD_REFETCH_DEBOUNCE_MS = 300
+const SQUAD_BOARD_REFETCH_DEBOUNCE_MS = 300
 
 /** Longest a burst of events can postpone a refetch. */
-export const SQUAD_BOARD_REFETCH_MAX_WAIT_MS = 1_000
+const SQUAD_BOARD_REFETCH_MAX_WAIT_MS = 1_000
 
 export interface BoardRefetchSchedulerOptions {
   refetch: () => void | Promise<void>

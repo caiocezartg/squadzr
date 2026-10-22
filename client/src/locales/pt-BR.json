@@ -174,48 +174,46 @@
       "maxPlayersTooMany": "Máximo de 20 jogadores"
     }
   },
-  "rooms": {
-    "myRooms": {
-      "title": "Meus squads",
-      "subtitle": "Squads que você criou ou entrou",
-      "loadError": "Falha ao carregar seus squads. Por favor, atualize a página.",
-      "tabCreated": "Criados ({count})",
-      "tabJoined": "Participando ({count})",
-      "noRoomsYet": "Nenhum squad aqui ainda.",
-      "noRoomsFiltered": "Nenhum squad corresponde aos seus filtros."
-    },
-    "notFound": {
-      "title": "Squad não encontrado",
-      "description": "Este squad não existe mais ou o código é inválido. Verifique o código e tente novamente.",
-      "codeLabel": "Código informado:",
-      "backToRooms": "Voltar para Squads",
-      "createRoom": "Criar squad"
-    },
-    "lobby": {
-      "backToRooms": "Voltar aos squads",
-      "leaveRoom": "Sair do squad",
-      "squadLocked": "Time fechado",
-      "cannotLeave": "Não é possível sair de um squad cheio",
-      "pleaseSignIn": "Por favor, entre com sua conta para ver este squad.",
-      "playerCount": "{current}/{max} jogadores",
-      "players": "Jogadores ({current}/{max})",
-      "copied": "Copiado!",
-      "waitingForPlayer": "Aguardando jogador...",
-      "host": "Anfitrião"
-    },
-    "discordCard": {
-      "title": "Seu time está pronto!",
-      "description": "Entre no servidor do Discord para começar a jogar juntos.",
-      "copied": "Copiado!",
-      "copyLink": "Copiar link",
-      "joinDiscord": "Entrar no Discord"
-    }
+  "mySquads": {
+    "title": "Meus squads",
+    "subtitle": "Squads que você criou ou entrou",
+    "loadError": "Falha ao carregar seus squads. Por favor, atualize a página.",
+    "tabCreated": "Criados ({count})",
+    "tabJoined": "Participando ({count})",
+    "noSquadsYet": "Nenhum squad aqui ainda.",
+    "noSquadsFiltered": "Nenhum squad corresponde aos seus filtros."
+  },
+  "squadNotFound": {
+    "title": "Squad não encontrado",
+    "description": "Este squad não existe mais ou o código é inválido. Verifique o código e tente novamente.",
+    "codeLabel": "Código informado:",
+    "backToSquads": "Voltar para Squads",
+    "createSquad": "Criar squad"
+  },
+  "lobby": {
+    "backToSquads": "Voltar aos squads",
+    "leaveSquad": "Sair do squad",
+    "squadLocked": "Time fechado",
+    "cannotLeave": "Não é possível sair de um squad cheio",
+    "pleaseSignIn": "Por favor, entre com sua conta para ver este squad.",
+    "playerCount": "{current}/{max} jogadores",
+    "players": "Jogadores ({current}/{max})",
+    "copied": "Copiado!",
+    "waitingForPlayer": "Aguardando jogador...",
+    "host": "Anfitrião"
+  },
+  "discordCard": {
+    "title": "Seu time está pronto!",
+    "description": "Entre no servidor do Discord para começar a jogar juntos.",
+    "copied": "Copiado!",
+    "copyLink": "Copiar link",
+    "joinDiscord": "Entrar no Discord"
   },
   "notFound": {
     "title": "Página não encontrada",
     "description": "Parece que você saiu do mapa. A página que você procura não existe ou foi movida.",
     "backToHome": "Voltar ao Início",
-    "exploreRooms": "Explorar Squads"
+    "exploreSquads": "Explorar Squads"
   },
   "notifications": {
     "title": "Notificações",

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Game, PublicSquad } from '@/types'
 import { SQUADS_SEARCH_DEFAULTS } from './squads-search'
-import { SQUAD_PAGE_SIZE, querySquadList, type SquadListQuery } from './squad-list-query'
+import { querySquadList, type SquadListQuery } from './squad-list-query'
 
 const lol = { id: 'game-lol', name: 'League of Legends' } as Game
 const cs2 = { id: 'game-cs2', name: 'Counter-Strike 2' } as Game
@@ -144,7 +144,6 @@ describe('querySquadList — sort', () => {
 
 describe('querySquadList — pagination', () => {
   it('shows six squads per page', () => {
-    expect(SQUAD_PAGE_SIZE).toBe(6)
     const result = querySquadList(squads(7), games, query())
     expect(result.pageSquads).toHaveLength(6)
     expect(result).toMatchObject({ currentPage: 1, totalPages: 2, hasNextPage: true })

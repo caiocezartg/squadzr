@@ -1,9 +1,8 @@
 /**
- * Links to the landing and from it (CCC-77). The landing is an App Router page, so every path that
- * sends the player to `/` goes through the Next router, and the old app never handles that path.
+ * Links to the landing and from it (CCC-77). Every path that sends the player to `/` goes through
+ * the Next router.
  */
 
-import { RouterProvider, createRootRoute, createRouter } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
@@ -14,10 +13,8 @@ import { createHarnessNavigation } from './navigation'
 describe('links to the landing', () => {
   it('sends the not-found page home link to the App Router landing', async () => {
     const navigation = createHarnessNavigation('/missing')
-    const rootRoute = createRootRoute({ component: NotFound })
-    const router = createRouter({ routeTree: rootRoute, history: navigation.history })
     const user = userEvent.setup({ delay: null })
-    render(<RouterProvider router={router} />)
+    render(<NotFound />)
 
     await user.click(await screen.findByRole('link', { name: 'Back to Home' }))
 

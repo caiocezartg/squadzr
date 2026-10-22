@@ -5,15 +5,7 @@
  */
 
 import { QueryClientProvider } from '@tanstack/react-query'
-import {
-  Outlet,
-  RouterProvider,
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from '@tanstack/react-router'
-import type { AnyRoute } from '@tanstack/react-router'
+import { usePathname } from 'next/navigation'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
@@ -22,62 +14,46 @@ import { AppHeader } from '@/components/layout/app-header'
 import type { UserNotification } from '@/types'
 import { createTestQueryClient } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
-import { roomReadyNotification } from './fixtures'
-import { RegisterLegacyNavigator } from './shell'
+import { squadReadyNotification } from './fixtures'
+import { createHarnessNavigation } from './navigation'
 import { signInAsFakeUser, toastStore } from './stubs'
 
-const ALPHA_ID = roomReadyNotification.id
+const ALPHA_ID = squadReadyNotification.id
 const BETA_ID = '3f1c2b4a-5d6e-4f70-8a9b-0c1d2e3f4a5b'
 const INTERNAL_ERROR = 'Something went wrong. Please try again later.'
 
 function squadNotification(
   id: string,
-  roomName: string,
+  squadName: string,
   roomCode: string,
   readAt: string | null
 ): UserNotification {
   return {
-    ...roomReadyNotification,
+    ...squadReadyNotification,
     id,
     readAt,
-    payload: { ...roomReadyNotification.payload, roomName, roomCode },
+    payload: { ...squadReadyNotification.payload, roomName: squadName, roomCode },
   }
 }
 
 /** The header around a page: the bell, the squad pages it opens and the page itself. */
-function headerScene(): AnyRoute {
-  const rootRoute = createRootRoute({
-    component: () => (
-      <>
-        <AppHeader />
-        <Outlet />
-      </>
-    ),
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => <div>Home page</div>,
-  })
-  const lobbyRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/squads/$code',
-    component: () => <div>Lobby page</div>,
-  })
-  return rootRoute.addChildren([indexRoute, lobbyRoute]) as AnyRoute
+function HeaderScene() {
+  const pathname = usePathname()
+
+  return (
+    <>
+      <AppHeader />
+      {pathname.startsWith('/squads/') ? <div>Lobby page</div> : <div>Home page</div>}
+    </>
+  )
 }
 
 function renderHeader(): UserEvent {
-  const router = createRouter({
-    routeTree: headerScene(),
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
+  createHarnessNavigation('/')
 
   render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <RouterProvider router={router} />
-      {/* The catch-all registers its router while it is mounted; the squad pages here are that router's. */}
-      <RegisterLegacyNavigator router={router} />
+      <HeaderScene />
     </QueryClientProvider>
   )
 
@@ -90,8 +66,8 @@ async function openNotifications(user: UserEvent, unread: number): Promise<void>
 }
 
 /** The menu entry of one squad; its dismiss button sits next to it in the same row. */
-function squadEntry(roomName: RegExp): HTMLElement {
-  return screen.getByRole('button', { name: roomName })
+function squadEntry(squadName: RegExp): HTMLElement {
+  return screen.getByRole('button', { name: squadName })
 }
 
 let notifications: UserNotification[] = []

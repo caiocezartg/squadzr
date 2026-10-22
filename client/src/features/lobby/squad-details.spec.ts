@@ -1,14 +1,14 @@
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiClientError } from '@/lib/api-contract'
-import { gameLol, lobbyRoomResponse, lobbySquad } from '@/test/fixtures'
+import { gameLol, lobbySquadResponse, lobbySquad } from '@/test/fixtures'
 import type { DetailsSource } from './squad-details'
 import { discardFailedSquadRead, readSquadDetails, squadQueryKey } from './squad-details'
 
 /** A source whose reads the test answers by hand. */
 function fakeSource(overrides: Partial<DetailsSource> = {}): DetailsSource {
   return {
-    readSquad: vi.fn(async () => lobbyRoomResponse),
+    readSquad: vi.fn(async () => lobbySquadResponse),
     readGame: vi.fn(async () => gameLol),
     ...overrides,
   }
@@ -23,7 +23,7 @@ describe('readSquadDetails', () => {
     const source = fakeSource()
 
     await expect(readSquadDetails(source, lobbySquad.code)).resolves.toEqual({
-      response: lobbyRoomResponse,
+      response: lobbySquadResponse,
       game: gameLol,
     })
     expect(source.readSquad).toHaveBeenCalledWith(lobbySquad.code)
@@ -76,7 +76,7 @@ describe('readSquadDetails', () => {
     })
 
     await expect(readSquadDetails(source, lobbySquad.code)).resolves.toEqual({
-      response: lobbyRoomResponse,
+      response: lobbySquadResponse,
       game: null,
     })
     expect(consoleError).toHaveBeenCalled()
@@ -101,14 +101,14 @@ describe('discardFailedSquadRead', () => {
   it('keeps a Squad that holds data, even when a later read failed', () => {
     const queryClient = new QueryClient()
     queryClient.setQueryData(squadQueryKey(lobbySquad.code), {
-      response: lobbyRoomResponse,
+      response: lobbySquadResponse,
       game: gameLol,
     })
 
     discardFailedSquadRead(queryClient, lobbySquad.code)
 
     expect(queryClient.getQueryData(squadQueryKey(lobbySquad.code))).toEqual({
-      response: lobbyRoomResponse,
+      response: lobbySquadResponse,
       game: gameLol,
     })
   })

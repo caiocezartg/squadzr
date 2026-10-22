@@ -26,14 +26,14 @@ describe('valid responses', () => {
   it('returns the parsed body with dates as ISO strings', async () => {
     onHttp('GET', '/api/rooms', () => httpOk({ rooms: [openSquad] }))
 
-    const { rooms } = await api.get('/api/rooms', roomsResponseSchema)
+    const { rooms: squads } = await api.get('/api/rooms', roomsResponseSchema)
 
-    expect(rooms[0]?.createdAt).toBe(openSquad.createdAt)
-    expect(typeof rooms[0]?.createdAt).toBe('string')
+    expect(squads[0]?.createdAt).toBe(openSquad.createdAt)
+    expect(typeof squads[0]?.createdAt).toBe('string')
     expect(console.error).not.toHaveBeenCalled()
   })
 
-  it('keeps only the public projection of a catalog room', async () => {
+  it('keeps only the public projection of a catalog squad', async () => {
     onHttp('GET', '/api/rooms', () =>
       httpOk({ rooms: [{ ...openSquad, discordLink: SECRET_INVITE }], players: [hostPlayer] })
     )
@@ -46,12 +46,12 @@ describe('valid responses', () => {
   })
 
   it('returns lobby details for a member and the public projection otherwise', async () => {
-    const { discordLink: _discordLink, ...publicRoom } = lobbySquad
+    const { discordLink: _discordLink, ...publicSquad } = lobbySquad
     onHttp('GET', '/api/rooms/:code', (req) =>
       httpOk(
         req.params.code === 'LOBBY1'
           ? { room: lobbySquad, players: [hostPlayer] }
-          : { room: publicRoom }
+          : { room: publicSquad }
       )
     )
 
@@ -59,16 +59,16 @@ describe('valid responses', () => {
     const asOutsider = await api.get('/api/rooms/OTHER1', roomResponseSchema)
 
     expect(asMember).toEqual({ room: lobbySquad, players: [hostPlayer] })
-    expect(asOutsider).toEqual({ room: publicRoom })
+    expect(asOutsider).toEqual({ room: publicSquad })
   })
 })
 
 describe('invalid responses', () => {
   it.each([
     ['a missing collection', {}],
-    ['a room without an id', { rooms: [{ ...openSquad, id: undefined }] }],
+    ['a squad without an id', { rooms: [{ ...openSquad, id: undefined }] }],
     ['a date that is not an ISO string', { rooms: [{ ...openSquad, createdAt: 1_769_000_000 }] }],
-    ['a room name that is not a string', { rooms: [{ ...openSquad, name: 42 }] }],
+    ['a squad name that is not a string', { rooms: [{ ...openSquad, name: 42 }] }],
   ])('rejects %s with a typed ApiContractError', async (_label, body) => {
     onHttp('GET', '/api/rooms', () => httpOk(body))
 
@@ -98,7 +98,7 @@ describe('invalid responses', () => {
       'room.discordLink',
     ],
   ])(
-    'rejects lobby details with %s instead of downgrading them to a public room',
+    'rejects lobby details with %s instead of downgrading them to a public squad',
     async (_label, override, path) => {
       onHttp('GET', '/api/rooms/:code', () =>
         httpOk({ room: lobbySquad, players: [hostPlayer], ...override })

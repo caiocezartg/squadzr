@@ -13,7 +13,7 @@ export interface MockServerMessage {
   timestamp?: number
 }
 
-export interface RecordedFrame {
+interface RecordedFrame {
   type: string
   payload: unknown
 }

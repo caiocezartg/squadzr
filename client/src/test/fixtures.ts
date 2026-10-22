@@ -1,11 +1,10 @@
 /**
- * Deterministic domain fixtures for the room-flow tests. Dates are computed
+ * Deterministic domain fixtures for the squad-flow tests. Dates are computed
  * relative to the moment the module is imported so relative-time rendering
  * ("2h ago") stays stable for the duration of a test file.
  */
 
 import type {
-  CreateRoomResponse,
   Game,
   GamesResponse,
   Player,
@@ -14,7 +13,6 @@ import type {
   Squad,
   UserNotification,
 } from '@/types'
-import type { JoinRoomResponse } from '@squadzr/schemas'
 import type { WsServerEventPayload } from '@squadzr/schemas/ws'
 
 /** ISO 8601 string, as transport dates travel in JSON. */
@@ -105,12 +103,12 @@ export const boardSquads: RoomsResponse = {
 }
 
 export function squadsForPagination(): RoomsResponse {
-  const rooms = Array.from({ length: 7 }, (_, i) => {
+  const squads = Array.from({ length: 7 }, (_, i) => {
     const index = i + 1
     const squad: Squad = {
       id: `aaaaaaaa-0000-4000-8000-00000000001${index}`,
       code: `P${String(index).padStart(5, '0')}`,
-      name: `Page room ${index}`,
+      name: `Page squad ${index}`,
       hostId: 'user-9',
       gameId: gameLol.id,
       maxPlayers: 5,
@@ -124,7 +122,7 @@ export function squadsForPagination(): RoomsResponse {
     }
     return squad
   })
-  return { rooms }
+  return { rooms: squads }
 }
 
 export const lobbySquad: Squad = {
@@ -141,13 +139,6 @@ export const lobbySquad: Squad = {
   updatedAt: hoursAgo(1),
 }
 
-export const invalidDiscordSquad: Squad = {
-  ...lobbySquad,
-  id: 'aaaaaaaa-0000-4000-8000-000000000005',
-  code: 'BADLNK',
-  discordLink: 'https://not-discord.example/invite',
-}
-
 export const hostPlayer: Player = {
   id: 'user-1',
   name: 'Caio',
@@ -162,13 +153,8 @@ export const guestPlayer: Player = {
   isHost: false,
 }
 
-export const lobbyRoomResponse: RoomResponse = {
+export const lobbySquadResponse: RoomResponse = {
   room: lobbySquad,
-  players: [hostPlayer],
-}
-
-export const invalidDiscordRoomResponse: RoomResponse = {
-  room: invalidDiscordSquad,
   players: [hostPlayer],
 }
 
@@ -188,31 +174,11 @@ export const createdSquad: Squad = {
   updatedAt: hoursAgo(0),
 }
 
-export const createRoomResponse: CreateRoomResponse = {
-  room: createdSquad,
-}
+type LobbySnapshot = WsServerEventPayload<'room_snapshot'>
 
 /**
- * Contract-valid answer for `POST /api/rooms/:code/join`; the join flow parses
- * it with `joinRoomResponseSchema`, so an `{ ok: true }` stub is not a valid
- * substitute.
- */
-export const joinRoomResponse: JoinRoomResponse = {
-  message: 'Joined squad',
-  roomMember: {
-    id: 'bbbbbbbb-0000-4000-8000-000000000001',
-    roomId: openSquad.id,
-    userId: 'user-1',
-    joinedAt: hoursAgo(0),
-  },
-}
-
-export type LobbySnapshot = WsServerEventPayload<'room_snapshot'>
-
-/**
- * Authoritative room snapshot as the server sends it after every subscribe or
- * resubscribe: member room projection, complete roster, readiness, expiration
- * and per-member Presence.
+ * Authoritative squad snapshot as the server sends it after every subscribe or resubscribe: member
+ * projection, complete roster, readiness, expiration and per-member Presence.
  */
 export function lobbySnapshot(overrides: Partial<LobbySnapshot> = {}): LobbySnapshot {
   return {
@@ -240,7 +206,7 @@ export function readyLobbySnapshot(overrides: Partial<LobbySnapshot> = {}): Lobb
   })
 }
 
-export const roomReadyNotification: UserNotification = {
+export const squadReadyNotification: UserNotification = {
   id: '9b2f7a1e-4c3d-4e5f-8a6b-1c2d3e4f5a6b',
   userId: 'user-1',
   type: 'room_ready',

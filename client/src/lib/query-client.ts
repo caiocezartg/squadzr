@@ -7,10 +7,11 @@ import {
   type DehydratedState,
   type Query,
 } from '@tanstack/react-query'
+import { ApiClientError } from './api-contract'
 
 type DehydratedQuery = DehydratedState['queries'][number]
 
-export function createQueryClient(): QueryClient {
+function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
@@ -18,11 +19,8 @@ export function createQueryClient(): QueryClient {
         gcTime: 1000 * 60 * 5, // 5 minutes
         retry: (failureCount, error) => {
           // Don't retry on 4xx errors
-          if (error instanceof Error && 'status' in error) {
-            const status = (error as { status: number }).status
-            if (status >= 400 && status < 500) {
-              return false
-            }
+          if (error instanceof ApiClientError && error.status >= 400 && error.status < 500) {
+            return false
           }
           return failureCount < 3
         },

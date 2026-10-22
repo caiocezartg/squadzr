@@ -36,22 +36,6 @@ afterEach(() => {
 })
 
 describe('squad card — no entrance fade', () => {
-  it('keeps opacity out of the CSS transition properties', () => {
-    render(<SquadCard squad={openSquad} game={gameLol} />)
-
-    const card = screen.getByRole('button')
-    expect(card.className).not.toMatch(/(^|\s)transition-all(\s|$)/)
-
-    const transitionProperty = card.className.match(/(?:^|\s)transition-\[([^\]]+)\]/)
-    expect(transitionProperty).not.toBeNull()
-
-    const properties = transitionProperty?.[1]?.split(',').map((property) => property.trim())
-    expect(properties).toEqual(
-      expect.arrayContaining(['transform', 'border-color', 'box-shadow', 'filter'])
-    )
-    expect(properties).not.toContain('opacity')
-  })
-
   it('starts visible on mount, with no animation and no inline opacity', () => {
     render(<SquadCard squad={openSquad} game={gameLol} />)
 

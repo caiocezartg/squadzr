@@ -13,12 +13,12 @@ describe('prefetchRoute on the server', () => {
   it('gives each request its own query client, so no request reads another request data', async () => {
     const firstFetch = vi.fn(async () => 'first request')
     const first = await prefetchRoute((client) =>
-      client.prefetchQuery({ queryKey: ['rooms'], queryFn: firstFetch })
+      client.prefetchQuery({ queryKey: ['squads'], queryFn: firstFetch })
     )
 
     const secondFetch = vi.fn(async () => 'second request')
     const second = await prefetchRoute((client) =>
-      client.prefetchQuery({ queryKey: ['rooms'], queryFn: secondFetch })
+      client.prefetchQuery({ queryKey: ['squads'], queryFn: secondFetch })
     )
 
     // The second request fetched its own data instead of reading the first request's cache.
@@ -48,7 +48,7 @@ describe('prefetchRoute on the server', () => {
     })
 
     const state = await prefetchRoute((client) => {
-      void client.prefetchQuery({ queryKey: ['rooms'], queryFn: () => read })
+      void client.prefetchQuery({ queryKey: ['squads'], queryFn: () => read })
     })
 
     expect(state.queries).toHaveLength(1)
@@ -64,7 +64,7 @@ describe('prefetchRoute on the server', () => {
 describe('hydrating a pending query that prefetchRoute handed over', () => {
   async function pendingState(read: Promise<string>) {
     const state = await prefetchRoute((client) => {
-      void client.prefetchQuery({ queryKey: ['rooms'], queryFn: () => read })
+      void client.prefetchQuery({ queryKey: ['squads'], queryFn: () => read })
     })
     return state
   }
@@ -82,7 +82,7 @@ describe('hydrating a pending query that prefetchRoute handed over', () => {
     const browserRead = vi.fn(async () => 'browser data')
 
     hydrate(browser, state)
-    const result = await browser.fetchQuery({ queryKey: ['rooms'], queryFn: browserRead })
+    const result = await browser.fetchQuery({ queryKey: ['squads'], queryFn: browserRead })
 
     // The browser waited on the server's promise instead of reading again.
     expect(result).toBe('server data')
@@ -100,11 +100,11 @@ describe('hydrating a pending query that prefetchRoute handed over', () => {
       },
     } as unknown as Promise<string>
     const browser = new QueryClient()
-    browser.setQueryData(['rooms'], 'cached data', { updatedAt: Date.now() - 120_000 })
+    browser.setQueryData(['squads'], 'cached data', { updatedAt: Date.now() - 120_000 })
 
     hydrate(browser, { ...state, queries: [{ ...dehydrated!, promise: settled }] })
 
-    expect(browser.getQueryState(['rooms'])?.status).toBe('success')
-    expect(browser.getQueryData(['rooms'])).toBe('cached data')
+    expect(browser.getQueryState(['squads'])?.status).toBe('success')
+    expect(browser.getQueryData(['squads'])).toBe('cached data')
   })
 })

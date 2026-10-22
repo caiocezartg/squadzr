@@ -15,7 +15,6 @@ import { httpOk, onHttp } from './http-router'
 import { boardGames, boardSquads, openSquad } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
-import { REALTIME_RELOAD_ATTEMPT_KEY } from '@/lib/realtime-update'
 import { setRealtimeUpdateNotice } from '@/lib/realtime-update-store'
 
 const originalLocation = window.location
@@ -99,14 +98,14 @@ describe('realtime protocol handshake', () => {
 
   it('keeps the matching build running without a notice or reload', async () => {
     const reload = stubReload()
-    const serverRooms = { rooms: [...boardSquads.rooms] }
-    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    const serverSquads = { rooms: [...boardSquads.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverSquads))
     renderSquadsFlow('/squads')
     await screen.findByText(openSquad.name)
 
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 2 } })
-    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== openSquad.id)
+    serverSquads.rooms = serverSquads.rooms.filter((squad) => squad.id !== openSquad.id)
     sendFromServer({
       type: 'room_removed',
       payload: { roomId: openSquad.id, roomCode: openSquad.code },
@@ -188,14 +187,24 @@ describe('realtime protocol reload bound', () => {
 
   it('reloads from the manual notice button', async () => {
     const reload = stubReload()
-    window.sessionStorage.setItem(REALTIME_RELOAD_ATTEMPT_KEY, String(Date.now()))
+    // The first divergence reloads the page; the simulated remount still sees the other version.
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
+    openLatestWebSocket()
+    sendFromServer({ type: 'protocol', payload: { version: 99 } })
+    expect(await screen.findByText(RELOADING_NOTICE)).toBeInTheDocument()
+    expect(reload).toHaveBeenCalledTimes(1)
+
+    cleanup()
+    act(() => setRealtimeUpdateNotice(null))
     const { user } = renderSquadsFlow('/squads')
     await screen.findByText(openSquad.name)
     openLatestWebSocket()
     sendFromServer({ type: 'protocol', payload: { version: 99 } })
+    await screen.findByText(MANUAL_RELOAD_NOTICE)
 
-    await user.click(await screen.findByRole('button', { name: 'Reload' }))
+    await user.click(screen.getByRole('button', { name: 'Reload' }))
 
-    expect(reload).toHaveBeenCalledTimes(1)
+    expect(reload).toHaveBeenCalledTimes(2)
   })
 })

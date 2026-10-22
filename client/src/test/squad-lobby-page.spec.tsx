@@ -13,7 +13,7 @@ import LobbyRoute from '@/app/squads/[code]/page'
 import {
   gameLol,
   guestPlayer,
-  lobbyRoomResponse,
+  lobbySquadResponse,
   lobbySquad,
   lobbySnapshot,
   readyLobbySnapshot,
@@ -111,7 +111,7 @@ describe('the Lobby on the App Router', () => {
 
   it('shows a member the roster from the snapshot, with placeholders until it arrives', async () => {
     signInAsFakeUser()
-    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
+    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
 
     await renderLobbyRoute(lobbySquad.code)
 
@@ -130,7 +130,7 @@ describe('the Lobby on the App Router', () => {
 
   it('locks the leave button and reveals the invite once the snapshot of a Ready Squad arrives', async () => {
     signInAsFakeUser()
-    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
+    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
 
     await renderLobbyRoute(lobbySquad.code)
     await screen.findByText(lobbySquad.name)
@@ -159,7 +159,7 @@ describe('the Lobby on the App Router', () => {
 
   it("shows a player's initial in the roster once the avatar image fails to load", async () => {
     signInAsFakeUser()
-    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
+    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
 
     await renderLobbyRoute(lobbySquad.code)
     await screen.findByText(lobbySquad.name)
@@ -186,7 +186,7 @@ describe('the Lobby on the App Router', () => {
     expect(await screen.findByTestId('lobby-skeleton')).toBeInTheDocument()
     expect(screen.queryByText(lobbySquad.name)).not.toBeInTheDocument()
 
-    squadRead.resolve(httpOk(lobbyRoomResponse))
+    squadRead.resolve(httpOk(lobbySquadResponse))
 
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
     expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()
@@ -198,7 +198,7 @@ describe('the Lobby on the App Router', () => {
     // The cache is older than the read, so the read is still running when the page renders.
     queryClient.setQueryData(
       squadQueryKey(lobbySquad.code),
-      { response: lobbyRoomResponse, game: gameLol },
+      { response: lobbySquadResponse, game: gameLol },
       { updatedAt: Date.now() - 120_000 }
     )
     onHttp('GET', '/api/rooms/:code', () => deferred<MockHttpResponse>().promise)

@@ -61,10 +61,8 @@ export function MySquadsView() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="font-heading text-2xl font-bold sm:text-3xl">
-            {t('rooms.myRooms.title')}
-          </h1>
-          <p className="mt-1 text-sm text-muted">{t('rooms.myRooms.subtitle')}</p>
+          <h1 className="font-heading text-2xl font-bold sm:text-3xl">{t('mySquads.title')}</h1>
+          <p className="mt-1 text-sm text-muted">{t('mySquads.subtitle')}</p>
         </div>
         <button onClick={() => setCreateOpen(true)} className="btn-accent gap-2">
           <Plus className="size-4" />
@@ -90,7 +88,7 @@ export function MySquadsView() {
         key={`results-${attempt}`}
         fallback={
           <div className="mb-6 mt-6 flex flex-col items-start gap-3">
-            <AlertBox type="error" message={t('rooms.myRooms.loadError')} />
+            <AlertBox type="error" message={t('mySquads.loadError')} />
             <button onClick={retry} className="btn-ghost">
               {t('squads.page.retry')}
             </button>

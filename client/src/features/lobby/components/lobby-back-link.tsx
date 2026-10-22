@@ -12,7 +12,7 @@ export function LobbyBackLink() {
       className="flex w-fit items-center gap-2 rounded-lg border border-border-light bg-surface px-4 py-2 text-sm text-muted hover:border-muted/30 hover:bg-surface-hover hover:text-offwhite transition-all"
     >
       <ArrowLeft className="size-4" />
-      {t('rooms.lobby.backToRooms')}
+      {t('lobby.backToSquads')}
     </AppLink>
   )
 }

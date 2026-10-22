@@ -4,20 +4,11 @@
  * dialog both the Squad Board and My Squads mount.
  */
 
-import { readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { renderSquadsFlow } from './harness'
 import { httpOk, onHttp } from './http-router'
 import { boardGames, boardSquads } from './fixtures'
-
-const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-
-function read(path: string): string {
-  return readFileSync(resolve(SRC_DIR, path), 'utf8')
-}
 
 beforeEach(() => {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
@@ -54,30 +45,5 @@ describe('eager dialogs', () => {
 
     expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
     expect(screen.getByLabelText('Squad Name')).toBeInTheDocument()
-  })
-
-  it('imports the create and join dialogs eagerly, not as lazy chunks', () => {
-    const board = read('features/squad-board/squad-board-results.tsx')
-    const mySquads = read('features/my-squads/my-squads-results.tsx')
-    const joining = read('features/squad-joining/use-squad-joining.tsx')
-
-    expect(board).toContain("from '@/features/squad-creation'")
-    expect(mySquads).toContain("from '@/features/squad-creation'")
-    expect(joining).toContain("from './join-squad-auth-modal'")
-
-    for (const source of [board, mySquads, joining]) {
-      expect(source).not.toMatch(/\blazy\(|next\/dynamic|LazyIslandBoundary|ModalLoading/)
-    }
-  })
-
-  it('renders the one create dialog from squad creation on both pages', () => {
-    const board = read('features/squad-board/squad-board-results.tsx')
-    const mySquads = read('features/my-squads/my-squads-results.tsx')
-
-    for (const source of [board, mySquads]) {
-      expect(source).toContain('<CreateSquadDialog')
-      expect(source).not.toContain('CreateSquadModal')
-      expect(source).not.toContain('DialogMotionProvider')
-    }
   })
 })

@@ -39,10 +39,7 @@ export function SquadBoardView() {
   }
 
   // WebSocket for real-time squad list updates
-  const { on, subscribe } = useWebSocket({
-    url: WS_URL,
-    autoConnect: true,
-  })
+  const { on, subscribe } = useWebSocket(WS_URL)
 
   useSquadBoardEvents({ subscribe })
   useNotificationEvents({ on })

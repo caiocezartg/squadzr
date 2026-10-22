@@ -14,6 +14,7 @@ import { act, cleanup, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderSquadsFlow } from './harness'
 import { countHttpCalls, httpOk, onHttp } from './http-router'
+import { settleNavigation } from './navigation'
 import type { MockHttpResponse } from './http-router'
 import {
   boardGames,
@@ -22,7 +23,7 @@ import {
   guestPlayer,
   hostPlayer,
   lobbySquad,
-  lobbyRoomResponse,
+  lobbySquadResponse,
   lobbySnapshot,
   openSquad,
 } from './fixtures'
@@ -35,7 +36,7 @@ const FIRST_RECONNECT_DELAY = 3000
 function registerRoutes(): void {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
   onHttp('GET', '/api/games', () => httpOk(boardGames))
-  onHttp('GET', '/api/rooms/:code', () => httpOk(lobbyRoomResponse))
+  onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
   onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
 }
 
@@ -71,8 +72,8 @@ afterEach(() => {
 
 describe('board subscription', () => {
   it('re-sends subscribe_lobby on the new socket and refetches on its events idempotently', async () => {
-    const serverRooms = { rooms: [...boardSquads.rooms] }
-    onHttp('GET', '/api/rooms', () => httpOk(serverRooms))
+    const serverSquads = { rooms: [...boardSquads.rooms] }
+    onHttp('GET', '/api/rooms', () => httpOk(serverSquads))
     renderSquadsFlow('/squads', { user: null })
     await screen.findByText(openSquad.name)
     openLatestWebSocket()
@@ -82,10 +83,10 @@ describe('board subscription', () => {
 
     expect(frameTypes(reconnected)).toEqual(['subscribe_lobby'])
 
-    // The authoritative server state no longer has the room; the duplicated
+    // The authoritative server state no longer has the squad; the duplicated
     // removed events each refetch the board and it stays deduplicated.
     const fetchesBeforeRemoval = countHttpCalls('GET', '/api/rooms')
-    serverRooms.rooms = serverRooms.rooms.filter((room) => room.id !== openSquad.id)
+    serverSquads.rooms = serverSquads.rooms.filter((squad) => squad.id !== openSquad.id)
     sendFromServer({
       type: 'room_removed',
       payload: { roomId: openSquad.id, roomCode: openSquad.code },
@@ -169,37 +170,38 @@ describe('squad channel subscription', () => {
   })
 
   it('leaves the previous squad on a code switch and ignores its late events', async () => {
-    const nextRoom = {
+    const nextSquad = {
       ...lobbySquad,
       id: 'aaaaaaaa-0000-4000-8000-000000000007',
       code: 'NEXT01',
       name: 'Next squad',
     }
     onHttp('GET', '/api/rooms/:code', (req) => {
-      if (req.params.code === nextRoom.code)
-        return httpOk({ room: nextRoom, players: [hostPlayer] })
-      return httpOk(lobbyRoomResponse)
+      if (req.params.code === nextSquad.code)
+        return httpOk({ room: nextSquad, players: [hostPlayer] })
+      return httpOk(lobbySquadResponse)
     })
 
-    const { router } = renderSquadsFlow('/squads/LOBBY1')
+    const { navigation } = renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
     const socket = latestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     expect(await screen.findByText('Ana')).toBeInTheDocument()
 
-    await act(() => router.navigate({ href: `/squads/${nextRoom.code}` }))
+    navigation.router.push(`/squads/${nextSquad.code}`)
+    await settleNavigation()
 
-    // The same socket releases the previous room channel before joining the new one.
+    // The same socket releases the previous squad channel before joining the new one.
     await vi.waitFor(() =>
       expect(socket.sentFrames()).toEqual([
         { type: 'join_room', payload: { roomCode: 'LOBBY1' } },
         { type: 'leave_room', payload: { roomCode: 'LOBBY1' } },
-        { type: 'join_room', payload: { roomCode: nextRoom.code } },
+        { type: 'join_room', payload: { roomCode: nextSquad.code } },
       ])
     )
 
-    // Events from the previous room, already in flight, never touch this page.
+    // Events from the previous squad, already in flight, never touch this page.
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     sendFromServer({
       type: 'presence_updated',
@@ -207,11 +209,11 @@ describe('squad channel subscription', () => {
     })
     expect(screen.queryByText('Ana')).not.toBeInTheDocument()
 
-    // The new room's snapshot is applied.
+    // The new squad's snapshot is applied.
     sendFromServer({
       type: 'room_snapshot',
       payload: lobbySnapshot({
-        room: { ...nextRoom, memberCount: 2, isMember: true },
+        room: { ...nextSquad, memberCount: 2, isMember: true },
         players: [hostPlayer, guestPlayer],
       }),
     })
@@ -236,12 +238,13 @@ describe('squad channel subscription', () => {
   })
 
   it('leaves the squad channel by closing the socket, without leave_room, on navigation', async () => {
-    const { router } = renderSquadsFlow('/squads/LOBBY1')
+    const { navigation } = renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText(lobbySquad.name)
     openLatestWebSocket()
     const lobbySocket = latestWebSocket()
 
-    await act(() => router.navigate({ href: '/squads' }))
+    navigation.router.push('/squads')
+    await settleNavigation()
     await screen.findByText(openSquad.name)
 
     // Leaving the route affects Presence only (server emits presence_updated on close).
@@ -253,13 +256,13 @@ describe('squad channel subscription', () => {
 
 describe('live state ownership', () => {
   it('never lets a late HTTP response overwrite the roster from the snapshot', async () => {
-    let releaseRoomResponse: (() => void) | undefined
+    let releaseSquadResponse: (() => void) | undefined
     onHttp(
       'GET',
       '/api/rooms/:code',
       () =>
         new Promise<MockHttpResponse>((resolve) => {
-          releaseRoomResponse = () => resolve(httpOk(lobbyRoomResponse))
+          releaseSquadResponse = () => resolve(httpOk(lobbySquadResponse))
         })
     )
 
@@ -270,7 +273,7 @@ describe('live state ownership', () => {
     openLatestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
 
-    releaseRoomResponse?.()
+    releaseSquadResponse?.()
     expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
 
     // HTTP returns only the host, but the live roster comes from the snapshot.

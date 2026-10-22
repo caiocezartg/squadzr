@@ -4,10 +4,10 @@ import { setRealtimeUpdateNotice } from '@/lib/realtime-update-store'
  * sessionStorage key holding the timestamp (ms) of the last automatic reload
  * this tab performed to chase the server's realtime protocol.
  */
-export const REALTIME_RELOAD_ATTEMPT_KEY = 'squadzr:realtime:last-reload'
+const REALTIME_RELOAD_ATTEMPT_KEY = 'squadzr:realtime:last-reload'
 
 /** An automatic reload is allowed at most once per tab in this window. */
-export const REALTIME_RELOAD_COOLDOWN_MS = 5 * 60 * 1000
+const REALTIME_RELOAD_COOLDOWN_MS = 5 * 60 * 1000
 
 /**
  * True when this tab may still reload automatically for a protocol failure,

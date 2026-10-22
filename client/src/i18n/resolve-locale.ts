@@ -28,7 +28,7 @@ export function resolveLocale({ cookie, acceptLanguage }: LocaleInputs): Locale 
  * The language ranges of an `Accept-Language` header, most preferred first. A range with quality
  * 0 is refused, and so is the `*` wildcard, so neither is returned.
  */
-export function parseAcceptLanguage(header: string): string[] {
+function parseAcceptLanguage(header: string): string[] {
   return header
     .split(',')
     .map((entry) => {

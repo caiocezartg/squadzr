@@ -1,17 +1,17 @@
 import type { WsServerEventPayload } from '@squadzr/schemas/ws'
 import type { Player } from '@/types'
 
-/** The authoritative room snapshot the server pushes on the room channel. */
-export type RoomSnapshot = WsServerEventPayload<'room_snapshot'>
+/** The authoritative squad snapshot the server pushes on the squad channel. */
+export type SquadSnapshot = WsServerEventPayload<'room_snapshot'>
 
 /** Presence keyed by member id: online while a healthy session participates. */
 export type PresenceState = Record<string, boolean>
 
 /**
- * The roster of a room snapshot. A repeated player id is collapsed so
+ * The roster of a squad snapshot. A repeated player id is collapsed so
  * duplicate entries can never render twice.
  */
-export function rosterFromSnapshot(snapshot: RoomSnapshot): Player[] {
+export function rosterFromSnapshot(snapshot: SquadSnapshot): Player[] {
   const seen = new Set<string>()
   return snapshot.players.filter((player) => {
     if (seen.has(player.id)) return false
@@ -21,7 +21,7 @@ export function rosterFromSnapshot(snapshot: RoomSnapshot): Player[] {
 }
 
 /** Projects the snapshot's Presence entries into the state the roster renders. */
-export function presenceFromSnapshot(snapshot: RoomSnapshot): PresenceState {
+export function presenceFromSnapshot(snapshot: SquadSnapshot): PresenceState {
   return Object.fromEntries(snapshot.presence.map((entry) => [entry.playerId, entry.online]))
 }
 

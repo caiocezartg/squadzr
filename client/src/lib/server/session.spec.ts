@@ -1,7 +1,28 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { API_INTERNAL_URL } from '@/env.server'
 import { ApiContractError } from '@/lib/api-contract'
-import { loadSession } from './session'
+import { getRequestSession } from './session'
+
+const requestHeaders = vi.hoisted(() => ({
+  cookie: null as string | null,
+  forwardedFor: null as string | null,
+}))
+
+// The session loader reads the request headers; the suite supplies them per call.
+vi.mock('next/headers', () => ({
+  headers: async () =>
+    new Headers({
+      ...(requestHeaders.cookie ? { cookie: requestHeaders.cookie } : {}),
+      ...(requestHeaders.forwardedFor ? { 'x-forwarded-for': requestHeaders.forwardedFor } : {}),
+    }),
+}))
+
+/** Reads the session of a request that carries `cookie` from `forwardedFor`. */
+function readSession(cookie: string | null, forwardedFor: string | null = null) {
+  requestHeaders.cookie = cookie
+  requestHeaders.forwardedFor = forwardedFor
+  return getRequestSession()
+}
 
 const user = { id: 'user-1', name: 'Caio', email: 'caio@squadzr.test', image: null }
 
@@ -47,11 +68,11 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('loadSession', () => {
+describe('getRequestSession', () => {
   it('asks Better Auth for the session without renewing it', async () => {
     const fetchMock = stubFetch('null')
 
-    await loadSession('better-auth.session_token=abc')
+    await readSession('better-auth.session_token=abc')
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(GET_SESSION_URL)
   })
@@ -59,7 +80,7 @@ describe('loadSession', () => {
   it("forwards the viewer's cookie", async () => {
     const fetchMock = stubFetch('null')
 
-    await loadSession('better-auth.session_token=abc')
+    await readSession('better-auth.session_token=abc')
 
     const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers)
     expect(headers.get('cookie')).toBe('better-auth.session_token=abc')
@@ -68,7 +89,7 @@ describe('loadSession', () => {
   it('is never cached', async () => {
     const fetchMock = stubFetch('null')
 
-    await loadSession('better-auth.session_token=abc')
+    await readSession('better-auth.session_token=abc')
 
     const init = fetchMock.mock.calls[0]?.[1] as RequestInit & { next?: unknown }
     expect(init.cache).toBe('no-store')
@@ -78,27 +99,27 @@ describe('loadSession', () => {
   it('returns the user of an authenticated viewer', async () => {
     stubFetch(JSON.stringify(authenticatedBody))
 
-    await expect(loadSession('better-auth.session_token=abc')).resolves.toEqual({ user })
+    await expect(readSession('better-auth.session_token=abc')).resolves.toEqual({ user })
   })
 
   it('returns null for a viewer Better Auth answers with a null body', async () => {
     stubFetch('null')
 
-    await expect(loadSession(null)).resolves.toBeNull()
+    await expect(readSession(null)).resolves.toBeNull()
   })
 
   it('returns null for a 401', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     stubFetch(JSON.stringify({ code: 'UNAUTHORIZED', message: 'Unauthorized' }), 401)
 
-    await expect(loadSession('better-auth.session_token=expired')).resolves.toBeNull()
+    await expect(readSession('better-auth.session_token=expired')).resolves.toBeNull()
   })
 
   it('fails validation for an authenticated body without a user', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     stubFetch(JSON.stringify({ session: authenticatedBody.session }))
 
-    await expect(loadSession('better-auth.session_token=abc')).rejects.toBeInstanceOf(
+    await expect(readSession('better-auth.session_token=abc')).rejects.toBeInstanceOf(
       ApiContractError
     )
   })
@@ -109,7 +130,7 @@ describe('loadSession', () => {
       jsonResponse(authenticatedBody)
     )
 
-    await expect(loadSession('better-auth.session_token=abc')).resolves.toEqual({ user })
+    await expect(readSession('better-auth.session_token=abc')).resolves.toEqual({ user })
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
@@ -119,7 +140,7 @@ describe('loadSession', () => {
       jsonResponse(authenticatedBody)
     )
 
-    await expect(loadSession('better-auth.session_token=abc')).resolves.toEqual({ user })
+    await expect(readSession('better-auth.session_token=abc')).resolves.toEqual({ user })
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
@@ -134,7 +155,7 @@ describe('loadSession', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    await expect(loadSession('better-auth.session_token=abc')).resolves.toEqual({ user })
+    await expect(readSession('better-auth.session_token=abc')).resolves.toEqual({ user })
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
@@ -145,7 +166,7 @@ describe('loadSession', () => {
       jsonResponse(serverError, 500)
     )
 
-    await expect(loadSession('better-auth.session_token=abc')).resolves.toBeNull()
+    await expect(readSession('better-auth.session_token=abc')).resolves.toBeNull()
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(errorSpy).toHaveBeenCalledTimes(1)
   })
@@ -157,7 +178,7 @@ describe('loadSession', () => {
       401
     )
 
-    await expect(loadSession('better-auth.session_token=expired')).resolves.toBeNull()
+    await expect(readSession('better-auth.session_token=expired')).resolves.toBeNull()
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -165,7 +186,7 @@ describe('loadSession', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const fetchMock = stubFetch(JSON.stringify({ message: 'Too many requests' }), 429)
 
-    await expect(loadSession('better-auth.session_token=abc')).resolves.toBeNull()
+    await expect(readSession('better-auth.session_token=abc')).resolves.toBeNull()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(errorSpy).toHaveBeenCalledTimes(1)
     expect(String(errorSpy.mock.calls[0]?.[0])).toMatch(/Session read failed/)
@@ -175,7 +196,7 @@ describe('loadSession', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const fetchMock = stubFetch(JSON.stringify({ code: 'FORBIDDEN', message: 'Forbidden' }), 403)
 
-    await expect(loadSession('better-auth.session_token=abc')).resolves.toBeNull()
+    await expect(readSession('better-auth.session_token=abc')).resolves.toBeNull()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(errorSpy).toHaveBeenCalledTimes(1)
     expect(String(errorSpy.mock.calls[0]?.[0])).toMatch(/Session read failed/)
@@ -185,15 +206,15 @@ describe('loadSession', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const fetchMock = stubFetch(JSON.stringify({ error: 'FORBIDDEN', message: 'Forbidden' }), 403)
 
-    await expect(loadSession('better-auth.session_token=abc')).resolves.toBeNull()
+    await expect(readSession('better-auth.session_token=abc')).resolves.toBeNull()
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it("forwards the viewer's x-forwarded-for, and nothing when it has none", async () => {
     const fetchMock = stubFetch('null')
 
-    await loadSession('better-auth.session_token=abc', '203.0.113.7')
-    await loadSession('better-auth.session_token=abc')
+    await readSession('better-auth.session_token=abc', '203.0.113.7')
+    await readSession('better-auth.session_token=abc')
 
     const sent = fetchMock.mock.calls.map(([, init]) => new Headers(init?.headers))
     expect(sent[0]?.get('x-forwarded-for')).toBe('203.0.113.7')
@@ -203,7 +224,7 @@ describe('loadSession', () => {
   it('does not retry a null body', async () => {
     const fetchMock = stubFetch('null')
 
-    await expect(loadSession(null)).resolves.toBeNull()
+    await expect(readSession(null)).resolves.toBeNull()
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -211,7 +232,7 @@ describe('loadSession', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const fetchMock = stubFetch(JSON.stringify({ session: authenticatedBody.session }))
 
-    await expect(loadSession('better-auth.session_token=abc')).rejects.toBeInstanceOf(
+    await expect(readSession('better-auth.session_token=abc')).rejects.toBeInstanceOf(
       ApiContractError
     )
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -224,7 +245,7 @@ describe('loadSession', () => {
       jsonResponse(authenticatedBody)
     )
 
-    await loadSession('better-auth.session_token=abc')
+    await readSession('better-auth.session_token=abc')
 
     expect(timeout.mock.calls).toEqual([[2000], [2000]])
     const firstInit = fetchMock.mock.calls[0]?.[1] as RequestInit

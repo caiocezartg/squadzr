@@ -27,7 +27,7 @@ const betterAuthErrorSchema = z.object({
  * once and the page renders signed out, so the browser's check corrects it. A network error, a
  * timeout or a 5xx is retried once first; a refused request (a 429 included) is not.
  */
-export async function loadSession(
+async function loadSession(
   cookie: string | null,
   forwardedFor: string | null = null
 ): Promise<SessionDto | null> {

@@ -7,7 +7,7 @@ import { publicSquadSource } from './server-squad-source'
 import { readSquadDetails } from './squad-details'
 
 /** The metadata of a page with no Squad to preview: a missing, Ready or expired Squad, or a failed read. */
-export const GENERIC_METADATA: Metadata = { title: { absolute: 'Squadzr' } }
+const GENERIC_METADATA: Metadata = { title: { absolute: 'Squadzr' } }
 
 /**
  * The invite preview of a Squad link. The Squad and its game come from the public projection, read

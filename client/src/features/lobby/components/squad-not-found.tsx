@@ -33,25 +33,25 @@ export function SquadNotFound({ code }: SquadNotFoundProps) {
 
         {/* Heading */}
         <h1 className="font-heading text-2xl font-bold text-offwhite sm:text-3xl mb-2">
-          {t('rooms.notFound.title')}
+          {t('squadNotFound.title')}
         </h1>
 
         {/* Description */}
-        <p className="text-sm text-muted leading-relaxed mb-5">{t('rooms.notFound.description')}</p>
+        <p className="text-sm text-muted leading-relaxed mb-5">{t('squadNotFound.description')}</p>
 
         {/* Code badge */}
         <div className="card flex items-center gap-2.5 px-4 py-2.5 mb-8 border-border-light">
-          <span className="text-xs text-muted">{t('rooms.notFound.codeLabel')}</span>
+          <span className="text-xs text-muted">{t('squadNotFound.codeLabel')}</span>
           <span className="font-mono text-sm font-bold text-accent tracking-widest">{code}</span>
         </div>
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
           <AppLink href="/squads" className="btn-accent w-full sm:w-auto text-center">
-            {t('rooms.notFound.backToRooms')}
+            {t('squadNotFound.backToSquads')}
           </AppLink>
           <AppLink href="/squads" className="btn-ghost w-full sm:w-auto text-center">
-            {t('rooms.notFound.createRoom')}
+            {t('squadNotFound.createSquad')}
           </AppLink>
         </div>
       </m.div>
