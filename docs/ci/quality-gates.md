@@ -1,7 +1,7 @@
 # CI quality gates and branch protection
 
 Repository-owned GitHub Actions checks (CCC-30). They run from a clean checkout on every pull
-request into `development`, `main` or `next-migration` (including an existing pull request retargeted
+request into `development` or `main` (including an existing pull request retargeted
 to one of them, via the `edited` event), on pushes to those branches, and on manual dispatch. **CI
 never deploys.**
 
@@ -11,7 +11,6 @@ never deploys.**
 | ------------- | ---------------------------------------------------------------- | ----------------------------------------------- |
 | `development` | Integration branch                                               | Every task pull request                         |
 | `main`        | Release-only branch; Vercel deploys it to Production (see below) | Promotion pull requests from `development` only |
-| `next-migration` | Integration branch for the Next.js migration (CCC-69)         | Every migration ticket pull request             |
 
 ## Stable required-check names
 
