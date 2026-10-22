@@ -6,6 +6,8 @@ Each `.dc.html` file is one artboard. The files need the canvas runtime (`suppor
 
 `canvas.json` holds the artboard layout and titles.
 
+`screens/` holds a PNG render of each artboard, named after its `.dc.html` file, for visual comparison. `assets/logo.svg` is the Squadzr logo used across the screens. The other canvas images are game covers, which the app loads from game data.
+
 ## Screens
 
 | File | Screen |
