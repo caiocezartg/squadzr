@@ -2,7 +2,11 @@ import type { NewRoom, Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
-import { InvalidGameError, RoomCreateLimitReachedError } from '@application/errors'
+import {
+  GameNotAvailableError,
+  InvalidGameError,
+  RoomCreateLimitReachedError,
+} from '@application/errors'
 import { ROOM } from '@config/constants'
 
 export interface CreateRoomOutput {
@@ -25,10 +29,14 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
   async execute(input: CreateRoomInput): Promise<CreateRoomOutput> {
     const game = await this.gameRepository.findById(input.gameId)
+    if (!game) {
+      throw new InvalidGameError(input.gameId)
+    }
+
     // A Game removed from the catalog is still readable by id, but no new Squad
     // may point at it.
-    if (!game || !game.listed) {
-      throw new InvalidGameError(input.gameId)
+    if (!game.listed) {
+      throw new GameNotAvailableError(input.gameId)
     }
 
     const maxPlayers = input.maxPlayers ?? game.maxPlayers

@@ -166,7 +166,7 @@ describe('POST /api/rooms', () => {
     expect(hosted.json()).toEqual({ hosted: [], joined: [] })
   })
 
-  it('rejects a delisted game with 400 INVALID_GAME and persists nothing', async () => {
+  it('rejects a delisted game with 400 INVALID_GAME and says it is no longer available', async () => {
     const delisted = await insertGame(server, { listed: false })
 
     const response = await postRoom(server, host, { gameId: delisted.id })
@@ -174,7 +174,7 @@ describe('POST /api/rooms', () => {
     expect(response.statusCode).toBe(400)
     expect(response.json()).toEqual({
       error: 'INVALID_GAME',
-      message: `Game with id "${delisted.id}" does not exist`,
+      message: `Game with id "${delisted.id}" is no longer available`,
     })
     const hosted = await get(server, '/api/rooms/my', host)
     expect(hosted.json()).toEqual({ hosted: [], joined: [] })
