@@ -7,12 +7,24 @@ const lol = { id: 'game-lol', name: 'League of Legends' } as Game
 const cs2 = { id: 'game-cs2', name: 'Counter-Strike 2' } as Game
 const games = new Map<string, Game>([lol, cs2].map((game) => [game.id, game]))
 
+function summary(game: Game, slug: string): PublicSquad['game'] {
+  return {
+    id: game.id,
+    name: game.name,
+    slug,
+    genres: [],
+    coverUrl: `https://cdn.squadzr.test/${slug}.jpg`,
+    coverThumbUrl: `https://cdn.squadzr.test/${slug}-thumb.jpg`,
+  }
+}
+
 function squad(overrides: Partial<PublicSquad> & { id: string }): PublicSquad {
   return {
     code: overrides.id.toUpperCase(),
     name: `Squad ${overrides.id}`,
     hostId: 'host',
     gameId: lol.id,
+    game: summary(lol, 'lol'),
     maxPlayers: 5,
     tags: [],
     language: 'en',
@@ -44,6 +56,7 @@ describe('querySquadList — filters', () => {
     id: 'full',
     name: 'Full lobby',
     gameId: cs2.id,
+    game: summary(cs2, 'cs2'),
     maxPlayers: 4,
     memberCount: 4,
     language: 'pt-br',

@@ -8,10 +8,13 @@ export { healthResponseSchema, type HealthResponse } from './health'
 export { sessionResponseSchema, type SessionDto } from './session'
 export { userResponseSchema, type UserDto } from './user'
 export {
+  gameGenreSchema,
   gameIdParamSchema,
   gameResponseSchema,
+  gameSummarySchema,
   gamesResponseSchema,
   type GameDto,
+  type GameSummaryDto,
   type GamesResponse,
 } from './game'
 export {

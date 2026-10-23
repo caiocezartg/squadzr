@@ -3,7 +3,11 @@ import type { RoomMember } from '@domain/entities/room-member.entity'
 
 /** Room and its host Membership, created together in one transaction. */
 export interface CreatedRoom {
-  readonly room: Room
+  /**
+   * The inserted row: its Game is not read back. The create use case already
+   * read the Game to validate the input and attaches that summary to the Room.
+   */
+  readonly room: Omit<Room, 'game'>
   readonly hostMember: RoomMember
 }
 

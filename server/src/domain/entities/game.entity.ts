@@ -20,6 +20,15 @@ export interface Game {
   readonly updatedAt: Date
 }
 
+/**
+ * The Game fields a Squad carries so a client can render its game without a
+ * second read. Legacy Games (no IGDB identity, empty genres) have the same shape.
+ */
+export type GameSummary = Pick<
+  Game,
+  'id' | 'name' | 'slug' | 'genres' | 'coverUrl' | 'thumbnailUrl'
+>
+
 export interface CreateGameInput {
   readonly name: string
   readonly slug: string

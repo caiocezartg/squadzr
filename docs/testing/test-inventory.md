@@ -23,15 +23,18 @@ inventory (see the equivalence proof below).
 
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
-| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 25 | 109 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 25 | 231 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 27 | 195 |
-| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 3 | 69 |
+| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 26 | 121 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 26 | 235 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 465 |
+| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 79 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-22 for
-CCC-88. That ticket adds `tests/integration/catalog-migration.test.ts` and recounts
-`server:integration` at 25 files / 231 tests; the other rows keep the 2026-10-15 (CCC-70) numbers.
+CCC-92. That ticket adds `tests/integration/squad-game-summary.test.ts` and recounts
+`server:integration` at 26 files / 235 tests, plus one projection test and one create-path test in
+`server:unit`, three contract tests in `schemas:unit`; the `server:unit`, `client:unit` and
+`schemas:unit` rows also carried drift from earlier tickets that this recount corrects. CCC-88 added
+`tests/integration/catalog-migration.test.ts` (included in the `server:integration` count).
 The CCC-70 recount itself added `src/env.spec.ts`, `src/lib/router-history.spec.ts` and
 `scripts/bundle-report.spec.mjs` to `client:unit`, corrected the server and client unit rows that
 had drifted since the 2026-10-09 recount, and corrected the `server:integration` row, which had
@@ -73,7 +76,9 @@ Integration projects follow the same naming convention:
   throwaway database and pin the migration they exercise by tag, so later migrations cannot
   silently change what they prove. `catalog-migration` (CCC-88) seeds a legacy game and a Squad
   that references it, then asserts the catalog migration delists the game, keeps the Squad and
-  applies the defaults.
+  applies the defaults. `squad-game-summary` (CCC-92) asserts every Squad response and realtime
+  message carries its Game summary, including a Squad on a legacy Game, and counts repository
+  reads to prove the Game is joined in the same query as the Squad.
 - Client and realtime flows stay in jsdom projects under the planned capability work
   (CCC-32/CCC-33).
 
