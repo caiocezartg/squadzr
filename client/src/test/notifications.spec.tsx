@@ -184,3 +184,33 @@ describe('notification changes from the bell', () => {
     expect(squadEntry(/Alpha squad/)).toBeInTheDocument()
   })
 })
+
+describe('game cover in the bell', () => {
+  const COVER_URL = 'https://cdn.squadzr.test/covers/lol.jpg'
+
+  it('shows the game cover when the notification carries one', async () => {
+    notifications = notifications.map((notification) =>
+      notification.id === ALPHA_ID
+        ? { ...notification, payload: { ...notification.payload, gameCoverUrl: COVER_URL } }
+        : notification
+    )
+    const user = renderHeader()
+    await openNotifications(user, 2)
+
+    const cover = squadEntry(/Alpha squad/).querySelector('img')
+    expect(cover).toHaveAttribute('src', COVER_URL)
+    expect(
+      within(squadEntry(/Alpha squad/)).getByText(squadReadyNotification.payload.gameName)
+    ).toBeInTheDocument()
+  })
+
+  it('keeps the look without a cover for notifications written before it existed', async () => {
+    const user = renderHeader()
+    await openNotifications(user, 2)
+
+    expect(squadEntry(/Beta squad/).querySelector('img')).toBeNull()
+    expect(
+      within(squadEntry(/Beta squad/)).getByText(squadReadyNotification.payload.gameName)
+    ).toBeInTheDocument()
+  })
+})

@@ -42,11 +42,20 @@ function NotificationItem({
           {/* Icon + unread dot */}
           <div className="flex flex-col items-center pt-0.5">
             <div
-              className={`size-7 rounded-lg flex items-center justify-center shrink-0 ${
+              className={`size-7 rounded-lg flex items-center justify-center shrink-0 overflow-hidden ${
                 isUnread ? 'bg-accent/15 text-accent' : 'bg-surface-light text-muted'
               }`}
             >
-              <Gamepad2 className="size-3.5" />
+              {notification.payload.gameCoverUrl ? (
+                <img
+                  src={notification.payload.gameCoverUrl}
+                  alt=""
+                  className="size-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <Gamepad2 className="size-3.5" />
+              )}
             </div>
             {isUnread && <div className="mt-1.5 size-1.5 rounded-full bg-accent shrink-0" />}
           </div>

@@ -20,6 +20,9 @@ export function toUserNotificationDto(
       roomCode: notification.payload.roomCode,
       roomName: notification.payload.roomName,
       gameName: notification.payload.gameName,
+      ...(notification.payload.gameCoverUrl === undefined
+        ? {}
+        : { gameCoverUrl: notification.payload.gameCoverUrl }),
       players: notification.payload.players.map((player) => ({
         name: player.name,
         image: player.image,

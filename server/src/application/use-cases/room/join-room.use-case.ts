@@ -65,6 +65,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     // The repository reads the authoritative roster and profiles through tx.
     const game = await this.gameRepository.findById(room.gameId)
     const gameName = game?.name ?? 'Unknown game'
+    const gameCoverUrl = game?.coverUrl
 
     const outcome = await this.roomMemberRepository.joinOpenRoom({
       roomId: room.id,
@@ -75,6 +76,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
           members: authoritativeMembers,
           users,
           gameName,
+          ...(gameCoverUrl === undefined ? {} : { gameCoverUrl }),
         }),
     })
 
