@@ -73,6 +73,7 @@ export function CreateSquadModal({ onClose, onCreated }: CreateSquadModalProps) 
   })
 
   const [selectedGame, setSelectedGame] = useState<Game | null>(null)
+  const [gameListOpen, setGameListOpen] = useState(false)
 
   const maxPlayersHelperText = selectedGame
     ? t('squads.createModal.playerLimitHelperWithGame', {
@@ -107,7 +108,16 @@ export function CreateSquadModal({ onClose, onCreated }: CreateSquadModalProps) 
   return (
     <Dialog.Root
       open
-      onOpenChange={(isOpen) => {
+      onOpenChange={(isOpen, eventDetails) => {
+        // The game picker owns the first Escape while its list is open. Base UI
+        // listens for Escape on the document, where the picker cannot stop the
+        // key from reaching this dialog, so the picker reports its list and the
+        // dialog cancels the dismissal instead of dropping the draft.
+        if (!isOpen && eventDetails.reason === 'escape-key' && gameListOpen) {
+          eventDetails.cancel()
+          return
+        }
+
         if (!isOpen) onClose()
       }}
     >
@@ -172,6 +182,7 @@ export function CreateSquadModal({ onClose, onCreated }: CreateSquadModalProps) 
                                 setSelectedGame(game)
                                 field.onChange(game?.id ?? '')
                               }}
+                              onListOpenChange={setGameListOpen}
                               hasError={!!errors.gameId}
                             />
                           )}

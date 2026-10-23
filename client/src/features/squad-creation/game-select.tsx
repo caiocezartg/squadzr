@@ -23,6 +23,12 @@ export interface GameSelectProps {
   /** The game the form currently holds, kept after the search results change. */
   selectedGame: Game | null
   onSelect: (game: Game | null) => void
+  /**
+   * Tells the dialog whether the list is open. The dialog needs it to leave the
+   * first Escape to the list: Base UI listens for Escape on the document, where
+   * the picker cannot stop it (see CreateSquadModal).
+   */
+  onListOpenChange: (isOpen: boolean) => void
   hasError: boolean
 }
 
@@ -38,7 +44,13 @@ export interface GameSelectProps {
  * dialog is in `/squads`' initial JavaScript, and the library's popup and
  * floating-focus machinery took that route over its bundle budget.
  */
-export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectProps) {
+export function GameSelect({
+  id,
+  selectedGame,
+  onSelect,
+  onListOpenChange,
+  hasError,
+}: GameSelectProps) {
   const t = useTranslations()
   const listboxId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -82,6 +94,11 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
   useEffect(() => {
     setActiveIndex(-1)
   }, [games])
+
+  // The dialog cancels its Escape dismissal while this list is open.
+  useEffect(() => {
+    onListOpenChange(open)
+  }, [onListOpenChange, open])
 
   // Unmount the list once its close transition has played.
   useEffect(() => {
@@ -144,10 +161,10 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
   const handleContainerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Escape' || !open) return
 
-    // The first Escape belongs to the open list. Base UI's dialog dismiss
-    // ignores `defaultPrevented`, so the event must not reach its popup.
+    // The first Escape belongs to the open list. Base UI's dialog listens for
+    // Escape on the document, where propagation cannot be stopped in the app,
+    // so the dialog keeps itself open for this key instead (CreateSquadModal).
     event.preventDefault()
-    event.stopPropagation()
     closeList()
   }
 

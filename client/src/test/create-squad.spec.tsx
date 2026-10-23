@@ -13,7 +13,7 @@
  */
 
 import { screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { renderSquadsFlow } from './harness'
 import { settleNavigation } from './navigation'
 import { countHttpCalls, getHttpLog, httpCreated, httpError, httpOk, onHttp } from './http-router'
@@ -47,6 +47,32 @@ function registerCreateRoutes(): void {
 beforeEach(() => {
   registerBoardRoutes()
 })
+
+let stopEscapeMirror: (() => void) | undefined
+
+afterEach(() => {
+  stopEscapeMirror?.()
+  stopEscapeMirror = undefined
+})
+
+/**
+ * Delivers each Escape to the `document` as well. Next mounts the app with
+ * `hydrateRoot(document)`, so React's root listener and Base UI's dialog
+ * dismiss share the document node and `stopPropagation` cannot keep the
+ * dialog from hearing the key; Testing Library mounts the tree inside a div
+ * below the document, so the test re-sends the key to model that shared node.
+ */
+function mirrorEscapeOnDocument(): void {
+  const mirror = (event: KeyboardEvent) => {
+    // The re-sent key is dispatched on the document itself; ignore it so the
+    // listener does not mirror its own event.
+    if (event.key !== 'Escape' || event.target === document) return
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+  }
+
+  document.addEventListener('keydown', mirror, true)
+  stopEscapeMirror = () => document.removeEventListener('keydown', mirror, true)
+}
 
 async function openCreateModal(
   user: Awaited<ReturnType<typeof renderSquadsFlow>['user']>
@@ -192,6 +218,29 @@ describe('create squad — game picker', () => {
     expect(name).toHaveValue('Draft squad')
 
     // With the list closed, Escape closes the dialog as before.
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument())
+  })
+
+  it('keeps the dialog when the document listener hears the first Escape', async () => {
+    const { user } = renderSquadsFlow('/squads')
+    await openCreateModal(user)
+
+    const name = screen.getByLabelText('Squad Name')
+    await user.type(name, 'Draft squad')
+    await user.click(screen.getByLabelText('Game'))
+    expect(await screen.findByRole('listbox', { name: 'Select a game' })).toBeInTheDocument()
+
+    // Base UI's dismiss listener sits on the document, where Next also mounts
+    // React; the picker cannot stop this event from reaching it.
+    mirrorEscapeOnDocument()
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
+    expect(screen.getByText('Create a Squad')).toBeInTheDocument()
+    expect(name).toHaveValue('Draft squad')
+
     await user.keyboard('{Escape}')
 
     await waitFor(() => expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument())
