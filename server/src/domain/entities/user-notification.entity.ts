@@ -11,6 +11,8 @@ export interface UserNotificationPayload {
   readonly roomCode: string
   readonly roomName: string
   readonly gameName: string
+  /** Absent in notifications written before the catalog gained covers (CCC-95). */
+  readonly gameCoverUrl?: string
   readonly players: ReadonlyArray<{ readonly name: string; readonly image: string | null }>
 }
 

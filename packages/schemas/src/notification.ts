@@ -9,6 +9,8 @@ export const userNotificationPayloadSchema = z.object({
   roomCode: z.string().length(6),
   roomName: z.string(),
   gameName: z.string(),
+  // Absent in notifications written before the catalog gained covers (CCC-95).
+  gameCoverUrl: z.url().optional(),
   players: z.array(z.object({ name: z.string(), image: z.string().nullable() })),
   discordLink: z.url().nullable(),
 })
