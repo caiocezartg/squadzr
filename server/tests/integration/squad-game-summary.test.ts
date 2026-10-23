@@ -96,11 +96,17 @@ describe('Squad game summary over HTTP', () => {
 
     await joinAll(server, created.code, [member!])
 
+    // A Squad the host belongs to without hosting it, so My Squads answers
+    // through its joined query as well.
+    const memberRoom = await createRoom(server, member!, { gameId: game.id })
+    await joinAll(server, memberRoom.code, [host])
+
     const listed = roomsResponseSchema.parse((await get(server, '/api/rooms')).json())
     expect(listed.rooms.find((room) => room.id === created.id)?.game).toEqual(summary)
 
     const mine = myRoomsResponseSchema.parse((await get(server, '/api/rooms/my', host)).json())
     expect(mine.hosted.find((room) => room.id === created.id)?.game).toEqual(summary)
+    expect(mine.joined.find((room) => room.id === memberRoom.id)?.game).toEqual(summary)
 
     const publicRead = roomResponseSchema.parse(
       (await get(server, `/api/rooms/${created.code}`, outsider!)).json()
@@ -122,12 +128,40 @@ describe('Squad game summary over HTTP', () => {
       genres: [],
     })
     expect(summary.genres).toEqual([])
+    const [member, outsider] = await signInMany(server, 2)
+    const guest = await open(server)
+    await subscribeCatalog(guest)
+    const hostSocket = await open(server, host)
 
     const created = await createRoom(server, host, { gameId: game.id })
     expect(created.game).toEqual(summary)
 
+    const createdMessage = roomCreatedMessageSchema.parse(await guest.next())
+    expect(createdMessage.payload.room.game).toEqual(summary)
+
+    const snapshot = roomSnapshotMessageSchema.parse(
+      await joinRoomChannel(hostSocket, created.code)
+    )
+    expect(snapshot.payload.room.game).toEqual(summary)
+
+    await joinAll(server, created.code, [member!])
+
     const listed = roomsResponseSchema.parse((await get(server, '/api/rooms')).json())
     expect(listed.rooms.find((room) => room.id === created.id)?.game).toEqual(summary)
+
+    const mine = myRoomsResponseSchema.parse((await get(server, '/api/rooms/my', host)).json())
+    expect(mine.hosted.find((room) => room.id === created.id)?.game).toEqual(summary)
+
+    const publicRead = roomResponseSchema.parse(
+      (await get(server, `/api/rooms/${created.code}`, outsider!)).json()
+    )
+    expect(isRoomLobbyResponse(publicRead)).toBe(false)
+    expect(publicRead.room.game).toEqual(summary)
+
+    const lobby = roomLobbyResponseSchema.parse(
+      (await get(server, `/api/rooms/${created.code}`, member!)).json()
+    )
+    expect(lobby.room.game).toEqual(summary)
   })
 })
 
