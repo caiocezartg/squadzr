@@ -97,7 +97,8 @@ describe('PostgreSQL 16 harness', () => {
     const [gameCount] = await server.app.db.select({ total: count() }).from(games)
 
     expect(Math.floor(Number(version.rows[0]?.server_version_num) / 10_000)).toBe(16)
-    expect(Number(migrations.rows[0]?.total)).toBe(5)
+    // CCC-89 adds 0005 (slug is no longer the game identity), on top of CCC-88's 0004.
+    expect(Number(migrations.rows[0]?.total)).toBe(6)
     expect(gameCount?.total).toBe(0)
   })
 

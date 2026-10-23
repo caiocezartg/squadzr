@@ -92,6 +92,15 @@ describe('Room Ready notifications', () => {
     }
   })
 
+  it('carries the game cover of a ready notification over HTTP', async () => {
+    const { game } = await fillRoom()
+
+    for (const user of [host, member]) {
+      const [notification] = await listNotifications(user)
+      expect(notification?.payload.gameCoverUrl).toBe(game.coverUrl)
+    }
+  })
+
   it('does not notify anyone while the room still has free seats', async () => {
     const game = await insertGame(server)
     const room = await createRoom(server, host, { gameId: game.id, maxPlayers: 3 })
