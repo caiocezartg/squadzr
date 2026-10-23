@@ -109,10 +109,9 @@ export function CreateSquadModal({ onClose, onCreated }: CreateSquadModalProps) 
     <Dialog.Root
       open
       onOpenChange={(isOpen, eventDetails) => {
-        // The game picker owns the first Escape while its list is open. Base UI
-        // listens for Escape on the document, where the picker cannot stop the
-        // key from reaching this dialog, so the picker reports its list and the
-        // dialog cancels the dismissal instead of dropping the draft.
+        // The game picker owns the first Escape while its list is open. The
+        // picker reports its list and the dialog cancels its own Escape
+        // dismissal, so keeping the draft does not depend on event propagation.
         if (!isOpen && eventDetails.reason === 'escape-key' && gameListOpen) {
           eventDetails.cancel()
           return

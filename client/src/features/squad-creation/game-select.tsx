@@ -24,9 +24,9 @@ export interface GameSelectProps {
   selectedGame: Game | null
   onSelect: (game: Game | null) => void
   /**
-   * Tells the dialog whether the list is open. The dialog needs it to leave the
-   * first Escape to the list: Base UI listens for Escape on the document, where
-   * the picker cannot stop it (see CreateSquadModal).
+   * Tells the dialog whether the list is open. The dialog needs it to cancel its
+   * own Escape dismissal while the list is open, so the first Escape reaches the
+   * list without depending on event propagation (see CreateSquadModal).
    */
   onListOpenChange: (isOpen: boolean) => void
   hasError: boolean
@@ -161,9 +161,9 @@ export function GameSelect({
   const handleContainerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Escape' || !open) return
 
-    // The first Escape belongs to the open list. Base UI's dialog listens for
-    // Escape on the document, where propagation cannot be stopped in the app,
-    // so the dialog keeps itself open for this key instead (CreateSquadModal).
+    // The first Escape belongs to the open list. The dialog cancels its own
+    // Escape dismissal while this list is open (CreateSquadModal), so the
+    // dialog stays open without relying on event propagation.
     event.preventDefault()
     closeList()
   }

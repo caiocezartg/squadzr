@@ -56,11 +56,11 @@ afterEach(() => {
 })
 
 /**
- * Delivers each Escape to the `document` as well. Next mounts the app with
- * `hydrateRoot(document)`, so React's root listener and Base UI's dialog
- * dismiss share the document node and `stopPropagation` cannot keep the
- * dialog from hearing the key; Testing Library mounts the tree inside a div
- * below the document, so the test re-sends the key to model that shared node.
+ * Delivers each Escape to the `document` as well. Testing Library mounts the
+ * tree inside a div below the document, so the test re-sends the key there to
+ * cover a key that also reaches the document. The dialog cancels its own Escape
+ * dismissal while the game list is open, so the outcome does not depend on how
+ * far the key propagates.
  */
 function mirrorEscapeOnDocument(): void {
   const mirror = (event: KeyboardEvent) => {
