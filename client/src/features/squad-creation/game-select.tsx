@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronsUpDown } from 'lucide-react'
+import { Check, ChevronsUpDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { Game } from '@/types'
 import { searchGames } from './search-games'
@@ -10,6 +10,9 @@ import { useDebouncedValue } from './use-debounced-value'
 
 /** How long the player's typing settles before the search asks the server. */
 const SEARCH_DEBOUNCE_MS = 250
+
+/** How long the list takes to fade and shrink away before it unmounts. */
+const LIST_CLOSE_MS = 150
 
 /** Stable empty list, so the combobox keeps one items reference while it loads. */
 const NO_GAMES: Game[] = []
@@ -26,9 +29,10 @@ export interface GameSelectProps {
 /**
  * The game picker of the create-Squad form: an ARIA combobox backed by
  * `GET /api/games`. It lists each match with its player range; the input owns
- * the keyboard (arrows, Enter, Escape) and the listbox announces every result,
- * so screen readers hear the same choices a sighted player sees. The dialog no
- * longer loads the catalog: the search reads only what the player needs.
+ * the keyboard (arrows, Enter, Escape) and a live region announces how many
+ * results the search found, so screen readers hear the same choices a sighted
+ * player sees. The dialog no longer loads the catalog: the search reads only
+ * what the player needs.
  *
  * It is intentionally local instead of a full combobox library: the create
  * dialog is in `/squads`' initial JavaScript, and the library's popup and
@@ -42,7 +46,11 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
 
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  // The list stays mounted for one short transition after it closes.
+  const [closing, setClosing] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+
+  const listMounted = open || closing
 
   const labelOf = (game: Game) =>
     t('squads.createModal.gameWithPlayers', {
@@ -64,17 +72,33 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
   })
   const games = gamesQuery.data ?? NO_GAMES
 
+  const statusMessage = gamesQuery.isFetching
+    ? t('squads.createModal.searchingGames')
+    : games.length === 0
+      ? t('squads.createModal.noGamesFound')
+      : t('squads.createModal.gamesFound', { count: games.length })
+
   // A new result set starts with nothing highlighted; the first ArrowDown picks it.
   useEffect(() => {
     setActiveIndex(-1)
   }, [games])
+
+  // Unmount the list once its close transition has played.
+  useEffect(() => {
+    if (!closing) return
+
+    const timeout = window.setTimeout(() => setClosing(false), LIST_CLOSE_MS)
+    return () => window.clearTimeout(timeout)
+  }, [closing])
 
   // Close the list when the player clicks anywhere outside the picker.
   useEffect(() => {
     if (!open) return
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false)
+      if (containerRef.current?.contains(event.target as Node)) return
+      setOpen(false)
+      setClosing(true)
     }
 
     document.addEventListener('pointerdown', handlePointerDown)
@@ -89,10 +113,21 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
     })
   }, [activeIndex, listboxId, open])
 
+  const openList = () => {
+    setClosing(false)
+    setOpen(true)
+  }
+
+  const closeList = () => {
+    if (!open) return
+    setOpen(false)
+    setClosing(true)
+  }
+
   const selectGame = (game: Game) => {
     setQuery(labelOf(game))
     setActiveIndex(-1)
-    setOpen(false)
+    closeList()
     onSelect(game)
     inputRef.current?.focus()
   }
@@ -100,16 +135,26 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
   const handleInputChange = (next: string) => {
     setQuery(next)
     setActiveIndex(-1)
-    setOpen(true)
+    openList()
     if (selectedGame && next !== labelOf(selectedGame)) {
       onSelect(null)
     }
   }
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+  const handleContainerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape' || !open) return
+
+    // The first Escape belongs to the open list. Base UI's dialog dismiss
+    // ignores `defaultPrevented`, so the event must not reach its popup.
+    event.preventDefault()
+    event.stopPropagation()
+    closeList()
+  }
+
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      setOpen(true)
+      openList()
       if (games.length > 0) {
         setActiveIndex((index) => (index < 0 ? 0 : Math.min(index + 1, games.length - 1)))
       }
@@ -118,7 +163,7 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
 
     if (event.key === 'ArrowUp') {
       event.preventDefault()
-      setOpen(true)
+      openList()
       if (games.length > 0) {
         setActiveIndex((index) => (index <= 0 ? 0 : index - 1))
       }
@@ -130,29 +175,30 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
       if (!open) return
       event.preventDefault()
       if (game) selectGame(game)
-      else setOpen(false)
+      else closeList()
       return
     }
 
-    if (event.key === 'Escape' && open) {
-      event.preventDefault()
-      setOpen(false)
-    }
+    if (event.key === 'Tab') closeList()
+  }
 
-    if (event.key === 'Tab') setOpen(false)
+  const toggleList = () => {
+    if (open) closeList()
+    else openList()
+    inputRef.current?.focus()
   }
 
   const optionId = (index: number) => `${listboxId}-option-${index}`
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} onKeyDown={handleContainerKeyDown} className="relative">
       <input
         ref={inputRef}
         id={id}
         type="text"
         role="combobox"
         aria-expanded={open}
-        aria-controls={open && games.length > 0 ? listboxId : undefined}
+        aria-controls={listMounted ? listboxId : undefined}
         aria-autocomplete="list"
         aria-activedescendant={open && activeIndex >= 0 ? optionId(activeIndex) : undefined}
         aria-invalid={hasError || undefined}
@@ -160,9 +206,9 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
         placeholder={t('squads.createModal.selectGame')}
         value={query}
         onChange={(event) => handleInputChange(event.target.value)}
-        onFocus={() => setOpen(true)}
-        onClick={() => setOpen(true)}
-        onKeyDown={handleKeyDown}
+        onFocus={openList}
+        onClick={openList}
+        onKeyDown={handleInputKeyDown}
         className={`flex h-[44px] w-full rounded-lg border bg-surface px-4 pr-10 text-sm text-offwhite transition-colors duration-200 placeholder:text-muted/60 focus:outline-hidden focus:ring-1 ${
           hasError
             ? 'border-danger/50 focus:border-danger/70 focus:ring-danger/20'
@@ -171,12 +217,15 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
       />
       <button
         type="button"
-        aria-label={t('squads.createModal.toggleGameList')}
+        tabIndex={-1}
+        aria-label={
+          open ? t('squads.createModal.hideGameList') : t('squads.createModal.showGameList')
+        }
         aria-expanded={open}
-        onClick={() => {
-          setOpen(true)
-          inputRef.current?.focus()
-        }}
+        aria-controls={listMounted ? listboxId : undefined}
+        // The chevron is a pointer shortcut: focus stays in the combobox.
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={toggleList}
         className="absolute top-1/2 right-1 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition-colors hover:text-offwhite focus:outline-hidden"
       >
         {gamesQuery.isFetching ? (
@@ -189,40 +238,54 @@ export function GameSelect({ id, selectedGame, onSelect, hasError }: GameSelectP
         )}
       </button>
 
-      {open && (
-        <div className="absolute z-60 mt-2 w-full overflow-hidden rounded-xl border border-border bg-surface shadow-2xl shadow-black/50">
-          {games.length === 0 ? (
-            <p role="status" className="px-3 py-2.5 text-sm text-muted">
-              {gamesQuery.isFetching
-                ? t('squads.createModal.searchingGames')
-                : t('squads.createModal.noGamesFound')}
-            </p>
-          ) : (
-            <ul
-              id={listboxId}
-              role="listbox"
-              aria-label={t('squads.createModal.selectGame')}
-              className="max-h-72 overflow-y-auto py-1"
-            >
-              {games.map((game, index) => (
+      <p role="status" aria-live="polite" className="sr-only">
+        {listMounted ? statusMessage : ''}
+      </p>
+
+      {listMounted && (
+        <div
+          aria-hidden={closing || undefined}
+          className={`absolute z-60 mt-2 w-full origin-top overflow-hidden rounded-xl border border-border bg-surface shadow-2xl shadow-black/50 transition-[scale,opacity] duration-150 ease-out starting:scale-95 starting:opacity-0 ${
+            closing ? 'pointer-events-none scale-95 opacity-0' : 'scale-100 opacity-100'
+          }`}
+        >
+          <ul
+            id={listboxId}
+            role="listbox"
+            aria-label={t('squads.createModal.selectGame')}
+            className={games.length === 0 ? undefined : 'max-h-72 overflow-y-auto py-1'}
+          >
+            {games.map((game, index) => {
+              const selected = selectedGame?.id === game.id
+              return (
                 <li
                   key={game.id}
                   id={optionId(index)}
                   role="option"
-                  aria-selected={index === activeIndex}
+                  aria-selected={selected}
                   onMouseDown={(event) => event.preventDefault()}
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => selectGame(game)}
-                  className={`cursor-default scroll-my-1 truncate px-3 py-2.5 text-sm transition-colors ${
+                  className={`grid cursor-default scroll-my-1 grid-cols-[1rem_1fr] items-center gap-2 px-3 py-2.5 text-sm transition-colors ${
                     index === activeIndex
                       ? 'bg-surface-hover text-accent'
                       : 'text-offwhite hover:bg-surface-hover'
                   }`}
                 >
-                  {labelOf(game)}
+                  <span className="col-start-1 flex items-center">
+                    {selected && <Check className="size-3.5" aria-hidden="true" />}
+                  </span>
+                  <span className="col-start-2 truncate">{labelOf(game)}</span>
                 </li>
-              ))}
-            </ul>
+              )
+            })}
+          </ul>
+          {games.length === 0 && (
+            <p className="px-3 py-2.5 text-sm text-muted">
+              {gamesQuery.isFetching
+                ? t('squads.createModal.searchingGames')
+                : t('squads.createModal.noGamesFound')}
+            </p>
           )}
         </div>
       )}

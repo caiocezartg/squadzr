@@ -173,6 +173,87 @@ describe('create squad — game search', () => {
   })
 })
 
+describe('create squad — game picker', () => {
+  it('closes the game list before the dialog on Escape, keeping the draft', async () => {
+    const { user } = renderSquadsFlow('/squads')
+    await openCreateModal(user)
+
+    const name = screen.getByLabelText('Squad Name')
+    await user.type(name, 'Draft squad')
+    await user.click(screen.getByLabelText('Game'))
+    expect(await screen.findByRole('listbox', { name: 'Select a game' })).toBeInTheDocument()
+
+    // The first Escape belongs to the list: Base UI's dialog ignores
+    // `defaultPrevented`, so the event must not reach it.
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
+    expect(screen.getByText('Create a Squad')).toBeInTheDocument()
+    expect(name).toHaveValue('Draft squad')
+
+    // With the list closed, Escape closes the dialog as before.
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument())
+  })
+
+  it('toggles the list from the chevron button', async () => {
+    const { user } = renderSquadsFlow('/squads')
+    await openCreateModal(user)
+
+    await user.click(screen.getByLabelText('Game'))
+    const listbox = await screen.findByRole('listbox', { name: 'Select a game' })
+
+    const hide = screen.getByRole('button', { name: 'Hide games' })
+    expect(hide).toHaveAttribute('tabindex', '-1')
+    expect(hide).toHaveAttribute('aria-controls', listbox.id)
+
+    await user.click(hide)
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Show games' })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Show games' }))
+    expect(await screen.findByRole('listbox', { name: 'Select a game' })).toBeInTheDocument()
+  })
+
+  it('announces the number of games the search found', async () => {
+    const { user } = renderSquadsFlow('/squads')
+    await openCreateModal(user)
+
+    const status = screen.getByRole('status')
+    await user.click(screen.getByLabelText('Game'))
+    await waitFor(() => expect(status).toHaveTextContent('2 games found'))
+
+    const gameInput = screen.getByLabelText('Game')
+    await user.type(gameInput, 'counter')
+    await waitFor(() => expect(status).toHaveTextContent('1 game found'))
+
+    await user.type(gameInput, 'zzz')
+    await waitFor(() => expect(status).toHaveTextContent('No games found. Try another name.'))
+  })
+
+  it('marks the chosen game as selected when the list reopens', async () => {
+    const { user } = renderSquadsFlow('/squads')
+    await openCreateModal(user)
+    await pickGame(user, 'league', 'League of Legends (1-5 players)')
+
+    await user.click(screen.getByLabelText('Game'))
+
+    const chosen = await screen.findByRole('option', {
+      name: 'League of Legends (1-5 players)',
+    })
+    expect(chosen).toHaveAttribute('aria-selected', 'true')
+    expect(chosen.querySelector('svg')).not.toBeNull()
+    // The chosen label stops the search, so the popular games return after the debounce.
+    expect(
+      await screen.findByRole('option', { name: 'Counter-Strike 2 (1-5 players)' })
+    ).toHaveAttribute('aria-selected', 'false')
+  })
+})
+
 describe('create squad — reopening', () => {
   it('starts from an empty form after the dialog closes', async () => {
     const { user } = renderSquadsFlow('/squads')

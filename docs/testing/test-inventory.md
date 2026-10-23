@@ -25,14 +25,16 @@ inventory (see the equivalence proof below).
 | --- | --- | --- | --- | --- | --- |
 | `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 26 | 120 |
 | `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 25 | 247 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 471 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 476 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 79 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-22 for
 CCC-93. That ticket extends `tests/integration/games-http.test.ts` with the game search and the
 delisted single-game read, and `tests/integration/rooms-http.test.ts` with the 2/40/41 Squad-size
-bounds and the delisted-game rejection; it adds no suite files. The CCC-88 recount added
+bounds and the delisted-game rejection; it also adds the game-list dismissal, toggle, selection and
+live-region cases to the client create-Squad flow, and the search-announcement strings to the
+message-file spec. It adds no suite files. The CCC-88 recount added
 `tests/integration/catalog-migration.test.ts` and recorded `server:integration` at 25 files /
 231 tests. The CCC-70 recount added `src/env.spec.ts`, `src/lib/router-history.spec.ts` and
 `scripts/bundle-report.spec.mjs` to `client:unit` and corrected the server and client unit rows that
@@ -136,10 +138,10 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 88 | 670 |
-| `bunx vitest run` (direct root composition) | 88 | 670 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 88 | 675 |
+| `bunx vitest run` (direct root composition) | 88 | 675 |
 | `bunx turbo test --filter=server` | 26 | 120 |
-| `bunx turbo test --filter=client` | 58 | 471 |
+| `bunx turbo test --filter=client` | 58 | 476 |
 | `bunx turbo test --filter=@squadzr/schemas` | 4 | 79 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace

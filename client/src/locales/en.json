@@ -174,7 +174,9 @@
       "maxPlayersTooMany": "Max 40 players",
       "searchingGames": "Searching games…",
       "noGamesFound": "No games found. Try another name.",
-      "toggleGameList": "Show games"
+      "gamesFound": "{count, plural, one {# game found} other {# games found}}",
+      "showGameList": "Show games",
+      "hideGameList": "Hide games"
     }
   },
   "mySquads": {
