@@ -1,9 +1,15 @@
-import { eq } from 'drizzle-orm'
-import type { CreateGameInput, Game } from '@domain/entities/game.entity'
+import { and, eq, inArray } from 'drizzle-orm'
+import type { Game, UpsertGameInput } from '@domain/entities/game.entity'
 import type { IGameRepository } from '@domain/repositories/game.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import type { Database } from '@infrastructure/database/drizzle'
 import { games, type GameRow } from '@infrastructure/database/schema/games'
+
+/**
+ * The statements the repository issues, shared by the root connection and a
+ * transaction handle so one import can bind every write to the same connection.
+ */
+type DatabaseExecutor = Pick<Database, 'select' | 'insert' | 'update' | 'delete'>
 
 function mapRowToEntity(row: GameRow): Game {
   return {
@@ -27,41 +33,48 @@ function mapRowToEntity(row: GameRow): Game {
 export class DrizzleGameRepository implements IGameRepository {
   constructor(
     private readonly db: Database,
-    private readonly clock: Clock
+    private readonly clock: Clock,
+    private readonly executor: DatabaseExecutor = db
   ) {}
 
   async findById(id: string): Promise<Game | null> {
-    const result = await this.db.select().from(games).where(eq(games.id, id)).limit(1)
+    const result = await this.executor.select().from(games).where(eq(games.id, id)).limit(1)
     const row = result[0]
     return row ? mapRowToEntity(row) : null
   }
 
   async findAll(): Promise<Game[]> {
-    const result = await this.db.select().from(games)
+    const result = await this.executor.select().from(games)
     return result.map(mapRowToEntity)
   }
 
-  async upsertBySlug(input: CreateGameInput): Promise<Game> {
-    const result = await this.db
+  async upsertByIgdbId(input: UpsertGameInput): Promise<Game> {
+    const result = await this.executor
       .insert(games)
       .values({
+        igdbId: input.igdbId,
         name: input.name,
         slug: input.slug,
+        genres: [...input.genres],
         coverUrl: input.coverUrl,
-        // Local seeds and upserts have no separate thumbnail art yet: the cover
-        // is the thumbnail until the IGDB import supplies a better crop.
-        thumbnailUrl: input.coverUrl,
+        thumbnailUrl: input.thumbnailUrl,
+        popularity: input.popularity,
         minPlayers: input.minPlayers,
         maxPlayers: input.maxPlayers,
+        featuredRank: input.featuredRank,
       })
       .onConflictDoUpdate({
-        target: games.slug,
+        target: games.igdbId,
         set: {
           name: input.name,
+          slug: input.slug,
+          genres: [...input.genres],
           coverUrl: input.coverUrl,
-          thumbnailUrl: input.coverUrl,
+          thumbnailUrl: input.thumbnailUrl,
+          popularity: input.popularity,
           minPlayers: input.minPlayers,
           maxPlayers: input.maxPlayers,
+          featuredRank: input.featuredRank,
           updatedAt: this.clock.now(),
         },
       })
@@ -72,5 +85,33 @@ export class DrizzleGameRepository implements IGameRepository {
       throw new Error('Failed to upsert game')
     }
     return mapRowToEntity(row)
+  }
+
+  async delistByIgdbIds(igdbIds: readonly number[]): Promise<number> {
+    if (igdbIds.length === 0) return 0
+
+    const rows = await this.executor
+      .update(games)
+      .set({ listed: false, updatedAt: this.clock.now() })
+      .where(and(inArray(games.igdbId, [...igdbIds]), eq(games.listed, true)))
+      .returning({ id: games.id })
+
+    return rows.length
+  }
+
+  async relistByIgdbIds(igdbIds: readonly number[]): Promise<number> {
+    if (igdbIds.length === 0) return 0
+
+    const rows = await this.executor
+      .update(games)
+      .set({ listed: true, updatedAt: this.clock.now() })
+      .where(and(inArray(games.igdbId, [...igdbIds]), eq(games.listed, false)))
+      .returning({ id: games.id })
+
+    return rows.length
+  }
+
+  async runInTransaction<T>(work: (repository: IGameRepository) => Promise<T>): Promise<T> {
+    return this.db.transaction((tx) => work(new DrizzleGameRepository(this.db, this.clock, tx)))
   }
 }

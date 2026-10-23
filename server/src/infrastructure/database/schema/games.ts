@@ -15,11 +15,12 @@ import type { GameGenre } from '@domain/entities/game.entity'
 // identity, `genres` and `thumbnailUrl` feed the catalog UI, `popularity`
 // orders the listing and `listed` hides rows (legacy rows start delisted)
 // while Squads that still reference them keep rendering. `featuredRank` marks
-// the hand-picked highlights.
+// the hand-picked highlights. `slug` is a display/search handle only: the
+// unique identity moved to `igdbId` when the Catalog Import replaced the seed.
 export const games = pgTable('games', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
-  slug: varchar('slug', { length: 100 }).notNull().unique(),
+  slug: varchar('slug', { length: 100 }).notNull(),
   igdbId: integer('igdb_id').unique(),
   genres: jsonb('genres')
     .$type<GameGenre[]>()
