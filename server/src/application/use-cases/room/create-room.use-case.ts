@@ -25,7 +25,9 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
   async execute(input: CreateRoomInput): Promise<CreateRoomOutput> {
     const game = await this.gameRepository.findById(input.gameId)
-    if (!game) {
+    // A Game removed from the catalog is still readable by id, but no new Squad
+    // may point at it.
+    if (!game || !game.listed) {
       throw new InvalidGameError(input.gameId)
     }
 

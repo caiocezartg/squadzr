@@ -9,30 +9,52 @@ import type { TestServer } from './test-server'
 
 export const DISCORD_INVITE = 'https://discord.gg/squadzr'
 
-export async function insertGame(server: TestServer, maxPlayers = 5): Promise<GameDto> {
-  const slug = `game-${randomUUID().slice(0, 8)}`
+export interface InsertGameOptions {
+  name?: string
+  slug?: string
+  coverUrl?: string
+  thumbnailUrl?: string
+  genres?: GameDto['genres']
+  popularity?: number
+  listed?: boolean
+  minPlayers?: number
+  maxPlayers?: number
+}
+
+export async function insertGame(
+  server: TestServer,
+  maxPlayersOrOptions: number | InsertGameOptions = 5
+): Promise<GameDto> {
+  const options =
+    typeof maxPlayersOrOptions === 'number'
+      ? { maxPlayers: maxPlayersOrOptions }
+      : maxPlayersOrOptions
+  const slug = options.slug ?? `game-${randomUUID().slice(0, 8)}`
+  const coverUrl = options.coverUrl ?? `https://cdn.squadzr.test/${slug}.webp`
   const [game] = await server.app.db
     .insert(games)
     .values({
-      name: `Game ${slug}`,
+      name: options.name ?? `Game ${slug}`,
       slug,
-      coverUrl: `https://cdn.squadzr.test/${slug}.webp`,
-      thumbnailUrl: `https://cdn.squadzr.test/${slug}.webp`,
+      genres: options.genres ?? [],
+      coverUrl,
+      thumbnailUrl: options.thumbnailUrl ?? coverUrl,
+      popularity: options.popularity ?? 0,
       // Catalog fixtures are listed by default; every flow that creates a
       // Squad needs a listed game to point at.
-      listed: true,
-      minPlayers: 2,
-      maxPlayers,
+      listed: options.listed ?? true,
+      minPlayers: options.minPlayers ?? 2,
+      maxPlayers: options.maxPlayers ?? 5,
     })
     .returning()
   if (!game) throw new Error('Failed to insert game')
-  // The row carries the catalog columns (CCC-88), but the transport contract is
-  // unchanged until CCC-93, so the fixture exposes only the DTO fields.
   return {
     id: game.id,
     name: game.name,
     slug: game.slug,
+    genres: game.genres,
     coverUrl: game.coverUrl,
+    coverThumbUrl: game.thumbnailUrl,
     minPlayers: game.minPlayers,
     maxPlayers: game.maxPlayers,
     createdAt: game.createdAt.toISOString(),

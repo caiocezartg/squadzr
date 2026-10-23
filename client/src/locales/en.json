@@ -171,7 +171,10 @@
       "discordLinkInvalid": "Please enter a valid URL",
       "discordLinkNotValid": "Must be a valid Discord invite (discord.gg or discord.com/invite)",
       "maxPlayersTooFew": "Must be at least 2 players",
-      "maxPlayersTooMany": "Max 20 players"
+      "maxPlayersTooMany": "Max 40 players",
+      "searchingGames": "Searching games…",
+      "noGamesFound": "No games found. Try another name.",
+      "toggleGameList": "Show games"
     }
   },
   "mySquads": {
@@ -248,6 +251,7 @@
   },
   "errors": {
     "GAME_NOT_FOUND": "This game could not be found.",
+    "INVALID_GAME": "This game is no longer available. Please choose another game.",
     "ROOM_NOT_FOUND": "This squad no longer exists or the code is invalid.",
     "ROOM_FULL": "This squad is already full.",
     "ROOM_READY": "This squad is ready — members cannot leave.",

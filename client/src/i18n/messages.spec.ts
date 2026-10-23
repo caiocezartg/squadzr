@@ -49,6 +49,11 @@ describe('ICU messages', () => {
     expect(tPtBR('timeAgo.minutesAgo', { count: 5 })).toBe('há 5min')
   })
 
+  it('states the 40-player Squad limit in both languages', () => {
+    expect(t('squads.createModal.maxPlayersTooMany')).toBe('Max 40 players')
+    expect(tPtBR('squads.createModal.maxPlayersTooMany')).toBe('Máximo de 40 jogadores')
+  })
+
   it('keeps the text around rich tags', () => {
     expect(t.rich('hero.subtitle', { bold: (chunks) => chunks })).toBe(
       'Create or join squads, fill your squad, and get a Discord invite the second your team is ready.'

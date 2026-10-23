@@ -172,6 +172,22 @@ describe('CreateRoomUseCase', () => {
       expect(mockRoomRepository.create).not.toHaveBeenCalled()
     })
 
+    it('should throw InvalidGameError if the game is delisted', async () => {
+      const delisted = createMockGame({ id: 'game-123', listed: false })
+      mockGameRepository.findById.mockResolvedValue(delisted)
+
+      await expect(
+        useCase.execute({
+          name: 'Test Room',
+          hostId: 'host-123',
+          gameId: 'game-123',
+          discordLink: 'https://discord.gg/test',
+        })
+      ).rejects.toThrow(InvalidGameError)
+
+      expect(mockRoomRepository.create).not.toHaveBeenCalled()
+    })
+
     it('should throw RoomCreateLimitReachedError when the transaction reports the host limit', async () => {
       const game = createMockGame({ id: 'game-123' })
       mockGameRepository.findById.mockResolvedValue(game)
