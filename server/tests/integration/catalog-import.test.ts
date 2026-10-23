@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { sql } from 'drizzle-orm'
+import type { IGameRepository } from '@domain/repositories/game.repository'
 import { games } from '@infrastructure/database/schema'
 import { DrizzleGameRepository } from '@infrastructure/repositories/drizzle-game.repository'
 import {
@@ -81,6 +83,60 @@ function candidates(count: number, start = 2000) {
       slug: `game-${igdbId}`,
     })
   })
+}
+
+/** Delegates every call to `inner`, except the relist, which fails after the delist. */
+function failAtRelist(inner: IGameRepository): IGameRepository {
+  return {
+    findById: (id) => inner.findById(id),
+    findAll: () => inner.findAll(),
+    upsertByIgdbId: (input) => inner.upsertByIgdbId(input),
+    delistByIgdbIds: (igdbIds) => inner.delistByIgdbIds(igdbIds),
+    relistByIgdbIds: () => Promise.reject(new Error('relist failed after delist')),
+    acquireCatalogImportLock: () => inner.acquireCatalogImportLock(),
+    runInTransaction: (work) => inner.runInTransaction((tx) => work(failAtRelist(tx))),
+  }
+}
+
+interface LockGate {
+  readonly onLocked: () => void
+  readonly release: Promise<void>
+}
+
+/** Holds the transaction open right after it acquired the Catalog Import lock. */
+function createGatedRepository(inner: IGameRepository, gate: LockGate): IGameRepository {
+  return {
+    findById: (id) => inner.findById(id),
+    findAll: () => inner.findAll(),
+    upsertByIgdbId: (input) => inner.upsertByIgdbId(input),
+    delistByIgdbIds: (igdbIds) => inner.delistByIgdbIds(igdbIds),
+    relistByIgdbIds: (igdbIds) => inner.relistByIgdbIds(igdbIds),
+    acquireCatalogImportLock: async () => {
+      await inner.acquireCatalogImportLock()
+      gate.onLocked()
+      await gate.release
+    },
+    runInTransaction: (work) =>
+      inner.runInTransaction((tx) => work(createGatedRepository(tx, gate))),
+  }
+}
+
+/** Waits until a connection of this test's database blocks on the import lock. */
+async function waitForAdvisoryLockWaiter(): Promise<void> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const { rows } = await server.app.db.execute<{ waiters: number }>(sql`
+      select count(*)::int as waiters
+      from pg_locks l
+      join pg_stat_activity a on a.pid = l.pid
+      where l.locktype = 'advisory'
+        and not l.granted
+        and a.datname = current_database()
+    `)
+    if ((rows[0]?.waiters ?? 0) > 0) return
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+
+  throw new Error('no Catalog Import run waited on the advisory lock')
 }
 
 describe('CatalogImportUseCase', () => {
@@ -255,6 +311,51 @@ describe('CatalogImportUseCase', () => {
     expect(rows.filter((row) => row.listed)).toHaveLength(12)
   })
 
+  it('serializes concurrent runs so neither can pass the fraction check on a stale count', async () => {
+    let onLocked!: () => void
+    let releaseLock!: () => void
+    const locked = new Promise<void>((resolve) => {
+      onLocked = resolve
+    })
+    const release = new Promise<void>((resolve) => {
+      releaseLock = resolve
+    })
+    const safety: CatalogImportSafety = { minimumRetainedFraction: 0.5, minimumCandidates: 1 }
+
+    source.withCandidates(candidates(12, 2100))
+    const first = new CatalogImportUseCase(
+      source,
+      createGatedRepository(new DrizzleGameRepository(server.app.db, server.app.clock), {
+        onLocked,
+        release,
+      }),
+      [],
+      safety
+    )
+    const firstRun = first.execute()
+    await locked
+
+    // Four candidates pass against today's empty catalog, but not against the
+    // twelve the first run is listing; the lock makes the second run wait.
+    const secondSource = new FakeGameCatalogSource().withCandidates(candidates(4, 2200))
+    const second = new CatalogImportUseCase(
+      secondSource,
+      new DrizzleGameRepository(server.app.db, server.app.clock),
+      [],
+      safety
+    )
+    const secondResult = second.execute().catch((error: unknown) => error)
+
+    await waitForAdvisoryLockWaiter()
+    releaseLock()
+    await firstRun
+
+    const error = await secondResult
+    expect(error).toBeInstanceOf(CatalogImportSafetyError)
+    expect(error).toMatchObject({ stop: 'below_fraction' })
+    expect(await catalog()).toHaveLength(12)
+  })
+
   it('applies every squad-size rule in order', async () => {
     const curated: CuratedGame[] = [
       { igdbId: 2001, name: 'Curated', minPlayers: 4, maxPlayers: 50, featuredRank: null },
@@ -341,7 +442,7 @@ describe('CatalogImportUseCase', () => {
     expect((await catalog()).filter((row) => row.igdbId === null)).toHaveLength(1)
   })
 
-  it('rolls back every write when one candidate fails mid-run', async () => {
+  it('rolls back every created row when one candidate fails mid-run', async () => {
     source.withCandidates([
       createCandidate({ igdbId: 4001 }),
       createCandidate({ igdbId: 4002 }),
@@ -351,6 +452,43 @@ describe('CatalogImportUseCase', () => {
     await expect(buildUseCase().execute()).rejects.toThrow()
 
     expect(await catalog()).toHaveLength(0)
+  })
+
+  it('rolls back updates and delists of existing rows when the run fails mid-transaction', async () => {
+    await seedListedGames(2)
+    const before = new Map((await catalog()).map((row) => [row.id, row]))
+    expect(before.size).toBe(2)
+
+    // 5000 would be updated and 5001, absent from the candidates, delisted; the
+    // relist fails after both writes, so the transaction must undo them.
+    source.withCandidates([
+      createCandidate({
+        igdbId: 5000,
+        name: 'Seeded 5000 updated',
+        slug: 'seeded-5000-updated',
+        genres: [{ slug: 'shooter', name: 'Shooter' }],
+        popularity: 999,
+        multiplayer: { onlineCoopMax: null, onlineMax: 12 },
+      }),
+      createCandidate({ igdbId: 4001 }),
+    ])
+
+    const useCase = new CatalogImportUseCase(
+      source,
+      failAtRelist(new DrizzleGameRepository(server.app.db, server.app.clock)),
+      [],
+      SMALL_CATALOG_SAFETY
+    )
+
+    await expect(useCase.execute()).rejects.toThrow('relist failed after delist')
+
+    const after = await catalog()
+    expect(after).toHaveLength(2)
+    for (const row of after) {
+      // toEqual covers every column, including name, slug, listed, sizes,
+      // featuredRank and updatedAt.
+      expect(row).toEqual(before.get(row.id))
+    }
   })
 
   it('counts duplicate candidates as received but not as written games', async () => {

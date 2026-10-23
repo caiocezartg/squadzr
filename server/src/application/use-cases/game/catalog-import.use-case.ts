@@ -134,9 +134,9 @@ function toUpsertInput(
 }
 
 /**
- * One Catalog Import run: fetch every candidate, decide whether the catalog
- * survives the swap, then upsert, delist and relist inside one transaction.
- * Anything that throws leaves the catalog exactly as it was.
+ * One Catalog Import run: fetch every candidate, then decide whether the
+ * catalog survives the swap and upsert, delist and relist inside one locked
+ * transaction. Anything that throws leaves the catalog exactly as it was.
  */
 export class CatalogImportUseCase implements ICatalogImportUseCase {
   constructor(
@@ -151,15 +151,20 @@ export class CatalogImportUseCase implements ICatalogImportUseCase {
     const received = await this.source.fetchCandidates()
     const { unique: candidates, dropped } = dedupeCandidates(received)
 
-    await this.assertCatalogSurvives(candidates.length, input.overrideFractionCheck ?? false)
-
     const curatedByIgdbId = new Map(this.curatedGames.map((game) => [game.igdbId, game]))
     const candidateIds = new Set(candidates.map((candidate) => candidate.igdbId))
 
     const changes = await this.gameRepository.runInTransaction(async (repository) => {
-      // Read inside the transaction so created/updated and the delist/relist
-      // sets describe the same catalog the writes are about to replace.
+      // Wait for any concurrent run, then read once: the safety check and the
+      // delist/relist sets describe the same catalog the writes replace.
+      await repository.acquireCatalogImportLock()
       const existingGames = await repository.findAll()
+      this.assertCatalogSurvives(
+        candidates.length,
+        existingGames.filter((game) => game.listed).length,
+        input.overrideFractionCheck ?? false
+      )
+
       const existingImportedGames = existingGames.filter(isImportedGame)
       const existingByIgdbId = new Map(
         existingImportedGames.map((game) => [game.igdbId, game] as const)
@@ -198,13 +203,16 @@ export class CatalogImportUseCase implements ICatalogImportUseCase {
     }
   }
 
-  /** Fails before any write when the candidates cannot sustain today's catalog. */
-  private async assertCatalogSurvives(
+  /**
+   * Fails before any write when the candidates cannot sustain today's catalog.
+   * Call it inside the locked transaction, with the Listed Games count read from
+   * the same snapshot as the writes.
+   */
+  private assertCatalogSurvives(
     candidateCount: number,
+    listedCount: number,
     overrideFractionCheck: boolean
-  ): Promise<void> {
-    const listedCount = (await this.gameRepository.findAll()).filter((game) => game.listed).length
-
+  ): void {
     if (candidateCount < this.safety.minimumCandidates) {
       throw new CatalogImportSafetyError(
         'below_floor',

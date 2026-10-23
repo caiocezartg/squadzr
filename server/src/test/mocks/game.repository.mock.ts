@@ -52,6 +52,7 @@ export function createMockGameRepository(): MockGameRepository {
     ),
     delistByIgdbIds: vi.fn<(igdbIds: readonly number[]) => Promise<number>>().mockResolvedValue(0),
     relistByIgdbIds: vi.fn<(igdbIds: readonly number[]) => Promise<number>>().mockResolvedValue(0),
+    acquireCatalogImportLock: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     runInTransaction: vi.fn() as unknown as MockGameRepository['runInTransaction'],
   }
 

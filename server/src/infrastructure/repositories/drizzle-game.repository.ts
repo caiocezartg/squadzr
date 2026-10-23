@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import type { Game, UpsertGameInput } from '@domain/entities/game.entity'
 import type { IGameRepository } from '@domain/repositories/game.repository'
 import type { Clock } from '@domain/services/clock.interface'
@@ -9,7 +9,13 @@ import { games, type GameRow } from '@infrastructure/database/schema/games'
  * The statements the repository issues, shared by the root connection and a
  * transaction handle so one import can bind every write to the same connection.
  */
-type DatabaseExecutor = Pick<Database, 'select' | 'insert' | 'update' | 'delete'>
+type DatabaseExecutor = Pick<Database, 'select' | 'insert' | 'update' | 'delete' | 'execute'>
+
+/**
+ * Application-wide key of the advisory lock that serializes Catalog Import
+ * transactions. Any run taking it waits for the previous run to commit.
+ */
+const CATALOG_IMPORT_LOCK_KEY = 89_001
 
 function mapRowToEntity(row: GameRow): Game {
   return {
@@ -109,6 +115,10 @@ export class DrizzleGameRepository implements IGameRepository {
       .returning({ id: games.id })
 
     return rows.length
+  }
+
+  async acquireCatalogImportLock(): Promise<void> {
+    await this.executor.execute(sql`select pg_advisory_xact_lock(${CATALOG_IMPORT_LOCK_KEY})`)
   }
 
   async runInTransaction<T>(work: (repository: IGameRepository) => Promise<T>): Promise<T> {

@@ -24,7 +24,7 @@ inventory (see the equivalence proof below).
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
 | `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 27 | 122 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 26 | 245 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 26 | 247 |
 | `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 465 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 76 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
@@ -75,7 +75,8 @@ Integration projects follow the same naming convention:
   that references it, then asserts the catalog migration delists the game, keeps the Squad and
   applies the defaults. `catalog-import` (CCC-89) drives the use case with a fake Game Catalog
   Source against an isolated PostgreSQL: first run, idempotent re-run, update with a slug change,
-  delist and relist, both safety stops and the override, a mid-run rollback, every squad-size rule,
+  delist and relist, both safety stops and the override, mid-run rollbacks of new and existing rows,
+  concurrent runs serialized by the import lock, every squad-size rule,
   featured ranks, legacy rows and dropped duplicates. `catalog-import-entry` runs the real entry
   function on its own isolated database and asserts the exit code, the single structured summary
   and that the database pool closed; it spawns no child process.
@@ -134,7 +135,7 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 
 ## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89)
 
-### Current counts (recounted 2026-10-22, CCC-89)
+### Current counts (recounted 2026-10-23, CCC-89)
 
 | Command | Test files | Tests |
 | --- | --- | --- |
@@ -149,9 +150,9 @@ numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-
 specs together with their use cases, so the server unit suite has 5 fewer tests than before that
 change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
 16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
-current run passes 26 files / 245 tests (measured 2026-10-22 against the test PostgreSQL on port
+current run passes 26 files / 247 tests (measured 2026-10-23 against the test PostgreSQL on port
 5433): the CCC-88 row of 25 files / 231 tests plus CCC-89's changes — the 2 child-process seed
-tests removed with the static seed, the Catalog Import suites (+2 files / +14 tests), two extra
+tests removed with the static seed, the Catalog Import suites (+2 files / +16 tests), two extra
 IGDB-id cases in `games-postgres` and no other integration change. The `server:unit` row had
 drifted to 26 files / 119 tests since CCC-70, so the CCC-89 recount corrects it to 27 files / 122
 tests with `curated-games.spec.ts` (+1 file / +3 tests). CCC-59 removed the `types:unit` project
