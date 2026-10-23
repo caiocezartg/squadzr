@@ -24,16 +24,19 @@ inventory (see the equivalence proof below).
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
 | `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 25 | 109 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 23 | 227 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 25 | 231 |
 | `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 27 | 195 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 3 | 69 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
-Suites are test files. The counts above are the current inventory, recounted on 2026-10-15 for
-CCC-70. That ticket adds `src/env.spec.ts`, `src/lib/router-history.spec.ts` and
-`scripts/bundle-report.spec.mjs` to `client:unit`, corrects the server and client unit rows that had
-drifted since the 2026-10-09 recount, and corrects the `server:integration` row, which had drifted
-since CCC-59. The CCC-28 numbers are kept as a historical record in the equivalence proof below.
+Suites are test files. The counts above are the current inventory, recounted on 2026-10-22 for
+CCC-88. That ticket adds `tests/integration/catalog-migration.test.ts` and recounts
+`server:integration` at 25 files / 231 tests; the other rows keep the 2026-10-15 (CCC-70) numbers.
+The CCC-70 recount itself added `src/env.spec.ts`, `src/lib/router-history.spec.ts` and
+`scripts/bundle-report.spec.mjs` to `client:unit`, corrected the server and client unit rows that
+had drifted since the 2026-10-09 recount, and corrected the `server:integration` row, which had
+drifted since CCC-59. The CCC-28 numbers are kept as a historical record in the equivalence proof
+below.
 
 `@squadzr/typescript-config` ships only shared TypeScript configuration files, so no test project is
 expected there. Every other workspace must keep at least one test file: the configs deliberately do
@@ -65,7 +68,12 @@ Integration projects follow the same naming convention:
   `bun run test:integration` inside `server/` after starting the disposable database with
   `docker compose -f docker-compose.test.yml up -d --wait` (PostgreSQL 16 on port 5433, tmpfs
   storage). `TEST_DATABASE_URL` overrides the admin connection
-  (default `postgresql://postgres:postgres@localhost:5433/postgres`).
+  (default `postgresql://postgres:postgres@localhost:5433/postgres`). Migration suites
+  (`room-lifecycle-migration`, `catalog-migration`) replay the checked-in SQL files against a
+  throwaway database and pin the migration they exercise by tag, so later migrations cannot
+  silently change what they prove. `catalog-migration` (CCC-88) seeds a legacy game and a Squad
+  that references it, then asserts the catalog migration delists the game, keeps the Squad and
+  applies the defaults.
 - Client and realtime flows stay in jsdom projects under the planned capability work
   (CCC-32/CCC-33).
 
@@ -136,10 +144,11 @@ numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-
 specs together with their use cases, so the server unit suite has 5 fewer tests than before that
 change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
 16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
-current run passes 23 files / 227 tests (measured 2026-10-15 against the test PostgreSQL on port
-5433), and this ticket does not touch `server/tests`, so that drift predates it. CCC-59 removed the
-`types:unit` project (1 file, 1 test) together with the `@squadzr/types` workspace. The schemas suite
-measures 69 tests, not the 74 recorded by the CCC-58 recount; this ticket does not touch
+current run passes 25 files / 231 tests (measured 2026-10-22 against the test PostgreSQL on port
+5433). CCC-88 added `tests/integration/catalog-migration.test.ts` (one suite, one test) for the
+catalog migration; the remaining drift from the CCC-59 numbers predates this ticket. CCC-59 removed
+the `types:unit` project (1 file, 1 test) together with the `@squadzr/types` workspace. The schemas
+suite measures 69 tests, not the 74 recorded by the CCC-58 recount; this ticket does not touch
 `packages/schemas`, so that drift predates CCC-59 and is corrected here.
 
 ### Historical record (CCC-28, 2026-09-25)
