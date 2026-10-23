@@ -13,7 +13,7 @@ import type { GameGenre } from '@domain/entities/game.entity'
 
 // The catalog can be imported from IGDB (CCC-86): `igdbId` is the external
 // identity, `genres` and `thumbnailUrl` feed the catalog UI, `popularity`
-// orders the listing and `listed` hides rows (legacy imports start delisted)
+// orders the listing and `listed` hides rows (legacy rows start delisted)
 // while Squads that still reference them keep rendering. `featuredRank` marks
 // the hand-picked highlights.
 export const games = pgTable('games', {

@@ -145,11 +145,12 @@ specs together with their use cases, so the server unit suite has 5 fewer tests 
 change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
 16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
 current run passes 25 files / 231 tests (measured 2026-10-22 against the test PostgreSQL on port
-5433). CCC-88 added `tests/integration/catalog-migration.test.ts` (one suite, one test) for the
-catalog migration; the remaining drift from the CCC-59 numbers predates this ticket. CCC-59 removed
-the `types:unit` project (1 file, 1 test) together with the `@squadzr/types` workspace. The schemas
-suite measures 69 tests, not the 74 recorded by the CCC-58 recount; this ticket does not touch
-`packages/schemas`, so that drift predates CCC-59 and is corrected here.
+5433): the 23 files / 227 tests row plus CCC-74's `tests/integration/auth-session-cookie.test.ts`
+(+1 file / +3 tests, added after that recount) and CCC-88's
+`tests/integration/catalog-migration.test.ts` (+1 file / +1 test) for the catalog migration. CCC-59
+removed the `types:unit` project (1 file, 1 test) together with the `@squadzr/types` workspace. The
+schemas suite measures 69 tests, not the 74 recorded by the CCC-58 recount; this ticket does not
+touch `packages/schemas`, so that drift predates CCC-59 and is corrected here.
 
 ### Historical record (CCC-28, 2026-09-25)
 
