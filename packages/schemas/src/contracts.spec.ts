@@ -12,12 +12,13 @@ import {
   roomsResponseSchema,
   userNotificationSchema,
 } from './index'
-import { gameSchema } from './game'
+import { gameSchema, gameSummarySchema } from './game'
 import { isoDateTimeSchema } from './date'
 import { userSchema } from './user'
 import type { UserNotificationPayloadDto } from './notification'
 import type {
   GameDto,
+  GameSummaryDto,
   PublicRoomDto,
   RoomDto,
   RoomMemberDto,
@@ -31,12 +32,22 @@ const GAME_ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7'
 const INVITE = 'https://discord.gg/squadzr'
 const CREATED_AT = '2026-09-27T12:30:00.000Z'
 
+const gameSummary = {
+  id: GAME_ID,
+  name: 'Counter-Strike 2',
+  slug: 'cs2',
+  genres: [{ slug: 'shooter', name: 'Shooter' }],
+  coverUrl: 'https://cdn.squadzr.test/cs2.webp',
+  coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
+}
+
 const publicRoom = {
   id: ROOM_ID,
   code: 'ABC123',
   name: 'Ranked 5v5',
   hostId: 'user-1',
   gameId: GAME_ID,
+  game: gameSummary,
   maxPlayers: 5,
   tags: ['ranked'],
   language: 'en',
@@ -139,6 +150,31 @@ describe('transport dates', () => {
     expectTypeOf<UserNotificationDto['readAt']>().toEqualTypeOf<string | null>()
     expectTypeOf<UserNotificationDto['payload']>().toEqualTypeOf<UserNotificationPayloadDto>()
     expectTypeOf(userSchema.parse).returns.toEqualTypeOf<UserDto>()
+  })
+})
+
+describe('gameSummarySchema', () => {
+  it('parses the summary a Squad carries and infers its type', () => {
+    const parsed = gameSummarySchema.parse(gameSummary)
+
+    expect(parsed).toEqual(gameSummary)
+    expectTypeOf<GameSummaryDto['genres']>().toEqualTypeOf<{ slug: string; name: string }[]>()
+    expectTypeOf<GameSummaryDto['coverThumbUrl']>().toEqualTypeOf<string>()
+  })
+
+  it('rejects a summary without its genres or with an invalid cover URL', () => {
+    const { genres: _genres, ...withoutGenres } = gameSummary
+
+    expect(gameSummarySchema.safeParse(withoutGenres).success).toBe(false)
+    expect(
+      gameSummarySchema.safeParse({ ...gameSummary, coverThumbUrl: 'not a url' }).success
+    ).toBe(false)
+  })
+
+  it('requires the summary next to gameId on every Squad', () => {
+    const { game: _game, ...withoutGame } = publicRoom
+
+    expect(publicRoomSchema.safeParse(withoutGame).success).toBe(false)
   })
 })
 

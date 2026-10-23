@@ -33,24 +33,48 @@ function sampleSquads(now: Date): ShowcaseItem[] {
     createdAt: nowIso,
     updatedAt: nowIso,
   })
+  // Squad samples carry the Game summary like any Squad the API sends (CCC-92).
+  const summaryOf = (game: Game): Squad['game'] => ({
+    id: game.id,
+    name: game.name,
+    slug: game.slug,
+    genres: [],
+    coverUrl: game.coverUrl,
+    coverThumbUrl: game.coverUrl,
+  })
+
+  const lol = sampleGame(
+    'g1',
+    'League of Legends',
+    'lol',
+    'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co49wj.webp'
+  )
+  const cs2 = sampleGame(
+    'g2',
+    'Counter-Strike 2',
+    'cs2',
+    'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/coaczd.webp'
+  )
+  const dota = sampleGame(
+    'g3',
+    'Dota 2',
+    'dota2',
+    'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/cobfk4.webp'
+  )
 
   return [
     {
       floatAmount: 6,
       floatDuration: 6.5,
       floatDelay: 0,
-      game: sampleGame(
-        'g1',
-        'League of Legends',
-        'lol',
-        'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co49wj.webp'
-      ),
+      game: lol,
       squad: {
         id: 's1',
         code: 'ABC12',
         name: 'Ranked climbing - Gold+',
         hostId: 'u1',
         gameId: 'g1',
+        game: summaryOf(lol),
         maxPlayers: 5,
         discordLink: null,
         tags: ['ranked', 'chill'],
@@ -65,18 +89,14 @@ function sampleSquads(now: Date): ShowcaseItem[] {
       floatAmount: 8,
       floatDuration: 7.2,
       floatDelay: 1.0,
-      game: sampleGame(
-        'g2',
-        'Counter-Strike 2',
-        'cs2',
-        'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/coaczd.webp'
-      ),
+      game: cs2,
       squad: {
         id: 's2',
         code: 'XYZ99',
         name: 'Competitive 5v5 tryhard',
         hostId: 'u2',
         gameId: 'g2',
+        game: summaryOf(cs2),
         maxPlayers: 5,
         discordLink: null,
         tags: ['competitive'],
@@ -91,18 +111,14 @@ function sampleSquads(now: Date): ShowcaseItem[] {
       floatAmount: 5,
       floatDuration: 8.0,
       floatDelay: 2.2,
-      game: sampleGame(
-        'g3',
-        'Dota 2',
-        'dota2',
-        'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/cobfk4.webp'
-      ),
+      game: dota,
       squad: {
         id: 's3',
         code: 'QWE34',
         name: 'Fun match no stress',
         hostId: 'u3',
         gameId: 'g3',
+        game: summaryOf(dota),
         maxPlayers: 5,
         discordLink: null,
         tags: ['casual', 'fun'],
