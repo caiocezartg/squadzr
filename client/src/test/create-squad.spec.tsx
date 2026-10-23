@@ -103,25 +103,47 @@ describe('create squad — game search', () => {
 
     const input = screen.getByLabelText('Game')
     await user.click(input)
+    expect(input).toHaveAttribute('role', 'combobox')
+    expect(input).toHaveAttribute('aria-expanded', 'true')
+    const listbox = screen.getByRole('listbox', { name: 'Select a game' })
+    expect(input).toHaveAttribute('aria-controls', listbox.id)
     expect(
       await screen.findByRole('option', { name: 'League of Legends (1-5 players)' })
     ).toBeInTheDocument()
 
     await user.type(input, 'count')
 
+    // The typing is debounced: the request leaves only after the player pauses.
+    await waitFor(() =>
+      expect(
+        getHttpLog().some(
+          (request) => request.path === '/api/games' && request.query.get('search') === 'count'
+        )
+      ).toBe(true)
+    )
     expect(
-      await screen.findByRole('option', { name: 'Counter-Strike 2 (1-5 players)' })
+      await screen.findByRole(
+        'option',
+        { name: 'Counter-Strike 2 (1-5 players)' },
+        { timeout: 3000 }
+      )
     ).toBeInTheDocument()
     await waitFor(() =>
       expect(
         screen.queryByRole('option', { name: 'League of Legends (1-5 players)' })
       ).not.toBeInTheDocument()
     )
+    const counterStrike = screen.getByRole('option', {
+      name: 'Counter-Strike 2 (1-5 players)',
+    })
+    expect(input).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
+    expect(input).toHaveAttribute('aria-activedescendant', counterStrike.id)
     expect(
-      getHttpLog().some(
+      getHttpLog().filter(
         (request) => request.path === '/api/games' && request.query.get('search') === 'count'
       )
-    ).toBe(true)
+    ).toHaveLength(1)
   })
 
   it('submits the gameId of the chosen result', async () => {
@@ -130,7 +152,16 @@ describe('create squad — game search', () => {
     await openCreateModal(user)
 
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
-    await pickGame(user, 'counter', 'Counter-Strike 2 (1-5 players)')
+    const gameInput = screen.getByLabelText('Game')
+    await user.click(gameInput)
+    await user.type(gameInput, 'counter')
+    await user.click(
+      await screen.findByRole(
+        'option',
+        { name: 'Counter-Strike 2 (1-5 players)' },
+        { timeout: 3000 }
+      )
+    )
     await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
 
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
