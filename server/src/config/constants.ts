@@ -9,3 +9,10 @@ export const ROOM = {
   /** A Ready Room stays accessible to its members for 60min after `readyAt`. */
   READY_ROOM_RETENTION_MS: 60 * 60_000,
 } as const
+
+export const GAME_CATALOG_IMPORT = {
+  /** Candidates must reach this share of today's Listed Games, or the run stops. */
+  MINIMUM_RETAINED_FRACTION: 0.5,
+  /** Absolute candidate floor of every run, including the first one. */
+  MINIMUM_CANDIDATES: 10,
+} as const

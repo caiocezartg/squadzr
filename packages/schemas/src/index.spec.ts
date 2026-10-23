@@ -48,18 +48,36 @@ describe('createRoomInputSchema', () => {
 })
 
 describe('userNotificationPayloadSchema', () => {
-  it('requires a 6-character room code', () => {
-    const base = {
-      roomId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-      roomName: 'Ranked 5v5',
-      gameName: 'Counter-Strike 2',
-      players: [{ name: 'caio', image: null }],
-      discordLink: 'https://discord.gg/squadzr',
-    }
+  const base = {
+    roomId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+    roomName: 'Ranked 5v5',
+    gameName: 'Counter-Strike 2',
+    players: [{ name: 'caio', image: null }],
+    discordLink: 'https://discord.gg/squadzr',
+  }
 
+  it('requires a 6-character room code', () => {
     expect(userNotificationPayloadSchema.parse({ ...base, roomCode: 'ABC123' })).toMatchObject({
       roomCode: 'ABC123',
     })
     expect(() => userNotificationPayloadSchema.parse({ ...base, roomCode: 'AB12' })).toThrow()
+  })
+
+  it('accepts a game cover and keeps it in the payload', () => {
+    const parsed = userNotificationPayloadSchema.parse({
+      ...base,
+      roomCode: 'ABC123',
+      gameCoverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/lol.jpg',
+    })
+
+    expect(parsed.gameCoverUrl).toBe(
+      'https://images.igdb.com/igdb/image/upload/t_cover_big/lol.jpg'
+    )
+  })
+
+  it('parses a payload written before the game cover existed', () => {
+    const parsed = userNotificationPayloadSchema.parse({ ...base, roomCode: 'ABC123' })
+
+    expect(parsed.gameCoverUrl).toBeUndefined()
   })
 })

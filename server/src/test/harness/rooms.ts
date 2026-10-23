@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { count, eq } from 'drizzle-orm'
 import type { LightMyRequestResponse } from 'fastify'
 import { expect } from 'vitest'
-import { roomSchema, type GameDto, type RoomDto } from '@squadzr/schemas'
+import { roomSchema, type GameDto, type GameSummaryDto, type RoomDto } from '@squadzr/schemas'
 import { games, roomMembers, rooms } from '@infrastructure/database/schema'
 import type { TestUser } from './auth'
 import type { TestServer } from './test-server'
@@ -17,18 +17,27 @@ export interface InsertGameOptions {
   genres?: GameDto['genres']
   popularity?: number
   listed?: boolean
+  igdbId?: number | null
   minPlayers?: number
   maxPlayers?: number
 }
 
-export async function insertGame(
+export interface InsertedGame {
+  /** The catalog contract (CCC-93 grows it; CCC-92 keeps it unchanged). */
+  readonly game: GameDto
+  /** The summary a Squad carries for this Game, as the API projects it. */
+  readonly summary: GameSummaryDto
+}
+
+/**
+ * Inserts a game with its catalog columns and exposes both the HTTP catalog
+ * fixture and the Squad summary. A legacy Game is `listed: false` with no
+ * `igdbId` and no genres.
+ */
+export async function insertGameFixture(
   server: TestServer,
-  maxPlayersOrOptions: number | InsertGameOptions = 5
-): Promise<GameDto> {
-  const options =
-    typeof maxPlayersOrOptions === 'number'
-      ? { maxPlayers: maxPlayersOrOptions }
-      : maxPlayersOrOptions
+  options: InsertGameOptions = {}
+): Promise<InsertedGame> {
   const slug = options.slug ?? `game-${randomUUID().slice(0, 8)}`
   const coverUrl = options.coverUrl ?? `https://cdn.squadzr.test/${slug}.webp`
   const [game] = await server.app.db
@@ -36,6 +45,7 @@ export async function insertGame(
     .values({
       name: options.name ?? `Game ${slug}`,
       slug,
+      igdbId: options.igdbId ?? null,
       genres: options.genres ?? [],
       coverUrl,
       thumbnailUrl: options.thumbnailUrl ?? coverUrl,
@@ -48,18 +58,37 @@ export async function insertGame(
     })
     .returning()
   if (!game) throw new Error('Failed to insert game')
-  return {
+  // One summary, spread into both fixtures: `thumbnailUrl` is mapped to the
+  // contract's `coverThumbUrl` exactly once.
+  const summary: GameSummaryDto = {
     id: game.id,
     name: game.name,
     slug: game.slug,
     genres: game.genres,
     coverUrl: game.coverUrl,
     coverThumbUrl: game.thumbnailUrl,
-    minPlayers: game.minPlayers,
-    maxPlayers: game.maxPlayers,
-    createdAt: game.createdAt.toISOString(),
-    updatedAt: game.updatedAt.toISOString(),
   }
+  return {
+    game: {
+      ...summary,
+      minPlayers: game.minPlayers,
+      maxPlayers: game.maxPlayers,
+      createdAt: game.createdAt.toISOString(),
+      updatedAt: game.updatedAt.toISOString(),
+    },
+    summary,
+  }
+}
+
+export async function insertGame(
+  server: TestServer,
+  maxPlayersOrOptions: number | InsertGameOptions = 5
+): Promise<GameDto> {
+  const options =
+    typeof maxPlayersOrOptions === 'number'
+      ? { maxPlayers: maxPlayersOrOptions }
+      : maxPlayersOrOptions
+  return (await insertGameFixture(server, options)).game
 }
 
 export interface CreateRoomBody {

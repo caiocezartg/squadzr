@@ -71,4 +71,30 @@ describe('buildRoomReadyNotifications', () => {
 
     expect(notifications[0]?.payload.players).toEqual([{ name: 'Unknown', image: null }])
   })
+
+  it('carries the game cover next to the game name', () => {
+    const notifications = buildRoomReadyNotifications({
+      room,
+      members: [createMockRoomMember({ roomId: 'room-1', userId: 'host' })],
+      users: [createMockUser({ id: 'host', name: 'Host' })],
+      gameName: 'League of Legends',
+      gameCoverUrl: 'https://images.igdb.com/lol.jpg',
+    })
+
+    expect(notifications[0]?.payload).toMatchObject({
+      gameName: 'League of Legends',
+      gameCoverUrl: 'https://images.igdb.com/lol.jpg',
+    })
+  })
+
+  it('omits the cover when the room game could not be resolved', () => {
+    const notifications = buildRoomReadyNotifications({
+      room,
+      members: [createMockRoomMember({ roomId: 'room-1', userId: 'host' })],
+      users: [createMockUser({ id: 'host', name: 'Host' })],
+      gameName: 'Unknown game',
+    })
+
+    expect(notifications[0]?.payload).not.toHaveProperty('gameCoverUrl')
+  })
 })

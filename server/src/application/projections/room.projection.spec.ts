@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { publicRoomSchema, roomMemberSchema, roomSchema } from '@squadzr/schemas'
-import { createMockRoom, createMockRoomMember } from '@test/mocks'
+import { createMockGame, createMockRoom, createMockRoomMember } from '@test/mocks'
 import { toMemberRoom, toPublicRoom, toRoomMemberDto } from './room.projection'
 
 const ROOM_ID = '3fa85f64-5717-4562-b3fc-2c963f66afa6'
 const GAME_ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7'
 const INVITE = 'https://discord.gg/squadzr'
 
+const game = createMockGame({ id: GAME_ID })
+
 const readyRoom = createMockRoom({
   id: ROOM_ID,
   gameId: GAME_ID,
+  game,
   discordLink: INVITE,
   readyAt: new Date('2024-01-02T10:00:00.000Z'),
   lastActivityAt: new Date('2024-01-02T09:59:59.000Z'),
@@ -25,6 +28,14 @@ describe('toPublicRoom', () => {
       name: 'Test Room',
       hostId: 'user-uuid-1',
       gameId: GAME_ID,
+      game: {
+        id: GAME_ID,
+        name: game.name,
+        slug: game.slug,
+        genres: [{ slug: 'moba', name: 'MOBA' }],
+        coverUrl: game.coverUrl,
+        coverThumbUrl: game.thumbnailUrl,
+      },
       maxPlayers: 5,
       tags: [],
       language: 'pt-br',
@@ -49,6 +60,20 @@ describe('toPublicRoom', () => {
       memberCount: 3,
       isMember: false,
     })
+  })
+
+  it('carries the Game summary next to gameId, with thumbnailUrl as coverThumbUrl', () => {
+    const projection = toPublicRoom(readyRoom)
+
+    expect(projection.game).toEqual({
+      id: GAME_ID,
+      name: game.name,
+      slug: game.slug,
+      genres: [{ slug: 'moba', name: 'MOBA' }],
+      coverUrl: game.coverUrl,
+      coverThumbUrl: game.thumbnailUrl,
+    })
+    expect(projection.game.coverThumbUrl).not.toBe(projection.game.coverUrl)
   })
 
   it('satisfies the shared public room contract', () => {

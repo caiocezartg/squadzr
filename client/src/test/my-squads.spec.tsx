@@ -15,7 +15,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import { settleNavigation } from './navigation'
-import { boardGames, createdSquad, gameLol, guestPlayer, hostPlayer } from './fixtures'
+import {
+  boardGames,
+  createdSquad,
+  gameLol,
+  gameLolSummary,
+  guestPlayer,
+  hostPlayer,
+} from './fixtures'
 import type { MyRoomsResponse, Squad } from '@/types'
 
 /**
@@ -29,6 +36,7 @@ const readyHostedSquad: Squad = {
   name: 'Ready squad',
   hostId: 'user-1',
   gameId: gameLol.id,
+  game: gameLolSummary,
   maxPlayers: 5,
   discordLink: 'https://discord.gg/ready',
   tags: ['ranked'],

@@ -59,6 +59,7 @@ describe('POST /api/rooms', () => {
         'code',
         'createdAt',
         'discordLink',
+        'game',
         'gameId',
         'hostId',
         'id',

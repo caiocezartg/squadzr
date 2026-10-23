@@ -1,16 +1,35 @@
 import { randomInt } from 'node:crypto'
 import { and, count, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
+import type { GameSummary } from '@domain/entities/game.entity'
 import type { NewRoom, Room } from '@domain/entities/room.entity'
 import type { CreateRoomOutcome, IRoomRepository } from '@domain/repositories/room.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import type { Database } from '@infrastructure/database/drizzle'
+import { games } from '@infrastructure/database/schema/games'
 import { rooms, type RoomRow } from '@infrastructure/database/schema/rooms'
 import { roomMembers } from '@infrastructure/database/schema/room-members'
 import { ROOM } from '@config/constants'
 import { openRoomCutoff, validOpenRoomCondition } from './open-room-rules'
-import { mapRoomMemberRowToEntity, mapRoomRowToEntity } from './room-mapping'
+import {
+  mapCreatedRoomRowToEntity,
+  mapRoomMemberRowToEntity,
+  mapRoomRowToEntity,
+} from './room-mapping'
 import { lockUserRow } from './user-lock'
+
+/**
+ * The Game columns a Squad carries. Selected with the Squad itself, in the same
+ * query, so a read never pays one extra lookup per Squad.
+ */
+const gameSummaryColumns = {
+  id: games.id,
+  name: games.name,
+  slug: games.slug,
+  genres: games.genres,
+  coverUrl: games.coverUrl,
+  thumbnailUrl: games.thumbnailUrl,
+} as const
 
 function readyRoomCutoff(now: Date): Date {
   return new Date(now.getTime() - ROOM.READY_ROOM_RETENTION_MS)
@@ -47,12 +66,12 @@ function isUniqueConstraintViolation(error: unknown): boolean {
   return candidate.code === '23505' || isUniqueConstraintViolation(candidate.cause)
 }
 
-type MyRoomRow = RoomRow & { memberCount: number }
+type MyRoomRow = RoomRow & { memberCount: number; game: GameSummary }
 
 function mapMyRoomRow(r: MyRoomRow): Room {
-  const { memberCount, ...roomRow } = r
+  const { memberCount, game, ...roomRow } = r
   return {
-    ...mapRoomRowToEntity(roomRow),
+    ...mapRoomRowToEntity(roomRow, game),
     memberCount,
     isMember: true as const,
   }
@@ -65,33 +84,41 @@ export class DrizzleRoomRepository implements IRoomRepository {
   ) {}
 
   async findByCode(code: string): Promise<Room | null> {
-    const result = await this.db.select().from(rooms).where(eq(rooms.code, code)).limit(1)
+    const result = await this.db
+      .select({ room: rooms, game: gameSummaryColumns })
+      .from(rooms)
+      .innerJoin(games, eq(games.id, rooms.gameId))
+      .where(eq(rooms.code, code))
+      .limit(1)
     const row = result[0]
-    return row ? mapRoomRowToEntity(row) : null
+    return row ? mapRoomRowToEntity(row.room, row.game) : null
   }
 
   async findByIds(ids: readonly string[]): Promise<Room[]> {
     if (ids.length === 0) return []
     const result = await this.db
-      .select()
+      .select({ room: rooms, game: gameSummaryColumns })
       .from(rooms)
+      .innerJoin(games, eq(games.id, rooms.gameId))
       .where(inArray(rooms.id, [...ids]))
-    return result.map(mapRoomRowToEntity)
+    return result.map((row) => mapRoomRowToEntity(row.room, row.game))
   }
 
   async findAvailable(now: Date): Promise<Room[]> {
     const result = await this.db
       .select({
         room: rooms,
+        game: gameSummaryColumns,
         memberCount: count(roomMembers.id),
       })
       .from(rooms)
+      .innerJoin(games, eq(games.id, rooms.gameId))
       .leftJoin(roomMembers, eq(rooms.id, roomMembers.roomId))
       .where(validOpenRoomCondition(now))
-      .groupBy(rooms.id)
+      .groupBy(rooms.id, games.id)
 
     return result.map((row) => ({
-      ...mapRoomRowToEntity(row.room),
+      ...mapRoomRowToEntity(row.room, row.game),
       memberCount: row.memberCount,
     }))
   }
@@ -115,6 +142,7 @@ export class DrizzleRoomRepository implements IRoomRepository {
       createdAt: rooms.createdAt,
       updatedAt: rooms.updatedAt,
       memberCount: count(allMembersAlias.id),
+      game: gameSummaryColumns,
     }
 
     const condition = retainedRoomCondition(now)
@@ -123,9 +151,10 @@ export class DrizzleRoomRepository implements IRoomRepository {
       this.db
         .select(selectFields)
         .from(rooms)
+        .innerJoin(games, eq(games.id, rooms.gameId))
         .leftJoin(allMembersAlias, eq(allMembersAlias.roomId, rooms.id))
         .where(and(eq(rooms.hostId, userId), condition))
-        .groupBy(rooms.id)
+        .groupBy(rooms.id, games.id)
         .orderBy(desc(rooms.createdAt)),
       this.db
         .select(selectFields)
@@ -134,9 +163,10 @@ export class DrizzleRoomRepository implements IRoomRepository {
           userMembershipAlias,
           and(eq(userMembershipAlias.roomId, rooms.id), eq(userMembershipAlias.userId, userId))
         )
+        .innerJoin(games, eq(games.id, rooms.gameId))
         .leftJoin(allMembersAlias, eq(allMembersAlias.roomId, rooms.id))
         .where(and(ne(rooms.hostId, userId), condition))
-        .groupBy(rooms.id)
+        .groupBy(rooms.id, games.id)
         .orderBy(desc(rooms.createdAt)),
     ])
 
@@ -147,9 +177,13 @@ export class DrizzleRoomRepository implements IRoomRepository {
   }
 
   async findExpiredRooms(now: Date): Promise<Room[]> {
-    const result = await this.db.select().from(rooms).where(expiredRoomCondition(now))
+    const result = await this.db
+      .select({ room: rooms, game: gameSummaryColumns })
+      .from(rooms)
+      .innerJoin(games, eq(games.id, rooms.gameId))
+      .where(expiredRoomCondition(now))
 
-    return result.map(mapRoomRowToEntity)
+    return result.map((row) => mapRoomRowToEntity(row.room, row.game))
   }
 
   async create(input: NewRoom): Promise<CreateRoomOutcome> {
@@ -209,7 +243,7 @@ export class DrizzleRoomRepository implements IRoomRepository {
 
           return {
             status: 'created',
-            room: mapRoomRowToEntity(roomRow),
+            room: mapCreatedRoomRowToEntity(roomRow),
             hostMember: mapRoomMemberRowToEntity(memberRow),
           }
         })

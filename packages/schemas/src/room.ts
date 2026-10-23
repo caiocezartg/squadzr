@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { isoDateTimeSchema } from './date'
+import { gameSummarySchema } from './game'
 
 export const roomLanguageSchema = z.enum(['en', 'pt-br'])
 
@@ -13,6 +14,9 @@ export const publicRoomSchema = z.object({
   name: z.string(),
   hostId: z.string(),
   gameId: z.uuid(),
+  // The Squad's Game summary: `gameId` stays for clients that still resolve the
+  // catalog themselves.
+  game: gameSummarySchema,
   maxPlayers: z.number().int(),
   tags: z.array(z.string()).default([]),
   language: roomLanguageSchema.default('pt-br'),

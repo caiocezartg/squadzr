@@ -58,6 +58,8 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       throw new RoomCreateLimitReachedError(ROOM.CREATE_LIMIT)
     }
 
-    return { room: outcome.room, hostMember: outcome.hostMember }
+    // The Game read to validate `gameId` is the one the response and the
+    // `room_created` broadcast carry: the create path never reads it again.
+    return { room: { ...outcome.room, game }, hostMember: outcome.hostMember }
   }
 }
