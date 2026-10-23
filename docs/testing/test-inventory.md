@@ -23,24 +23,30 @@ inventory (see the equivalence proof below).
 
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
-| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 26 | 122 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 25 | 233 |
+| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 27 | 125 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 26 | 249 |
 | `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 467 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 78 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
-Suites are test files. The counts above are the current inventory, recounted on 2026-10-23 for
-CCC-95. The previous recount (2026-10-22, CCC-88) added `tests/integration/catalog-migration.test.ts`
-and recorded `server:integration` at 25 files / 231 tests. The CCC-70 recount itself added
-`src/env.spec.ts`, `src/lib/router-history.spec.ts` and `scripts/bundle-report.spec.mjs` to
-`client:unit`, corrected the server and client unit rows that had drifted since the 2026-10-09
-recount, and corrected the `server:integration` row, which had drifted since CCC-59. The CCC-28
-numbers are kept as a historical record in the equivalence proof below.
+Suites are test files. The counts above are the current inventory, recounted on 2026-10-23 on the
+merged tree after CCC-89 and CCC-95.
 
 CCC-95 adds tests to each suite it touches: the legacy notification payload contract case and the
 game-cover payload case in `schemas:unit` (+2), the builder cover/omission cases and the join
 use-case cover flow in `server:unit` (+3), the covered and uncovered menu renderings in `client:unit`
-(+2), and the cover over HTTP and the realtime channel in `server:integration` (+2).
+(+2), and the cover over HTTP and the realtime channel in `server:integration` (+2). CCC-89 removed
+the child-process `games-seed` suite with the static seed, moved `games-postgres` to the IGDB-id
+upsert, added the Catalog Import suites (fake source against an isolated PostgreSQL, plus the
+entry's exit code and pool close) and added `src/interface/catalog/curated-games.spec.ts`; that
+recount also corrected the client and schemas rows, which had drifted since CCC-70.
+
+The previous recount (2026-10-22, CCC-88) added `tests/integration/catalog-migration.test.ts` and
+recorded `server:integration` at 25 files / 231 tests. The CCC-70 recount itself added
+`src/env.spec.ts`, `src/lib/router-history.spec.ts` and `scripts/bundle-report.spec.mjs` to
+`client:unit`, corrected the server and client unit rows that had drifted since the 2026-10-09
+recount, and corrected the `server:integration` row, which had drifted since CCC-59. The CCC-28
+numbers are kept as a historical record in the equivalence proof below.
 
 `@squadzr/typescript-config` ships only shared TypeScript configuration files, so no test project is
 expected there. Every other workspace must keep at least one test file: the configs deliberately do
@@ -77,7 +83,13 @@ Integration projects follow the same naming convention:
   throwaway database and pin the migration they exercise by tag, so later migrations cannot
   silently change what they prove. `catalog-migration` (CCC-88) seeds a legacy game and a Squad
   that references it, then asserts the catalog migration delists the game, keeps the Squad and
-  applies the defaults.
+  applies the defaults. `catalog-import` (CCC-89) drives the use case with a fake Game Catalog
+  Source against an isolated PostgreSQL: first run, idempotent re-run, update with a slug change,
+  delist and relist, both safety stops and the override, mid-run rollbacks of new and existing rows,
+  concurrent runs serialized by the import lock, every squad-size rule,
+  featured ranks, legacy rows and dropped duplicates. `catalog-import-entry` runs the real entry
+  function on its own isolated database and asserts the exit code, the single structured summary
+  and that the database pool closed; it spawns no child process.
 - Client and realtime flows stay in jsdom projects under the planned capability work
   (CCC-32/CCC-33).
 
@@ -131,30 +143,34 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
   collecting tests. The script was removed instead of being restored with a new dependency;
   introducing coverage tooling is a deliberate follow-up decision, not an accidental default.
 
-## Equivalence proof (CCC-28, CCC-58, CCC-59)
+## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-95)
 
-### Current counts (recounted 2026-10-15, CCC-70)
+### Current counts (recounted 2026-10-23 on the merged tree, CCC-89 and CCC-95)
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 55 | 373 |
-| `bunx vitest run` (direct root composition) | 55 | 373 |
-| `bunx turbo test --filter=server` | 25 | 109 |
-| `bunx turbo test --filter=client` | 27 | 195 |
-| `bunx turbo test --filter=@squadzr/schemas` | 3 | 69 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 89 | 670 |
+| `bunx vitest run` (direct root composition) | 89 | 670 |
+| `bunx turbo test --filter=server` | 27 | 125 |
+| `bunx turbo test --filter=client` | 58 | 467 |
+| `bunx turbo test --filter=@squadzr/schemas` | 4 | 78 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
 numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
 specs together with their use cases, so the server unit suite has 5 fewer tests than before that
 change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
 16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
-current run passes 25 files / 231 tests (measured 2026-10-22 against the test PostgreSQL on port
-5433): the 23 files / 227 tests row plus CCC-74's `tests/integration/auth-session-cookie.test.ts`
-(+1 file / +3 tests, added after that recount) and CCC-88's
-`tests/integration/catalog-migration.test.ts` (+1 file / +1 test) for the catalog migration. CCC-59
-removed the `types:unit` project (1 file, 1 test) together with the `@squadzr/types` workspace. The
-schemas suite measures 69 tests, not the 74 recorded by the CCC-58 recount; this ticket does not
-touch `packages/schemas`, so that drift predates CCC-59 and is corrected here.
+current run passes 26 files / 249 tests (measured 2026-10-23 against the test PostgreSQL on port
+5433): the CCC-88 row of 25 files / 231 tests plus CCC-89's changes — the 2 child-process seed
+tests removed with the static seed, the Catalog Import suites (+2 files / +16 tests), two extra
+IGDB-id cases in `games-postgres` — plus CCC-95's 2 cover cases in the existing notification
+suites. The `server:unit` row had drifted to 26 files / 119 tests since CCC-70, so the CCC-89
+recount corrected it to 27 files / 122 tests with `curated-games.spec.ts` (+1 file / +3 tests), and
+CCC-95 adds 3 cover cases, so the merged tree measures 27 files / 125 tests. CCC-59 removed the
+`types:unit` project (1 file, 1 test) together with the `@squadzr/types` workspace. The schemas
+suite measures 78 tests across 4 files (CCC-89 corrected a drift to 76, CCC-95 added 2), and the
+client suite measures 58 files / 467 tests (CCC-89 corrected a drift to 465, CCC-95 added 2); both
+drifts predate CCC-89 and were corrected by its recount.
 
 ### Historical record (CCC-28, 2026-09-25)
 

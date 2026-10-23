@@ -27,8 +27,7 @@
     "db:generate": "turbo db:generate --filter=server",
     "db:migrate": "turbo db:migrate --filter=server",
     "db:push": "turbo db:push --filter=server",
-    "db:studio": "turbo db:studio --filter=server",
-    "db:seed": "turbo db:seed --filter=server"
+    "db:studio": "turbo db:studio --filter=server"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.0.0",
