@@ -23,20 +23,24 @@ inventory (see the equivalence proof below).
 
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
-| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 25 | 109 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 25 | 231 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 27 | 195 |
-| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 3 | 69 |
+| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 26 | 122 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 25 | 233 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 467 |
+| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 78 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
-Suites are test files. The counts above are the current inventory, recounted on 2026-10-22 for
-CCC-88. That ticket adds `tests/integration/catalog-migration.test.ts` and recounts
-`server:integration` at 25 files / 231 tests; the other rows keep the 2026-10-15 (CCC-70) numbers.
-The CCC-70 recount itself added `src/env.spec.ts`, `src/lib/router-history.spec.ts` and
-`scripts/bundle-report.spec.mjs` to `client:unit`, corrected the server and client unit rows that
-had drifted since the 2026-10-09 recount, and corrected the `server:integration` row, which had
-drifted since CCC-59. The CCC-28 numbers are kept as a historical record in the equivalence proof
-below.
+Suites are test files. The counts above are the current inventory, recounted on 2026-10-23 for
+CCC-95. The previous recount (2026-10-22, CCC-88) added `tests/integration/catalog-migration.test.ts`
+and recorded `server:integration` at 25 files / 231 tests. The CCC-70 recount itself added
+`src/env.spec.ts`, `src/lib/router-history.spec.ts` and `scripts/bundle-report.spec.mjs` to
+`client:unit`, corrected the server and client unit rows that had drifted since the 2026-10-09
+recount, and corrected the `server:integration` row, which had drifted since CCC-59. The CCC-28
+numbers are kept as a historical record in the equivalence proof below.
+
+CCC-95 adds tests to each suite it touches: the legacy notification payload contract case and the
+game-cover payload case in `schemas:unit` (+2), the builder cover/omission cases and the join
+use-case cover flow in `server:unit` (+3), the covered and uncovered menu renderings in `client:unit`
+(+2), and the cover over HTTP and the realtime channel in `server:integration` (+2).
 
 `@squadzr/typescript-config` ships only shared TypeScript configuration files, so no test project is
 expected there. Every other workspace must keep at least one test file: the configs deliberately do

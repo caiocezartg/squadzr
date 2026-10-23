@@ -250,6 +250,48 @@ describe('JoinRoomUseCase', () => {
       )
     })
 
+    it('should carry the game cover into the ready notification payload', async () => {
+      const room = openRoom({ maxPlayers: 2 })
+      mockRoomRepository.findByCode.mockResolvedValue(room)
+      mockRoomMemberRepository.findByRoomAndUser.mockResolvedValue(null)
+      mockGameRepository.findById.mockResolvedValue(
+        createMockGame({
+          name: 'League',
+          coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/lol.jpg',
+        })
+      )
+
+      mockRoomMemberRepository.joinOpenRoom.mockImplementation(async (input) => {
+        const members = [
+          createMockRoomMember({ roomId: input.roomId, userId: 'host' }),
+          createMockRoomMember({ roomId: input.roomId, userId: input.userId }),
+        ]
+        const users = [
+          createMockUser({ id: 'host', name: 'Host' }),
+          createMockUser({ id: input.userId, name: 'Joiner' }),
+        ]
+        const notifications = input.buildReadyNotifications?.(members, users) ?? []
+        return {
+          status: 'joined',
+          member: members[1]!,
+          memberCount: 2,
+          becameReady: true,
+          notifications: notifications.map((notification, index) => ({
+            ...notification,
+            id: `notification-${index}`,
+            readAt: null,
+            createdAt: FIXED_NOW,
+          })),
+        }
+      })
+
+      const result = await useCase.execute({ code: 'ABC123', userId: 'user-2' })
+
+      expect(result.createdNotifications[0]?.payload.gameCoverUrl).toBe(
+        'https://images.igdb.com/igdb/image/upload/t_cover_big/lol.jpg'
+      )
+    })
+
     it('should resolve the notification players from the members that committed inside the join', async () => {
       const room = openRoom({ maxPlayers: 3 })
       mockRoomRepository.findByCode.mockResolvedValue(room)

@@ -26,6 +26,9 @@ export function notificationInputToRow(input: CreateUserNotificationInput): NewU
       roomCode: input.payload.roomCode,
       roomName: input.payload.roomName,
       gameName: input.payload.gameName,
+      ...(input.payload.gameCoverUrl === undefined
+        ? {}
+        : { gameCoverUrl: input.payload.gameCoverUrl }),
       players: input.payload.players.map((player) => ({
         name: player.name,
         image: player.image,
