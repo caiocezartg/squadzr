@@ -28,6 +28,7 @@ async function insertGame(server: TestServer, slug: string): Promise<void> {
     name: slug,
     slug,
     coverUrl: `https://example.com/${slug}.webp`,
+    thumbnailUrl: `https://example.com/${slug}.webp`,
     minPlayers: 2,
     maxPlayers: 5,
   })
@@ -96,7 +97,7 @@ describe('PostgreSQL 16 harness', () => {
     const [gameCount] = await server.app.db.select({ total: count() }).from(games)
 
     expect(Math.floor(Number(version.rows[0]?.server_version_num) / 10_000)).toBe(16)
-    expect(Number(migrations.rows[0]?.total)).toBe(4)
+    expect(Number(migrations.rows[0]?.total)).toBe(5)
     expect(gameCount?.total).toBe(0)
   })
 

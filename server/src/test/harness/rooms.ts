@@ -17,14 +17,24 @@ export async function insertGame(server: TestServer, maxPlayers = 5): Promise<Ga
       name: `Game ${slug}`,
       slug,
       coverUrl: `https://cdn.squadzr.test/${slug}.webp`,
+      thumbnailUrl: `https://cdn.squadzr.test/${slug}.webp`,
+      // Catalog fixtures are listed by default; every flow that creates a
+      // Squad needs a listed game to point at.
+      listed: true,
       minPlayers: 2,
       maxPlayers,
     })
     .returning()
   if (!game) throw new Error('Failed to insert game')
-  // The row carries Date columns; the transport contract models them as ISO strings.
+  // The row carries the catalog columns (CCC-88), but the transport contract is
+  // unchanged until CCC-93, so the fixture exposes only the DTO fields.
   return {
-    ...game,
+    id: game.id,
+    name: game.name,
+    slug: game.slug,
+    coverUrl: game.coverUrl,
+    minPlayers: game.minPlayers,
+    maxPlayers: game.maxPlayers,
     createdAt: game.createdAt.toISOString(),
     updatedAt: game.updatedAt.toISOString(),
   }

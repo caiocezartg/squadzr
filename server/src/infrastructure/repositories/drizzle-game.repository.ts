@@ -10,7 +10,13 @@ function mapRowToEntity(row: GameRow): Game {
     id: row.id,
     name: row.name,
     slug: row.slug,
+    igdbId: row.igdbId,
+    genres: row.genres,
     coverUrl: row.coverUrl,
+    thumbnailUrl: row.thumbnailUrl,
+    popularity: row.popularity,
+    listed: row.listed,
+    featuredRank: row.featuredRank,
     minPlayers: row.minPlayers,
     maxPlayers: row.maxPlayers,
     createdAt: row.createdAt,
@@ -42,6 +48,9 @@ export class DrizzleGameRepository implements IGameRepository {
         name: input.name,
         slug: input.slug,
         coverUrl: input.coverUrl,
+        // Local seeds and upserts have no separate thumbnail art yet: the cover
+        // is the thumbnail until the IGDB import supplies a better crop.
+        thumbnailUrl: input.coverUrl,
         minPlayers: input.minPlayers,
         maxPlayers: input.maxPlayers,
       })
@@ -50,6 +59,7 @@ export class DrizzleGameRepository implements IGameRepository {
         set: {
           name: input.name,
           coverUrl: input.coverUrl,
+          thumbnailUrl: input.coverUrl,
           minPlayers: input.minPlayers,
           maxPlayers: input.maxPlayers,
           updatedAt: this.clock.now(),
