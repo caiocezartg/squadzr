@@ -1,5 +1,6 @@
 import type {
   GameCatalogCandidate,
+  GameCatalogFetchResult,
   IGameCatalogSource,
 } from '@domain/services/game-catalog-source.interface'
 
@@ -23,6 +24,7 @@ export function createCandidate(
 /** In-memory Game Catalog Source for the Catalog Import integration suite. */
 export class FakeGameCatalogSource implements IGameCatalogSource {
   candidates: GameCatalogCandidate[] = []
+  invalid = 0
   failure: Error | null = null
   calls = 0
 
@@ -31,14 +33,20 @@ export class FakeGameCatalogSource implements IGameCatalogSource {
     return this
   }
 
+  /** Entries the source discarded before returning, as IGDB does with incomplete games. */
+  withInvalid(count: number): this {
+    this.invalid = count
+    return this
+  }
+
   failWith(error: Error): this {
     this.failure = error
     return this
   }
 
-  async fetchCandidates(): Promise<GameCatalogCandidate[]> {
+  async fetchCandidates(): Promise<GameCatalogFetchResult> {
     this.calls += 1
     if (this.failure) throw this.failure
-    return [...this.candidates]
+    return { candidates: [...this.candidates], invalid: this.invalid }
   }
 }

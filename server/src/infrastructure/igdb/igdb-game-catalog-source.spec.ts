@@ -99,7 +99,7 @@ describe('IgdbGameCatalogSource', () => {
       request.url === TOKEN_URL ? tokenResponse() : Response.json([game()])
     )
 
-    const candidates = await harness.source.fetchCandidates()
+    const result = await harness.source.fetchCandidates()
 
     expect(tokenRequests(harness.requests)).toHaveLength(1)
     const token = tokenRequests(harness.requests)[0]!
@@ -114,7 +114,7 @@ describe('IgdbGameCatalogSource', () => {
     expect(new Headers(page.init.headers).get('Client-ID')).toBe('test-client-id')
     expect(new Headers(page.init.headers).get('Authorization')).toBe('Bearer app-access-token')
 
-    expect(candidates).toEqual([
+    expect(result.candidates).toEqual([
       {
         igdbId: 2000,
         name: 'Game 2000',
@@ -126,7 +126,7 @@ describe('IgdbGameCatalogSource', () => {
         popularity: 120,
       },
     ])
-    expect(harness.source.dropped).toBe(0)
+    expect(result.invalid).toBe(0)
   })
 
   it('pages in batches of 500 until a short page, with one token for the whole run', async () => {
@@ -140,7 +140,7 @@ describe('IgdbGameCatalogSource', () => {
         : Response.json([game({ id: 9999, name: 'Last Game', slug: 'last-game' })])
     })
 
-    const candidates = await harness.source.fetchCandidates()
+    const { candidates } = await harness.source.fetchCandidates()
 
     const pages = gamesRequests(harness.requests)
     expect(pages).toHaveLength(2)
@@ -179,7 +179,7 @@ describe('IgdbGameCatalogSource', () => {
       return Response.json([game()])
     })
 
-    const candidates = await harness.source.fetchCandidates()
+    const { candidates } = await harness.source.fetchCandidates()
 
     expect(attempts).toBe(3)
     expect(candidates).toHaveLength(1)
@@ -229,7 +229,7 @@ describe('IgdbGameCatalogSource', () => {
       { threshold: 42, curatedIgdbIds: [1036, 235_288] }
     )
 
-    const candidates = await harness.source.fetchCandidates()
+    const { candidates } = await harness.source.fetchCandidates()
 
     const [filtered, curated] = gamesRequests(harness.requests)
     expect(bodyOf(filtered!)).toContain('game_modes = (2,3,5,6)')
@@ -248,23 +248,15 @@ describe('IgdbGameCatalogSource', () => {
     expect(candidates.map((candidate) => candidate.igdbId)).toEqual([1036])
   })
 
-  it('maps a recorded page and drops the candidates missing their name, slug or cover', async () => {
-    const page = [
-      ...recordedPage,
-      // IGDB can omit genres; the candidate survives with an empty list.
-      { id: 9101, name: 'No Genres Game', slug: 'no-genres-game', cover: { image_id: 'co1test' } },
-      { id: 9102, name: 'No Cover Game', slug: 'no-cover-game', cover: null },
-      { id: 9103, name: 'No Slug Game', slug: null, cover: { image_id: 'co2test' } },
-      { id: 9104, name: null, slug: 'no-name-game', cover: { image_id: 'co3test' } },
-    ]
+  it('maps a recorded page and counts the candidates missing their name, slug or cover', async () => {
     const harness = createHarness((request) =>
-      request.url === TOKEN_URL ? tokenResponse() : Response.json(page)
+      request.url === TOKEN_URL ? tokenResponse() : Response.json(recordedPage)
     )
 
-    const candidates = await harness.source.fetchCandidates()
+    const result = await harness.source.fetchCandidates()
 
-    expect(candidates).toHaveLength(6)
-    expect(candidates[0]).toEqual({
+    expect(result.candidates).toHaveLength(6)
+    expect(result.candidates[0]).toEqual({
       igdbId: 5,
       name: "Baldur's Gate",
       slug: 'baldur-s-gate',
@@ -275,18 +267,19 @@ describe('IgdbGameCatalogSource', () => {
       popularity: 355,
     })
     // The recorded page has online co-op but no online maximum.
-    expect(candidates[1]).toMatchObject({
+    expect(result.candidates[1]).toMatchObject({
       igdbId: 6,
       multiplayer: { onlineCoopMax: 6, onlineMax: null },
     })
-    // The extra candidate has no genres and no multiplayer modes.
-    expect(candidates[5]).toMatchObject({
-      igdbId: 9101,
+    // The recorded page's no-genres record survives with an empty list and
+    // unknown multiplayer capacity; only name, slug or cover are required.
+    expect(result.candidates[5]).toMatchObject({
+      igdbId: 134710,
       genres: [],
       multiplayer: { onlineCoopMax: null, onlineMax: null },
-      popularity: 0,
+      popularity: 72,
     })
-    expect(harness.source.dropped).toBe(3)
+    expect(result.invalid).toBe(3)
   })
 
   it('fails when the token response is malformed', async () => {

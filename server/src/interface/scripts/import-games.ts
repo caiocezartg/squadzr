@@ -4,10 +4,10 @@ import { createIgdbGameCatalogSource } from '@interface/factories/catalog-import
 import { SystemClock } from '@infrastructure/services/system-clock'
 
 /**
- * `db:import-games`: one local Catalog Import against the database URL of the
- * environment. Bun loads the `.env` files (root for the database, server-local
- * for the Twitch credentials); the process itself never reads a file, so the
- * hosted job only needs injected variables.
+ * `db:import-games`: one local Catalog Import against the database URL and the
+ * Twitch credentials of the repository root `.env`, which the Bun command
+ * loads. The process itself never reads a file, so the hosted job runs this
+ * script with `--no-env-file` and injected variables.
  */
 async function main(): Promise<void> {
   const env = loadCatalogImportEnv()
@@ -20,17 +20,11 @@ async function main(): Promise<void> {
     new SystemClock()
   )
 
-  const exitCode = await runCatalogImport({
+  process.exitCode = await runCatalogImport({
     databaseUrl: env.DATABASE_URL,
     source,
     overrideFractionCheck: env.CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK,
   })
-
-  if (source.dropped > 0) {
-    console.warn(JSON.stringify({ event: 'igdb_candidates_dropped', dropped: source.dropped }))
-  }
-
-  process.exitCode = exitCode
 }
 
 main().catch((error) => {

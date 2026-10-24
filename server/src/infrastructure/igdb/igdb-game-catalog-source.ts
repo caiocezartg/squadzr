@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Clock } from '@domain/services/clock.interface'
 import type {
   GameCatalogCandidate,
+  GameCatalogFetchResult,
   GameMultiplayerCapacity,
   IGameCatalogSource,
 } from '@domain/services/game-catalog-source.interface'
@@ -90,20 +91,15 @@ function imageUrl(imageId: string, size: 'cover_big_2x' | 'cover_small_2x'): str
 export class IgdbGameCatalogSource implements IGameCatalogSource {
   private readonly fetchImpl: typeof globalThis.fetch
   private readonly pacer: RequestPacer
-  private droppedCandidates = 0
+  private invalidCandidates = 0
 
   constructor(private readonly options: IgdbGameCatalogSourceOptions) {
     this.fetchImpl = options.fetch ?? globalThis.fetch
     this.pacer = new RequestPacer(options.clock, options.sleep)
   }
 
-  /** Candidates dropped because they missed their name, slug or cover. */
-  get dropped(): number {
-    return this.droppedCandidates
-  }
-
-  async fetchCandidates(): Promise<GameCatalogCandidate[]> {
-    this.droppedCandidates = 0
+  async fetchCandidates(): Promise<GameCatalogFetchResult> {
+    this.invalidCandidates = 0
     const accessToken = await this.requestAccessToken()
     const filtered = await this.fetchFilteredGames(accessToken)
     const curated = await this.fetchCuratedGames(accessToken)
@@ -116,7 +112,7 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
       }
     }
 
-    return [...byIgdbId.values()]
+    return { candidates: [...byIgdbId.values()], invalid: this.invalidCandidates }
   }
 
   /** One client-credentials token per run; it lives in this call only. */
@@ -209,7 +205,7 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
     const imageId = game.cover?.image_id?.trim()
 
     if (!name || !slug || !imageId) {
-      this.droppedCandidates += 1
+      this.invalidCandidates += 1
       return null
     }
 

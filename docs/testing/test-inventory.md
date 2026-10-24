@@ -24,7 +24,7 @@ inventory (see the equivalence proof below).
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
 | `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 29 | 148 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 27 | 269 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 27 | 270 |
 | `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 479 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 84 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
@@ -34,7 +34,8 @@ merged tree after CCC-89, CCC-90, CCC-92, CCC-93 and CCC-95. CCC-90 adds the IGD
 (`igdb-game-catalog-source.spec.ts`, +1 file / +10 tests, with a recorded IGDB page as fixture) and
 the import environment suite (`catalog-import-env.spec.ts`, +1 file / +9 tests), plus one curated-id
 case in `curated-games.spec.ts` (+1). It adds no integration suite: the adapter runs with a stubbed
-`fetch` and needs no database or IGDB credentials, so `server:integration` stays at 27 files / 269
+`fetch` and needs no database or IGDB credentials. It does add one invalid-summary case to
+`tests/integration/catalog-import.test.ts` (+1 test), so `server:integration` measures 27 files / 270
 tests.
 
 CCC-93 extends `tests/integration/games-http.test.ts` with the game search and the delisted
@@ -179,12 +180,13 @@ numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-
 specs together with their use cases, so the server unit suite has 5 fewer tests than before that
 change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
 16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
-current run passes 27 files / 269 tests (measured 2026-10-23 against the test PostgreSQL on port
+current run passes 27 files / 270 tests (measured 2026-10-23 against the test PostgreSQL on port
 5433): the CCC-88 row of 25 files / 231 tests plus CCC-89's changes — the 2 child-process seed
 tests removed with the static seed, the Catalog Import suites (+2 files / +16 tests), two extra
 IGDB-id cases in `games-postgres` — plus CCC-93's cases in the existing games and rooms HTTP suites
-(search, delisted-game and Squad-size) and CCC-95's 2 cover cases in the existing notification
-suites and CCC-92's `squad-game-summary` suite (+1 file / +4 tests). The `server:unit` row had
+(search, delisted-game and Squad-size), CCC-95's 2 cover cases in the existing notification
+suites, CCC-92's `squad-game-summary` suite (+1 file / +4 tests) and CCC-90's invalid-summary case
+in `catalog-import.test.ts` (+1 test). The `server:unit` row had
 drifted to 26 files / 119 tests since CCC-70, so the CCC-89 recount corrected it to 27 files / 122
 tests with `curated-games.spec.ts` (+1 file / +3 tests); CCC-93 adds its create-room delisted-game
 cases, CCC-95 adds 3 cover cases and CCC-92 adds one projection case and one create-path case, and
