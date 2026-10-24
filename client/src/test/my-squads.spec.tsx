@@ -18,6 +18,8 @@ import { settleNavigation } from './navigation'
 import {
   boardGames,
   createdSquad,
+  gameCs2,
+  gameCs2Summary,
   gameLol,
   gameLolSummary,
   guestPlayer,
@@ -53,6 +55,8 @@ const readyJoinedSquad: Squad = {
   code: 'READY2',
   name: 'Joined ready squad',
   hostId: 'user-9',
+  gameId: gameCs2.id,
+  game: gameCs2Summary,
 }
 
 function mySquads(hosted: Squad[], joined: Squad[]): MyRoomsResponse {
@@ -69,7 +73,6 @@ beforeEach(() => {
   onHttp('GET', '/api/rooms/:code', () =>
     httpOk({ room: readyHostedSquad, players: [hostPlayer, guestPlayer] })
   )
-  onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
 })
 
 describe('my squads — filters through the URL', () => {
@@ -90,6 +93,17 @@ describe('my squads — filters through the URL', () => {
     await user.click(screen.getByText('Joined (1)'))
     expect(await screen.findByText('Joined ready squad')).toBeInTheDocument()
   })
+
+  it('filters both lists by the game name their own summaries carry', async () => {
+    onHttp('GET', '/api/rooms/my', () => httpOk(mySquads([readyHostedSquad], [readyJoinedSquad])))
+    const { user } = renderSquadsFlow('/squads/my')
+    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText('Search by game or squad name...'), 'Counter')
+
+    await waitFor(() => expect(screen.queryByText('Ready squad')).not.toBeInTheDocument())
+    expect(screen.getByText('Joined ready squad')).toBeInTheDocument()
+  })
 })
 
 describe('my squads — refresh behavior', () => {
@@ -98,7 +112,6 @@ describe('my squads — refresh behavior', () => {
     const queryClient = createTestQueryClient()
     // What the server dehydrated for the cached visit: the new Squad is not in it yet.
     queryClient.setQueryData(['my-squads'], mySquads([], []))
-    queryClient.setQueryData(['games'], boardGames)
 
     renderSquadsFlow('/squads/my', { queryClient })
 

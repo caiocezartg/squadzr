@@ -1,15 +1,14 @@
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiClientError } from '@/lib/api-contract'
-import { gameLol, lobbySquadResponse, lobbySquad } from '@/test/fixtures'
-import type { DetailsSource } from './squad-details'
+import { lobbySquad, lobbySquadResponse } from '@/test/fixtures'
+import type { SquadSource } from './squad-details'
 import { discardFailedSquadRead, readSquadDetails, squadQueryKey } from './squad-details'
 
-/** A source whose reads the test answers by hand. */
-function fakeSource(overrides: Partial<DetailsSource> = {}): DetailsSource {
+/** A source whose Squad read the test answers by hand. */
+function fakeSource(overrides: Partial<SquadSource> = {}): SquadSource {
   return {
     readSquad: vi.fn(async () => lobbySquadResponse),
-    readGame: vi.fn(async () => gameLol),
     ...overrides,
   }
 }
@@ -19,15 +18,14 @@ afterEach(() => {
 })
 
 describe('readSquadDetails', () => {
-  it("returns the Squad's response with its game", async () => {
+  it("returns the Squad's response, with the game summary it carries", async () => {
     const source = fakeSource()
 
-    await expect(readSquadDetails(source, lobbySquad.code)).resolves.toEqual({
-      response: lobbySquadResponse,
-      game: gameLol,
-    })
+    const response = await readSquadDetails(source, lobbySquad.code)
+
+    expect(response).toEqual(lobbySquadResponse)
+    expect(response?.room.game).toEqual(lobbySquad.game)
     expect(source.readSquad).toHaveBeenCalledWith(lobbySquad.code)
-    expect(source.readGame).toHaveBeenCalledWith(lobbySquad.gameId)
   })
 
   it('reads the code uppercased, as the contract carries it', async () => {
@@ -53,7 +51,6 @@ describe('readSquadDetails', () => {
     })
 
     await expect(readSquadDetails(source, lobbySquad.code)).resolves.toBeNull()
-    expect(source.readGame).not.toHaveBeenCalled()
   })
 
   it('throws any other failure of the Squad read', async () => {
@@ -65,21 +62,6 @@ describe('readSquadDetails', () => {
     })
 
     await expect(readSquadDetails(source, lobbySquad.code)).rejects.toBe(failure)
-  })
-
-  it('leaves the game out when the game read fails, and logs the failure', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    const source = fakeSource({
-      readGame: vi.fn(async () => {
-        throw new ApiClientError('Game not found', 404, 'GAME_NOT_FOUND')
-      }),
-    })
-
-    await expect(readSquadDetails(source, lobbySquad.code)).resolves.toEqual({
-      response: lobbySquadResponse,
-      game: null,
-    })
-    expect(consoleError).toHaveBeenCalled()
   })
 })
 
@@ -100,16 +82,10 @@ describe('discardFailedSquadRead', () => {
 
   it('keeps a Squad that holds data, even when a later read failed', () => {
     const queryClient = new QueryClient()
-    queryClient.setQueryData(squadQueryKey(lobbySquad.code), {
-      response: lobbySquadResponse,
-      game: gameLol,
-    })
+    queryClient.setQueryData(squadQueryKey(lobbySquad.code), lobbySquadResponse)
 
     discardFailedSquadRead(queryClient, lobbySquad.code)
 
-    expect(queryClient.getQueryData(squadQueryKey(lobbySquad.code))).toEqual({
-      response: lobbySquadResponse,
-      game: gameLol,
-    })
+    expect(queryClient.getQueryData(squadQueryKey(lobbySquad.code))).toEqual(lobbySquadResponse)
   })
 })

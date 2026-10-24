@@ -2,7 +2,6 @@ import 'server-only'
 import type { Metadata } from 'next'
 import type { PublicRoomDto } from '@squadzr/schemas'
 import messages from '@/locales/en.json'
-import type { Game } from '@/types'
 import { publicSquadSource } from './server-squad-source'
 import { readSquadDetails } from './squad-details'
 
@@ -17,16 +16,17 @@ const GENERIC_METADATA: Metadata = { title: { absolute: 'Squadzr' } }
 export async function lobbyMetadata(squadCode: string): Promise<Metadata> {
   try {
     const details = await readSquadDetails(publicSquadSource, squadCode)
-    if (!details?.game) return GENERIC_METADATA
+    if (!details) return GENERIC_METADATA
 
-    return invitePreview(details.response.room, details.game)
+    return invitePreview(details.room)
   } catch (error) {
     console.error('Lobby metadata read failed; the link gets the generic metadata:', error)
     return GENERIC_METADATA
   }
 }
 
-function invitePreview(squad: PublicRoomDto, game: Game): Metadata {
+function invitePreview(squad: PublicRoomDto): Metadata {
+  const game = squad.game
   const title = `${squad.name} · ${game.name}`
   const description = describeSquad(squad)
   const images = [game.coverUrl]

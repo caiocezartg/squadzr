@@ -179,7 +179,6 @@ describe('capability boundaries', () => {
     expect(features).toEqual(
       expect.arrayContaining([
         'squad-board',
-        'games',
         'lobby',
         'my-squads',
         'squad-creation',
@@ -187,6 +186,8 @@ describe('capability boundaries', () => {
         'squad-list',
       ])
     )
+    // CCC-94 removed the games capability: every Squad carries its own game summary.
+    expect(features).not.toContain('games')
   })
 
   it('has no import cycles between capability modules', () => {

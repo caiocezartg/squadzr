@@ -8,10 +8,11 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import LobbyRoute from '@/app/squads/[code]/page'
 import {
-  gameLol,
+  gameCs2,
+  gameCs2Summary,
   guestPlayer,
   lobbySquadResponse,
   lobbySquad,
@@ -52,10 +53,6 @@ function deferred<T>() {
 const { discordLink: _discordLink, ...publicLobbySquad } = lobbySquad
 
 const notFoundBody = { error: 'ROOM_NOT_FOUND', message: 'Room not found' }
-
-beforeEach(() => {
-  onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
-})
 
 /**
  * Renders the page as Next does: the server component's output, awaited as the server awaits it, inside the
@@ -128,6 +125,38 @@ describe('the Lobby on the App Router', () => {
     expect(screen.getAllByText('Waiting for player...')).toHaveLength(1)
   })
 
+  it('renders its game from the Squad before and after a snapshot replaces it', async () => {
+    signInAsFakeUser()
+    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
+
+    await renderLobbyRoute(lobbySquad.code)
+
+    // The HTTP read carries League of Legends; the snapshot below carries Counter-Strike 2.
+    expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
+    expect(screen.getByText(lobbySquad.game.name)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: lobbySquad.game.name })).toHaveAttribute(
+      'src',
+      lobbySquad.game.coverUrl
+    )
+    expect(screen.queryByText(gameCs2Summary.name)).not.toBeInTheDocument()
+
+    openLatestWebSocket()
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        room: { ...lobbySquad, gameId: gameCs2.id, game: gameCs2Summary },
+      }),
+    })
+
+    expect(await screen.findByText('2/3 players')).toBeInTheDocument()
+    expect(screen.getByText(gameCs2Summary.name)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: gameCs2Summary.name })).toHaveAttribute(
+      'src',
+      gameCs2Summary.coverUrl
+    )
+    expect(screen.queryByText(lobbySquad.game.name)).not.toBeInTheDocument()
+  })
+
   it('locks the leave button and reveals the invite once the snapshot of a Ready Squad arrives', async () => {
     signInAsFakeUser()
     onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
@@ -196,11 +225,9 @@ describe('the Lobby on the App Router', () => {
     signInAsFakeUser()
     const queryClient = createTestQueryClient()
     // The cache is older than the read, so the read is still running when the page renders.
-    queryClient.setQueryData(
-      squadQueryKey(lobbySquad.code),
-      { response: lobbySquadResponse, game: gameLol },
-      { updatedAt: Date.now() - 120_000 }
-    )
+    queryClient.setQueryData(squadQueryKey(lobbySquad.code), lobbySquadResponse, {
+      updatedAt: Date.now() - 120_000,
+    })
     onHttp('GET', '/api/rooms/:code', () => deferred<MockHttpResponse>().promise)
 
     await renderLobbyRoute(lobbySquad.code, queryClient)

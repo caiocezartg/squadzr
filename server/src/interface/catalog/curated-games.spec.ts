@@ -23,4 +23,16 @@ describe('CURATED_GAMES', () => {
     expect(ranks.length).toBeGreaterThan(0)
     expect(new Set(ranks).size).toBe(ranks.length)
   })
+
+  it('keeps the verified ids of the ambiguous games', () => {
+    expect(CURATED_GAMES.find((game) => game.name === 'Overwatch')).toMatchObject({
+      igdbId: 125174,
+    })
+    expect(CURATED_GAMES.find((game) => game.name === 'GTA Online')).toMatchObject({
+      igdbId: 134710,
+    })
+    expect(CURATED_GAMES.find((game) => game.name === 'EA Sports FC')).toMatchObject({
+      igdbId: 353848,
+    })
+  })
 })

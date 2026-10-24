@@ -508,6 +508,26 @@ describe('CatalogImportUseCase', () => {
     expect(await catalog()).toHaveLength(2)
   })
 
+  it('reports the candidates its source discarded as invalid, next to duplicate drops', async () => {
+    source
+      .withCandidates([
+        createCandidate({ igdbId: 6101 }),
+        createCandidate({ igdbId: 6101, name: 'Duplicate' }),
+        createCandidate({ igdbId: 6102 }),
+      ])
+      .withInvalid(2)
+
+    const summary = await buildUseCase().execute()
+
+    expect(summary).toMatchObject({
+      received: 3,
+      dropped: 1,
+      invalid: 2,
+      created: 2,
+    })
+    expect(await catalog()).toHaveLength(2)
+  })
+
   it('wires the curated list and the safety limits through the factory', async () => {
     source.withCandidates(
       CURATED_GAMES.map((game) =>

@@ -1,4 +1,4 @@
-import type { Game, PublicSquad } from '@/types'
+import type { PublicSquad } from '@/types'
 import type { ResolvedSquadsSearch } from './squads-search'
 
 const SQUAD_PAGE_SIZE = 6
@@ -22,14 +22,9 @@ export interface SquadListResult {
   pageRange: number[]
 }
 
-type Games = ReadonlyMap<string, Game>
-
-function matchesSearch(squad: PublicSquad, games: Games, search: string): boolean {
+function matchesSearch(squad: PublicSquad, search: string): boolean {
   const term = search.toLowerCase()
-  return (
-    !!games.get(squad.gameId)?.name.toLowerCase().includes(term) ||
-    squad.name.toLowerCase().includes(term)
-  )
+  return squad.game.name.toLowerCase().includes(term) || squad.name.toLowerCase().includes(term)
 }
 
 function matchesStatus(squad: PublicSquad, filter: SquadListQuery['filter']): boolean {
@@ -44,10 +39,10 @@ function matchesTag(squad: PublicSquad, tag: string): boolean {
   return squad.tags.some((squadTag) => squadTag.toLowerCase().includes(term))
 }
 
-function filterSquads(squads: readonly PublicSquad[], games: Games, query: SquadListQuery) {
+function filterSquads(squads: readonly PublicSquad[], query: SquadListQuery) {
   return squads.filter(
     (squad) =>
-      (!query.search.trim() || matchesSearch(squad, games, query.search)) &&
+      (!query.search.trim() || matchesSearch(squad, query.search)) &&
       matchesStatus(squad, query.filter) &&
       (query.language === 'all' || squad.language === query.language) &&
       (!query.tag.trim() || matchesTag(squad, query.tag))
@@ -73,19 +68,18 @@ function listPages(currentPage: number, totalPages: number): number[] {
 }
 
 /**
- * The Squad list: filters the squads by search term, status, language and tag,
- * sorts them by creation date (newest first unless asked otherwise) and cuts
- * the page the query asks for. Pure on purpose: the same inputs give the same
- * list on the server render and in the browser, and `squads` is never mutated.
- * A page past the last one resolves to the last.
+ * The Squad list: filters the squads by search term (the Squad's name or its own game's name),
+ * status, language and tag, sorts them by creation date (newest first unless asked otherwise) and
+ * cuts the page the query asks for. Pure on purpose: the same inputs give the same list on the
+ * server render and in the browser, and `squads` is never mutated. A page past the last one resolves
+ * to the last.
  */
 export function querySquadList(
   squads: readonly PublicSquad[],
-  games: Games,
   query: SquadListQuery,
   pageSize = SQUAD_PAGE_SIZE
 ): SquadListResult {
-  const matching = sortSquads(filterSquads(squads, games, query), query.sort)
+  const matching = sortSquads(filterSquads(squads, query), query.sort)
   const totalPages = Math.max(1, Math.ceil(matching.length / pageSize))
   const currentPage = Math.min(query.page, totalPages)
   const start = (currentPage - 1) * pageSize
