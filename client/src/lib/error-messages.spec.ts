@@ -56,6 +56,20 @@ describe('GAME_NOT_FOUND', () => {
   })
 })
 
+describe('INVALID_GAME', () => {
+  it('asks for another game in English', () => {
+    expect(getUserFriendlyError(apiError('INVALID_GAME'), t)).toBe(
+      'This game is no longer available. Please choose another game.'
+    )
+  })
+
+  it('asks for another game in Portuguese', () => {
+    expect(getUserFriendlyError(apiError('INVALID_GAME'), tPtBR)).toBe(
+      'Este jogo não está mais disponível. Por favor, escolha outro jogo.'
+    )
+  })
+})
+
 describe('translateErrorCode', () => {
   it('translates a known code, such as a realtime error payload', () => {
     expect(translateErrorCode('ROOM_FULL', tPtBR)).toBe('Este squad já está cheio.')

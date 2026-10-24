@@ -1,6 +1,5 @@
 import { useTranslations } from 'next-intl'
 import { useSession } from '@/hooks/use-session'
-import { useGamesMap, useSuspenseGames } from '@/features/games'
 import { SquadGrid, querySquadList, type SquadListQuery } from '@/features/squad-list'
 import type { SquadJoining } from '@/features/squad-joining'
 import { CreateSquadDialog } from '@/features/squad-creation'
@@ -23,9 +22,9 @@ export interface SquadBoardResultsProps {
 }
 
 /**
- * The squads the board lists: the grid, its pagination, the empty state and the create dialog, which
- * needs the games. It reads the list and the games, so it suspends until both are cached, and the page
- * shows its title and filters in the meantime.
+ * The squads the board lists: the grid, its pagination, the empty state and the create dialog. It
+ * reads the list, so it suspends until it is cached, and the page shows its title and filters in the
+ * meantime. Each card renders its game from the Squad itself.
  */
 export function SquadBoardResults({
   baseline,
@@ -39,11 +38,9 @@ export function SquadBoardResults({
   const t = useTranslations()
   const session = useSession()
   const squads = useSquadBoardSquads(baseline)
-  const games = useSuspenseGames()
-  const gamesMap = useGamesMap(games)
 
   const { matching, pageSquads, currentPage, totalPages, hasPreviousPage, hasNextPage, pageRange } =
-    querySquadList(squads, gamesMap, query)
+    querySquadList(squads, query)
 
   const goToPage = (target: number) => setPage(Math.max(1, Math.min(target, totalPages)))
   const previousPage = () => goToPage(currentPage - 1)
@@ -78,7 +75,6 @@ export function SquadBoardResults({
           <SquadGrid
             id="squads-grid"
             squads={pageSquads}
-            games={gamesMap}
             onSelect={joining.requestJoin}
             loadingSquadCode={joining.joiningSquadCode}
           />
@@ -98,7 +94,7 @@ export function SquadBoardResults({
 
       {/* Create squad dialog, mounted only while it is open */}
       {session?.user && createOpen && (
-        <CreateSquadDialog games={games} onClose={() => onCreateOpenChange(false)} />
+        <CreateSquadDialog onClose={() => onCreateOpenChange(false)} />
       )}
     </>
   )

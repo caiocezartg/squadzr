@@ -15,6 +15,8 @@ export interface MockHttpRequest {
   query: URLSearchParams
   params: Record<string, string>
   body: unknown
+  /** The caller's cancellation signal, as `fetch` would receive it. */
+  signal?: AbortSignal
 }
 
 export interface MockHttpResponse {
@@ -108,11 +110,44 @@ const httpFetch = async (input: string | URL, init: RequestInit = {}): Promise<R
   }
 
   const { route, params } = match
-  const result = await route.handler({ ...request, params })
+  const result = await untilAborted(route.handler({ ...request, params }), request.signal)
   const status = result.status ?? 200
 
   // A successful response always has a body; an error keeps exactly the body the test gave it.
   return jsonResponse(status, status >= 400 ? result.body : (result.body ?? {}))
+}
+
+/**
+ * Rejects like `fetch` when the caller's signal aborts, even while a test
+ * handler still holds the response. Without a signal the handler's result is
+ * returned untouched.
+ */
+async function untilAborted<T>(
+  result: T | Promise<T>,
+  signal: AbortSignal | undefined
+): Promise<T> {
+  const settled = Promise.resolve(result)
+  if (!signal) return settled
+  if (signal.aborted) throw abortError()
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(abortError())
+    signal.addEventListener('abort', onAbort, { once: true })
+    settled.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort)
+        resolve(value)
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', onAbort)
+        reject(error)
+      }
+    )
+  })
+}
+
+function abortError(): DOMException {
+  return new DOMException('The operation was aborted.', 'AbortError')
 }
 
 function findRoute(
@@ -138,6 +173,7 @@ function buildRequest(input: string | URL, init: RequestInit): MockHttpRequest {
     query: url.searchParams,
     params: {},
     body: parseBody(init.body, method),
+    signal: init.signal ?? undefined,
   }
 }
 

@@ -27,7 +27,7 @@ async function setup(capacity = 4) {
   const [host, member, third] = await signInMany(server, 3)
   const game = await insertGame(server, capacity)
   const room = await createRoom(server, host!, { gameId: game.id, maxPlayers: capacity })
-  return { host: host!, member: member!, third: third!, room }
+  return { host: host!, member: member!, third: third!, room, game }
 }
 
 async function open(user: Parameters<typeof connect>[1] = null) {
@@ -158,6 +158,26 @@ describe('authoritative snapshots and ordered events', () => {
     first.client.close(1000)
     await first.serverClosed
     expect(subscriptionState(server).trackedRooms()).toBe(0)
+  })
+
+  it('pushes the game cover with the ready notification', async () => {
+    const { host, member, room, game } = await setup(2)
+    const session = await open(host)
+
+    await joinAll(server, room.code, [member])
+
+    const messages = await session.drain()
+    expect(messages).toHaveLength(1)
+    expect(messages[0]).toEqual(
+      expect.objectContaining({
+        type: 'notification',
+        payload: {
+          notification: expect.objectContaining({
+            payload: expect.objectContaining({ gameCoverUrl: game.coverUrl }),
+          }),
+        },
+      })
+    )
   })
 
   it('deletes an expired room for members and sends a separate removed catalog hint', async () => {

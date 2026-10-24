@@ -1,6 +1,5 @@
 import { Tabs } from '@base-ui-components/react'
 import { useTranslations } from 'next-intl'
-import { useSuspenseGames, useGamesMap } from '@/features/games'
 import { CreateSquadDialog } from '@/features/squad-creation'
 import { querySquadList, SquadGrid, type SquadListQuery } from '@/features/squad-list'
 import { useAppNavigation } from '@/lib/navigation'
@@ -21,9 +20,9 @@ export interface MySquadsResultsProps {
 
 /**
  * The squads My Squads lists: the hosted and joined tabs, their grids and the create dialog. It
- * reads the lists and the games, so it suspends until both are cached, and the page shows its title
- * and filters in the meantime. Both panels stay mounted, so the server HTML carries the hosted and
- * the joined Squads even though only one tab is selected.
+ * reads the lists, so it suspends until they are cached, and the page shows its title and filters in
+ * the meantime. Both panels stay mounted, so the server HTML carries the hosted and the joined Squads
+ * even though only one tab is selected. Each card renders its game from the Squad itself.
  */
 export function MySquadsResults({
   baseline,
@@ -35,11 +34,9 @@ export function MySquadsResults({
   const t = useTranslations()
   const navigateApp = useAppNavigation()
   const { hosted, joined, refetch } = useMySquads(baseline)
-  const games = useSuspenseGames()
-  const gamesMap = useGamesMap(games)
 
-  const hostedSquads = querySquadList(hosted, gamesMap, query).matching
-  const joinedSquads = querySquadList(joined, gamesMap, query).matching
+  const hostedSquads = querySquadList(hosted, query).matching
+  const joinedSquads = querySquadList(joined, query).matching
 
   return (
     <>
@@ -69,7 +66,6 @@ export function MySquadsResults({
           ) : (
             <SquadGrid
               squads={hostedSquads}
-              games={gamesMap}
               onSelect={(squad) => navigateApp(lobbyHref(squad.code))}
             />
           )}
@@ -84,7 +80,6 @@ export function MySquadsResults({
           ) : (
             <SquadGrid
               squads={joinedSquads}
-              games={gamesMap}
               onSelect={(squad) => navigateApp(lobbyHref(squad.code))}
             />
           )}
@@ -94,7 +89,6 @@ export function MySquadsResults({
       {/* The one create squad dialog, mounted only while it is open. */}
       {createOpen && (
         <CreateSquadDialog
-          games={games}
           onClose={() => onCreateOpenChange(false)}
           onCreated={() => {
             void refetch()

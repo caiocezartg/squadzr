@@ -23,17 +23,66 @@ inventory (see the equivalence proof below).
 
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
-| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 25 | 109 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 23 | 227 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 27 | 195 |
-| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 3 | 69 |
+| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 29 | 148 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 28 | 280 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 488 |
+| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 84 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
-Suites are test files. The counts above are the current inventory, recounted on 2026-10-15 for
-CCC-70. That ticket adds `src/env.spec.ts`, `src/lib/router-history.spec.ts` and
-`scripts/bundle-report.spec.mjs` to `client:unit`, corrects the server and client unit rows that had
-drifted since the 2026-10-09 recount, and corrects the `server:integration` row, which had drifted
-since CCC-59. The CCC-28 numbers are kept as a historical record in the equivalence proof below.
+Suites are test files. The counts above are the current inventory, recounted on 2026-10-24 on the
+merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96 and CCC-98. CCC-90 adds the
+IGDB adapter suite (`igdb-game-catalog-source.spec.ts`, +1 file / +10 tests, with a recorded IGDB
+page as fixture) and the import environment suite (`catalog-import-env.spec.ts`, +1 file / +9
+tests), plus one curated-id case in `curated-games.spec.ts` (+1). It adds no integration suite: the
+adapter runs with a stubbed `fetch` and needs no database or IGDB credentials. It does add one
+invalid-summary case to `tests/integration/catalog-import.test.ts` (+1 test).
+
+CCC-94 moves the client onto the game summary every Squad carries: the full-list games hooks and the
+games map are gone, the game-list stubs leave the board, My Squads and Lobby flow specs, and the flow
+tests now cover cards and both searches from `squad.game`, the Lobby before and after a snapshot, the
+invite preview and the landing showcase. It adds no suite files and removes none; `client:unit` gains
+2 tests (479 → 481). CCC-93 extends `tests/integration/games-http.test.ts` with the game search and the delisted
+single-game read, and `tests/integration/rooms-http.test.ts` with the 2/40/41 Squad-size bounds and
+the delisted-game rejection; it also adds the game-list dismissal (including a case that mirrors
+Next's `document` root for Escape), toggle, selection and live-region cases to the client
+create-Squad flow, and the search-announcement strings to the message-file spec. It adds no suite
+files. CCC-92 adds `tests/integration/squad-game-summary.test.ts` (+1 file / +4 tests), one
+projection case and one create-path case in `server:unit` (+2), and three contract cases in
+`schemas:unit` (+3); it adds no client tests. CCC-95 adds tests to each suite it touches: the legacy
+notification payload contract case and the game-cover payload case in `schemas:unit` (+2), the
+builder cover/omission cases and the join use-case cover flow in `server:unit` (+3), the covered and
+uncovered menu renderings in `client:unit` (+2), and the cover over HTTP and the realtime channel in
+`server:integration` (+2). CCC-89 removed the child-process `games-seed` suite with the static seed,
+moved `games-postgres` to the IGDB-id upsert, added the Catalog Import suites (fake source against
+an isolated PostgreSQL, plus the entry's exit code and pool close) and added
+`src/interface/catalog/curated-games.spec.ts`; that recount also corrected the client and schemas
+rows, which had drifted since CCC-70.
+
+CCC-96 adds `tests/integration/popular-games-http.test.ts` (+1 file / +10 tests) for the landing's
+popular games endpoint: ranking, the Featured fallback, expired and Ready Squads, the top-tag
+tie-break, `totalGames` and the `limit` bounds. It also replaces the landing's full-list and
+random-pick client cases with the popular read in `games.spec.ts` (−2) and adds the FAQ
+no-fixed-count and IGDB-credit cases to `messages.spec.ts` (+2), so on the merged tree `client:unit`
+measures 58 files / 481 tests; the popular read also adds the client assertions in
+`landing.spec.tsx`, which keeps its 9 tests.
+
+CCC-98 keeps the game selector's previous results while the next term loads and cancels superseded
+searches. It adds 4 create-Squad flow cases (the first term's results stay listed until the next
+answer replaces them with no visible loading copy, the empty copy waits for a settled response, the
+superseded request's signal aborts, and a warm term answers from the cache without another request)
+and 3 `api` cancellation cases (the signal reaches `fetch`, an aborted call rejects with its abort
+error rather than a contract error, and calls without a signal stay unchanged). It adds no suite
+files, so `client:unit` measures 58 files / 488 tests on the merged tree.
+
+CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
+Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
+
+The CCC-88 recount (2026-10-22) added `tests/integration/catalog-migration.test.ts` and recorded
+`server:integration` at 25 files / 231 tests. The CCC-70 recount added `src/env.spec.ts`,
+`src/lib/router-history.spec.ts` and `scripts/bundle-report.spec.mjs` to `client:unit`, corrected
+the server and client unit rows that had drifted since the 2026-10-09 recount, and corrected the
+`server:integration` row, which had drifted since CCC-59. The CCC-28 numbers are kept as a
+historical record in the equivalence proof below.
 
 `@squadzr/typescript-config` ships only shared TypeScript configuration files, so no test project is
 expected there. Every other workspace must keep at least one test file: the configs deliberately do
@@ -49,9 +98,10 @@ with its project entry.
 Project names carry the suite kind after the `:` separator. Unit projects (`*:unit`) run against
 mock/in-memory dependencies:
 
-- `server:unit` — 97 tests across 22 spec files as of 2026-10-08. CCC-58 removed the
-  `create-user` (2 tests) and `update-user` (3 tests) specs together with their use cases. The
-  CCC-28 baseline of 39 tests across 10 specs is historical; see the equivalence proof below.
+- `server:unit` — 148 tests across 29 spec files as of 2026-10-23 (merged tree, CCC-89, CCC-90,
+  CCC-92, CCC-93 and CCC-95). CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
+  specs together with their use cases. The CCC-28 baseline of 39 tests across 10 specs is historical; see
+  the equivalence proof below. CCC-90 adds the IGDB adapter and Catalog Import environment suites.
 - `client:unit` — runs in jsdom; the environment is proven by an assertion on `document`, which
   fails under a Node environment. `scripts/bundle-report.spec.mjs` checks the bundle report of the
   Next build (`client/scripts/bundle-report.mjs`) against a fixture of manifests; it stays in this
@@ -65,7 +115,26 @@ Integration projects follow the same naming convention:
   `bun run test:integration` inside `server/` after starting the disposable database with
   `docker compose -f docker-compose.test.yml up -d --wait` (PostgreSQL 16 on port 5433, tmpfs
   storage). `TEST_DATABASE_URL` overrides the admin connection
-  (default `postgresql://postgres:postgres@localhost:5433/postgres`).
+  (default `postgresql://postgres:postgres@localhost:5433/postgres`). Migration suites
+  (`room-lifecycle-migration`, `catalog-migration`) replay the checked-in SQL files against a
+  throwaway database and pin the migration they exercise by tag, so later migrations cannot
+  silently change what they prove. `catalog-migration` (CCC-88) seeds a legacy game and a Squad
+  that references it, then asserts the catalog migration delists the game, keeps the Squad and
+  applies the defaults. `games-http` (CCC-93) covers the Listed-only search, prefix/popularity
+  ranking, wildcard escaping, the `limit` bounds and the delisted single-game read; `rooms-http`
+  covers the 2–40 Squad-size bounds and the `INVALID_GAME` rejection for a delisted Game.
+  `popular-games-http` (CCC-96) drives `GET /api/games/popular`: open-Squad ranking, the Featured
+  fallback on a quiet day, expired and Ready Squads excluded, the top-tag tie-break, `totalGames`
+  and the 1–20 `limit` bounds.
+  `catalog-import` (CCC-89) drives the use case with a fake Game Catalog Source against an isolated
+  PostgreSQL: first run, idempotent re-run, update with a slug change, delist and relist, both
+  safety stops and the override, mid-run rollbacks of new and existing rows, concurrent runs
+  serialized by the import lock, every squad-size rule, featured ranks, legacy rows and dropped
+  duplicates. `catalog-import-entry` runs the real entry function on its own isolated database and
+  asserts the exit code, the single structured summary and that the database pool closed; it spawns
+  no child process. `squad-game-summary` (CCC-92) asserts every Squad response and realtime message
+  carries its Game summary, including a Squad on a legacy Game, and counts repository reads to prove
+  the Game is joined in the same query as the Squad.
 - Client and realtime flows stay in jsdom projects under the planned capability work
   (CCC-32/CCC-33).
 
@@ -119,28 +188,44 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
   collecting tests. The script was removed instead of being restored with a new dependency;
   introducing coverage tooling is a deliberate follow-up decision, not an accidental default.
 
-## Equivalence proof (CCC-28, CCC-58, CCC-59)
+## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98)
 
-### Current counts (recounted 2026-10-15, CCC-70)
+### Current counts (recounted 2026-10-24 on the merged tree, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96 and CCC-98)
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 55 | 373 |
-| `bunx vitest run` (direct root composition) | 55 | 373 |
-| `bunx turbo test --filter=server` | 25 | 109 |
-| `bunx turbo test --filter=client` | 27 | 195 |
-| `bunx turbo test --filter=@squadzr/schemas` | 3 | 69 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 91 | 720 |
+| `bunx vitest run` (direct root composition) | 91 | 720 |
+| `bunx turbo test --filter=server` | 29 | 148 |
+| `bunx turbo test --filter=client` | 58 | 488 |
+| `bunx turbo test --filter=@squadzr/schemas` | 4 | 84 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
 numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
 specs together with their use cases, so the server unit suite has 5 fewer tests than before that
 change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
 16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
-current run passes 23 files / 227 tests (measured 2026-10-15 against the test PostgreSQL on port
-5433), and this ticket does not touch `server/tests`, so that drift predates it. CCC-59 removed the
-`types:unit` project (1 file, 1 test) together with the `@squadzr/types` workspace. The schemas suite
-measures 69 tests, not the 74 recorded by the CCC-58 recount; this ticket does not touch
-`packages/schemas`, so that drift predates CCC-59 and is corrected here.
+current run passes 28 files / 280 tests (measured 2026-10-23 against the test PostgreSQL on port
+5433): the CCC-88 row of 25 files / 231 tests plus CCC-89's changes — the 2 child-process seed
+tests removed with the static seed, the Catalog Import suites (+2 files / +16 tests), two extra
+IGDB-id cases in `games-postgres` — plus CCC-93's cases in the existing games and rooms HTTP suites
+(search, delisted-game and Squad-size), CCC-95's 2 cover cases in the existing notification
+suites, CCC-92's `squad-game-summary` suite (+1 file / +4 tests) and CCC-90's invalid-summary case
+in `catalog-import.test.ts` (+1 test). The `server:unit` row had
+drifted to 26 files / 119 tests since CCC-70, so the CCC-89 recount corrected it to 27 files / 122
+tests with `curated-games.spec.ts` (+1 file / +3 tests); CCC-93 adds its create-room delisted-game
+cases, CCC-95 adds 3 cover cases and CCC-92 adds one projection case and one create-path case, and
+CCC-90 adds the IGDB adapter (10 tests) and import environment (9 tests) suites plus one curated-id
+case, so the merged tree measures 29 files / 148 tests. CCC-59 removed the `types:unit` project (1
+file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 84 tests across
+4 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
+contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 488
+tests (CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
+CCC-95 added 2, CCC-92 added none, CCC-96 replaced the landing's random-pick cases with the
+popular read and added the FAQ and IGDB-credit cases: net 0, and CCC-98 added 7 cancellation and
+placeholder flow cases); both drifts predate CCC-89 and were
+corrected by its recount. CCC-96's 10 popular-games cases plus CCC-90's invalid-summary case are the
+difference between the CCC-95 row of 27 files / 269 tests and the current 28 files / 280.
 
 ### Historical record (CCC-28, 2026-09-25)
 

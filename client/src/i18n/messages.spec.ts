@@ -49,6 +49,22 @@ describe('ICU messages', () => {
     expect(tPtBR('timeAgo.minutesAgo', { count: 5 })).toBe('há 5min')
   })
 
+  it('states the 40-player Squad limit in both languages', () => {
+    expect(t('squads.createModal.maxPlayersTooMany')).toBe('Max 40 players')
+    expect(tPtBR('squads.createModal.maxPlayersTooMany')).toBe('Máximo de 40 jogadores')
+  })
+
+  it('announces the game search results in both languages', () => {
+    expect(t('squads.createModal.gamesFound', { count: 1 })).toBe('1 game found')
+    expect(t('squads.createModal.gamesFound', { count: 3 })).toBe('3 games found')
+    expect(tPtBR('squads.createModal.gamesFound', { count: 1 })).toBe('1 jogo encontrado')
+    expect(tPtBR('squads.createModal.gamesFound', { count: 3 })).toBe('3 jogos encontrados')
+    expect(t('squads.createModal.noGamesFound')).toBe('No games found. Try another name.')
+    expect(tPtBR('squads.createModal.noGamesFound')).toBe(
+      'Nenhum jogo encontrado. Tente outro nome.'
+    )
+  })
+
   it('keeps the text around rich tags', () => {
     expect(t.rich('hero.subtitle', { bold: (chunks) => chunks })).toBe(
       'Create or join squads, fill your squad, and get a Discord invite the second your team is ready.'
@@ -66,6 +82,22 @@ describe('ICU messages', () => {
     expect(faqItems[0]?.question).toBe('Is Squadzr free?')
     expect(steps).toHaveLength(3)
     expect(steps[2]?.title).toBe('Squad Up & Play')
+  })
+
+  it('does not promise a fixed number of supported games in either language', () => {
+    const supportedGamesAnswer = (messages: {
+      faq: { items: readonly { id: string; answer: string }[] }
+    }) => messages.faq.items.find((item) => item.id === 'supported-games')?.answer ?? ''
+
+    expect(supportedGamesAnswer(en)).not.toMatch(/\d/)
+    expect(supportedGamesAnswer(ptBR)).not.toMatch(/\d/)
+    expect(supportedGamesAnswer(en)).toContain('catalog')
+    expect(supportedGamesAnswer(ptBR)).toContain('catálogo')
+  })
+
+  it('credits IGDB in both languages', () => {
+    expect(t('footer.gameDataByIgdb')).toBe('game data by IGDB')
+    expect(tPtBR('footer.gameDataByIgdb')).toBe('dados de jogos por IGDB')
   })
 
   it('keeps apostrophes in plain text', () => {

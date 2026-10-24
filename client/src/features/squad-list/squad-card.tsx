@@ -3,55 +3,34 @@ import { useTranslations } from 'next-intl'
 import { useTimeAgo } from '@/hooks/use-time-ago'
 import { languageBadgeKey } from '@/lib/language-badge'
 import { Check, Users } from 'lucide-react'
-import type { PublicSquad, Game } from '@/types'
+import type { PublicSquad } from '@/types'
 
 export interface SquadCardProps {
+  /** The Squad carries its own game summary, so the card never reads the catalog. */
   squad: PublicSquad
-  game: Game | undefined
   onJoin?: (squadCode: string) => void
   isLoading?: boolean
 }
 
-const COVER_POSITION_Y: Record<string, string> = {
-  roblox: '50%',
-  minecraft: '25%',
-  cs2: '30%',
-  fortnite: '10%',
-  dota2: '20%',
-  lol: '25%',
-  pubg: '20%',
-  freefire: '20%',
-  valorant: '15%',
-  warzone: '60%',
-  apex: '10%',
-  gtaonline: '45%',
-  rocketleague: '60%',
-  r6siege: '5%',
-  amongus: '30%',
-  overwatch2: '15%',
-  wow: '5%',
-  fc25: '5%',
-  dbd: '10%',
-}
-
-export function SquadCard({ squad, game, onJoin, isLoading }: SquadCardProps) {
+export function SquadCard({ squad, onJoin, isLoading }: SquadCardProps) {
   const t = useTranslations()
   const timeAgo = useTimeAgo(squad.createdAt)
   const members = squad.memberCount ?? 1
   const isFull = members >= squad.maxPlayers
   const isDisabled = isLoading || (isFull && !squad.isMember)
   const squadTags = squad.tags ?? []
-  const coverUrl = game?.coverUrl ? game.coverUrl : null
+  const game = squad.game
+  const coverUrl = game.coverUrl
   // The card never waits for the network: the cover fades in on its own when
   // it loads, over the placeholder background, and stays hidden if it fails.
   const [loadedCover, setLoadedCover] = useState<string | null>(null)
-  const coverLoaded = coverUrl !== null && loadedCover === coverUrl
+  const coverLoaded = loadedCover === coverUrl
 
   // A server-rendered card puts the `<img>` in the HTML, so the browser can finish loading it before
   // React attaches `onLoad`. That load never fires again, so the ref checks the image once attached.
   const markCoverIfAlreadyLoaded = useCallback(
     (img: HTMLImageElement | null) => {
-      if (coverUrl && img?.complete && img.naturalWidth > 0) setLoadedCover(coverUrl)
+      if (img?.complete && img.naturalWidth > 0) setLoadedCover(coverUrl)
     },
     [coverUrl]
   )
@@ -72,31 +51,22 @@ export function SquadCard({ squad, game, onJoin, isLoading }: SquadCardProps) {
       }`}
     >
       <div className="relative h-40 overflow-hidden bg-surface-light">
-        {coverUrl ? (
-          <img
-            ref={markCoverIfAlreadyLoaded}
-            src={coverUrl}
-            alt={game?.name ?? ''}
-            className={`h-full w-full object-cover transition-opacity duration-300 ease-out ${
-              coverLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-            style={{
-              objectPosition: `center ${game?.slug ? (COVER_POSITION_Y[game.slug] ?? '20%') : '20%'}`,
-            }}
-            loading="lazy"
-            onLoad={() => setLoadedCover(coverUrl)}
-          />
-        ) : (
-          <div className="h-full w-full bg-surface-light" />
-        )}
+        <img
+          ref={markCoverIfAlreadyLoaded}
+          src={coverUrl}
+          alt={game.name}
+          className={`h-full w-full object-cover transition-opacity duration-300 ease-out ${
+            coverLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          loading="lazy"
+          onLoad={() => setLoadedCover(coverUrl)}
+        />
 
         <div className="absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-surface/40 to-transparent" />
 
-        {game && (
-          <span className="absolute bottom-2 left-3 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs">
-            {game.name}
-          </span>
-        )}
+        <span className="absolute bottom-2 left-3 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs">
+          {game.name}
+        </span>
 
         {squad.isMember && (
           <span className="absolute right-3 top-2 flex items-center gap-1 rounded-md border border-accent/20 bg-surface/80 px-2 py-0.5 text-[10px] font-semibold text-accent backdrop-blur-xs">

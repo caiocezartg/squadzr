@@ -10,10 +10,11 @@ export const metadata: Metadata = {
 }
 
 /**
- * The Squad Board. The viewer's squads and the games are read on the server and handed to the browser
- * through the query client. The page does not wait for those reads: a read still running reaches the
- * browser as a pending query, so a client navigation renders the squads the cache holds at once, and
- * the board suspends only where it has no data.
+ * The Squad Board. The viewer's squads are read on the server and handed to the browser through the
+ * query client. Each Squad carries its game summary, so no catalog read is needed. The page does not
+ * wait for that read: a read still running reaches the browser as a pending query, so a client
+ * navigation renders the squads the cache holds at once, and the board suspends only where it has no
+ * data.
  */
 export default async function SquadsPage() {
   const viewer = await getRequestViewer()

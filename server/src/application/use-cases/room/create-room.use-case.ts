@@ -2,7 +2,11 @@ import type { NewRoom, Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
-import { InvalidGameError, RoomCreateLimitReachedError } from '@application/errors'
+import {
+  GameNotAvailableError,
+  InvalidGameError,
+  RoomCreateLimitReachedError,
+} from '@application/errors'
 import { ROOM } from '@config/constants'
 
 export interface CreateRoomOutput {
@@ -29,6 +33,12 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       throw new InvalidGameError(input.gameId)
     }
 
+    // A Game removed from the catalog is still readable by id, but no new Squad
+    // may point at it.
+    if (!game.listed) {
+      throw new GameNotAvailableError(input.gameId)
+    }
+
     const maxPlayers = input.maxPlayers ?? game.maxPlayers
 
     // Room and host Membership are one transaction, with Room Activity stamped
@@ -48,6 +58,8 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       throw new RoomCreateLimitReachedError(ROOM.CREATE_LIMIT)
     }
 
-    return { room: outcome.room, hostMember: outcome.hostMember }
+    // The Game read to validate `gameId` is the one the response and the
+    // `room_created` broadcast carry: the create path never reads it again.
+    return { room: { ...outcome.room, game }, hostMember: outcome.hostMember }
   }
 }

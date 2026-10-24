@@ -8,6 +8,8 @@ export interface BuildRoomReadyNotificationsInput {
   readonly members: readonly RoomMember[]
   readonly users: readonly Pick<User, 'id' | 'name' | 'avatarUrl'>[]
   readonly gameName: string
+  /** Absent when the room's game could not be resolved (CCC-95). */
+  readonly gameCoverUrl?: string
 }
 
 const TITLE = 'Room ready: your squad is full'
@@ -37,6 +39,7 @@ export function buildRoomReadyNotifications(
       roomCode: input.room.code,
       roomName: input.room.name,
       gameName: input.gameName,
+      ...(input.gameCoverUrl === undefined ? {} : { gameCoverUrl: input.gameCoverUrl }),
       players,
     },
   }))
