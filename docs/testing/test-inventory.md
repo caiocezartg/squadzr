@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | --- | --- | --- | --- | --- | --- |
 | `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 27 | 128 |
 | `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 28 | 279 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 478 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 479 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 84 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
@@ -53,8 +53,9 @@ CCC-96 adds `tests/integration/popular-games-http.test.ts` (+1 file / +10 tests)
 popular games endpoint: ranking, the Featured fallback, expired and Ready Squads, the top-tag
 tie-break, `totalGames` and the `limit` bounds. It also replaces the landing's full-list and
 random-pick client cases with the popular read in `games.spec.ts` (−2) and adds the FAQ
-no-fixed-count case to `messages.spec.ts` (+1), so `client:unit` measures 58 files / 478 tests; the
-popular read also adds the client assertions in `landing.spec.tsx`, which keeps its 9 tests.
+no-fixed-count and IGDB-credit cases to `messages.spec.ts` (+2), so `client:unit` measures 58 files /
+479 tests; the popular read also adds the client assertions in `landing.spec.tsx`, which keeps its
+9 tests.
 
 The CCC-88 recount (2026-10-22) added `tests/integration/catalog-migration.test.ts` and recorded
 `server:integration` at 25 files / 231 tests. The CCC-70 recount added `src/env.spec.ts`,
@@ -173,10 +174,10 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 89 | 690 |
-| `bunx vitest run` (direct root composition) | 89 | 690 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 89 | 691 |
+| `bunx vitest run` (direct root composition) | 89 | 691 |
 | `bunx turbo test --filter=server` | 27 | 128 |
-| `bunx turbo test --filter=client` | 58 | 478 |
+| `bunx turbo test --filter=client` | 58 | 479 |
 | `bunx turbo test --filter=@squadzr/schemas` | 4 | 84 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
@@ -196,10 +197,11 @@ cases, CCC-95 adds 3 cover cases and CCC-92 adds one projection case and one cre
 the merged tree measures 27 files / 128 tests. CCC-59 removed the `types:unit` project (1 file, 1
 test) together with the `@squadzr/types` workspace. The schemas suite measures 84 tests across 4
 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
-contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 478
+contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 479
 tests (CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-95 added 2,
 CCC-92 added none, and CCC-96 replaced the landing's random-pick cases with the popular read and
-added the FAQ case: −1 net); both drifts predate CCC-89 and were corrected by its recount. CCC-96's
+added the FAQ and IGDB-credit cases: net 0); both drifts predate CCC-89 and were corrected by its
+recount. CCC-96's
 10 integration cases are the difference between the CCC-95 row of 27 files / 269 tests and the
 current 28 files / 279.
 

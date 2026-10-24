@@ -125,23 +125,36 @@ export class DrizzleGameRepository implements IGameRepository {
   }
 
   async findPopular({ limit, now }: FindPopularGamesInput): Promise<PopularGames> {
-    // One read: the Open Squads are aggregated per Game in the same statement
-    // that ranks the page, and the window count returns the full Listed total
-    // even though `limit` cuts the rows.
-    const openSquadCount = sql<number>`count(${rooms.id})`.mapWith(Number)
-    const totalGames = sql<number>`count(*) over ()`.mapWith(Number)
-    // JSON keeps the tag arrays of every Open Squad as a flat list of arrays;
-    // PostgreSQL's array_agg refuses empty arrays and mixed dimensionalities.
-    const roomTags = sql<
-      string[][]
-    >`coalesce(jsonb_agg(${rooms.tags}) filter (where ${rooms.id} is not null), '[]'::jsonb)`
+    // Aggregate first, over the Open Rooms only: a Game with no Open Squad
+    // never enters this grouping, and the LEFT JOIN below gives it a zero count.
+    // JSON keeps each Open Squad's tag array; PostgreSQL's array_agg refuses
+    // empty arrays and mixed dimensionalities.
+    const openSquads = this.executor
+      .select({
+        gameId: rooms.gameId,
+        openSquadCount: sql<number>`count(*)`.mapWith(Number).as('open_squad_count'),
+        roomTags: sql<string[][]>`jsonb_agg(${rooms.tags})`.as('room_tags'),
+      })
+      .from(rooms)
+      .where(validOpenRoomCondition(now))
+      .groupBy(rooms.gameId)
+      .as('open_squads')
+
+    const openSquadCount = sql<number>`coalesce(${openSquads.openSquadCount}, 0)`.mapWith(Number)
+    // One cheap count over the catalog, not a window over every aggregated Game.
+    const totalGames =
+      sql<number>`(select count(*) from ${games} where ${games.listed} = true)`.mapWith(Number)
 
     const result = await this.executor
-      .select({ game: games, openSquadCount, totalGames, roomTags })
+      .select({
+        game: games,
+        openSquadCount,
+        roomTags: sql<string[][]>`coalesce(${openSquads.roomTags}, '[]'::jsonb)`,
+        totalGames,
+      })
       .from(games)
-      .leftJoin(rooms, and(eq(rooms.gameId, games.id), validOpenRoomCondition(now)))
+      .leftJoin(openSquads, eq(openSquads.gameId, games.id))
       .where(eq(games.listed, true))
-      .groupBy(games.id)
       .orderBy(
         desc(openSquadCount),
         // PostgreSQL sorts ascending NULLs last, so the Featured Games fill the

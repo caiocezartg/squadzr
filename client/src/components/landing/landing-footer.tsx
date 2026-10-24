@@ -1,8 +1,14 @@
+'use client'
+
+import { useTranslations } from 'next-intl'
+
 /**
- * The landing's own footer. The shell footer stays off `/`, so the landing carries this one. It has no
- * hooks and no motion, so it renders on the server only.
+ * The landing's own footer. The shell footer stays off `/`, so the landing carries this one. It has
+ * no motion, so it renders in the server HTML and hydrates with the rest of the page.
  */
 export function LandingFooter() {
+  const t = useTranslations()
+
   return (
     <footer className="border-t border-border/50 py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -17,7 +23,7 @@ export function LandingFooter() {
             rel="noreferrer"
             className="text-xs text-muted/60 transition-colors hover:text-muted"
           >
-            game data by IGDB
+            {t('footer.gameDataByIgdb')}
           </a>
         </div>
       </div>

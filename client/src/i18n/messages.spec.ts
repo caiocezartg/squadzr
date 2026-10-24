@@ -85,14 +85,19 @@ describe('ICU messages', () => {
   })
 
   it('does not promise a fixed number of supported games in either language', () => {
-    // The seventh FAQ item answers "What games are supported?".
-    const supportedGamesAnswer = (messages: { faq: { items: readonly { answer: string }[] } }) =>
-      messages.faq.items[6]?.answer ?? ''
+    const supportedGamesAnswer = (messages: {
+      faq: { items: readonly { id: string; answer: string }[] }
+    }) => messages.faq.items.find((item) => item.id === 'supported-games')?.answer ?? ''
 
     expect(supportedGamesAnswer(en)).not.toMatch(/\d/)
     expect(supportedGamesAnswer(ptBR)).not.toMatch(/\d/)
     expect(supportedGamesAnswer(en)).toContain('catalog')
     expect(supportedGamesAnswer(ptBR)).toContain('catálogo')
+  })
+
+  it('credits IGDB in both languages', () => {
+    expect(t('footer.gameDataByIgdb')).toBe('game data by IGDB')
+    expect(tPtBR('footer.gameDataByIgdb')).toBe('dados de jogos por IGDB')
   })
 
   it('keeps apostrophes in plain text', () => {
