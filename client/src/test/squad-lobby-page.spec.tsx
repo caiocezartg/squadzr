@@ -11,6 +11,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import LobbyRoute from '@/app/squads/[code]/page'
 import {
+  gameCs2,
+  gameCs2Summary,
   guestPlayer,
   lobbySquadResponse,
   lobbySquad,
@@ -129,17 +131,30 @@ describe('the Lobby on the App Router', () => {
 
     await renderLobbyRoute(lobbySquad.code)
 
+    // The HTTP read carries League of Legends; the snapshot below carries Counter-Strike 2.
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
     expect(screen.getByText(lobbySquad.game.name)).toBeInTheDocument()
-    const cover = () => screen.getByRole('img', { name: lobbySquad.game.name })
-    expect(cover()).toHaveAttribute('src', lobbySquad.game.coverUrl)
+    expect(screen.getByRole('img', { name: lobbySquad.game.name })).toHaveAttribute(
+      'src',
+      lobbySquad.game.coverUrl
+    )
+    expect(screen.queryByText(gameCs2Summary.name)).not.toBeInTheDocument()
 
     openLatestWebSocket()
-    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        room: { ...lobbySquad, gameId: gameCs2.id, game: gameCs2Summary },
+      }),
+    })
 
     expect(await screen.findByText('2/3 players')).toBeInTheDocument()
-    expect(screen.getByText(lobbySquad.game.name)).toBeInTheDocument()
-    expect(cover()).toHaveAttribute('src', lobbySquad.game.coverUrl)
+    expect(screen.getByText(gameCs2Summary.name)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: gameCs2Summary.name })).toHaveAttribute(
+      'src',
+      gameCs2Summary.coverUrl
+    )
+    expect(screen.queryByText(lobbySquad.game.name)).not.toBeInTheDocument()
   })
 
   it('locks the leave button and reveals the invite once the snapshot of a Ready Squad arrives', async () => {

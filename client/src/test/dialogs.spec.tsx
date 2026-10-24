@@ -12,7 +12,16 @@ import { boardGames, boardSquads } from './fixtures'
 
 beforeEach(() => {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
+  // The create dialog's game search: a name filter and a limit, as the catalog contract answers.
+  onHttp('GET', '/api/games', (request) => {
+    const search = request.query.get('search')?.trim().toLowerCase() ?? ''
+    const limit = Number(request.query.get('limit') ?? boardGames.games.length)
+    return httpOk({
+      games: boardGames.games
+        .filter((game) => game.name.toLowerCase().includes(search))
+        .slice(0, limit),
+    })
+  })
   onHttp('GET', '/api/rooms/my', () => httpOk({ hosted: [], joined: [] }))
 })
 

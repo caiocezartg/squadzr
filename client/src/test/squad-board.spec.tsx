@@ -1002,10 +1002,13 @@ describe('squad board — warm cache across surfaces', () => {
     expect(screen.queryByTestId('squad-board-skeleton')).not.toBeInTheDocument()
 
     act(() => navigation.history.push('/squads/my'))
+    // The push commits synchronously, so a fallback would be in the DOM here if the cache missed.
+    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
     expect(await screen.findByText('Casual five stack')).toBeInTheDocument()
     expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
 
     act(() => navigation.history.push(`/squads/${lobbySquad.code}`))
+    expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
     expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()
     expect(screen.getByText(lobbySquad.game.name)).toBeInTheDocument()
