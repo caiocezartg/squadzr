@@ -132,7 +132,7 @@ describe('POST /api/rooms', () => {
       'body/discordLink Discord link must be a valid Discord invite URL',
     ],
     ['maxPlayers below 2', { maxPlayers: 1 }, /^body\/maxPlayers /],
-    ['maxPlayers above 20', { maxPlayers: 21 }, /^body\/maxPlayers /],
+    ['maxPlayers above 40', { maxPlayers: 41 }, /^body\/maxPlayers /],
     ['more than 5 tags', { tags: ['a', 'b', 'c', 'd', 'e', 'f'] }, 'body/tags Max 5 tags'],
     ['an unsupported language', { language: 'es' as 'en' }, /^body\/language /],
   ])('rejects %s with 400 VALIDATION_ERROR', async (_label, override, message) => {
@@ -145,6 +145,14 @@ describe('POST /api/rooms', () => {
     else expect(body.message).toMatch(message)
   })
 
+  it('accepts the Squad size bounds of 2 and 40', async () => {
+    const smallest = await createRoom(server, host, { gameId, maxPlayers: 2 })
+    const largest = await createRoom(server, host, { gameId, maxPlayers: 40 })
+
+    expect(smallest.maxPlayers).toBe(2)
+    expect(largest.maxPlayers).toBe(40)
+  })
+
   it('rejects an unknown game with 400 INVALID_GAME and persists nothing', async () => {
     const unknownGameId = '00000000-0000-4000-8000-000000000000'
 
@@ -154,6 +162,20 @@ describe('POST /api/rooms', () => {
     expect(response.json()).toEqual({
       error: 'INVALID_GAME',
       message: `Game with id "${unknownGameId}" does not exist`,
+    })
+    const hosted = await get(server, '/api/rooms/my', host)
+    expect(hosted.json()).toEqual({ hosted: [], joined: [] })
+  })
+
+  it('rejects a delisted game with 400 INVALID_GAME and says it is no longer available', async () => {
+    const delisted = await insertGame(server, { listed: false })
+
+    const response = await postRoom(server, host, { gameId: delisted.id })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      error: 'INVALID_GAME',
+      message: `Game with id "${delisted.id}" is no longer available`,
     })
     const hosted = await get(server, '/api/rooms/my', host)
     expect(hosted.json()).toEqual({ hosted: [], joined: [] })

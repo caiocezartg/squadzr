@@ -94,7 +94,6 @@ export function MySquadsResults({
       {/* The one create squad dialog, mounted only while it is open. */}
       {createOpen && (
         <CreateSquadDialog
-          games={games}
           onClose={() => onCreateOpenChange(false)}
           onCreated={() => {
             void refetch()

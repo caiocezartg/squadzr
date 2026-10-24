@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import type { gameIdParamSchema } from '@squadzr/schemas'
+import type { gameIdParamSchema, gamesQuerySchema } from '@squadzr/schemas'
 import type { IListGamesUseCase } from '@application/use-cases/game/list-games.use-case'
 import type { IGetGameUseCase } from '@application/use-cases/game/get-game.use-case'
 import { toGameDto } from '@application/projections'
@@ -13,8 +13,14 @@ export interface GameControllerDeps {
 export class GameController {
   constructor(private readonly deps: GameControllerDeps) {}
 
-  async list(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const result = await this.deps.listGamesUseCase.execute()
+  async list(
+    request: FastifyRequest<{ Querystring: z.infer<typeof gamesQuerySchema> }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    const result = await this.deps.listGamesUseCase.execute({
+      search: request.query.search,
+      limit: request.query.limit,
+    })
 
     await reply.send({ games: result.games.map(toGameDto) })
   }

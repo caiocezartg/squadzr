@@ -60,7 +60,12 @@ function mySquads(hosted: Squad[], joined: Squad[]): MyRoomsResponse {
 }
 
 beforeEach(() => {
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
+  onHttp('GET', '/api/games', (request) => {
+    const search = request.query.get('search')?.toLowerCase() ?? ''
+    return httpOk({
+      games: boardGames.games.filter((game) => game.name.toLowerCase().includes(search)),
+    })
+  })
   onHttp('GET', '/api/rooms/:code', () =>
     httpOk({ room: readyHostedSquad, players: [hostPlayer, guestPlayer] })
   )
@@ -132,8 +137,14 @@ describe('my squads — refresh behavior', () => {
     await user.click(screen.getByRole('button', { name: 'Create new squad' }))
     await screen.findByText('Create a Squad')
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
-    await user.click(screen.getByLabelText('Game'))
-    await user.click(await screen.findByText('League of Legends (1-5 players)'))
+    const gameInput = screen.getByLabelText('Game')
+    await user.click(gameInput)
+    await user.type(gameInput, 'league')
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
+    expect(
+      await screen.findByRole('option', { name: 'League of Legends (1-5 players)' })
+    ).toBeInTheDocument()
+    await user.keyboard('{ArrowDown}{Enter}')
     await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
 
     // The server lists the new Squad in My Squads as soon as it exists.

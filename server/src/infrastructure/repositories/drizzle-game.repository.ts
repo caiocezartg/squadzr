@@ -1,9 +1,20 @@
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import type { Game, UpsertGameInput } from '@domain/entities/game.entity'
-import type { IGameRepository } from '@domain/repositories/game.repository'
+import type { IGameRepository, SearchGamesInput } from '@domain/repositories/game.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import type { Database } from '@infrastructure/database/drizzle'
 import { games, type GameRow } from '@infrastructure/database/schema/games'
+
+/** PostgreSQL's default LIKE escape character. */
+const LIKE_ESCAPE = '\\'
+
+/**
+ * Makes `%`, `_` and the escape character literal in a LIKE pattern, so a
+ * player searching for "100%" or "half_life" finds those characters as typed.
+ */
+function escapeLikeTerm(term: string): string {
+  return term.replace(/[\\%_]/g, (character) => `${LIKE_ESCAPE}${character}`)
+}
 
 /**
  * The statements the repository issues, shared by the root connection and a
@@ -51,6 +62,35 @@ export class DrizzleGameRepository implements IGameRepository {
 
   async findAll(): Promise<Game[]> {
     const result = await this.executor.select().from(games)
+    return result.map(mapRowToEntity)
+  }
+
+  async search({ search = '', limit }: SearchGamesInput): Promise<Game[]> {
+    const term = search.trim()
+    // ILIKE compares case-insensitively; the pattern escapes wildcards so the
+    // player's `%` and `_` match themselves.
+    const contains = `%${escapeLikeTerm(term)}%`
+
+    const result = await this.executor
+      .select()
+      .from(games)
+      .where(
+        term === ''
+          ? eq(games.listed, true)
+          : and(eq(games.listed, true), sql`${games.name} ILIKE ${contains} ESCAPE ${LIKE_ESCAPE}`)
+      )
+      .orderBy(
+        // A name that starts with the term comes before one that contains it
+        // later. `starts_with` compares text literally, so no escaping here.
+        term === ''
+          ? desc(games.popularity)
+          : sql`CASE WHEN starts_with(lower(${games.name}), lower(${term})) THEN 0 ELSE 1 END`,
+        desc(games.popularity),
+        asc(games.name),
+        asc(games.id)
+      )
+      .limit(limit)
+
     return result.map(mapRowToEntity)
   }
 

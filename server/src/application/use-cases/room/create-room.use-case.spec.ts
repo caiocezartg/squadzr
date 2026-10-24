@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { CreateRoomUseCase } from './create-room.use-case'
-import { InvalidGameError, RoomCreateLimitReachedError } from '@application/errors'
+import {
+  GameNotAvailableError,
+  InvalidGameError,
+  RoomCreateLimitReachedError,
+} from '@application/errors'
 import {
   createMockRoom,
   createMockRoomRepository,
@@ -189,6 +193,22 @@ describe('CreateRoomUseCase', () => {
           discordLink: 'https://discord.gg/test',
         })
       ).rejects.toThrow(InvalidGameError)
+
+      expect(mockRoomRepository.create).not.toHaveBeenCalled()
+    })
+
+    it('should throw GameNotAvailableError if the game is delisted', async () => {
+      const delisted = createMockGame({ id: 'game-123', listed: false })
+      mockGameRepository.findById.mockResolvedValue(delisted)
+
+      await expect(
+        useCase.execute({
+          name: 'Test Room',
+          hostId: 'host-123',
+          gameId: 'game-123',
+          discordLink: 'https://discord.gg/test',
+        })
+      ).rejects.toThrow(GameNotAvailableError)
 
       expect(mockRoomRepository.create).not.toHaveBeenCalled()
     })

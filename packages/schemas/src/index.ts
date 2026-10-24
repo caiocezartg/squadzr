@@ -12,9 +12,12 @@ export {
   gameIdParamSchema,
   gameResponseSchema,
   gameSummarySchema,
+  gamesQuerySchema,
   gamesResponseSchema,
   type GameDto,
+  type GameGenreDto,
   type GameSummaryDto,
+  type GamesQuery,
   type GamesResponse,
 } from './game'
 export {

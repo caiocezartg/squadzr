@@ -1,8 +1,17 @@
 import type { Game, UpsertGameInput } from '@domain/entities/game.entity'
 
+export interface SearchGamesInput {
+  /** The player's text; empty or absent lists the most popular Listed Games. */
+  readonly search?: string
+  /** The maximum number of games to return. */
+  readonly limit: number
+}
+
 export interface IGameRepository {
   findById(id: string): Promise<Game | null>
   findAll(): Promise<Game[]>
+  /** Listed Games only: name contains `search`, prefix matches first, then popularity. */
+  search(input: SearchGamesInput): Promise<Game[]>
   /** Inserts or updates an imported game by its IGDB id. Slugs are not unique. */
   upsertByIgdbId(input: UpsertGameInput): Promise<Game>
   /** Delists the listed imported games with these IGDB ids; returns how many changed. */

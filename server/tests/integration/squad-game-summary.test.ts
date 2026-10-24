@@ -6,6 +6,7 @@
  * validate the input, so a client never needs a second read.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { eq } from 'drizzle-orm'
 import {
   isRoomLobbyResponse,
   myRoomsResponseSchema,
@@ -16,6 +17,7 @@ import {
 } from '@squadzr/schemas'
 import { roomCreatedMessageSchema, roomSnapshotMessageSchema } from '@squadzr/schemas/ws'
 import type { Database } from '@infrastructure/database/drizzle'
+import { games } from '@infrastructure/database/schema/games'
 import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
 import { signIn, signInMany, type TestUser } from '@test/harness/auth'
 import { createRoom, get, insertGameFixture, joinAll } from '@test/harness/rooms'
@@ -121,10 +123,11 @@ describe('Squad game summary over HTTP', () => {
   })
 
   it('summarises a legacy Game like any other', async () => {
-    // A legacy row: no IGDB identity, delisted, no genres.
+    // A legacy row: no IGDB identity, no genres. It starts listed because
+    // CCC-93 refuses a new Squad on a delisted Game; the reads below still run
+    // after it is delisted.
     const { game, summary } = await insertGameFixture(server, {
       igdbId: null,
-      listed: false,
       genres: [],
     })
     expect(summary.genres).toEqual([])
@@ -135,6 +138,10 @@ describe('Squad game summary over HTTP', () => {
 
     const created = await createRoom(server, host, { gameId: game.id })
     expect(created.game).toEqual(summary)
+
+    // Delisting keeps the Squad and its summary on every read, even though no
+    // new Squad may point at the Game.
+    await server.app.db.update(games).set({ listed: false }).where(eq(games.id, game.id))
 
     const createdMessage = roomCreatedMessageSchema.parse(await guest.next())
     expect(createdMessage.payload.room.game).toEqual(summary)

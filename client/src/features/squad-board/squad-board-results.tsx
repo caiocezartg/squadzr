@@ -98,7 +98,7 @@ export function SquadBoardResults({
 
       {/* Create squad dialog, mounted only while it is open */}
       {session?.user && createOpen && (
-        <CreateSquadDialog games={games} onClose={() => onCreateOpenChange(false)} />
+        <CreateSquadDialog onClose={() => onCreateOpenChange(false)} />
       )}
     </>
   )

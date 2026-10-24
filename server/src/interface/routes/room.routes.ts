@@ -9,6 +9,7 @@ import {
   errorResponseSchema as errorResponse,
   gameIdParamSchema,
   gameResponseSchema,
+  gamesQuerySchema,
   gamesResponseSchema,
   joinRoomResponseSchema,
   leaveRoomResponseSchema,
@@ -27,8 +28,10 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
   app.get('/api/games', {
     schema: {
       tags: ['Games'],
-      summary: 'List all games',
-      description: 'Returns the catalog of all supported games.',
+      summary: 'Search games',
+      description:
+        'Returns Listed Games whose name contains the search text, name-prefix matches first, then by popularity. Without a search it returns the most popular Listed Games.',
+      querystring: gamesQuerySchema,
       response: {
         200: gamesResponseSchema,
       },

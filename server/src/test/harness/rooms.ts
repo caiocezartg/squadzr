@@ -10,11 +10,16 @@ import type { TestServer } from './test-server'
 export const DISCORD_INVITE = 'https://discord.gg/squadzr'
 
 export interface InsertGameOptions {
-  maxPlayers?: number
-  genres?: GameSummaryDto['genres']
+  name?: string
+  slug?: string
+  coverUrl?: string
+  thumbnailUrl?: string
+  genres?: GameDto['genres']
+  popularity?: number
   listed?: boolean
   igdbId?: number | null
-  thumbnailUrl?: string
+  minPlayers?: number
+  maxPlayers?: number
 }
 
 export interface InsertedGame {
@@ -33,51 +38,57 @@ export async function insertGameFixture(
   server: TestServer,
   options: InsertGameOptions = {}
 ): Promise<InsertedGame> {
-  const slug = `game-${randomUUID().slice(0, 8)}`
-  const coverUrl = `https://cdn.squadzr.test/${slug}.webp`
+  const slug = options.slug ?? `game-${randomUUID().slice(0, 8)}`
+  const coverUrl = options.coverUrl ?? `https://cdn.squadzr.test/${slug}.webp`
   const [game] = await server.app.db
     .insert(games)
     .values({
-      name: `Game ${slug}`,
+      name: options.name ?? `Game ${slug}`,
       slug,
       igdbId: options.igdbId ?? null,
       genres: options.genres ?? [],
       coverUrl,
       thumbnailUrl: options.thumbnailUrl ?? coverUrl,
-      // Catalog fixtures are listed by default; a Squad may still point at a
-      // delisted (legacy) game.
+      popularity: options.popularity ?? 0,
+      // Catalog fixtures are listed by default; every flow that creates a
+      // Squad needs a listed game to point at.
       listed: options.listed ?? true,
-      minPlayers: 2,
+      minPlayers: options.minPlayers ?? 2,
       maxPlayers: options.maxPlayers ?? 5,
     })
     .returning()
   if (!game) throw new Error('Failed to insert game')
+  // One summary, spread into both fixtures: `thumbnailUrl` is mapped to the
+  // contract's `coverThumbUrl` exactly once.
+  const summary: GameSummaryDto = {
+    id: game.id,
+    name: game.name,
+    slug: game.slug,
+    genres: game.genres,
+    coverUrl: game.coverUrl,
+    coverThumbUrl: game.thumbnailUrl,
+  }
   return {
-    // The row carries the catalog columns (CCC-88), but the transport contract
-    // is unchanged until CCC-93, so the fixture exposes only the DTO fields.
     game: {
-      id: game.id,
-      name: game.name,
-      slug: game.slug,
-      coverUrl: game.coverUrl,
+      ...summary,
       minPlayers: game.minPlayers,
       maxPlayers: game.maxPlayers,
       createdAt: game.createdAt.toISOString(),
       updatedAt: game.updatedAt.toISOString(),
     },
-    summary: {
-      id: game.id,
-      name: game.name,
-      slug: game.slug,
-      genres: game.genres,
-      coverUrl: game.coverUrl,
-      coverThumbUrl: game.thumbnailUrl,
-    },
+    summary,
   }
 }
 
-export async function insertGame(server: TestServer, maxPlayers = 5): Promise<GameDto> {
-  return (await insertGameFixture(server, { maxPlayers })).game
+export async function insertGame(
+  server: TestServer,
+  maxPlayersOrOptions: number | InsertGameOptions = 5
+): Promise<GameDto> {
+  const options =
+    typeof maxPlayersOrOptions === 'number'
+      ? { maxPlayers: maxPlayersOrOptions }
+      : maxPlayersOrOptions
+  return (await insertGameFixture(server, options)).game
 }
 
 export interface CreateRoomBody {

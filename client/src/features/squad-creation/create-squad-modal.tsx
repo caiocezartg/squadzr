@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useMutation } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -32,7 +33,6 @@ type FormInput = z.input<typeof formSchema>
 type FormValues = z.output<typeof formSchema>
 
 export interface CreateSquadModalProps {
-  games: Game[]
   /** Dismisses the dialog; the caller unmounts it, so the next open starts from an empty form. */
   onClose: () => void
   /**
@@ -47,9 +47,10 @@ const languageOptions = ['pt-br', 'en'] as const
 /**
  * The create-Squad dialog: form values are inferred from the shared contract, and the creation
  * mutation, its typed errors, the board refresh and the navigation to the new lobby stay internal.
- * Callers supply the games they already loaded and mount the dialog while it is open.
+ * The game picker searches the catalog, so callers no longer load the games list for it. Callers mount
+ * the dialog while it is open.
  */
-export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModalProps) {
+export function CreateSquadModal({ onClose, onCreated }: CreateSquadModalProps) {
   const t = useTranslations()
   // The lobby is still served by the old app, so the navigation goes through the shell's helper.
   const navigateApp = useAppNavigation()
@@ -58,7 +59,6 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
     register,
     handleSubmit,
     control,
-    watch,
     formState: { errors },
   } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(formSchema),
@@ -72,8 +72,8 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
     },
   })
 
-  const selectedGameId = watch('gameId')
-  const selectedGame = games.find((game) => game.id === selectedGameId)
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null)
+  const [gameListOpen, setGameListOpen] = useState(false)
 
   const maxPlayersHelperText = selectedGame
     ? t('squads.createModal.playerLimitHelperWithGame', {
@@ -108,7 +108,15 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
   return (
     <Dialog.Root
       open
-      onOpenChange={(isOpen) => {
+      onOpenChange={(isOpen, eventDetails) => {
+        // The game picker owns the first Escape while its list is open. The
+        // picker reports its list and the dialog cancels its own Escape
+        // dismissal, so keeping the draft does not depend on event propagation.
+        if (!isOpen && eventDetails.reason === 'escape-key' && gameListOpen) {
+          eventDetails.cancel()
+          return
+        }
+
         if (!isOpen) onClose()
       }}
     >
@@ -168,9 +176,12 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
                           render={({ field }) => (
                             <GameSelect
                               id="modal-gameId"
-                              games={games}
-                              value={field.value ?? ''}
-                              onChange={field.onChange}
+                              selectedGame={selectedGame}
+                              onSelect={(game) => {
+                                setSelectedGame(game)
+                                field.onChange(game?.id ?? '')
+                              }}
+                              onListOpenChange={setGameListOpen}
                               hasError={!!errors.gameId}
                             />
                           )}
@@ -201,6 +212,7 @@ export function CreateSquadModal({ games, onClose, onCreated }: CreateSquadModal
                         type="number"
                         className={errors.maxPlayers ? 'input-field-error' : 'input-field'}
                         min={2}
+                        max={40}
                         placeholder={selectedGame?.maxPlayers?.toString() ?? ''}
                         {...register('maxPlayers', {
                           setValueAs: (value: string) =>

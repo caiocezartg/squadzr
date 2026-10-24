@@ -60,7 +60,7 @@ export type RoomMemberDto = z.infer<typeof roomMemberSchema>
 export const createRoomInputSchema = z.object({
   name: z.string().trim().min(1, 'Room name is required').max(30, 'Room name too long'),
   gameId: z.uuid({ error: 'Invalid game ID' }),
-  maxPlayers: z.number().int().min(2).max(20).optional(),
+  maxPlayers: z.number().int().min(2).max(40).optional(),
   discordLink: z
     .url({ error: 'Invalid Discord link' })
     .refine(

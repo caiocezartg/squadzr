@@ -90,6 +90,7 @@ function failAtRelist(inner: IGameRepository): IGameRepository {
   return {
     findById: (id) => inner.findById(id),
     findAll: () => inner.findAll(),
+    search: (input) => inner.search(input),
     upsertByIgdbId: (input) => inner.upsertByIgdbId(input),
     delistByIgdbIds: (igdbIds) => inner.delistByIgdbIds(igdbIds),
     relistByIgdbIds: () => Promise.reject(new Error('relist failed after delist')),
@@ -108,6 +109,7 @@ function createGatedRepository(inner: IGameRepository, gate: LockGate): IGameRep
   return {
     findById: (id) => inner.findById(id),
     findAll: () => inner.findAll(),
+    search: (input) => inner.search(input),
     upsertByIgdbId: (input) => inner.upsertByIgdbId(input),
     delistByIgdbIds: (igdbIds) => inner.delistByIgdbIds(igdbIds),
     relistByIgdbIds: (igdbIds) => inner.relistByIgdbIds(igdbIds),

@@ -1,6 +1,6 @@
 import { vi, type Mock } from 'vitest'
 import type { Game, UpsertGameInput } from '@domain/entities/game.entity'
-import type { IGameRepository } from '@domain/repositories/game.repository'
+import type { IGameRepository, SearchGamesInput } from '@domain/repositories/game.repository'
 
 export function createMockGame(overrides?: Partial<Game>): Game {
   return {
@@ -34,6 +34,7 @@ export function createMockGameRepository(): MockGameRepository {
   const repository: MockGameRepository = {
     findById: vi.fn<(id: string) => Promise<Game | null>>().mockResolvedValue(null),
     findAll: vi.fn<() => Promise<Game[]>>().mockResolvedValue([]),
+    search: vi.fn<(input: SearchGamesInput) => Promise<Game[]>>().mockResolvedValue([]),
     upsertByIgdbId: vi.fn<(input: UpsertGameInput) => Promise<Game>>().mockImplementation((input) =>
       Promise.resolve(
         createMockGame({

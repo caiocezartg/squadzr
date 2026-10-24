@@ -12,12 +12,13 @@ import {
   roomsResponseSchema,
   userNotificationSchema,
 } from './index'
-import { gameSchema, gameSummarySchema } from './game'
+import { gameSchema, gameSummarySchema, gamesQuerySchema } from './game'
 import { isoDateTimeSchema } from './date'
 import { userSchema } from './user'
 import type { UserNotificationPayloadDto } from './notification'
 import type {
   GameDto,
+  GameGenreDto,
   GameSummaryDto,
   PublicRoomDto,
   RoomDto,
@@ -83,7 +84,9 @@ describe('transport dates', () => {
       id: GAME_ID,
       name: 'Counter-Strike 2',
       slug: 'cs2',
+      genres: [{ slug: 'shooter', name: 'Shooter' }],
       coverUrl: 'https://cdn.squadzr.test/cs2.webp',
+      coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
       minPlayers: 2,
       maxPlayers: 5,
       createdAt: CREATED_AT,
@@ -143,6 +146,8 @@ describe('transport dates', () => {
     expectTypeOf<UserDto['image']>().toEqualTypeOf<string | null>()
     expectTypeOf<UserDto['createdAt']>().toEqualTypeOf<string>()
     expectTypeOf<GameDto['minPlayers']>().toEqualTypeOf<number>()
+    expectTypeOf<GameDto['genres']>().toEqualTypeOf<GameGenreDto[]>()
+    expectTypeOf<GameDto['coverThumbUrl']>().toEqualTypeOf<string>()
     expectTypeOf<GameDto['updatedAt']>().toEqualTypeOf<string>()
     expectTypeOf<RoomDto['tags']>().toEqualTypeOf<string[]>()
     expectTypeOf<RoomDto['createdAt']>().toEqualTypeOf<string>()
@@ -150,6 +155,29 @@ describe('transport dates', () => {
     expectTypeOf<UserNotificationDto['readAt']>().toEqualTypeOf<string | null>()
     expectTypeOf<UserNotificationDto['payload']>().toEqualTypeOf<UserNotificationPayloadDto>()
     expectTypeOf(userSchema.parse).returns.toEqualTypeOf<UserDto>()
+  })
+})
+
+describe('gamesQuerySchema', () => {
+  it('defaults to the twenty most popular games with no search', () => {
+    expect(gamesQuerySchema.parse({})).toEqual({ limit: 20 })
+    expect(gamesQuerySchema.parse({ search: undefined })).toEqual({ limit: 20 })
+  })
+
+  it('trims the search and treats empty text as no search', () => {
+    expect(gamesQuerySchema.parse({ search: '  league  ' })).toEqual({
+      search: 'league',
+      limit: 20,
+    })
+    expect(gamesQuerySchema.parse({ search: '   ' })).toEqual({ search: '', limit: 20 })
+  })
+
+  it('reads the limit from the query string and bounds it from 1 to 50', () => {
+    expect(gamesQuerySchema.parse({ limit: '1' }).limit).toBe(1)
+    expect(gamesQuerySchema.parse({ limit: '50' }).limit).toBe(50)
+    for (const limit of ['0', '51', '1.5', 'many']) {
+      expect(gamesQuerySchema.safeParse({ limit }).success).toBe(false)
+    }
   })
 })
 

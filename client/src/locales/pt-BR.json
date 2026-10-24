@@ -171,7 +171,12 @@
       "discordLinkInvalid": "Por favor, insira uma URL válida",
       "discordLinkNotValid": "Deve ser um convite válido do Discord (discord.gg ou discord.com/invite)",
       "maxPlayersTooFew": "Mínimo de 2 jogadores",
-      "maxPlayersTooMany": "Máximo de 20 jogadores"
+      "maxPlayersTooMany": "Máximo de 40 jogadores",
+      "searchingGames": "Buscando jogos…",
+      "noGamesFound": "Nenhum jogo encontrado. Tente outro nome.",
+      "gamesFound": "{count, plural, one {# jogo encontrado} other {# jogos encontrados}}",
+      "showGameList": "Mostrar jogos",
+      "hideGameList": "Ocultar jogos"
     }
   },
   "mySquads": {
@@ -248,6 +253,7 @@
   },
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",
+    "INVALID_GAME": "Este jogo não está mais disponível. Por favor, escolha outro jogo.",
     "ROOM_NOT_FOUND": "Este squad não existe mais ou o código é inválido.",
     "ROOM_FULL": "Este squad já está cheio.",
     "ROOM_READY": "Este squad está pronto — membros não podem sair.",
