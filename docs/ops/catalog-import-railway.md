@@ -11,7 +11,7 @@ not hosted yet, so this service is the only hosted consumer of the database.
 | Project | `squadzr` |
 | Environment | `staging` |
 | Database | `postgres`, PostgreSQL 16 (`ghcr.io/railwayapp-templates/postgres-ssl:16`), volume `postgres-data` mounted at `/var/lib/postgresql/data` |
-| Cron service | `games-import`, deployed from `caiocezartg/squadzr` branch `igdb-catalog` |
+| Cron service | `games-import`, deployed from `caiocezartg/squadzr` branch `development` |
 | Config as code | `.railway/railway.ts` (Railway Infrastructure as Code) |
 
 The authoring file owns the whole environment: the build installs the Bun workspace from the
@@ -46,7 +46,7 @@ railway config apply --yes
 `plan` only reads Railway and prints the changes; review them before `apply`. With
 `--detailed-exit-code` it exits 0 when the environment matches the file and 2 when changes are
 pending, which is how CI can gate on drift. A config change does not need a code push: `config
-apply` changes the service settings and redeploys it. Code pushes to `igdb-catalog` deploy
+apply` changes the service settings and redeploys it. Code pushes to `development` deploy
 `games-import` through its GitHub source, and the watch patterns drop pushes that touch only
 `client/`.
 
@@ -184,29 +184,6 @@ railway api 'query { volumeInstanceBackupScheduleList(volumeInstanceId: "<volume
 
 `railway volume list --json` names the volume (`postgres-data`) and its volume instance id; the Daily
 entry must be listed for the backup requirement to hold.
-
-## When igdb-catalog merges
-
-`games-import` deploys from `igdb-catalog`. When CCC-97 merges that branch into `development` and the
-branch is deleted, the service is left without a source branch, so the merge follow-up moves the
-service before deleting anything:
-
-1. Confirm the merge commit is on `development` and still contains the import entry
-   (`server/src/interface/scripts/import-games.ts`); the new source must be able to deploy it.
-2. In `.railway/railway.ts`, change the `games-import` source branch from `igdb-catalog` to
-   `development`.
-3. Link and plan: `railway link --project squadzr --environment staging`, then
-   `railway config plan`. Expect exactly one change, the service source branch; stop and read the
-   plan if it shows anything else.
-4. Apply the source change: `railway config apply --yes`.
-5. Check the next deployment: `railway deployment list --service games-import` must show the new
-   deployment from `development` as `SUCCESS`, and `railway status --json` must report
-   `latestDeployment.meta.branch` as `development`. Trigger a `railway cron run` if the next schedule
-   is too far away, and read its summary.
-6. Only after that deployment succeeds, delete the `igdb-catalog` branch.
-
-Do not switch the source while `development` lacks the import code, and do not delete the branch
-first: either order leaves the cron service deploying from a branch that no longer exists.
 
 ## Migrations
 

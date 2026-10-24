@@ -1,36 +1,31 @@
 # CI quality gates and branch protection
 
 Repository-owned GitHub Actions checks (CCC-30). They run from a clean checkout on every pull
-request into `development`, `igdb-catalog`, or `main` (including an existing pull request retargeted
+request into `development` or `main` (including an existing pull request retargeted
 to one of them, via the `edited` event), on pushes to those branches, and on manual dispatch. **CI
 never deploys.**
 
 ## Branch model
 
-| Branch         | Role                                                             | Receives                                        |
-| -------------- | ---------------------------------------------------------------- | ----------------------------------------------- |
-| `development`  | Integration branch                                               | Every task pull request                         |
-| `igdb-catalog` | Spec delivery branch for CCC-86 (temporary)                      | Every CCC-86 task pull request                  |
-| `main`         | Release-only branch; Vercel deploys it to Production (see below) | Promotion pull requests from `development` only |
-
-`igdb-catalog` is a protected working branch while the CCC-86 spec is delivered: it receives every
-task pull request of that spec and requires the same checks as `development`. It is removed when the
-branch merges into `development` at the end of the spec (M5).
+| Branch        | Role                                                             | Receives                                        |
+| ------------- | ---------------------------------------------------------------- | ----------------------------------------------- |
+| `development` | Integration branch                                               | Every task pull request                         |
+| `main`        | Release-only branch; Vercel deploys it to Production (see below) | Promotion pull requests from `development` only |
 
 ## Stable required-check names
 
 These are the check names branch protection matches on. They are the `name:` of each job and must
 not be renamed without updating `.github/rulesets/*.json` and the live rulesets in the same change.
 
-| Check name          | Workflow                                        | What it runs                                                                         | Required on                           |
-| ------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------- |
-| `format-check`      | `CI` (`.github/workflows/ci.yml`)               | `bun run format:check`                                                               | `development`, `igdb-catalog`, `main` |
-| `lint`              | `CI`                                            | `bun run lint` (ESLint `--max-warnings=0` in every workspace)                        | `development`, `igdb-catalog`, `main` |
-| `typecheck`         | `CI`                                            | `bun run typecheck`                                                                  | `development`, `igdb-catalog`, `main` |
-| `unit-tests`        | `CI`                                            | `bun run test` (every Vitest unit project through Turbo)                             | `development`, `igdb-catalog`, `main` |
-| `integration-tests` | `CI`                                            | `bun run test:integration` in `server/` against a PostgreSQL 16 service              | `development`, `igdb-catalog`, `main` |
-| `build`             | `CI`                                            | `bun run build` (client and server production builds)                                | `development`, `igdb-catalog`, `main` |
-| `promotion-source`  | `Promotion` (`.github/workflows/promotion.yml`) | Fails any pull request into `main` whose head is not this repository's `development` | `main`                                |
+| Check name          | Workflow                                        | What it runs                                                                         | Required on           |
+| ------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------ | --------------------- |
+| `format-check`      | `CI` (`.github/workflows/ci.yml`)               | `bun run format:check`                                                               | `development`, `main` |
+| `lint`              | `CI`                                            | `bun run lint` (ESLint `--max-warnings=0` in every workspace)                        | `development`, `main` |
+| `typecheck`         | `CI`                                            | `bun run typecheck`                                                                  | `development`, `main` |
+| `unit-tests`        | `CI`                                            | `bun run test` (every Vitest unit project through Turbo)                             | `development`, `main` |
+| `integration-tests` | `CI`                                            | `bun run test:integration` in `server/` against a PostgreSQL 16 service              | `development`, `main` |
+| `build`             | `CI`                                            | `bun run build` (client and server production builds)                                | `development`, `main` |
+| `promotion-source`  | `Promotion` (`.github/workflows/promotion.yml`) | Fails any pull request into `main` whose head is not this repository's `development` | `main`                |
 
 All checks are produced by the GitHub Actions app (`integration_id` 15368), which the rulesets pin
 so no other app or commit status can satisfy them.
@@ -63,27 +58,22 @@ so no other app or commit status can satisfy them.
 Branch protection is a repository setting, not code. It is configured with repository rulesets
 whose exact definitions are versioned in `.github/rulesets/`:
 
-| Ruleset                              | File                                 | Target         | Rules                                                                                                                                                                                           |
-| ------------------------------------ | ------------------------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `development: integration branch`    | `.github/rulesets/development.json`  | `development`  | Require a pull request (0 approvals); require the six `CI` checks; require the branch to be up to date before merging; block force pushes and deletion; no bypass actors                        |
-| `igdb-catalog: spec delivery branch` | `.github/rulesets/igdb-catalog.json` | `igdb-catalog` | Same as `development`: require a pull request (0 approvals); require the six `CI` checks; require the branch to be up to date before merging; block force pushes and deletion; no bypass actors |
-| `main: release-only promotion`       | `.github/rulesets/main.json`         | `main`         | Require a pull request (0 approvals, merge commits only); require the six `CI` checks plus `promotion-source`; block force pushes and deletion; no bypass actors                                |
+| Ruleset                           | File                                | Target        | Rules                                                                                                                                                                    |
+| --------------------------------- | ----------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `development: integration branch` | `.github/rulesets/development.json` | `development` | Require a pull request (0 approvals); require the six `CI` checks; require the branch to be up to date before merging; block force pushes and deletion; no bypass actors |
+| `main: release-only promotion`    | `.github/rulesets/main.json`        | `main`        | Require a pull request (0 approvals, merge commits only); require the six `CI` checks plus `promotion-source`; block force pushes and deletion; no bypass actors         |
 
 `bypass_actors` is empty on purpose: repository admins cannot merge a pull request with a failing or
 pending required check. `main` does not require "up to date" because promotion merge commits exist
 only on `main`; requiring it would force merging `main` back into `development` before each
 release. `main` allows only merge commits so `development` and `main` keep a shared history.
 
-The promotion rule only governs pull requests into `main`: `promotion-source` is neither triggered
-for nor required on `igdb-catalog`, so it cannot block a task pull request there.
-
 Apply them once (requires admin on `caiocezartg/squadzr`):
 
 ```sh
 gh api --method POST repos/caiocezartg/squadzr/rulesets --input .github/rulesets/development.json
-gh api --method POST repos/caiocezartg/squadzr/rulesets --input .github/rulesets/igdb-catalog.json
 gh api --method POST repos/caiocezartg/squadzr/rulesets --input .github/rulesets/main.json
-gh api repos/caiocezartg/squadzr/rulesets   # verify all three are listed with "enforcement": "active"
+gh api repos/caiocezartg/squadzr/rulesets   # verify both are listed with "enforcement": "active"
 ```
 
 Or in the UI: **Settings → Rules → Rulesets → New ruleset → Import a ruleset**, then select each
@@ -108,10 +98,6 @@ Documentation alone does not satisfy CCC-30. After applying the rulesets:
 
 To verify the `main` promotion rule, open a pull request from any other branch into `main` and
 confirm `promotion-source` fails and merging is blocked.
-
-`igdb-catalog` requires the same six checks as `development`, so a trial pull request there must
-show all of them. Its ruleset does not require `promotion-source`, so the promotion rule cannot
-block it.
 
 ## Deployment link (Vercel / Railway)
 
