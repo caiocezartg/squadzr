@@ -17,9 +17,7 @@ import { countHttpCalls, httpOk, onHttp } from './http-router'
 import { settleNavigation } from './navigation'
 import type { MockHttpResponse } from './http-router'
 import {
-  boardGames,
   boardSquads,
-  gameLol,
   guestPlayer,
   hostPlayer,
   lobbySquad,
@@ -35,9 +33,7 @@ const FIRST_RECONNECT_DELAY = 3000
 
 function registerRoutes(): void {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
   onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
-  onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
 }
 
 /** Drops the current socket and lets the first reconnection attempt fire. */

@@ -13,8 +13,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SquadCard } from '@/features/squad-list'
-import type { Game } from '@/types'
-import { gameLol, openSquad } from './fixtures'
+import { openSquad } from './fixtures'
 import { EnglishIntlProvider } from './intl'
 
 let animateCalls: Array<{ element: Element; keyframes: unknown }> = []
@@ -37,7 +36,7 @@ afterEach(() => {
 
 describe('squad card — no entrance fade', () => {
   it('starts visible on mount, with no animation and no inline opacity', () => {
-    render(<SquadCard squad={openSquad} game={gameLol} />)
+    render(<SquadCard squad={openSquad} />)
 
     const card = screen.getByRole('button')
     expect(card.style.opacity).toBe('')
@@ -48,7 +47,7 @@ describe('squad card — no entrance fade', () => {
   it('stays visible through a StrictMode mount, which runs the effects twice', () => {
     render(
       <StrictMode>
-        <SquadCard squad={openSquad} game={gameLol} />
+        <SquadCard squad={openSquad} />
       </StrictMode>
     )
 
@@ -59,7 +58,7 @@ describe('squad card — no entrance fade', () => {
   it('is visible in the server HTML, so hydration has nothing to fade in', () => {
     const markup = renderToStaticMarkup(
       <EnglishIntlProvider>
-        <SquadCard squad={openSquad} game={gameLol} />
+        <SquadCard squad={openSquad} />
       </EnglishIntlProvider>
     )
     const [card] = markup.match(/^<button[^>]*>/) ?? []
@@ -70,15 +69,33 @@ describe('squad card — no entrance fade', () => {
   })
 
   it('counts the members the card was given, one for a squad without a count', () => {
-    render(<SquadCard squad={{ ...openSquad, memberCount: 3 }} game={gameLol} />)
+    render(<SquadCard squad={{ ...openSquad, memberCount: 3 }} />)
 
     expect(screen.getByText('3')).toBeInTheDocument()
   })
 })
 
 describe('squad card — cover', () => {
+  it('renders the game name and IGDB cover the Squad carries, without a per-game crop', () => {
+    const squad = {
+      ...openSquad,
+      game: {
+        ...openSquad.game,
+        name: 'Arc Raiders',
+        coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co123.webp',
+      },
+    }
+    render(<SquadCard squad={squad} />)
+
+    const cover = screen.getByRole('img')
+    expect(cover).toHaveAttribute('src', squad.game.coverUrl)
+    expect(cover).toHaveAttribute('alt', 'Arc Raiders')
+    expect(cover.style.objectPosition).toBe('')
+    expect(screen.getByText('Arc Raiders')).toBeInTheDocument()
+  })
+
   it('keeps the cover hidden over the placeholder until it loads, then fades it in', () => {
-    render(<SquadCard squad={openSquad} game={gameLol} />)
+    render(<SquadCard squad={openSquad} />)
 
     const cover = screen.getByRole('img')
     expect(cover).toHaveClass('transition-opacity', 'opacity-0')
@@ -92,7 +109,7 @@ describe('squad card — cover', () => {
   })
 
   it('keeps a broken cover hidden so the placeholder shows instead', () => {
-    render(<SquadCard squad={openSquad} game={gameLol} />)
+    render(<SquadCard squad={openSquad} />)
 
     const cover = screen.getByRole('img')
     fireEvent.error(cover)
@@ -120,21 +137,21 @@ describe('squad card — cover', () => {
 
     it('shows a cover that is already complete at mount, with no load event', () => {
       stubImageState({ complete: true, naturalWidth: 460 })
-      render(<SquadCard squad={openSquad} game={gameLol} />)
+      render(<SquadCard squad={openSquad} />)
 
       expect(screen.getByRole('img')).toHaveClass('opacity-100')
     })
 
     it('keeps a cover that already failed hidden', () => {
       stubImageState({ complete: true, naturalWidth: 0 })
-      render(<SquadCard squad={openSquad} game={gameLol} />)
+      render(<SquadCard squad={openSquad} />)
 
       expect(screen.getByRole('img')).toHaveClass('opacity-0')
     })
 
     it('keeps a cover that is still loading hidden until it loads', () => {
       stubImageState({ complete: false, naturalWidth: 0 })
-      render(<SquadCard squad={openSquad} game={gameLol} />)
+      render(<SquadCard squad={openSquad} />)
 
       const cover = screen.getByRole('img')
       expect(cover).toHaveClass('opacity-0')
@@ -144,11 +161,14 @@ describe('squad card — cover', () => {
   })
 
   it('hides the cover again while a new cover URL loads', () => {
-    const { rerender } = render(<SquadCard squad={openSquad} game={gameLol} />)
+    const { rerender } = render(<SquadCard squad={openSquad} />)
     fireEvent.load(screen.getByRole('img'))
 
-    const otherGame: Game = { ...gameLol, coverUrl: 'https://cdn.squadzr.test/covers/other.jpg' }
-    rerender(<SquadCard squad={openSquad} game={otherGame} />)
+    const otherSquad = {
+      ...openSquad,
+      game: { ...openSquad.game, coverUrl: 'https://cdn.squadzr.test/covers/other.jpg' },
+    }
+    rerender(<SquadCard squad={otherSquad} />)
 
     const cover = screen.getByRole('img')
     expect(cover).toHaveClass('opacity-0')

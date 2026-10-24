@@ -22,9 +22,7 @@ import { renderSquadsFlow } from './harness'
 import { httpError, httpOk, onHttp } from './http-router'
 import { settleNavigation } from './navigation'
 import {
-  boardGames,
   boardSquads,
-  gameLol,
   guestPlayer,
   hostPlayer,
   lobbySquad,
@@ -50,7 +48,6 @@ const invalidDiscordSquadResponse: RoomResponse = {
 
 function registerLobbyRoutes(): void {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
   onHttp('GET', '/api/rooms/:code', (req) => {
     if (req.params.code === lobbySquad.code) return httpOk(lobbySquadResponse)
     if (req.params.code === invalidDiscordSquad.code) {
@@ -58,7 +55,6 @@ function registerLobbyRoutes(): void {
     }
     return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
   })
-  onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
   onHttp('POST', '/api/rooms/:code/join', () => httpOk({ ok: true }))
   onHttp('POST', '/api/rooms/:code/leave', () => httpOk({ ok: true }))
 }
@@ -450,7 +446,6 @@ describe('squad lobby — full reload of a full squad', () => {
 
   function registerFullSquadRoutes(): void {
     onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
-    onHttp('GET', '/api/games', () => httpOk(boardGames))
     onHttp('GET', '/api/rooms/:code', (req) => {
       if (req.params.code !== lobbySquad.code) {
         return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
@@ -458,7 +453,6 @@ describe('squad lobby — full reload of a full squad', () => {
       // HTTP still carries no ready indicator at all.
       return httpOk({ room: lobbySquad, players: fullRoster })
     })
-    onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
   }
 
   it('derives readiness and the authorized link from the snapshot alone', async () => {

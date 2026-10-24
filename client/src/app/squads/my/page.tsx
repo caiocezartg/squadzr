@@ -15,10 +15,11 @@ export const metadata: Metadata = {
  * My Squads. A request with no session cookie is redirected to the landing before any content
  * renders. The check reads the cookie and never calls the API, so a navigation does not wait on the
  * server. A cookie that is present but expired is not caught here: the list's read answers 401, and
- * the browser sends the viewer to the landing (see `useSignedOutRedirect`). The list and the games
- * are started on the server and handed to the browser through the query client; the page does not
- * wait for those reads, so a client navigation renders the lists the cache holds at once, and the
- * page suspends only where it has no data.
+ * the browser sends the viewer to the landing (see `useSignedOutRedirect`). The list is started on
+ * the server and handed to the browser through the query client; each Squad carries its game
+ * summary, so no catalog read is needed. The page does not wait for that read, so a client
+ * navigation renders the lists the cache holds at once, and the page suspends only where it has no
+ * data.
  */
 export default async function MySquadsRoute() {
   const viewer = await getRequestViewer()

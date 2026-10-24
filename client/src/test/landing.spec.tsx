@@ -116,6 +116,14 @@ describe('hero squad showcase', () => {
     expect(screen.getByText('8m ago')).toBeInTheDocument()
     expect(screen.getByText('3m ago')).toBeInTheDocument()
     expect(screen.getByText('15m ago')).toBeInTheDocument()
+    // Each sample card reads its game from the Squad summary it carries.
+    expect(screen.getByText('League of Legends')).toBeInTheDocument()
+    expect(screen.getByText('Counter-Strike 2')).toBeInTheDocument()
+    expect(screen.getByText('Dota 2')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Counter-Strike 2' })).toHaveAttribute(
+      'src',
+      'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/coaczd.webp'
+    )
   })
 })
 
