@@ -17,6 +17,7 @@ export interface InsertGameOptions {
   genres?: GameDto['genres']
   popularity?: number
   listed?: boolean
+  featuredRank?: number | null
   igdbId?: number | null
   minPlayers?: number
   maxPlayers?: number
@@ -53,6 +54,7 @@ export async function insertGameFixture(
       // Catalog fixtures are listed by default; every flow that creates a
       // Squad needs a listed game to point at.
       listed: options.listed ?? true,
+      featuredRank: options.featuredRank ?? null,
       minPlayers: options.minPlayers ?? 2,
       maxPlayers: options.maxPlayers ?? 5,
     })

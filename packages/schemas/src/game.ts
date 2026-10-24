@@ -48,6 +48,31 @@ export const gamesQuerySchema = z.object({
 
 export type GamesQuery = z.infer<typeof gamesQuerySchema>
 
+// Popular games query: the landing asks for a page of the games with the most
+// Open Squads. Fastify delivers query values as strings.
+export const popularGamesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(20).default(8),
+})
+
+export type PopularGamesQuery = z.infer<typeof popularGamesQuerySchema>
+
+// One entry of the landing's popular games list: the Game, how many Open Squads
+// it has right now and its most used tags (at most three, by use then name).
+export const popularGameSchema = z.object({
+  game: gameSchema,
+  openSquadCount: z.number().int().nonnegative(),
+  topTags: z.array(z.string()).max(3),
+})
+
+export type PopularGameDto = z.infer<typeof popularGameSchema>
+
+export const popularGamesResponseSchema = z.object({
+  totalGames: z.number().int().nonnegative(),
+  games: z.array(popularGameSchema),
+})
+
+export type PopularGamesResponse = z.infer<typeof popularGamesResponseSchema>
+
 // Game HTTP responses
 export const gamesResponseSchema = z.object({ games: z.array(gameSchema) })
 

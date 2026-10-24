@@ -14,11 +14,17 @@ export {
   gameSummarySchema,
   gamesQuerySchema,
   gamesResponseSchema,
+  popularGameSchema,
+  popularGamesQuerySchema,
+  popularGamesResponseSchema,
   type GameDto,
   type GameGenreDto,
   type GameSummaryDto,
   type GamesQuery,
   type GamesResponse,
+  type PopularGameDto,
+  type PopularGamesQuery,
+  type PopularGamesResponse,
 } from './game'
 export {
   createRoomInputSchema,

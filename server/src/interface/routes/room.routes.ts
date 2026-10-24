@@ -14,6 +14,8 @@ import {
   joinRoomResponseSchema,
   leaveRoomResponseSchema,
   myRoomsResponseSchema,
+  popularGamesQuerySchema,
+  popularGamesResponseSchema,
   roomCodeParamSchema,
   roomResponseSchema,
   roomsResponseSchema,
@@ -37,6 +39,20 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       },
     },
     handler: gameController.list.bind(gameController),
+  })
+
+  app.get('/api/games/popular', {
+    schema: {
+      tags: ['Games'],
+      summary: 'List popular games',
+      description:
+        'Returns the Listed Games with the most Open Squads right now, ranked by open Squads, featured rank, popularity and name. On a quiet day the Featured Games fill the list. Each entry carries the open count and up to three most used tags, and the response carries the total of Listed Games.',
+      querystring: popularGamesQuerySchema,
+      response: {
+        200: popularGamesResponseSchema,
+      },
+    },
+    handler: gameController.popular.bind(gameController),
   })
 
   app.get('/api/games/:id', {

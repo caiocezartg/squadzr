@@ -21,7 +21,8 @@
     "openMenu": "Open menu"
   },
   "footer": {
-    "line": "© {year} Squadzr — Find your gaming squad"
+    "line": "© {year} Squadzr — Find your gaming squad",
+    "gameDataByIgdb": "game data by IGDB"
   },
   "hero": {
     "badge": "{count} GAMES SUPPORTED",
@@ -38,34 +39,42 @@
     "subtitle": "Everything you need to know before building your squad.",
     "items": [
       {
+        "id": "free",
         "question": "Is Squadzr free?",
         "answer": "Yes, 100% free. No credit card required, no premium plans. Just sign in with your Discord account and start playing."
       },
       {
+        "id": "account",
         "question": "Do I need to create an account?",
         "answer": "You sign in with your Discord account in one click — no forms, no extra passwords. Your Discord avatar and username are your identity on Squadzr."
       },
       {
+        "id": "squad-limit",
         "question": "How many squads can I create?",
         "answer": "There is no limit. You can create as many squads as you want, for any game available on the platform."
       },
       {
+        "id": "discord-link",
         "question": "When is the Discord link shared?",
         "answer": "The Discord server invite is shared as soon as the squad reaches its max player count. When the last slot is filled, all members get access to the invite link."
       },
       {
+        "id": "host-leaves",
         "question": "What happens if the host leaves?",
         "answer": "If the squad creator leaves, the squad is closed and all members are removed. Regular members can leave without affecting the squad."
       },
       {
+        "id": "player-count",
         "question": "Can I choose the number of players?",
         "answer": "Yes. By default, the player count matches the selected game's max players, but you can customize it between 2 and 20 when creating a squad."
       },
       {
+        "id": "supported-games",
         "question": "What games are supported?",
-        "answer": "We currently support 19 popular games including League of Legends, Valorant, CS2, Dota 2, Fortnite, Overwatch 2, and more. The list is constantly updated."
+        "answer": "Squadzr supports a growing catalog of popular multiplayer games, and the list is constantly updated."
       },
       {
+        "id": "join-by-code",
         "question": "Can I join a squad by code?",
         "answer": "Yes. Every squad has a unique 6-character code that can be shared. Just enter the code to join the squad directly."
       }
@@ -102,6 +111,7 @@
     "title": "Play what you love",
     "subtitle": "Find teammates across the most popular multiplayer titles.",
     "playerRange": "{min}-{max} players",
+    "openSquads": "{count, plural, =0 {No open squads} one {# open squad} other {# open squads}}",
     "moreGames": "And many other games!"
   },
   "squads": {

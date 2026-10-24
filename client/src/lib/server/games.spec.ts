@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { API_INTERNAL_URL } from '@/env.server'
 import { ApiContractError } from '@/lib/api-contract'
-import { boardGames, gameCs2, gameLol } from '@/test/fixtures'
-import { loadGames, pickPopularGames } from './games'
+import { popularGames } from '@/test/fixtures'
+import { loadPopularGames } from './games'
 
 type RecordedInit = RequestInit & { next?: { revalidate?: number } }
 
@@ -28,26 +28,26 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('loadGames', () => {
-  it('returns the games the list response carries, parsed against the contract', async () => {
-    const fetchMock = stubFetch(jsonResponse(boardGames))
+describe('loadPopularGames', () => {
+  it('returns the total and the games the response carries, parsed against the contract', async () => {
+    const fetchMock = stubFetch(jsonResponse(popularGames))
 
-    await expect(loadGames()).resolves.toEqual([gameLol, gameCs2])
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${API_INTERNAL_URL}/api/games`)
+    await expect(loadPopularGames()).resolves.toEqual(popularGames)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${API_INTERNAL_URL}/api/games/popular`)
   })
 
   it('sends no cookie', async () => {
-    const fetchMock = stubFetch(jsonResponse(boardGames))
+    const fetchMock = stubFetch(jsonResponse(popularGames))
 
-    await loadGames()
+    await loadPopularGames()
 
     expect(new Headers(sentInit(fetchMock).headers).has('cookie')).toBe(false)
   })
 
   it('is revalidated every five minutes', async () => {
-    const fetchMock = stubFetch(jsonResponse(boardGames))
+    const fetchMock = stubFetch(jsonResponse(popularGames))
 
-    await loadGames()
+    await loadPopularGames()
 
     expect(sentInit(fetchMock).next).toEqual({ revalidate: 300 })
   })
@@ -56,30 +56,14 @@ describe('loadGames', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     stubFetch(jsonResponse({ error: 'INTERNAL', message: 'Database is down' }, 500))
 
-    await expect(loadGames()).resolves.toEqual([])
+    await expect(loadPopularGames()).resolves.toEqual({ totalGames: 0, games: [] })
     expect(consoleError).toHaveBeenCalledTimes(1)
   })
 
   it('throws when a 2xx body breaks the contract, so the page does not render a bad list', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    stubFetch(jsonResponse({ games: [{ id: 'not-a-uuid' }] }))
+    stubFetch(jsonResponse({ totalGames: 2, games: [{ game: { id: 'not-a-uuid' } }] }))
 
-    await expect(loadGames()).rejects.toBeInstanceOf(ApiContractError)
-  })
-})
-
-describe('pickPopularGames', () => {
-  it('shows at most eight games', () => {
-    const games = Array.from({ length: 12 }, (_, index) => ({ ...gameLol, name: `Game ${index}` }))
-
-    expect(pickPopularGames(games, () => 0.5)).toHaveLength(8)
-  })
-
-  it('orders the games by the random source it is given and keeps the list it was given', () => {
-    const games = [gameLol, gameCs2]
-
-    expect(pickPopularGames(games, () => 0)).toEqual([gameCs2, gameLol])
-    expect(pickPopularGames(games, () => 0.99)).toEqual([gameLol, gameCs2])
-    expect(games).toEqual([gameLol, gameCs2])
+    await expect(loadPopularGames()).rejects.toBeInstanceOf(ApiContractError)
   })
 })

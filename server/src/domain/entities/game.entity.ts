@@ -20,6 +20,21 @@ export interface Game {
   readonly updatedAt: Date
 }
 
+/** One entry of the landing's popular games list. */
+export interface PopularGame {
+  readonly game: Game
+  /** Open Squads on this Game at the instant the list was read. */
+  readonly openSquadCount: number
+  /** At most three tags, ranked by use across the Open Squads, then alphabetically. */
+  readonly topTags: string[]
+}
+
+export interface PopularGames {
+  /** Every Listed Game in the catalog, not just the returned page. */
+  readonly totalGames: number
+  readonly games: PopularGame[]
+}
+
 /**
  * The Game fields a Squad carries so a client can render its game without a
  * second read. Legacy Games (no IGDB identity, empty genres) have the same shape.

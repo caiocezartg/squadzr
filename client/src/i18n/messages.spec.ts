@@ -84,6 +84,22 @@ describe('ICU messages', () => {
     expect(steps[2]?.title).toBe('Squad Up & Play')
   })
 
+  it('does not promise a fixed number of supported games in either language', () => {
+    const supportedGamesAnswer = (messages: {
+      faq: { items: readonly { id: string; answer: string }[] }
+    }) => messages.faq.items.find((item) => item.id === 'supported-games')?.answer ?? ''
+
+    expect(supportedGamesAnswer(en)).not.toMatch(/\d/)
+    expect(supportedGamesAnswer(ptBR)).not.toMatch(/\d/)
+    expect(supportedGamesAnswer(en)).toContain('catalog')
+    expect(supportedGamesAnswer(ptBR)).toContain('catálogo')
+  })
+
+  it('credits IGDB in both languages', () => {
+    expect(t('footer.gameDataByIgdb')).toBe('game data by IGDB')
+    expect(tPtBR('footer.gameDataByIgdb')).toBe('dados de jogos por IGDB')
+  })
+
   it('keeps apostrophes in plain text', () => {
     expect(t('notFound.description')).toContain("you've wandered off the map")
   })

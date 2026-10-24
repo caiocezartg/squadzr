@@ -1,9 +1,15 @@
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
-import type { Game, UpsertGameInput } from '@domain/entities/game.entity'
-import type { IGameRepository, SearchGamesInput } from '@domain/repositories/game.repository'
+import type { Game, PopularGames, UpsertGameInput } from '@domain/entities/game.entity'
+import type {
+  FindPopularGamesInput,
+  IGameRepository,
+  SearchGamesInput,
+} from '@domain/repositories/game.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import type { Database } from '@infrastructure/database/drizzle'
 import { games, type GameRow } from '@infrastructure/database/schema/games'
+import { rooms } from '@infrastructure/database/schema/rooms'
+import { validOpenRoomCondition } from './open-room-rules'
 
 /** PostgreSQL's default LIKE escape character. */
 const LIKE_ESCAPE = '\\'
@@ -27,6 +33,30 @@ type DatabaseExecutor = Pick<Database, 'select' | 'insert' | 'update' | 'delete'
  * transactions. Any run taking it waits for the previous run to commit.
  */
 const CATALOG_IMPORT_LOCK_KEY = 89_001
+
+/** How many tags the landing shows next to a Game. */
+const POPULAR_GAME_TAG_LIMIT = 3
+
+/**
+ * Ranks the tags of a Game's Open Squads by how many Squads use them, then
+ * alphabetically, and keeps the first three. A Squad that repeats a tag still
+ * counts as one use.
+ */
+function rankTopTags(roomTags: readonly (readonly string[])[]): string[] {
+  const uses = new Map<string, number>()
+  for (const tags of roomTags) {
+    for (const tag of new Set(tags)) uses.set(tag, (uses.get(tag) ?? 0) + 1)
+  }
+
+  return [...uses.entries()]
+    .sort(([leftTag, leftUses], [rightTag, rightUses]) => {
+      if (leftUses !== rightUses) return rightUses - leftUses
+      if (leftTag === rightTag) return 0
+      return leftTag < rightTag ? -1 : 1
+    })
+    .slice(0, POPULAR_GAME_TAG_LIMIT)
+    .map(([tag]) => tag)
+}
 
 function mapRowToEntity(row: GameRow): Game {
   return {
@@ -92,6 +122,58 @@ export class DrizzleGameRepository implements IGameRepository {
       .limit(limit)
 
     return result.map(mapRowToEntity)
+  }
+
+  async findPopular({ limit, now }: FindPopularGamesInput): Promise<PopularGames> {
+    // Aggregate first, over the Open Rooms only: a Game with no Open Squad
+    // never enters this grouping, and the LEFT JOIN below gives it a zero count.
+    // JSON keeps each Open Squad's tag array; PostgreSQL's array_agg refuses
+    // empty arrays and mixed dimensionalities.
+    const openSquads = this.executor
+      .select({
+        gameId: rooms.gameId,
+        openSquadCount: sql<number>`count(*)`.mapWith(Number).as('open_squad_count'),
+        roomTags: sql<string[][]>`jsonb_agg(${rooms.tags})`.as('room_tags'),
+      })
+      .from(rooms)
+      .where(validOpenRoomCondition(now))
+      .groupBy(rooms.gameId)
+      .as('open_squads')
+
+    const openSquadCount = sql<number>`coalesce(${openSquads.openSquadCount}, 0)`.mapWith(Number)
+    // One cheap count over the catalog, not a window over every aggregated Game.
+    const totalGames =
+      sql<number>`(select count(*) from ${games} where ${games.listed} = true)`.mapWith(Number)
+
+    const result = await this.executor
+      .select({
+        game: games,
+        openSquadCount,
+        roomTags: sql<string[][]>`coalesce(${openSquads.roomTags}, '[]'::jsonb)`,
+        totalGames,
+      })
+      .from(games)
+      .leftJoin(openSquads, eq(openSquads.gameId, games.id))
+      .where(eq(games.listed, true))
+      .orderBy(
+        desc(openSquadCount),
+        // PostgreSQL sorts ascending NULLs last, so the Featured Games fill the
+        // list first on a quiet day and the rest follow by popularity and name.
+        asc(games.featuredRank),
+        desc(games.popularity),
+        asc(games.name),
+        asc(games.id)
+      )
+      .limit(limit)
+
+    return {
+      totalGames: result[0]?.totalGames ?? 0,
+      games: result.map((row) => ({
+        game: mapRowToEntity(row.game),
+        openSquadCount: row.openSquadCount,
+        topTags: rankTopTags(row.roomTags),
+      })),
+    }
   }
 
   async upsertByIgdbId(input: UpsertGameInput): Promise<Game> {
