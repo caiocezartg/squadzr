@@ -39,7 +39,8 @@ export default defineRailway(() => {
   })
 
   const gamesImport = service('games-import', {
-    source: github('caiocezartg/squadzr', { branch: 'development' }),
+    // checkSuites is Railway's "Wait for CI": a push deploys only after its GitHub checks pass.
+    source: github('caiocezartg/squadzr', { branch: 'development', checkSuites: true }),
     build: {
       builder: 'RAILPACK',
       buildCommand: 'bun install --frozen-lockfile',
