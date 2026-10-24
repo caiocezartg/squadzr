@@ -11,6 +11,14 @@ export function LandingFooter() {
           <p className="text-xs text-muted/60">
             &copy; {new Date().getFullYear()} Squadzr. Built for gamers.
           </p>
+          <a
+            href="https://www.igdb.com"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-muted/60 transition-colors hover:text-muted"
+          >
+            game data by IGDB
+          </a>
         </div>
       </div>
     </footer>

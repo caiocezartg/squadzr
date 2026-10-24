@@ -8,6 +8,7 @@ import type {
   Game,
   GamesResponse,
   Player,
+  PopularGamesResponse,
   RoomResponse,
   RoomsResponse,
   Squad,
@@ -68,6 +69,15 @@ export const gameCs2Summary = {
 
 export const boardGames: GamesResponse = {
   games: [gameLol, gameCs2],
+}
+
+/** The landing's popular games read: a total larger than the returned page. */
+export const popularGames: PopularGamesResponse = {
+  totalGames: 42,
+  games: [
+    { game: gameLol, openSquadCount: 4, topTags: ['ranked', 'chill'] },
+    { game: gameCs2, openSquadCount: 0, topTags: [] },
+  ],
 }
 
 /** Open squad with free slots — joinable by a signed-in user. */

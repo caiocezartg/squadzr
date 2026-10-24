@@ -24,13 +24,13 @@ inventory (see the equivalence proof below).
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
 | `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 27 | 128 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 27 | 269 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 479 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 28 | 279 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 478 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 84 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-23 on the
-merged tree after CCC-89, CCC-92, CCC-93 and CCC-95.
+merged tree after CCC-89, CCC-92, CCC-93, CCC-95 and CCC-96.
 
 CCC-93 extends `tests/integration/games-http.test.ts` with the game search and the delisted
 single-game read, and `tests/integration/rooms-http.test.ts` with the 2/40/41 Squad-size bounds and
@@ -48,6 +48,13 @@ moved `games-postgres` to the IGDB-id upsert, added the Catalog Import suites (f
 an isolated PostgreSQL, plus the entry's exit code and pool close) and added
 `src/interface/catalog/curated-games.spec.ts`; that recount also corrected the client and schemas
 rows, which had drifted since CCC-70.
+
+CCC-96 adds `tests/integration/popular-games-http.test.ts` (+1 file / +10 tests) for the landing's
+popular games endpoint: ranking, the Featured fallback, expired and Ready Squads, the top-tag
+tie-break, `totalGames` and the `limit` bounds. It also replaces the landing's full-list and
+random-pick client cases with the popular read in `games.spec.ts` (−2) and adds the FAQ
+no-fixed-count case to `messages.spec.ts` (+1), so `client:unit` measures 58 files / 478 tests; the
+popular read also adds the client assertions in `landing.spec.tsx`, which keeps its 9 tests.
 
 The CCC-88 recount (2026-10-22) added `tests/integration/catalog-migration.test.ts` and recorded
 `server:integration` at 25 files / 231 tests. The CCC-70 recount added `src/env.spec.ts`,
@@ -95,6 +102,9 @@ Integration projects follow the same naming convention:
   applies the defaults. `games-http` (CCC-93) covers the Listed-only search, prefix/popularity
   ranking, wildcard escaping, the `limit` bounds and the delisted single-game read; `rooms-http`
   covers the 2–40 Squad-size bounds and the `INVALID_GAME` rejection for a delisted Game.
+  `popular-games-http` (CCC-96) drives `GET /api/games/popular`: open-Squad ranking, the Featured
+  fallback on a quiet day, expired and Ready Squads excluded, the top-tag tie-break, `totalGames`
+  and the 1–20 `limit` bounds.
   `catalog-import` (CCC-89) drives the use case with a fake Game Catalog Source against an isolated
   PostgreSQL: first run, idempotent re-run, update with a slug change, delist and relist, both
   safety stops and the override, mid-run rollbacks of new and existing rows, concurrent runs
@@ -157,16 +167,16 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
   collecting tests. The script was removed instead of being restored with a new dependency;
   introducing coverage tooling is a deliberate follow-up decision, not an accidental default.
 
-## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-92, CCC-93, CCC-95)
+## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-92, CCC-93, CCC-95, CCC-96)
 
-### Current counts (recounted 2026-10-23 on the merged tree, CCC-89, CCC-92, CCC-93 and CCC-95)
+### Current counts (recounted 2026-10-23 on the merged tree, CCC-89, CCC-92, CCC-93, CCC-95 and CCC-96)
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 89 | 691 |
-| `bunx vitest run` (direct root composition) | 89 | 691 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 89 | 690 |
+| `bunx vitest run` (direct root composition) | 89 | 690 |
 | `bunx turbo test --filter=server` | 27 | 128 |
-| `bunx turbo test --filter=client` | 58 | 479 |
+| `bunx turbo test --filter=client` | 58 | 478 |
 | `bunx turbo test --filter=@squadzr/schemas` | 4 | 84 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
@@ -174,7 +184,7 @@ numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-
 specs together with their use cases, so the server unit suite has 5 fewer tests than before that
 change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
 16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
-current run passes 27 files / 269 tests (measured 2026-10-23 against the test PostgreSQL on port
+current run passes 28 files / 279 tests (measured 2026-10-23 against the test PostgreSQL on port
 5433): the CCC-88 row of 25 files / 231 tests plus CCC-89's changes — the 2 child-process seed
 tests removed with the static seed, the Catalog Import suites (+2 files / +16 tests), two extra
 IGDB-id cases in `games-postgres` — plus CCC-93's cases in the existing games and rooms HTTP suites
@@ -186,9 +196,12 @@ cases, CCC-95 adds 3 cover cases and CCC-92 adds one projection case and one cre
 the merged tree measures 27 files / 128 tests. CCC-59 removed the `types:unit` project (1 file, 1
 test) together with the `@squadzr/types` workspace. The schemas suite measures 84 tests across 4
 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
-contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 479
-tests (CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-95 added 2 and
-CCC-92 added none); both drifts predate CCC-89 and were corrected by its recount.
+contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 478
+tests (CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-95 added 2,
+CCC-92 added none, and CCC-96 replaced the landing's random-pick cases with the popular read and
+added the FAQ case: −1 net); both drifts predate CCC-89 and were corrected by its recount. CCC-96's
+10 integration cases are the difference between the CCC-95 row of 27 files / 269 tests and the
+current 28 files / 279.
 
 ### Historical record (CCC-28, 2026-09-25)
 

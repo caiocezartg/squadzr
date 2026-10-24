@@ -63,7 +63,7 @@
       },
       {
         "question": "Quais jogos são suportados?",
-        "answer": "Atualmente suportamos 19 jogos populares incluindo League of Legends, Valorant, CS2, Dota 2, Fortnite, Overwatch 2 e mais. A lista é constantemente atualizada."
+        "answer": "O Squadzr oferece um catálogo crescente de jogos multiplayer populares, e a lista é constantemente atualizada."
       },
       {
         "question": "Posso entrar em um squad por código?",
@@ -102,6 +102,7 @@
     "title": "Jogue o que você ama",
     "subtitle": "Encontre companheiros nos títulos multiplayer mais populares.",
     "playerRange": "{min}-{max} jogadores",
+    "openSquads": "{count, plural, =0 {Nenhum squad aberto} one {# squad aberto} other {# squads abertos}}",
     "moreGames": "E muitos outros jogos!"
   },
   "squads": {

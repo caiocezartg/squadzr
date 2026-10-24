@@ -1,8 +1,8 @@
 import { useTranslations } from 'next-intl'
 
 /**
- * The games-supported badge. The count comes from the page's games loader, so the badge is part of
- * the server HTML with the rest of the hero.
+ * The games-supported badge. The count is the total of Listed Games from the landing's popular
+ * games read, so the badge is part of the server HTML with the rest of the hero.
  */
 export function HeroGameBadge({ count }: { readonly count: number }) {
   const t = useTranslations()
