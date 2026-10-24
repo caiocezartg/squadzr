@@ -50,10 +50,10 @@ apply` changes the service settings and redeploys it. Code pushes to `igdb-catal
 `games-import` through its GitHub source, and the watch patterns drop pushes that touch only
 `client/`.
 
-A clean plan must never be taken for granted: if it ever shows a variable to delete, stop and read
-the variable names before applying, because a typo in the authoring file or a space in a
-dashboard-created key turns into a deletion. The two credentials are deliberately absent from the
-authoring file's values and only their names appear there.
+Never assume the plan is clean: if it ever shows a variable to delete, stop and read the variable
+names before applying, because a typo in the authoring file or a space in a dashboard-created key
+turns into a deletion. The two credentials are deliberately absent from the authoring file's values
+and only their names appear there.
 
 ## Variables
 
@@ -131,19 +131,38 @@ completed run, which is the cleanest way to read one run without the neighbourin
 
 The default run refuses to shrink the catalog below half of today's Listed Games, and always refuses
 fewer than 10 candidates. To deliberately narrow it, raise the threshold and bypass only the fraction
-check for that run:
+check for that run. Set both keys in one call so Railway redeploys once with both values:
 
 ```sh
-railway variable set IGDB_POPULARITY_THRESHOLD=120 --service games-import
-railway variable set CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK=true --service games-import
+railway variable set IGDB_POPULARITY_THRESHOLD=120 CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK=true \
+  --service games-import
+```
+
+Wait for the redeploy that the change triggers before starting a run:
+
+```sh
+railway deployment list --service games-import
+```
+
+The newest entry must read `SUCCESS`. A `cron run` started while the previous deployment is still
+active runs on that deployment without the new values, so the guard refuses with exit 1 even though
+the variables are set. Only then trigger the run:
+
+```sh
 railway cron run --service games-import --yes
 ```
 
-Then remove the override so later runs keep the guard:
+Removing the override also redeploys, and a run made before that deployment finishes still sees the
+override:
 
 ```sh
 railway variable delete CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK --service games-import
+railway deployment list --service games-import   # wait for the newest entry to read SUCCESS
 ```
+
+If you need several variable edits without one redeploy each, pass `--skip-deploys` to the `set`
+and `delete` calls and finish with a single `railway redeploy --service games-import`, then wait for
+that deployment the same way.
 
 The override never bypasses the absolute floor, and the import is idempotent: re-running with the
 previous threshold brings the dropped games back as `relisted`.
@@ -165,6 +184,29 @@ railway api 'query { volumeInstanceBackupScheduleList(volumeInstanceId: "<volume
 
 `railway volume list --json` names the volume (`postgres-data`) and its volume instance id; the Daily
 entry must be listed for the backup requirement to hold.
+
+## When igdb-catalog merges
+
+`games-import` deploys from `igdb-catalog`. When CCC-97 merges that branch into `development` and the
+branch is deleted, the service is left without a source branch, so the merge follow-up moves the
+service before deleting anything:
+
+1. Confirm the merge commit is on `development` and still contains the import entry
+   (`server/src/interface/scripts/import-games.ts`); the new source must be able to deploy it.
+2. In `.railway/railway.ts`, change the `games-import` source branch from `igdb-catalog` to
+   `development`.
+3. Link and plan: `railway link --project squadzr --environment staging`, then
+   `railway config plan`. Expect exactly one change, the service source branch; stop and read the
+   plan if it shows anything else.
+4. Apply the source change: `railway config apply --yes`.
+5. Check the next deployment: `railway deployment list --service games-import` must show the new
+   deployment from `development` as `SUCCESS`, and `railway status --json` must report
+   `latestDeployment.meta.branch` as `development`. Trigger a `railway cron run` if the next schedule
+   is too far away, and read its summary.
+6. Only after that deployment succeeds, delete the `igdb-catalog` branch.
+
+Do not switch the source while `development` lacks the import code, and do not delete the branch
+first: either order leaves the cron service deploying from a branch that no longer exists.
 
 ## Migrations
 

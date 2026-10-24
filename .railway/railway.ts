@@ -40,6 +40,7 @@ export default defineRailway(() => {
 
   const gamesImport = service('games-import', {
     source: github('caiocezartg/squadzr', { branch: 'igdb-catalog' }),
+    // Moves to development when igdb-catalog merges; see the runbook section of the same name.
     build: {
       builder: 'RAILPACK',
       buildCommand: 'bun install --frozen-lockfile',
