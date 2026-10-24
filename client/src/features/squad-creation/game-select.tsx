@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { Game } from '@/types'
@@ -79,10 +79,19 @@ export function GameSelect({
 
   const gamesQuery = useQuery({
     queryKey: ['games', 'search', debouncedTerm],
-    queryFn: () => searchGames(debouncedTerm),
+    queryFn: ({ signal }) => searchGames(debouncedTerm, signal),
+    // The player keeps reading the previous results while the next term loads;
+    // TanStack Query cancels the superseded request once its query loses this
+    // observer, so a term the player moved past no longer costs a response.
+    placeholderData: keepPreviousData,
     staleTime: 60_000,
   })
   const games = gamesQuery.data ?? NO_GAMES
+
+  // The live region and the chevron follow the fetch, but the list only shows
+  // the searching state when it has nothing to list yet.
+  const showsSearching = games.length === 0 && gamesQuery.isFetching
+  const showsEmpty = games.length === 0 && !gamesQuery.isFetching && !gamesQuery.isPlaceholderData
 
   const statusMessage = gamesQuery.isFetching
     ? t('squads.createModal.searchingGames')
@@ -297,9 +306,9 @@ export function GameSelect({
               )
             })}
           </ul>
-          {games.length === 0 && (
+          {(showsSearching || showsEmpty) && (
             <p className="px-3 py-2.5 text-sm text-muted">
-              {gamesQuery.isFetching
+              {showsSearching
                 ? t('squads.createModal.searchingGames')
                 : t('squads.createModal.noGamesFound')}
             </p>
