@@ -74,6 +74,9 @@ and 3 `api` cancellation cases (the signal reaches `fetch`, an aborted call reje
 error rather than a contract error, and calls without a signal stay unchanged). It adds no suite
 files, so `client:unit` measures 58 files / 488 tests on the merged tree.
 
+CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
+Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
+
 The CCC-88 recount (2026-10-22) added `tests/integration/catalog-migration.test.ts` and recorded
 `server:integration` at 25 files / 231 tests. The CCC-70 recount added `src/env.spec.ts`,
 `src/lib/router-history.spec.ts` and `scripts/bundle-report.spec.mjs` to `client:unit`, corrected
