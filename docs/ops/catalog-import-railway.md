@@ -46,9 +46,21 @@ railway config apply --yes
 `plan` only reads Railway and prints the changes; review them before `apply`. With
 `--detailed-exit-code` it exits 0 when the environment matches the file and 2 when changes are
 pending, which is how CI can gate on drift. A config change does not need a code push: `config
-apply` changes the service settings and redeploys it. Code pushes to `development` deploy
-`games-import` through its GitHub source, and the watch patterns drop pushes that touch only
-`client/`.
+apply` changes the service settings and redeploys it. The `railway/iac` package requires Railway
+CLI 5.42.1 or newer for `config plan` and `config apply`.
+
+Code pushes to `development` deploy `games-import` through its deployment trigger, once the push's
+GitHub checks pass (`checkSuites: true`, "Wait for CI" in the dashboard); the watch patterns drop
+pushes that touch only `client/`. `config apply` sets the source but does not create the trigger:
+Railway creates it when the repository is connected in the dashboard (service → Settings → Source
+Repo), which needs the Railway GitHub App installed with access to `caiocezartg/squadzr`. Check it
+with:
+
+```sh
+railway api 'query { deploymentTriggers(projectId: "<project id>", environmentId: "<staging id>", serviceId: "<games-import id>") { edges { node { branch checkSuites } } } }'
+```
+
+An empty list means pushes do not deploy, and the cron keeps running the last deployed commit.
 
 Never assume the plan is clean: if it ever shows a variable to delete, stop and read the variable
 names before applying, because a typo in the authoring file or a space in a dashboard-created key
