@@ -43,6 +43,8 @@ export interface CatalogImportSummary {
   readonly received: number
   /** Candidates ignored because their IGDB id repeated within the run. */
   readonly dropped: number
+  /** Candidates the source discarded because a required field was missing. */
+  readonly invalid: number
   readonly durationMs: number
 }
 
@@ -148,8 +150,8 @@ export class CatalogImportUseCase implements ICatalogImportUseCase {
 
   async execute(input: CatalogImportInput = {}): Promise<CatalogImportSummary> {
     const startedAt = performance.now()
-    const received = await this.source.fetchCandidates()
-    const { unique: candidates, dropped } = dedupeCandidates(received)
+    const fetched = await this.source.fetchCandidates()
+    const { unique: candidates, dropped } = dedupeCandidates(fetched.candidates)
 
     const curatedByIgdbId = new Map(this.curatedGames.map((game) => [game.igdbId, game]))
     const candidateIds = new Set(candidates.map((candidate) => candidate.igdbId))
@@ -197,8 +199,9 @@ export class CatalogImportUseCase implements ICatalogImportUseCase {
 
     return {
       ...changes,
-      received: received.length,
+      received: fetched.candidates.length,
       dropped,
+      invalid: fetched.invalid,
       durationMs: performance.now() - startedAt,
     }
   }

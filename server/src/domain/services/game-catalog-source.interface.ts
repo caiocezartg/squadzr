@@ -20,11 +20,19 @@ export interface GameCatalogCandidate {
   readonly popularity: number
 }
 
+/** One candidate list as fetched by a source, plus what it could not use. */
+export interface GameCatalogFetchResult {
+  /** Every usable candidate, fetched fresh on every run. */
+  readonly candidates: readonly GameCatalogCandidate[]
+  /** Entries discarded by the source because a required field was missing. */
+  readonly invalid: number
+}
+
 /**
  * The only seam between the Catalog Import and where games come from. The
  * production implementation queries IGDB (CCC-90); tests use a fake source.
  */
 export interface IGameCatalogSource {
   /** Every candidate the source currently knows, fetched fresh on every run. */
-  fetchCandidates(): Promise<GameCatalogCandidate[]>
+  fetchCandidates(): Promise<GameCatalogFetchResult>
 }
