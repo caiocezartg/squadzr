@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from 'react'
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
-import { discardFailedGames } from '@/features/games'
 import type { RoomsResponse } from '@/types'
 
 /**
@@ -23,7 +22,6 @@ export function discardFailedBoardReads(queryClient: QueryClient): void {
     exact: true,
     predicate: (query) => query.state.status === 'error' && query.state.data === undefined,
   })
-  discardFailedGames(queryClient)
 }
 
 /** Marks the board stale and refetches it while it is mounted. */

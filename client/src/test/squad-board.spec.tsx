@@ -15,10 +15,10 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { QueryClient } from '@tanstack/react-query'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
+import { squadQueryKey } from '@/features/lobby/squad-details'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import type { MockHttpResponse } from './http-router'
 import {
-  boardGames,
   boardSquads,
   fullSquad,
   gameLol,
@@ -67,7 +67,6 @@ const extraSquad: Squad = {
 
 function registerBoardRoutes(): void {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
 }
 
 function registerLobbyRoutes(): void {
@@ -78,7 +77,6 @@ function registerLobbyRoutes(): void {
     }
     return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
   })
-  onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
   onHttp('POST', '/api/rooms/:code/join', () => httpOk(joinSquadResponse))
 }
 
@@ -94,6 +92,14 @@ describe('squad board — rendering', () => {
     expect(screen.getByText('Full lobby')).toBeInTheDocument()
     expect(screen.getByText('Casual five stack')).toBeInTheDocument()
     expect(screen.getAllByText('League of Legends')).toHaveLength(2)
+    expect(screen.getByText('Counter-Strike 2')).toBeInTheDocument()
+    for (const cover of screen.getAllByRole('img', { name: 'League of Legends' })) {
+      expect(cover).toHaveAttribute('src', openSquad.game.coverUrl)
+    }
+    expect(screen.getByRole('img', { name: 'Counter-Strike 2' })).toHaveAttribute(
+      'src',
+      fullSquad.game.coverUrl
+    )
     expect(screen.getByText('Joined')).toBeInTheDocument()
     expect(screen.getByText('3 squads available')).toBeInTheDocument()
   })
@@ -125,6 +131,17 @@ describe('squad board — filters', () => {
 
     await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
     expect(screen.getByText('Ranked grind')).toBeInTheDocument()
+    expect(screen.queryByText('Casual five stack')).not.toBeInTheDocument()
+  })
+
+  it('filters squads by the game name their own summary carries', async () => {
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Ranked grind')
+
+    await user.type(screen.getByPlaceholderText('Search by game or squad name...'), 'Counter')
+
+    await waitFor(() => expect(screen.queryByText('Ranked grind')).not.toBeInTheDocument())
+    expect(screen.getByText('Full lobby')).toBeInTheDocument()
     expect(screen.queryByText('Casual five stack')).not.toBeInTheDocument()
   })
 
@@ -412,7 +429,6 @@ describe('squad board — removal without cached squads', () => {
     const remainingSquads = boardSquads.rooms.filter((squad) => squad.id !== lobbySquad.id)
     onHttp('GET', '/api/rooms', () => httpOk({ rooms: remainingSquads }))
     onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
-    onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
 
     const { navigation } = renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
@@ -804,11 +820,10 @@ describe('squad board — join flows', () => {
   )
 })
 
-/** A client holding the squads and the games the server render would have prefetched. */
+/** A client holding the squads the server render would have prefetched. */
 function seededClient(squads: RoomsResponse = boardSquads): QueryClient {
   const queryClient = createTestQueryClient()
   queryClient.setQueryData(['squads'], squads)
-  queryClient.setQueryData(['games'], boardGames)
   return queryClient
 }
 
@@ -966,5 +981,33 @@ describe('squad board — seeded server page', () => {
     await waitFor(() => expect(pageTwoCard()).toHaveTextContent('2/5'))
     expect(screen.getByText('Page squad 7')).toBeInTheDocument()
     expect(screen.queryByText('Page squad 1')).not.toBeInTheDocument()
+  })
+})
+
+describe('squad board — warm cache across surfaces', () => {
+  it('navigates from the board to My Squads and to a Lobby with no loading state', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+    onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
+    // Registered last, so it wins over the `/api/rooms/:code` route above for this path.
+    onHttp('GET', '/api/rooms/my', () => httpOk({ hosted: [memberSquad], joined: [] }))
+    const queryClient = createTestQueryClient()
+    // What the three routes' server reads have already dehydrated on a warm navigation.
+    queryClient.setQueryData(['squads'], boardSquads)
+    queryClient.setQueryData(['my-squads'], { hosted: [memberSquad], joined: [] })
+    queryClient.setQueryData(squadQueryKey(lobbySquad.code), lobbySquadResponse)
+
+    const { navigation } = renderSquadsFlow('/squads', { queryClient })
+
+    expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
+    expect(screen.queryByTestId('squad-board-skeleton')).not.toBeInTheDocument()
+
+    act(() => navigation.history.push('/squads/my'))
+    expect(await screen.findByText('Casual five stack')).toBeInTheDocument()
+    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
+
+    act(() => navigation.history.push(`/squads/${lobbySquad.code}`))
+    expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
+    expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()
+    expect(screen.getByText(lobbySquad.game.name)).toBeInTheDocument()
   })
 })

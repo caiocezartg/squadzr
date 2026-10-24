@@ -41,7 +41,6 @@ function registerCreateRoutes(): void {
       players: [hostPlayer],
     })
   )
-  onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
 }
 
 beforeEach(() => {

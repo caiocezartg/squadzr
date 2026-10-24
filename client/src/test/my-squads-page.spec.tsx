@@ -13,7 +13,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MySquadsRoute from '@/app/squads/my/page'
 import { mySquadsQueryKey } from '@/features/my-squads/my-squads-cache'
-import { boardGames, memberSquad, openSquad } from './fixtures'
+import { memberSquad, openSquad } from './fixtures'
 import { createTestQueryClient } from './harness'
 import { countHttpCalls, getHttpLog, httpError, httpOk, onHttp } from './http-router'
 import type { MockHttpResponse } from './http-router'
@@ -76,7 +76,6 @@ function signIn(): void {
 
 beforeEach(() => {
   viewer.current = { ...viewer.current, cookie: null }
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
 })
 
 describe('My Squads on the App Router', () => {
@@ -155,7 +154,6 @@ describe('My Squads on the App Router', () => {
       { hosted: [memberSquad], joined: [openSquad] },
       { updatedAt: Date.now() - 120_000 }
     )
-    queryClient.setQueryData(['games'], boardGames)
     onHttp('GET', '/api/rooms/my', () => deferred<MockHttpResponse>().promise)
 
     await renderRoute(queryClient)

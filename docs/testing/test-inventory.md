@@ -25,14 +25,18 @@ inventory (see the equivalence proof below).
 | --- | --- | --- | --- | --- | --- |
 | `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 27 | 128 |
 | `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 27 | 269 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 479 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 481 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 84 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-23 on the
-merged tree after CCC-89, CCC-92, CCC-93 and CCC-95.
+merged tree after CCC-89, CCC-92, CCC-93, CCC-94 and CCC-95.
 
-CCC-93 extends `tests/integration/games-http.test.ts` with the game search and the delisted
+CCC-94 moves the client onto the game summary every Squad carries: the full-list games hooks and the
+games map are gone, the game-list stubs leave the board, My Squads and Lobby flow specs, and the flow
+tests now cover cards and both searches from `squad.game`, the Lobby before and after a snapshot, the
+invite preview and the landing showcase. It adds no suite files and removes none; `client:unit` gains
+2 tests (479 → 481). CCC-93 extends `tests/integration/games-http.test.ts` with the game search and the delisted
 single-game read, and `tests/integration/rooms-http.test.ts` with the 2/40/41 Squad-size bounds and
 the delisted-game rejection; it also adds the game-list dismissal (including a case that mirrors
 Next's `document` root for Escape), toggle, selection and live-region cases to the client
@@ -157,16 +161,16 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
   collecting tests. The script was removed instead of being restored with a new dependency;
   introducing coverage tooling is a deliberate follow-up decision, not an accidental default.
 
-## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-92, CCC-93, CCC-95)
+## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-92, CCC-93, CCC-94, CCC-95)
 
-### Current counts (recounted 2026-10-23 on the merged tree, CCC-89, CCC-92, CCC-93 and CCC-95)
+### Current counts (recounted 2026-10-23 on the merged tree, CCC-89, CCC-92, CCC-93, CCC-94 and CCC-95)
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 89 | 691 |
-| `bunx vitest run` (direct root composition) | 89 | 691 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 89 | 693 |
+| `bunx vitest run` (direct root composition) | 89 | 693 |
 | `bunx turbo test --filter=server` | 27 | 128 |
-| `bunx turbo test --filter=client` | 58 | 479 |
+| `bunx turbo test --filter=client` | 58 | 481 |
 | `bunx turbo test --filter=@squadzr/schemas` | 4 | 84 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
@@ -186,9 +190,9 @@ cases, CCC-95 adds 3 cover cases and CCC-92 adds one projection case and one cre
 the merged tree measures 27 files / 128 tests. CCC-59 removed the `types:unit` project (1 file, 1
 test) together with the `@squadzr/types` workspace. The schemas suite measures 84 tests across 4
 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
-contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 479
-tests (CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-95 added 2 and
-CCC-92 added none); both drifts predate CCC-89 and were corrected by its recount.
+contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 481
+tests (CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
+CCC-95 added 2 and CCC-92 added none); both drifts predate CCC-89 and were corrected by its recount.
 
 ### Historical record (CCC-28, 2026-09-25)
 

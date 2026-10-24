@@ -4,7 +4,7 @@ import { useSquadBoardCommands } from '@/features/squad-board'
 import { useSession } from '@/hooks/use-session'
 import { useAppNavigation } from '@/lib/navigation'
 import type { RealtimeStatus } from '@/lib/ws-client'
-import type { Game, Player, PublicSquad } from '@/types'
+import type { Player, PublicSquad } from '@/types'
 import { rosterFromSnapshot, type PresenceState } from './squad-snapshot'
 import { useSquadChannel, type SquadChannel } from './use-squad-channel'
 import { useSquadData } from './use-squad-data'
@@ -15,7 +15,8 @@ export interface LobbyView {
   squadMissing: boolean
   membershipRevoked: boolean
   squad: PublicSquad | null
-  game: Game | null
+  /** The game summary the rendered Squad carries, before and after a realtime snapshot. */
+  game: PublicSquad['game'] | null
   players: Player[]
   maxPlayers: number
   emptySlots: number
@@ -62,9 +63,9 @@ export function useLobbyView(squadCode: string, channel: SquadChannel): LobbyVie
   const userId = session?.user?.id
 
   // The snapshot is the live source of Squad metadata; HTTP only supplies it before the first snapshot
-  // arrives.
-  const squad = channel.snapshot?.room ?? details?.response.room ?? null
-  const lobbyDetails = details && isRoomLobbyResponse(details.response) ? details.response : null
+  // arrives. Both carry the game summary, so the game survives the snapshot replacing the Squad.
+  const squad = channel.snapshot?.room ?? details?.room ?? null
+  const lobbyDetails = details && isRoomLobbyResponse(details) ? details : null
 
   const { leaveSquad } = useSquadMembership({
     squadCode,
@@ -87,7 +88,7 @@ export function useLobbyView(squadCode: string, channel: SquadChannel): LobbyVie
     squadMissing: details === null,
     membershipRevoked: channel.membershipRevoked,
     squad,
-    game: details?.game ?? null,
+    game: squad?.game ?? null,
     players,
     maxPlayers,
     emptySlots: Math.max(0, maxPlayers - players.length),

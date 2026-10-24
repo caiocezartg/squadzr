@@ -12,15 +12,7 @@ import { screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderSquadsFlow } from './harness'
 import { httpOk, onHttp } from './http-router'
-import {
-  boardGames,
-  boardSquads,
-  gameLol,
-  lobbySquad,
-  lobbySquadResponse,
-  lobbySnapshot,
-  openSquad,
-} from './fixtures'
+import { boardSquads, lobbySquad, lobbySquadResponse, lobbySnapshot, openSquad } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { toastStore } from './stubs'
 import type { PublicSquad, RoomsResponse } from '@/types'
@@ -36,8 +28,6 @@ const newSquad: PublicSquad = {
 
 beforeEach(() => {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
-  onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
 })
 

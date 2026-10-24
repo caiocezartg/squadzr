@@ -3,11 +3,10 @@
 import * as m from 'motion/react-m'
 import { useNow } from 'next-intl'
 import { SquadCard } from '@/features/squad-list'
-import type { Game, Squad } from '@/types'
+import type { Squad } from '@/types'
 
 interface ShowcaseItem {
   readonly squad: Squad
-  readonly game: Game
   readonly floatAmount: number
   readonly floatDuration: number
   readonly floatDelay: number
@@ -18,31 +17,19 @@ const MINUTE_MS = 60_000
 /**
  * The sample Squads, timed from `now`, the time next-intl hands to the client. Their relative times
  * are the same in the server HTML and in the browser, and they do not depend on when the module loaded.
+ * Each sample carries its game summary, as every Squad the API sends does.
  */
 function sampleSquads(now: Date): ShowcaseItem[] {
   const nowIso = now.toISOString()
   const minutesAgo = (minutes: number) =>
     new Date(now.getTime() - minutes * MINUTE_MS).toISOString()
-  const sampleGame = (id: string, name: string, slug: string, coverUrl: string): Game => ({
+  const sampleGame = (id: string, name: string, slug: string, coverUrl: string): Squad['game'] => ({
     id,
     name,
     slug,
     genres: [],
     coverUrl,
     coverThumbUrl: coverUrl,
-    minPlayers: 2,
-    maxPlayers: 5,
-    createdAt: nowIso,
-    updatedAt: nowIso,
-  })
-  // Squad samples carry the Game summary like any Squad the API sends (CCC-92).
-  const summaryOf = (game: Game): Squad['game'] => ({
-    id: game.id,
-    name: game.name,
-    slug: game.slug,
-    genres: [],
-    coverUrl: game.coverUrl,
-    coverThumbUrl: game.coverUrl,
   })
 
   const lol = sampleGame(
@@ -69,14 +56,13 @@ function sampleSquads(now: Date): ShowcaseItem[] {
       floatAmount: 6,
       floatDuration: 6.5,
       floatDelay: 0,
-      game: lol,
       squad: {
         id: 's1',
         code: 'ABC12',
         name: 'Ranked climbing - Gold+',
         hostId: 'u1',
         gameId: 'g1',
-        game: summaryOf(lol),
+        game: lol,
         maxPlayers: 5,
         discordLink: null,
         tags: ['ranked', 'chill'],
@@ -91,14 +77,13 @@ function sampleSquads(now: Date): ShowcaseItem[] {
       floatAmount: 8,
       floatDuration: 7.2,
       floatDelay: 1.0,
-      game: cs2,
       squad: {
         id: 's2',
         code: 'XYZ99',
         name: 'Competitive 5v5 tryhard',
         hostId: 'u2',
         gameId: 'g2',
-        game: summaryOf(cs2),
+        game: cs2,
         maxPlayers: 5,
         discordLink: null,
         tags: ['competitive'],
@@ -113,14 +98,13 @@ function sampleSquads(now: Date): ShowcaseItem[] {
       floatAmount: 5,
       floatDuration: 8.0,
       floatDelay: 2.2,
-      game: dota,
       squad: {
         id: 's3',
         code: 'QWE34',
         name: 'Fun match no stress',
         hostId: 'u3',
         gameId: 'g3',
-        game: summaryOf(dota),
+        game: dota,
         maxPlayers: 5,
         discordLink: null,
         tags: ['casual', 'fun'],
@@ -143,7 +127,7 @@ export function HeroSquadShowcase() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pointer-events-none">
-      {sampleSquads(now).map(({ squad, game, floatAmount, floatDuration, floatDelay }) => (
+      {sampleSquads(now).map(({ squad, floatAmount, floatDuration, floatDelay }) => (
         <m.div
           key={squad.id}
           animate={{ y: [0, -floatAmount, 0] }}
@@ -154,7 +138,7 @@ export function HeroSquadShowcase() {
             delay: floatDelay,
           }}
         >
-          <SquadCard squad={squad} game={game} />
+          <SquadCard squad={squad} />
         </m.div>
       ))}
     </div>
