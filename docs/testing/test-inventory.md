@@ -66,6 +66,9 @@ no-fixed-count and IGDB-credit cases to `messages.spec.ts` (+2), so on the merge
 measures 58 files / 481 tests; the popular read also adds the client assertions in
 `landing.spec.tsx`, which keeps its 9 tests.
 
+CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
+Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
+
 The CCC-88 recount (2026-10-22) added `tests/integration/catalog-migration.test.ts` and recorded
 `server:integration` at 25 files / 231 tests. The CCC-70 recount added `src/env.spec.ts`,
 `src/lib/router-history.spec.ts` and `scripts/bundle-report.spec.mjs` to `client:unit`, corrected
