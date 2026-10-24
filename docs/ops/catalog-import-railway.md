@@ -32,18 +32,28 @@ the same image.
 
 ## Apply a config change
 
+The Infrastructure as Code engine ships in the Railway CLI, so use version 5.42.1 or newer
+(`railway --version`); older CLIs stop with an upgrade error. `railway upgrade` replaces the binary.
+
 Link the repository once, then plan before applying:
 
 ```sh
 railway link --project squadzr --environment staging
-railway config plan
+railway config plan --detailed-exit-code
 railway config apply --yes
 ```
 
-`plan` only reads Railway and prints the changes; review them before `apply`. A config change does
-not need a code push: `config apply` changes the service settings and redeploys it. Code pushes to
-`igdb-catalog` deploy `games-import` through its GitHub source, and the watch patterns drop pushes
-that touch only `client/`.
+`plan` only reads Railway and prints the changes; review them before `apply`. With
+`--detailed-exit-code` it exits 0 when the environment matches the file and 2 when changes are
+pending, which is how CI can gate on drift. A config change does not need a code push: `config
+apply` changes the service settings and redeploys it. Code pushes to `igdb-catalog` deploy
+`games-import` through its GitHub source, and the watch patterns drop pushes that touch only
+`client/`.
+
+A clean plan must never be taken for granted: if it ever shows a variable to delete, stop and read
+the variable names before applying, because a typo in the authoring file or a space in a
+dashboard-created key turns into a deletion. The two credentials are deliberately absent from the
+authoring file's values and only their names appear there.
 
 ## Variables
 
@@ -56,7 +66,11 @@ The service receives exactly three variables:
 | `IGDB_CLIENT_SECRET` | Twitch application client secret (owner-set) |
 
 Set the two credentials in Railway under `squadzr` → `staging` → `games-import` → Variables. A
-variable change redeploys the service; the next cron run uses the new values.
+variable change redeploys the service; the next cron run uses the new values. The names are exact:
+a key entered as ` IGDB_CLIENT_ID` (leading space) is a different variable, so the import still reads
+`IGDB_CLIENT_ID` as undefined and the run exits 1 with `Invalid catalog import environment
+variables … expected string, received undefined`. That mistake happened once while setting the
+owner's credentials; check the key names in the Variables tab when a run fails that way.
 
 `IGDB_POPULARITY_THRESHOLD` and `CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK` stay unset, so the import
 uses its defaults (threshold 50, fraction check on). The credentials live only in Railway: rotate
@@ -88,25 +102,23 @@ change; the daily schedule is unaffected.
 
 ## Read the summary
 
-A successful run logs one JSON line and exits `0` (values below are illustrative):
+A successful run logs one JSON object on a single line and exits `0`. `railway logs` renders that
+object as `key=value` fields, so the first hosted run (2026-10-24) reads:
 
-```json
-{
-  "created": 0,
-  "updated": 1675,
-  "delisted": 0,
-  "relisted": 0,
-  "received": 1690,
-  "dropped": 0,
-  "invalid": 15,
-  "durationMs": 42000
-}
+```text
+[INFO] created=1675 updated=0 delisted=0 relisted=0 received=1675 dropped=0 invalid=0 durationMs=3873.87
 ```
 
-`received` counts the candidates IGDB returned (duplicates included), `dropped` is the duplicates
-ignored within the run, `invalid` is the candidates the source discarded for a missing field, and
-`created`/`updated`/`delisted`/`relisted` describe the catalog writes. A failed safety check or a
-failed write logs the error instead, changes nothing (the run is one transaction) and exits `1`.
+The same line is `{"created":1675,"updated":0,"delisted":0,"relisted":0,"received":1675,"dropped":0,"invalid":0,"durationMs":3873.87}`
+before Railway formats it. `received` counts the candidates IGDB returned (duplicates included),
+`dropped` is the duplicates ignored within the run, `invalid` is the candidates the source discarded
+for a missing field, and `created`/`updated`/`delisted`/`relisted` describe the catalog writes. A
+failed safety check or a failed write logs the error instead, changes nothing (the run is one
+transaction) and exits `1`.
+
+A second run straight after the first is the cheapest persistence check: it reports
+`created=0 updated=1675` instead of `created=1675`, which proves the previous run's rows are still in
+the database.
 
 ```sh
 railway logs --service games-import --deployment --lines 200
@@ -136,17 +148,23 @@ railway variable delete CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK --service games-i
 The override never bypasses the absolute floor, and the import is idempotent: re-running with the
 previous threshold brings the dropped games back as `relisted`.
 
-## Backups
+## Backups (known limitation: not enabled)
 
-Enable the Daily schedule in the `postgres` service's Backups tab; Railway keeps daily backups for
-6 days. Confirm it from the schema instead of the dashboard:
+**Volume backups are not enabled.** Railway sells volume backups as part of Pro workspaces; this
+workspace is Hobby, and both the dashboard and the API refuse to schedule a backup for
+`postgres-data`. The volume is therefore unprotected: losing it loses the hosted catalog. That loss
+is recoverable without a backup because the import rebuilds the catalog from IGDB on the next run,
+but nothing else stored in this database would survive.
+
+After the workspace moves to Pro, enable the Daily schedule in the `postgres` service's Backups tab
+(Railway keeps daily backups for 6 days) and confirm it from the schema instead of the dashboard:
 
 ```sh
 railway api 'query { volumeInstanceBackupScheduleList(volumeInstanceId: "<volume-instance-id>") { kind cron retentionSeconds } }'
 ```
 
-`railway volume list --json` gives the volume; the volume instance id comes from the environment's
-`volumeInstances` connection. The Daily entry must be listed for the backup requirement to hold.
+`railway volume list --json` names the volume (`postgres-data`) and its volume instance id; the Daily
+entry must be listed for the backup requirement to hold.
 
 ## Migrations
 
