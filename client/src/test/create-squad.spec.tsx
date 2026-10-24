@@ -55,6 +55,21 @@ function gameListPopup(): HTMLElement {
   return screen.getByRole('listbox', { name: 'Select a game' }).parentElement as HTMLElement
 }
 
+/**
+ * Keeps every text the game list popup shows until `stop`. A MutationObserver
+ * catches copy that appears only between two assertions, which a query at a
+ * single instant would miss.
+ */
+function watchGameListText(): { texts: string[]; stop: () => void } {
+  const popup = gameListPopup()
+  const texts = [popup.textContent ?? '']
+  const observer = new MutationObserver(() => {
+    texts.push(popup.textContent ?? '')
+  })
+  observer.observe(popup, { childList: true, subtree: true, characterData: true })
+  return { texts, stop: () => observer.disconnect() }
+}
+
 function registerBoardRoutes(): void {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
   onHttp('GET', '/api/games', (request) => {
@@ -219,6 +234,11 @@ describe('create squad — game search', () => {
     await user.type(input, 'league')
     await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
 
+    // Watch the whole transition, not a single instant: the loading copy must
+    // never appear between the second term's input and its results replacing
+    // the first term's.
+    const popupWatch = watchGameListText()
+
     await user.clear(input)
     await user.type(input, 'counter')
     await waitFor(() => expect(hasSearched('counter')).toBe(true))
@@ -240,6 +260,9 @@ describe('create squad — game search', () => {
         screen.queryByRole('option', { name: 'League of Legends (1-5 players)' })
       ).not.toBeInTheDocument()
     )
+    popupWatch.stop()
+
+    expect(popupWatch.texts.filter((text) => text.includes('Searching games…'))).toEqual([])
   })
 
   it('shows the empty message only after the response has no matches', async () => {

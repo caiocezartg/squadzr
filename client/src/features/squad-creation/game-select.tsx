@@ -93,11 +93,15 @@ export function GameSelect({
   const showsSearching = games.length === 0 && gamesQuery.isFetching
   const showsEmpty = games.length === 0 && !gamesQuery.isFetching && !gamesQuery.isPlaceholderData
 
+  // The live region follows the same settled/placeholder rule as the empty
+  // copy, so an empty placeholder is never announced as "No games found".
   const statusMessage = gamesQuery.isFetching
     ? t('squads.createModal.searchingGames')
-    : games.length === 0
+    : showsEmpty
       ? t('squads.createModal.noGamesFound')
-      : t('squads.createModal.gamesFound', { count: games.length })
+      : games.length > 0
+        ? t('squads.createModal.gamesFound', { count: games.length })
+        : ''
 
   // A new result set starts with nothing highlighted; the first ArrowDown picks it.
   useEffect(() => {
