@@ -100,6 +100,7 @@ describe('runCatalogImport', () => {
       relisted: 0,
       received: 12,
       dropped: 0,
+      invalid: 0,
     })
     expect(recorded.summaries[0]?.durationMs).toBeGreaterThanOrEqual(0)
     expect(source.calls).toBe(1)
