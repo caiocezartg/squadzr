@@ -15,6 +15,7 @@
     "db:generate": "bun --env-file=../.env --bun drizzle-kit generate",
     "db:migrate": "bun --env-file=../.env --bun drizzle-kit migrate",
     "db:migrate:runtime": "bun --no-env-file src/interface/scripts/migrate.ts",
+    "db:import-games": "bun --env-file=../.env --env-file=.env src/interface/scripts/import-games.ts",
     "db:push": "bun --env-file=../.env --bun drizzle-kit push",
     "db:studio": "bun --env-file=../.env --bun drizzle-kit studio"
   },
