@@ -12,16 +12,63 @@
  * toasts are module mocks (./stubs). No test touches private hook state.
  */
 
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { renderSquadsFlow } from './harness'
 import { settleNavigation } from './navigation'
-import { countHttpCalls, getHttpLog, httpCreated, httpError, httpOk, onHttp } from './http-router'
+import {
+  type MockHttpResponse,
+  countHttpCalls,
+  getHttpLog,
+  httpCreated,
+  httpError,
+  httpOk,
+  onHttp,
+} from './http-router'
 import { boardGames, boardSquads, createdSquad, gameCs2, gameLol, hostPlayer } from './fixtures'
 import { toastStore } from './stubs'
 import type { CreateRoomResponse, MyRoomsResponse } from '@/types'
 
 const createSquadResponse: CreateRoomResponse = { room: createdSquad }
+
+/** A response the test releases once it decides the request should settle. */
+function deferredResponse(): {
+  response: Promise<MockHttpResponse>
+  respond: (response: MockHttpResponse) => void
+} {
+  let respond!: (response: MockHttpResponse) => void
+  const response = new Promise<MockHttpResponse>((resolve) => {
+    respond = resolve
+  })
+  return { response, respond }
+}
+
+/** Whether a game search for the term has already left the client. */
+function hasSearched(term: string): boolean {
+  return getHttpLog().some(
+    (request) => request.path === '/api/games' && request.query.get('search') === term
+  )
+}
+
+/** The popup that carries the list and its loading/empty copy. */
+function gameListPopup(): HTMLElement {
+  return screen.getByRole('listbox', { name: 'Select a game' }).parentElement as HTMLElement
+}
+
+/**
+ * Keeps every text the game list popup shows until `stop`. A MutationObserver
+ * catches copy that appears only between two assertions, which a query at a
+ * single instant would miss.
+ */
+function watchGameListText(): { texts: string[]; stop: () => void } {
+  const popup = gameListPopup()
+  const texts = [popup.textContent ?? '']
+  const observer = new MutationObserver(() => {
+    texts.push(popup.textContent ?? '')
+  })
+  observer.observe(popup, { childList: true, subtree: true, characterData: true })
+  return { texts, stop: () => observer.disconnect() }
+}
 
 function registerBoardRoutes(): void {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
@@ -169,6 +216,158 @@ describe('create squad — game search', () => {
         (request) => request.path === '/api/games' && request.query.get('search') === 'count'
       )
     ).toHaveLength(1)
+  })
+
+  it('keeps the previous results listed while the next term loads', async () => {
+    const counter = deferredResponse()
+    onHttp('GET', '/api/games', (request) => {
+      const search = request.query.get('search') ?? ''
+      if (search === 'league') return httpOk({ games: [gameLol] })
+      if (search === 'counter') return counter.response
+      return httpOk(boardGames)
+    })
+
+    const { user } = renderSquadsFlow('/squads')
+    await openCreateModal(user)
+    const input = screen.getByLabelText('Game')
+    await user.click(input)
+    await user.type(input, 'league')
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
+
+    // Watch the whole transition, not a single instant: the loading copy must
+    // never appear between the second term's input and its results replacing
+    // the first term's.
+    const popupWatch = watchGameListText()
+
+    await user.clear(input)
+    await user.type(input, 'counter')
+    await waitFor(() => expect(hasSearched('counter')).toBe(true))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Searching games…'))
+
+    // The first term's result stays listed instead of the list blanking to the loading copy.
+    expect(
+      screen.getByRole('option', { name: 'League of Legends (1-5 players)' })
+    ).toBeInTheDocument()
+    expect(within(gameListPopup()).queryByText('Searching games…')).not.toBeInTheDocument()
+
+    counter.respond(httpOk({ games: [gameCs2] }))
+
+    expect(
+      await screen.findByRole('option', { name: 'Counter-Strike 2 (1-5 players)' })
+    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('option', { name: 'League of Legends (1-5 players)' })
+      ).not.toBeInTheDocument()
+    )
+    popupWatch.stop()
+
+    expect(popupWatch.texts.filter((text) => text.includes('Searching games…'))).toEqual([])
+  })
+
+  it('shows the empty message only after the response has no matches', async () => {
+    const noMatches = deferredResponse()
+    onHttp('GET', '/api/games', (request) => {
+      const search = request.query.get('search') ?? ''
+      if (search === 'league') return httpOk({ games: [gameLol] })
+      if (search === 'zzz') return noMatches.response
+      return httpOk(boardGames)
+    })
+
+    const { user } = renderSquadsFlow('/squads')
+    await openCreateModal(user)
+    const input = screen.getByLabelText('Game')
+    await user.click(input)
+    await user.type(input, 'league')
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
+
+    await user.clear(input)
+    await user.type(input, 'zzz')
+    await waitFor(() => expect(hasSearched('zzz')).toBe(true))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Searching games…'))
+
+    // The previous match is still listed, and the empty copy waits for the answer.
+    expect(
+      screen.getByRole('option', { name: 'League of Legends (1-5 players)' })
+    ).toBeInTheDocument()
+    expect(
+      within(gameListPopup()).queryByText('No games found. Try another name.')
+    ).not.toBeInTheDocument()
+
+    noMatches.respond(httpOk({ games: [] }))
+
+    expect(
+      await within(gameListPopup()).findByText('No games found. Try another name.')
+    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryAllByRole('option')).toHaveLength(0))
+  })
+
+  it('aborts the request for a term the player already moved past', async () => {
+    const league = deferredResponse()
+    let leagueSignal: AbortSignal | undefined
+    onHttp('GET', '/api/games', (request) => {
+      const search = request.query.get('search') ?? ''
+      if (search === 'league') {
+        leagueSignal = request.signal
+        return league.response
+      }
+      if (search === 'counter') return httpOk({ games: [gameCs2] })
+      return httpOk(boardGames)
+    })
+
+    const { user } = renderSquadsFlow('/squads')
+    await openCreateModal(user)
+    const input = screen.getByLabelText('Game')
+    await user.click(input)
+    await user.type(input, 'league')
+    await waitFor(() => expect(hasSearched('league')).toBe(true))
+    expect(leagueSignal?.aborted).toBe(false)
+
+    await user.clear(input)
+    await user.type(input, 'counter')
+
+    await waitFor(() => expect(leagueSignal?.aborted).toBe(true))
+    expect(
+      await screen.findByRole('option', { name: 'Counter-Strike 2 (1-5 players)' })
+    ).toBeInTheDocument()
+    // The abandoned request never surfaces as an error or an empty list.
+    expect(screen.queryByText('No games found. Try another name.')).not.toBeInTheDocument()
+
+    // Settle the mock behind the aborted request; the cancellation already won.
+    league.respond(httpOk({ games: [gameLol] }))
+  })
+
+  it('answers a warm term from the cache without a new loading state', async () => {
+    let counterRequests = 0
+    onHttp('GET', '/api/games', (request) => {
+      const search = request.query.get('search') ?? ''
+      if (search === 'counter') {
+        counterRequests += 1
+        return httpOk({ games: [gameCs2] })
+      }
+      return httpOk(boardGames)
+    })
+
+    const { user } = renderSquadsFlow('/squads')
+    await openCreateModal(user)
+    const input = screen.getByLabelText('Game')
+    await user.click(input)
+    await user.type(input, 'counter')
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
+    expect(counterRequests).toBe(1)
+
+    // Let the empty term read the popular games from the cache again.
+    await user.clear(input)
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(2))
+
+    await user.type(input, 'counter')
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
+
+    expect(
+      screen.getByRole('option', { name: 'Counter-Strike 2 (1-5 players)' })
+    ).toBeInTheDocument()
+    expect(counterRequests).toBe(1)
+    expect(screen.getByRole('status')).toHaveTextContent('1 game found')
   })
 
   it('submits the gameId of the chosen result', async () => {
