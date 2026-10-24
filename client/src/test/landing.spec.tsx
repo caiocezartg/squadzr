@@ -16,7 +16,7 @@ import { BackgroundRipple } from '@/components/landing/background-ripple'
 import { HeroSquadShowcase } from '@/components/landing/hero-squad-showcase'
 import { ClockProvider } from '@/hooks/use-clock'
 import en from '@/locales/en.json'
-import { boardGames, gameCs2, gameLol } from './fixtures'
+import { gameCs2, gameLol, popularGames } from './fixtures'
 import { httpOk, onHttp } from './http-router'
 import { EnglishIntlProvider } from './intl'
 import { fakeSession, signInAsFakeUser } from './stubs'
@@ -39,7 +39,7 @@ function rippleCells(container: HTMLElement): HTMLElement[] {
 }
 
 beforeEach(() => {
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
+  onHttp('GET', '/api/games/popular', () => httpOk(popularGames))
 })
 
 afterEach(() => {
@@ -64,13 +64,19 @@ describe('landing server HTML', () => {
     expect(headingOpenTag).not.toContain('opacity')
   })
 
-  it('renders the games badge, the popular games and the FAQ', async () => {
+  it('renders the total badge, the popular games and the FAQ', async () => {
     const html = await landingHtml()
 
-    expect(html).toContain('2 GAMES SUPPORTED')
+    // The badge counts every Listed Game (42), not just the two returned in the page.
+    expect(html).toContain('42 GAMES SUPPORTED')
     expect(html).toContain(gameLol.name)
     expect(html).toContain(gameCs2.name)
+    expect(html).toContain('4 open squads')
+    expect(html).toContain('No open squads')
+    expect(html).toContain('#ranked')
+    expect(html).toContain('#chill')
     expect(html).toContain('Is Squadzr free?')
+    expect(html).toContain('game data by IGDB')
   })
 
   it('shows a signed-out viewer the sign-in calls to action', async () => {
@@ -116,6 +122,14 @@ describe('hero squad showcase', () => {
     expect(screen.getByText('8m ago')).toBeInTheDocument()
     expect(screen.getByText('3m ago')).toBeInTheDocument()
     expect(screen.getByText('15m ago')).toBeInTheDocument()
+    // Each sample card reads its game from the Squad summary it carries.
+    expect(screen.getByText('League of Legends')).toBeInTheDocument()
+    expect(screen.getByText('Counter-Strike 2')).toBeInTheDocument()
+    expect(screen.getByText('Dota 2')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Counter-Strike 2' })).toHaveAttribute(
+      'src',
+      'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/coaczd.webp'
+    )
   })
 })
 

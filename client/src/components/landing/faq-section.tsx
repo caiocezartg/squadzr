@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl'
 export function FAQSection() {
   const t = useTranslations()
   const faqItems = t.raw('faq.items') as Array<{
+    id: string
     question: string
     answer: string
   }>
@@ -30,7 +31,7 @@ export function FAQSection() {
         <Accordion.Root className="space-y-2">
           {faqItems.map((item, i) => (
             <m.div
-              key={i}
+              key={item.id}
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}

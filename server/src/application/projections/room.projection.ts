@@ -1,6 +1,7 @@
 import type { PublicRoomDto, RoomDto, RoomMemberDto } from '@squadzr/schemas'
 import type { Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
+import { toGameSummaryDto } from './game.projection'
 
 /**
  * Public projection of a room, for the catalog and guest realtime events.
@@ -14,6 +15,7 @@ export function toPublicRoom(room: Room): PublicRoomDto {
     name: room.name,
     hostId: room.hostId,
     gameId: room.gameId,
+    game: toGameSummaryDto(room.game),
     maxPlayers: room.maxPlayers,
     tags: room.tags,
     language: room.language,

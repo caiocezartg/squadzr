@@ -12,7 +12,7 @@ import { act, cleanup, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderSquadsFlow } from './harness'
 import { httpOk, onHttp } from './http-router'
-import { boardGames, boardSquads, openSquad } from './fixtures'
+import { boardSquads, openSquad } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
 import { setRealtimeUpdateNotice } from '@/lib/realtime-update-store'
@@ -43,7 +43,6 @@ function sendUnparseableFrame(): void {
 beforeEach(() => {
   window.sessionStorage.clear()
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
 })
 

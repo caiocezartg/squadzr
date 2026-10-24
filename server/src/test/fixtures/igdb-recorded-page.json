@@ -1,0 +1,202 @@
+[
+  {
+    "id": 5,
+    "cover": {
+      "id": 93899,
+      "image_id": "co20gb"
+    },
+    "first_release_date": 914198400,
+    "genres": [
+      {
+        "id": 12,
+        "name": "Role-playing (RPG)",
+        "slug": "role-playing-rpg"
+      }
+    ],
+    "name": "Baldur's Gate",
+    "slug": "baldur-s-gate",
+    "total_rating_count": 355
+  },
+  {
+    "id": 6,
+    "cover": {
+      "id": 329139,
+      "image_id": "co71yr"
+    },
+    "first_release_date": 969494400,
+    "genres": [
+      {
+        "id": 12,
+        "name": "Role-playing (RPG)",
+        "slug": "role-playing-rpg"
+      }
+    ],
+    "multiplayer_modes": [
+      {
+        "id": 1920,
+        "onlinecoopmax": 6,
+        "onlinemax": 0
+      }
+    ],
+    "name": "Baldur's Gate II: Shadows of Amn",
+    "slug": "baldurs-gate-ii-shadows-of-amn",
+    "total_rating_count": 567
+  },
+  {
+    "id": 12,
+    "cover": {
+      "id": 357165,
+      "image_id": "co7nl9"
+    },
+    "first_release_date": 960336000,
+    "genres": [
+      {
+        "id": 12,
+        "name": "Role-playing (RPG)",
+        "slug": "role-playing-rpg"
+      },
+      {
+        "id": 31,
+        "name": "Adventure",
+        "slug": "adventure"
+      }
+    ],
+    "name": "Vampire: The Masquerade - Redemption",
+    "slug": "vampire-the-masquerade-redemption",
+    "total_rating_count": 73
+  },
+  {
+    "id": 17,
+    "cover": {
+      "id": 91143,
+      "image_id": "co1ybr"
+    },
+    "first_release_date": 984614400,
+    "genres": [
+      {
+        "id": 12,
+        "name": "Role-playing (RPG)",
+        "slug": "role-playing-rpg"
+      },
+      {
+        "id": 15,
+        "name": "Strategy",
+        "slug": "strategy"
+      },
+      {
+        "id": 16,
+        "name": "Turn-based strategy (TBS)",
+        "slug": "turn-based-strategy-tbs"
+      },
+      {
+        "id": 24,
+        "name": "Tactical",
+        "slug": "tactical"
+      }
+    ],
+    "name": "Fallout Tactics: Brotherhood of Steel",
+    "slug": "fallout-tactics-brotherhood-of-steel",
+    "total_rating_count": 106
+  },
+  {
+    "id": 21,
+    "cover": {
+      "id": 122599,
+      "image_id": "co2mlj"
+    },
+    "first_release_date": 1265673600,
+    "genres": [
+      {
+        "id": 5,
+        "name": "Shooter",
+        "slug": "shooter"
+      },
+      {
+        "id": 9,
+        "name": "Puzzle",
+        "slug": "puzzle"
+      },
+      {
+        "id": 12,
+        "name": "Role-playing (RPG)",
+        "slug": "role-playing-rpg"
+      },
+      {
+        "id": 31,
+        "name": "Adventure",
+        "slug": "adventure"
+      }
+    ],
+    "multiplayer_modes": [
+      {
+        "id": 13923,
+        "onlinemax": 10
+      }
+    ],
+    "name": "BioShock 2",
+    "slug": "bioshock-2",
+    "total_rating_count": 1120
+  },
+  {
+    "id": 134710,
+    "cover": {
+      "id": 222553,
+      "image_id": "co4rq1"
+    },
+    "first_release_date": 1416268800,
+    "name": "Grand Theft Auto Online",
+    "slug": "grand-theft-auto-online",
+    "total_rating_count": 72
+  },
+  {
+    "id": 135400,
+    "cover": null,
+    "first_release_date": 1482105600,
+    "genres": [
+      {
+        "id": 12,
+        "name": "Role-playing (RPG)",
+        "slug": "role-playing-rpg"
+      }
+    ],
+    "name": "Minecraft",
+    "slug": "minecraft--1",
+    "total_rating_count": 579
+  },
+  {
+    "id": 242408,
+    "cover": {
+      "id": 483385,
+      "image_id": "coaczd"
+    },
+    "first_release_date": 1695772800,
+    "genres": [
+      {
+        "id": 5,
+        "name": "Shooter",
+        "slug": "shooter"
+      }
+    ],
+    "name": "Counter-Strike 2",
+    "slug": null,
+    "total_rating_count": 367
+  },
+  {
+    "id": 1905,
+    "cover": {
+      "id": 603054,
+      "image_id": "cocxbi"
+    },
+    "first_release_date": 1593388800,
+    "genres": [
+      {
+        "id": 5,
+        "name": "Shooter",
+        "slug": "shooter"
+      }
+    ],
+    "name": null,
+    "slug": "fortnite",
+    "total_rating_count": 1015
+  }
+]

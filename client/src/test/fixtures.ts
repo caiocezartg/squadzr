@@ -8,6 +8,7 @@ import type {
   Game,
   GamesResponse,
   Player,
+  PopularGamesResponse,
   RoomResponse,
   RoomsResponse,
   Squad,
@@ -25,7 +26,9 @@ export const gameLol: Game = {
   id: '11111111-1111-4111-8111-111111111111',
   name: 'League of Legends',
   slug: 'lol',
+  genres: [{ slug: 'moba', name: 'MOBA' }],
   coverUrl: 'https://cdn.squadzr.test/covers/lol.jpg',
+  coverThumbUrl: 'https://cdn.squadzr.test/covers/lol-thumb.jpg',
   minPlayers: 1,
   maxPlayers: 5,
   createdAt: hoursAgo(24),
@@ -36,15 +39,45 @@ export const gameCs2: Game = {
   id: '22222222-2222-4222-8222-222222222222',
   name: 'Counter-Strike 2',
   slug: 'cs2',
+  genres: [{ slug: 'shooter', name: 'Shooter' }],
   coverUrl: 'https://cdn.squadzr.test/covers/cs2.jpg',
+  coverThumbUrl: 'https://cdn.squadzr.test/covers/cs2-thumb.jpg',
   minPlayers: 1,
   maxPlayers: 5,
   createdAt: hoursAgo(24),
   updatedAt: hoursAgo(24),
 }
 
+/** Game summary every Squad carries next to `gameId` (CCC-92). */
+export const gameLolSummary = {
+  id: gameLol.id,
+  name: gameLol.name,
+  slug: gameLol.slug,
+  genres: [{ slug: 'moba', name: 'MOBA' }],
+  coverUrl: gameLol.coverUrl,
+  coverThumbUrl: 'https://cdn.squadzr.test/covers/lol-thumb.jpg',
+}
+
+export const gameCs2Summary = {
+  id: gameCs2.id,
+  name: gameCs2.name,
+  slug: gameCs2.slug,
+  genres: [{ slug: 'shooter', name: 'Shooter' }],
+  coverUrl: gameCs2.coverUrl,
+  coverThumbUrl: 'https://cdn.squadzr.test/covers/cs2-thumb.jpg',
+}
+
 export const boardGames: GamesResponse = {
   games: [gameLol, gameCs2],
+}
+
+/** The landing's popular games read: a total larger than the returned page. */
+export const popularGames: PopularGamesResponse = {
+  totalGames: 42,
+  games: [
+    { game: gameLol, openSquadCount: 4, topTags: ['ranked', 'chill'] },
+    { game: gameCs2, openSquadCount: 0, topTags: [] },
+  ],
 }
 
 /** Open squad with free slots — joinable by a signed-in user. */
@@ -54,6 +87,7 @@ export const openSquad: Squad = {
   name: 'Ranked grind',
   hostId: 'user-9',
   gameId: gameLol.id,
+  game: gameLolSummary,
   maxPlayers: 5,
   discordLink: 'https://discord.gg/open',
   tags: ['ranked', 'chill'],
@@ -71,6 +105,7 @@ export const fullSquad: Squad = {
   name: 'Full lobby',
   hostId: 'user-9',
   gameId: gameCs2.id,
+  game: gameCs2Summary,
   maxPlayers: 4,
   discordLink: null,
   tags: [],
@@ -88,6 +123,7 @@ export const memberSquad: Squad = {
   name: 'Casual five stack',
   hostId: 'user-9',
   gameId: gameLol.id,
+  game: gameLolSummary,
   maxPlayers: 4,
   discordLink: null,
   tags: ['chill'],
@@ -111,6 +147,7 @@ export function squadsForPagination(): RoomsResponse {
       name: `Page squad ${index}`,
       hostId: 'user-9',
       gameId: gameLol.id,
+      game: gameLolSummary,
       maxPlayers: 5,
       discordLink: null,
       tags: [],
@@ -131,6 +168,7 @@ export const lobbySquad: Squad = {
   name: 'Squad ready check',
   hostId: 'user-1',
   gameId: gameLol.id,
+  game: gameLolSummary,
   maxPlayers: 3,
   discordLink: 'https://discord.gg/lobby',
   tags: ['squad'],
@@ -164,6 +202,7 @@ export const createdSquad: Squad = {
   name: 'Created squad',
   hostId: 'user-1',
   gameId: gameLol.id,
+  game: gameLolSummary,
   maxPlayers: 5,
   discordLink: 'https://discord.gg/created',
   tags: ['ranked'],

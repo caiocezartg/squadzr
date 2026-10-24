@@ -2,32 +2,95 @@ import { randomUUID } from 'node:crypto'
 import { count, eq } from 'drizzle-orm'
 import type { LightMyRequestResponse } from 'fastify'
 import { expect } from 'vitest'
-import { roomSchema, type GameDto, type RoomDto } from '@squadzr/schemas'
+import { roomSchema, type GameDto, type GameSummaryDto, type RoomDto } from '@squadzr/schemas'
 import { games, roomMembers, rooms } from '@infrastructure/database/schema'
 import type { TestUser } from './auth'
 import type { TestServer } from './test-server'
 
 export const DISCORD_INVITE = 'https://discord.gg/squadzr'
 
-export async function insertGame(server: TestServer, maxPlayers = 5): Promise<GameDto> {
-  const slug = `game-${randomUUID().slice(0, 8)}`
+export interface InsertGameOptions {
+  name?: string
+  slug?: string
+  coverUrl?: string
+  thumbnailUrl?: string
+  genres?: GameDto['genres']
+  popularity?: number
+  listed?: boolean
+  featuredRank?: number | null
+  igdbId?: number | null
+  minPlayers?: number
+  maxPlayers?: number
+}
+
+export interface InsertedGame {
+  /** The catalog contract (CCC-93 grows it; CCC-92 keeps it unchanged). */
+  readonly game: GameDto
+  /** The summary a Squad carries for this Game, as the API projects it. */
+  readonly summary: GameSummaryDto
+}
+
+/**
+ * Inserts a game with its catalog columns and exposes both the HTTP catalog
+ * fixture and the Squad summary. A legacy Game is `listed: false` with no
+ * `igdbId` and no genres.
+ */
+export async function insertGameFixture(
+  server: TestServer,
+  options: InsertGameOptions = {}
+): Promise<InsertedGame> {
+  const slug = options.slug ?? `game-${randomUUID().slice(0, 8)}`
+  const coverUrl = options.coverUrl ?? `https://cdn.squadzr.test/${slug}.webp`
   const [game] = await server.app.db
     .insert(games)
     .values({
-      name: `Game ${slug}`,
+      name: options.name ?? `Game ${slug}`,
       slug,
-      coverUrl: `https://cdn.squadzr.test/${slug}.webp`,
-      minPlayers: 2,
-      maxPlayers,
+      igdbId: options.igdbId ?? null,
+      genres: options.genres ?? [],
+      coverUrl,
+      thumbnailUrl: options.thumbnailUrl ?? coverUrl,
+      popularity: options.popularity ?? 0,
+      // Catalog fixtures are listed by default; every flow that creates a
+      // Squad needs a listed game to point at.
+      listed: options.listed ?? true,
+      featuredRank: options.featuredRank ?? null,
+      minPlayers: options.minPlayers ?? 2,
+      maxPlayers: options.maxPlayers ?? 5,
     })
     .returning()
   if (!game) throw new Error('Failed to insert game')
-  // The row carries Date columns; the transport contract models them as ISO strings.
-  return {
-    ...game,
-    createdAt: game.createdAt.toISOString(),
-    updatedAt: game.updatedAt.toISOString(),
+  // One summary, spread into both fixtures: `thumbnailUrl` is mapped to the
+  // contract's `coverThumbUrl` exactly once.
+  const summary: GameSummaryDto = {
+    id: game.id,
+    name: game.name,
+    slug: game.slug,
+    genres: game.genres,
+    coverUrl: game.coverUrl,
+    coverThumbUrl: game.thumbnailUrl,
   }
+  return {
+    game: {
+      ...summary,
+      minPlayers: game.minPlayers,
+      maxPlayers: game.maxPlayers,
+      createdAt: game.createdAt.toISOString(),
+      updatedAt: game.updatedAt.toISOString(),
+    },
+    summary,
+  }
+}
+
+export async function insertGame(
+  server: TestServer,
+  maxPlayersOrOptions: number | InsertGameOptions = 5
+): Promise<GameDto> {
+  const options =
+    typeof maxPlayersOrOptions === 'number'
+      ? { maxPlayers: maxPlayersOrOptions }
+      : maxPlayersOrOptions
+  return (await insertGameFixture(server, options)).game
 }
 
 export interface CreateRoomBody {

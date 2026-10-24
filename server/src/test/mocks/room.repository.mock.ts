@@ -2,6 +2,7 @@ import { vi, type Mock } from 'vitest'
 import type { Room, NewRoom } from '@domain/entities/room.entity'
 import type { CreateRoomOutcome, IRoomRepository } from '@domain/repositories/room.repository'
 import { FIXED_NOW } from './clock.mock'
+import { createMockGame } from './game.repository.mock'
 
 export function createMockRoom(overrides?: Partial<Room>): Room {
   return {
@@ -10,6 +11,7 @@ export function createMockRoom(overrides?: Partial<Room>): Room {
     name: 'Test Room',
     hostId: 'user-uuid-1',
     gameId: 'game-uuid-1',
+    game: createMockGame(),
     maxPlayers: 5,
     discordLink: null,
     tags: [],

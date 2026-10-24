@@ -13,7 +13,7 @@ import { roomMembers } from '@infrastructure/database/schema/room-members'
 import { rooms } from '@infrastructure/database/schema/rooms'
 import { isRoomExpired } from '@domain/services/room-lifecycle'
 import { ROOM } from '@config/constants'
-import { mapRoomMemberRowToEntity, mapRoomRowToEntity } from './room-mapping'
+import { mapCreatedRoomRowToEntity, mapRoomMemberRowToEntity } from './room-mapping'
 import { lockUserRow } from './user-lock'
 import {
   advanceRoomActivity,
@@ -67,7 +67,7 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
       if (!roomRow) return { status: 'not_found' }
       await lockUserRow(tx, input.userId)
       const now = this.clock.now()
-      const room = mapRoomRowToEntity(roomRow)
+      const room = mapCreatedRoomRowToEntity(roomRow)
 
       // Validate: every answer that writes no Membership returns here.
       const validation = await validateJoin(tx, { room, userId: input.userId, now })
@@ -119,7 +119,7 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
       const roomRow = roomRows[0]
       if (!roomRow) return { status: 'not_found' }
 
-      const room = mapRoomRowToEntity(roomRow)
+      const room = mapCreatedRoomRowToEntity(roomRow)
       const now = this.clock.now()
       if (isRoomExpired(room, now, ROOM)) return { status: 'not_found' }
       if (room.readyAt) return { status: 'ready' }

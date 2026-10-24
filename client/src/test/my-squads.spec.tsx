@@ -15,7 +15,16 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import { settleNavigation } from './navigation'
-import { boardGames, createdSquad, gameLol, guestPlayer, hostPlayer } from './fixtures'
+import {
+  boardGames,
+  createdSquad,
+  gameCs2,
+  gameCs2Summary,
+  gameLol,
+  gameLolSummary,
+  guestPlayer,
+  hostPlayer,
+} from './fixtures'
 import type { MyRoomsResponse, Squad } from '@/types'
 
 /**
@@ -29,6 +38,7 @@ const readyHostedSquad: Squad = {
   name: 'Ready squad',
   hostId: 'user-1',
   gameId: gameLol.id,
+  game: gameLolSummary,
   maxPlayers: 5,
   discordLink: 'https://discord.gg/ready',
   tags: ['ranked'],
@@ -45,6 +55,8 @@ const readyJoinedSquad: Squad = {
   code: 'READY2',
   name: 'Joined ready squad',
   hostId: 'user-9',
+  gameId: gameCs2.id,
+  game: gameCs2Summary,
 }
 
 function mySquads(hosted: Squad[], joined: Squad[]): MyRoomsResponse {
@@ -52,11 +64,15 @@ function mySquads(hosted: Squad[], joined: Squad[]): MyRoomsResponse {
 }
 
 beforeEach(() => {
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
+  onHttp('GET', '/api/games', (request) => {
+    const search = request.query.get('search')?.toLowerCase() ?? ''
+    return httpOk({
+      games: boardGames.games.filter((game) => game.name.toLowerCase().includes(search)),
+    })
+  })
   onHttp('GET', '/api/rooms/:code', () =>
     httpOk({ room: readyHostedSquad, players: [hostPlayer, guestPlayer] })
   )
-  onHttp('GET', '/api/games/:gameId', () => httpOk({ game: gameLol }))
 })
 
 describe('my squads — filters through the URL', () => {
@@ -77,6 +93,17 @@ describe('my squads — filters through the URL', () => {
     await user.click(screen.getByText('Joined (1)'))
     expect(await screen.findByText('Joined ready squad')).toBeInTheDocument()
   })
+
+  it('filters both lists by the game name their own summaries carry', async () => {
+    onHttp('GET', '/api/rooms/my', () => httpOk(mySquads([readyHostedSquad], [readyJoinedSquad])))
+    const { user } = renderSquadsFlow('/squads/my')
+    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText('Search by game or squad name...'), 'Counter')
+
+    await waitFor(() => expect(screen.queryByText('Ready squad')).not.toBeInTheDocument())
+    expect(screen.getByText('Joined ready squad')).toBeInTheDocument()
+  })
 })
 
 describe('my squads — refresh behavior', () => {
@@ -85,7 +112,6 @@ describe('my squads — refresh behavior', () => {
     const queryClient = createTestQueryClient()
     // What the server dehydrated for the cached visit: the new Squad is not in it yet.
     queryClient.setQueryData(['my-squads'], mySquads([], []))
-    queryClient.setQueryData(['games'], boardGames)
 
     renderSquadsFlow('/squads/my', { queryClient })
 
@@ -124,8 +150,14 @@ describe('my squads — refresh behavior', () => {
     await user.click(screen.getByRole('button', { name: 'Create new squad' }))
     await screen.findByText('Create a Squad')
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
-    await user.click(screen.getByLabelText('Game'))
-    await user.click(await screen.findByText('League of Legends (1-5 players)'))
+    const gameInput = screen.getByLabelText('Game')
+    await user.click(gameInput)
+    await user.type(gameInput, 'league')
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
+    expect(
+      await screen.findByRole('option', { name: 'League of Legends (1-5 players)' })
+    ).toBeInTheDocument()
+    await user.keyboard('{ArrowDown}{Enter}')
     await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
 
     // The server lists the new Squad in My Squads as soon as it exists.

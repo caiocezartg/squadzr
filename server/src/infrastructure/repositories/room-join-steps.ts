@@ -64,7 +64,13 @@ export async function lockRoomRow(
  */
 export async function validateJoin(
   tx: DatabaseTransaction,
-  input: { readonly room: Room; readonly userId: string; readonly now: Date }
+  input: {
+    // The locked row is validated without reading its Game: the summary belongs
+    // to the read projections, and the join already loaded it through `findByCode`.
+    readonly room: Pick<Room, 'id' | 'hostId' | 'maxPlayers' | 'readyAt' | 'lastActivityAt'>
+    readonly userId: string
+    readonly now: Date
+  }
 ): Promise<JoinValidation> {
   const { room, userId, now } = input
   if (isRoomExpired(room, now, ROOM)) return withoutSeat({ status: 'expired' })

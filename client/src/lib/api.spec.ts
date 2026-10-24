@@ -9,7 +9,7 @@ import { roomResponseSchema, roomsResponseSchema } from '@squadzr/schemas'
 import { ApiClientError, ApiContractError, api } from './api'
 import { getUserFriendlyError } from './error-messages'
 import { englishT } from '../test/intl'
-import { getHttpLog, httpError, httpOk, onHttp } from '@/test/http-router'
+import { type MockHttpResponse, getHttpLog, httpError, httpOk, onHttp } from '@/test/http-router'
 import { hostPlayer, lobbySquad, openSquad } from '@/test/fixtures'
 
 const SECRET_INVITE = 'https://discord.gg/secret-invite'
@@ -60,6 +60,37 @@ describe('valid responses', () => {
 
     expect(asMember).toEqual({ room: lobbySquad, players: [hostPlayer] })
     expect(asOutsider).toEqual({ room: publicSquad })
+  })
+})
+
+describe('cancellation', () => {
+  it('forwards the caller signal to fetch', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: [] }))
+    const controller = new AbortController()
+
+    await api.get('/api/rooms', roomsResponseSchema, controller.signal)
+
+    expect(getHttpLog().at(-1)?.signal).toBe(controller.signal)
+  })
+
+  it('rejects with the abort error, not a contract error, when the caller aborts', async () => {
+    onHttp('GET', '/api/rooms', () => new Promise<MockHttpResponse>(() => undefined))
+    const controller = new AbortController()
+
+    const pending = api.get('/api/rooms', roomsResponseSchema, controller.signal)
+    controller.abort()
+
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    await expect(pending).rejects.not.toBeInstanceOf(ApiClientError)
+    expect(console.error).not.toHaveBeenCalled()
+  })
+
+  it('leaves callers without a signal unchanged', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: [] }))
+
+    await api.get('/api/rooms', roomsResponseSchema)
+
+    expect(getHttpLog().at(-1)?.signal).toBeUndefined()
   })
 })
 

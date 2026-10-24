@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
 import { SquadBoardPage } from '@/features/squad-board/page'
-import { boardGames, memberSquad } from './fixtures'
+import { memberSquad } from './fixtures'
 import { createTestQueryClient } from './harness'
 import { EnglishIntlProvider } from './intl'
 import { createHarnessNavigation } from './navigation'
@@ -19,7 +19,6 @@ describe('squad board — server render', () => {
     createHarnessNavigation('/squads')
     const queryClient = createTestQueryClient()
     queryClient.setQueryData(['squads'], { rooms: [memberSquad] })
-    queryClient.setQueryData(['games'], boardGames)
 
     const markup = renderToStaticMarkup(
       <QueryClientProvider client={queryClient}>

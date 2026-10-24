@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { isoDateTimeSchema } from './date'
+import { gameSummarySchema } from './game'
 
 export const roomLanguageSchema = z.enum(['en', 'pt-br'])
 
@@ -13,6 +14,9 @@ export const publicRoomSchema = z.object({
   name: z.string(),
   hostId: z.string(),
   gameId: z.uuid(),
+  // The Squad's Game summary: `gameId` stays for clients that still resolve the
+  // catalog themselves.
+  game: gameSummarySchema,
   maxPlayers: z.number().int(),
   tags: z.array(z.string()).default([]),
   language: roomLanguageSchema.default('pt-br'),
@@ -56,7 +60,7 @@ export type RoomMemberDto = z.infer<typeof roomMemberSchema>
 export const createRoomInputSchema = z.object({
   name: z.string().trim().min(1, 'Room name is required').max(30, 'Room name too long'),
   gameId: z.uuid({ error: 'Invalid game ID' }),
-  maxPlayers: z.number().int().min(2).max(20).optional(),
+  maxPlayers: z.number().int().min(2).max(40).optional(),
   discordLink: z
     .url({ error: 'Invalid Discord link' })
     .refine(

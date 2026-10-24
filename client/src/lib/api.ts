@@ -11,6 +11,8 @@ interface RequestConfig {
   readonly method: Method
   readonly url: string
   readonly data?: unknown
+  /** Lets the caller abandon the request, as a search that a newer term superseded. */
+  readonly signal?: AbortSignal
 }
 
 /** The API base URL and a path, joined by a single slash. */
@@ -37,13 +39,14 @@ async function readBody(response: Response): Promise<unknown> {
  * leaves this module.
  */
 async function request<S extends z.ZodType>(
-  { method, url, data }: RequestConfig,
+  { method, url, data, signal }: RequestConfig,
   schema: S | undefined
 ): Promise<z.output<S> | void> {
   const hasBody = data !== undefined
   const response = await fetch(absoluteUrl(url), {
     method,
     credentials: 'include',
+    signal,
     headers: hasBody
       ? { Accept: 'application/json', 'Content-Type': 'application/json' }
       : { Accept: 'application/json' },
@@ -60,8 +63,12 @@ async function request<S extends z.ZodType>(
   return parseApiResponse(schema, context, body)
 }
 
-function get<S extends z.ZodType>(path: string, schema: S): Promise<z.output<S>> {
-  return request({ method: 'GET', url: path }, schema) as Promise<z.output<S>>
+function get<S extends z.ZodType>(
+  path: string,
+  schema: S,
+  signal?: AbortSignal
+): Promise<z.output<S>> {
+  return request({ method: 'GET', url: path, signal }, schema) as Promise<z.output<S>>
 }
 
 function send(method: Exclude<Method, 'GET' | 'DELETE'>) {

@@ -14,6 +14,8 @@ import { databaseUrl, type PostgresHarnessContext } from '@test/harness/postgres
 
 const { Client } = pg
 const MIGRATIONS_FOLDER = fileURLToPath(new URL('../../drizzle', import.meta.url))
+// Pinned by tag: later migrations must not change which file this suite replays.
+const LIFECYCLE_MIGRATION = '0003_fine_deathbird.sql'
 
 function migrationFiles(): string[] {
   return readdirSync(MIGRATIONS_FOLDER)
@@ -64,10 +66,10 @@ describe('room lifecycle migration (CCC-35)', () => {
 
   it('deletes disposable room data, preserves auth data and lands the new schema', async () => {
     const files = migrationFiles()
-    expect(files).toHaveLength(4)
+    const migrationIndex = files.indexOf(LIFECYCLE_MIGRATION)
+    expect(migrationIndex).toBeGreaterThanOrEqual(0)
 
-    const migration = files[files.length - 1]!
-    for (const file of files.slice(0, -1)) {
+    for (const file of files.slice(0, migrationIndex)) {
       await applyMigration(client, file)
     }
 
@@ -128,7 +130,7 @@ describe('room lifecycle migration (CCC-35)', () => {
       notifications: 2,
     })
 
-    await applyMigration(client, migration!)
+    await applyMigration(client, files[migrationIndex]!)
 
     expect({
       users: await countRows(client, 'user'),

@@ -14,7 +14,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import SquadsPage from '@/app/squads/page'
 import { getQueryClient } from '@/lib/query-client'
-import { boardGames, boardSquads, openSquad } from './fixtures'
+import { boardSquads, openSquad } from './fixtures'
 import { createTestQueryClient } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import type { MockHttpResponse } from './http-router'
@@ -58,7 +58,6 @@ async function renderSquadsRoute(queryClient: QueryClient = createTestQueryClien
 }
 
 function registerBoardReads(rooms: () => Promise<MockHttpResponse> | MockHttpResponse): void {
-  onHttp('GET', '/api/games', () => httpOk(boardGames))
   onHttp('GET', '/api/rooms', rooms)
 }
 
@@ -104,7 +103,6 @@ describe('squad board on the App Router', () => {
       { rooms: [openSquad] },
       { updatedAt: Date.now() - 120_000 }
     )
-    queryClient.setQueryData(['games'], boardGames)
     const squadsRead = deferred<MockHttpResponse>()
     registerBoardReads(() => squadsRead.promise)
 
@@ -190,23 +188,6 @@ describe('squad board on the App Router', () => {
 
       expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
       expect(screen.queryByText(loadError)).not.toBeInTheDocument()
-    })
-
-    it('reads the games again on a revisit when only the games failed', async () => {
-      signInAsFakeUser()
-      createHarnessNavigation('/squads')
-      const queryClient = createTestQueryClient()
-      onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
-      onHttp('GET', '/api/games', boardFailure)
-
-      const failedVisit = await renderSquadsRoute(queryClient)
-      expect(await screen.findByText(loadError)).toBeInTheDocument()
-      failedVisit.unmount()
-
-      registerBoardReads(() => httpOk(boardSquads))
-      await renderSquadsRoute(queryClient)
-
-      expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
     })
 
     it('reads the board again when the reader tries again, and shows the squad count with it', async () => {

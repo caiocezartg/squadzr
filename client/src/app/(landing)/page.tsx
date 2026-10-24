@@ -7,7 +7,7 @@ import { HowItWorks } from '@/components/landing/how-it-works'
 import { LandingFooter } from '@/components/landing/landing-footer'
 import { PopularGames } from '@/components/landing/popular-games'
 import { MotionProvider } from '@/components/ui/motion-provider'
-import { loadGames, pickPopularGames } from '@/lib/server/games'
+import { loadPopularGames } from '@/lib/server/games'
 
 // The root layout's title template does not reach a page at its own level, so the landing names the app itself.
 export const metadata: Metadata = {
@@ -23,12 +23,12 @@ export default async function LandingPage() {
   // The landing renders per request. Waiting for the request first keeps Next from rendering it at build
   // time, when the games API is not running.
   await connection()
-  const games = await loadGames()
+  const { totalGames, games } = await loadPopularGames()
 
   return (
     <MotionProvider>
-      <HeroSection gameCount={games.length} />
-      <PopularGames games={pickPopularGames(games)} />
+      <HeroSection gameCount={totalGames} />
+      <PopularGames games={games} />
       <HowItWorks />
       <FAQSection />
       <CTABanner />

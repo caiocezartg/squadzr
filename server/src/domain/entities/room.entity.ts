@@ -1,9 +1,13 @@
+import type { GameSummary } from './game.entity'
+
 export interface Room {
   readonly id: string
   readonly code: string
   readonly name: string
   readonly hostId: string
   readonly gameId: string
+  /** Read together with the Squad, so a projection never looks the Game up again. */
+  readonly game: GameSummary
   readonly maxPlayers: number
   readonly discordLink: string | null
   readonly tags: string[]
