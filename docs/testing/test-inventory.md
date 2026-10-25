@@ -23,10 +23,10 @@ inventory (see the equivalence proof below).
 
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
-| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 29 | 148 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 28 | 280 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 488 |
-| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 84 |
+| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 29 | 155 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 28 | 285 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 489 |
+| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 90 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-24 on the
@@ -72,7 +72,8 @@ answer replaces them with no visible loading copy, the empty copy waits for a se
 superseded request's signal aborts, and a warm term answers from the cache without another request)
 and 3 `api` cancellation cases (the signal reaches `fetch`, an aborted call rejects with its abort
 error rather than a contract error, and calls without a signal stay unchanged). It adds no suite
-files, so `client:unit` measures 58 files / 488 tests on the merged tree.
+files, so `client:unit` measures 58 files / 489 tests on the merged tree (CCC-105 added the Lobby's
+"Offline · X ago" case).
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
@@ -98,8 +99,9 @@ with its project entry.
 Project names carry the suite kind after the `:` separator. Unit projects (`*:unit`) run against
 mock/in-memory dependencies:
 
-- `server:unit` — 148 tests across 29 spec files as of 2026-10-23 (merged tree, CCC-89, CCC-90,
-  CCC-92, CCC-93 and CCC-95). CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
+- `server:unit` — 155 tests across 29 spec files as of 2026-10-24 (merged tree, CCC-89, CCC-90,
+  CCC-92, CCC-93, CCC-95 and CCC-105, whose 7 cases cover the Presence tracker's offline time,
+  clearing and removal). CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
   specs together with their use cases. The CCC-28 baseline of 39 tests across 10 specs is historical; see
   the equivalence proof below. CCC-90 adds the IGDB adapter and Catalog Import environment suites.
 - `client:unit` — runs in jsdom; the environment is proven by an assertion on `document`, which
@@ -194,33 +196,35 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 91 | 720 |
-| `bunx vitest run` (direct root composition) | 91 | 720 |
-| `bunx turbo test --filter=server` | 29 | 148 |
-| `bunx turbo test --filter=client` | 58 | 488 |
-| `bunx turbo test --filter=@squadzr/schemas` | 4 | 84 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 91 | 734 |
+| `bunx vitest run` (direct root composition) | 91 | 734 |
+| `bunx turbo test --filter=server` | 29 | 155 |
+| `bunx turbo test --filter=client` | 58 | 489 |
+| `bunx turbo test --filter=@squadzr/schemas` | 4 | 90 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
 numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
 specs together with their use cases, so the server unit suite has 5 fewer tests than before that
 change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
 16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
-current run passes 28 files / 280 tests (measured 2026-10-23 against the test PostgreSQL on port
+current run passes 28 files / 285 tests (measured 2026-10-24 against the test PostgreSQL on port
 5433): the CCC-88 row of 25 files / 231 tests plus CCC-89's changes — the 2 child-process seed
 tests removed with the static seed, the Catalog Import suites (+2 files / +16 tests), two extra
 IGDB-id cases in `games-postgres` — plus CCC-93's cases in the existing games and rooms HTTP suites
 (search, delisted-game and Squad-size), CCC-95's 2 cover cases in the existing notification
 suites, CCC-92's `squad-game-summary` suite (+1 file / +4 tests) and CCC-90's invalid-summary case
-in `catalog-import.test.ts` (+1 test). The `server:unit` row had
+in `catalog-import.test.ts` (+1 test) and CCC-105's `offlineSince` cases in
+`realtime-disconnects.test.ts` (+5 tests: the close time after the grace, kept for a later snapshot,
+cleared on reconnect, removed with the Membership, `null` when never seen). The `server:unit` row had
 drifted to 26 files / 119 tests since CCC-70, so the CCC-89 recount corrected it to 27 files / 122
 tests with `curated-games.spec.ts` (+1 file / +3 tests); CCC-93 adds its create-room delisted-game
 cases, CCC-95 adds 3 cover cases and CCC-92 adds one projection case and one create-path case, and
 CCC-90 adds the IGDB adapter (10 tests) and import environment (9 tests) suites plus one curated-id
-case, so the merged tree measures 29 files / 148 tests. CCC-59 removed the `types:unit` project (1
-file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 84 tests across
-4 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
-contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 488
-tests (CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
+case, so the merged tree measured 29 files / 148 tests before CCC-105 added 7 Presence tracker cases (155). CCC-59 removed the `types:unit` project (1
+file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 90 tests across
+4 files (CCC-105 added 6: presence with an ISO time, with `null` and without it, and protocol version 3; CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
+contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 489
+tests (CCC-105 added the Lobby's offline-time case; CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
 CCC-95 added 2, CCC-92 added none, CCC-96 replaced the landing's random-pick cases with the
 popular read and added the FAQ and IGDB-credit cases: net 0, and CCC-98 added 7 cancellation and
 placeholder flow cases); both drifts predate CCC-89 and were

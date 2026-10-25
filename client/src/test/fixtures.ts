@@ -226,8 +226,8 @@ export function lobbySnapshot(overrides: Partial<LobbySnapshot> = {}): LobbySnap
     readyAt: null,
     expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
     presence: [
-      { playerId: hostPlayer.id, online: true },
-      { playerId: guestPlayer.id, online: false },
+      { playerId: hostPlayer.id, online: true, offlineSince: null },
+      { playerId: guestPlayer.id, online: false, offlineSince: null },
     ],
     ...overrides,
   }
@@ -238,8 +238,8 @@ export function readyLobbySnapshot(overrides: Partial<LobbySnapshot> = {}): Lobb
   return lobbySnapshot({
     readyAt: new Date().toISOString(),
     presence: [
-      { playerId: hostPlayer.id, online: true },
-      { playerId: guestPlayer.id, online: true },
+      { playerId: hostPlayer.id, online: true, offlineSince: null },
+      { playerId: guestPlayer.id, online: true, offlineSince: null },
     ],
     ...overrides,
   })

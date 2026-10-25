@@ -201,6 +201,7 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
         presence: players.map((player) => ({
           playerId: player.id,
           online: this.presence.isOnline(room.code, player.id),
+          offlineSince: this.presence.offlineSince(room.code, player.id)?.toISOString() ?? null,
         })),
       },
     })
@@ -217,6 +218,7 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
       { category: 'presence', event: 'transition', roomCode, userId: playerId, online },
       'Realtime Presence transition'
     )
+    const offlineSince = this.presence.offlineSince(roomCode, playerId)?.toISOString() ?? null
     for (const socket of this.connectionManager.getRoomSockets(roomCode) ?? []) {
       if (socket === excludeSocket) continue
       this.publish(socket, () => {
@@ -224,7 +226,7 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
         this.connectionManager.sendToSocket(socket, {
           type: 'presence_updated',
           timestamp: this.clock.now().getTime(),
-          payload: { roomCode, playerId, online },
+          payload: { roomCode, playerId, online, offlineSince },
         })
       })
     }

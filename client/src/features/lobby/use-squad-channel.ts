@@ -102,7 +102,12 @@ export function useSquadChannel({
         },
         presence_updated: (payload) => {
           if (!matchesSquadCode(payload.roomCode, squadCode)) return
-          setPresence((current) => applyPresence(current, payload.playerId, payload.online))
+          setPresence((current) =>
+            applyPresence(current, payload.playerId, {
+              online: payload.online,
+              offlineSince: payload.offlineSince,
+            })
+          )
         },
         room_deleted: (payload) => {
           if (!matchesSquadCode(payload.roomCode, squadCode)) return

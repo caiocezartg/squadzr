@@ -4,6 +4,7 @@
  * the reconnect grace window. HTTP Membership removal revokes the channel.
  */
 import { afterEach, describe, expect, it } from 'vitest'
+import { roomSnapshotMessageSchema } from '@squadzr/schemas/ws'
 import { signInMany, type TestUser } from '@test/harness/auth'
 import { countMembers, createRoom, insertGame, joinAll, roomAction } from '@test/harness/rooms'
 import {
@@ -65,11 +66,11 @@ async function openMemberTab(room: TwoMemberRoom): Promise<RealtimeSession> {
   return tab
 }
 
-function viewerLeft(room: TwoMemberRoom) {
+function viewerLeft(room: TwoMemberRoom, offlineSince: unknown = expect.any(String)) {
   return {
     type: 'presence_updated',
     timestamp: expect.any(Number),
-    payload: { playerId: room.member.id, roomCode: room.roomCode, online: false },
+    payload: { playerId: room.member.id, roomCode: room.roomCode, online: false, offlineSince },
   }
 }
 
@@ -78,6 +79,7 @@ describe('graceful disconnect', () => {
     const room = await twoMemberRoom()
     const tab = await openMemberTab(room)
     await subscribeCatalog(tab)
+    const closedAt = clock.now().toISOString()
 
     tab.client.close(NORMAL_CLOSURE)
 
@@ -90,7 +92,7 @@ describe('graceful disconnect', () => {
     expect(await room.hostSocket.drain()).toEqual([])
     clock.advance(1)
     await subscriptionState(server).sweepPresence()
-    expect(await room.hostSocket.drain()).toEqual([viewerLeft(room)])
+    expect(await room.hostSocket.drain()).toEqual([viewerLeft(room, closedAt)])
     expect(await countMembers(server, room.roomId)).toBe(2)
   })
 
@@ -192,7 +194,7 @@ describe('Membership and multi-session Presence', () => {
         type: 'room_snapshot',
         payload: expect.objectContaining({
           players: [expect.objectContaining({ id: room.host.id })],
-          presence: [{ playerId: room.host.id, online: true }],
+          presence: [{ playerId: room.host.id, online: true, offlineSince: null }],
         }),
       }),
     ])
@@ -209,5 +211,115 @@ describe('Membership and multi-session Presence', () => {
     clock.advance(10_000)
     await subscriptionState(server).sweepPresence()
     expect(await room.hostSocket.drain()).toEqual([])
+  })
+})
+
+describe('offlineSince', () => {
+  function memberPresence(room: TwoMemberRoom, snapshot: unknown) {
+    const { presence } = roomSnapshotMessageSchema.parse(snapshot).payload
+    return presence.find((entry) => entry.playerId === room.member.id)
+  }
+
+  async function closeAndExpire(room: TwoMemberRoom, tab: RealtimeSession): Promise<string> {
+    const closedAt = clock.now().toISOString()
+    tab.client.close(NORMAL_CLOSURE)
+    await tab.serverClosed
+    clock.advance(12_000)
+    await subscriptionState(server).sweepPresence()
+    expect(await room.hostSocket.drain()).toEqual([viewerLeft(room, closedAt)])
+    return closedAt
+  }
+
+  it('is the close time of the last session, not the end of the grace', async () => {
+    const room = await twoMemberRoom()
+    const tab = await openMemberTab(room)
+    const first = await open(room.member)
+    await joinRoomChannel(first, room.roomCode)
+    await room.hostSocket.drain()
+
+    tab.client.close(NORMAL_CLOSURE)
+    await tab.serverClosed
+    clock.advance(3_000)
+    const lastClosedAt = clock.now().toISOString()
+    first.client.close(NORMAL_CLOSURE)
+    await first.serverClosed
+    clock.advance(10_000)
+    await subscriptionState(server).sweepPresence()
+
+    expect(await room.hostSocket.drain()).toEqual([viewerLeft(room, lastClosedAt)])
+  })
+
+  it('is kept for a snapshot read after the sweep deleted the online entry', async () => {
+    const room = await twoMemberRoom()
+    const tab = await openMemberTab(room)
+    const closedAt = await closeAndExpire(room, tab)
+
+    clock.advance(60_000)
+    const viewer = await open(room.host)
+    const snapshot = await joinRoomChannel(viewer, room.roomCode)
+
+    expect(memberPresence(room, snapshot)).toEqual({
+      playerId: room.member.id,
+      online: false,
+      offlineSince: closedAt,
+    })
+  })
+
+  it('clears when the member comes back online and starts over on the next disconnect', async () => {
+    const room = await twoMemberRoom()
+    const tab = await openMemberTab(room)
+    await closeAndExpire(room, tab)
+
+    const returned = await open(room.member)
+    const snapshot = await joinRoomChannel(returned, room.roomCode)
+
+    expect(memberPresence(room, snapshot)).toEqual({
+      playerId: room.member.id,
+      online: true,
+      offlineSince: null,
+    })
+    expect(await room.hostSocket.drain()).toEqual([
+      {
+        type: 'presence_updated',
+        timestamp: expect.any(Number),
+        payload: {
+          playerId: room.member.id,
+          roomCode: room.roomCode,
+          online: true,
+          offlineSince: null,
+        },
+      },
+    ])
+    await closeAndExpire(room, returned)
+  })
+
+  it('is removed when the Membership ends, so a later Membership has no known time', async () => {
+    const room = await twoMemberRoom()
+    const tab = await openMemberTab(room)
+    await closeAndExpire(room, tab)
+
+    expect((await roomAction(server, room.member, room.roomCode, 'leave')).statusCode).toBe(200)
+    await room.hostSocket.drain()
+    await joinAll(server, room.roomCode, [room.member])
+
+    const [snapshot] = await room.hostSocket.drain()
+    expect(memberPresence(room, snapshot)).toEqual({
+      playerId: room.member.id,
+      online: false,
+      offlineSince: null,
+    })
+  })
+
+  it('is null for a member the server has never seen', async () => {
+    const room = await twoMemberRoom()
+    const viewer = await open(room.host)
+
+    const snapshot = await joinRoomChannel(viewer, room.roomCode)
+
+    expect(memberPresence(room, snapshot)).toEqual({
+      playerId: room.member.id,
+      online: false,
+      offlineSince: null,
+    })
   })
 })

@@ -166,6 +166,7 @@ describe('16 KiB maxPayload', () => {
     await joinRoomChannel(offender, room.code)
     expect((await hostSocket.next()).type).toBe('presence_updated')
 
+    const closedAt = clock.now().toISOString()
     offender.sendRaw(paddedJsonFrame(MAX_PAYLOAD_BYTES + 1))
     await offender.serverClosed
 
@@ -182,7 +183,12 @@ describe('16 KiB maxPayload', () => {
       {
         type: 'presence_updated',
         timestamp: expect.any(Number),
-        payload: { playerId: member!.id, roomCode: room.code, online: false },
+        payload: {
+          playerId: member!.id,
+          roomCode: room.code,
+          online: false,
+          offlineSince: closedAt,
+        },
       },
     ])
   })

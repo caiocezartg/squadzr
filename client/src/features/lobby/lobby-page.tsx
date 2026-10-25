@@ -230,7 +230,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
               key={player.id}
               player={player}
               index={i}
-              online={lobby.presence[player.id]}
+              presence={lobby.presence[player.id]}
             />
           ))}
           {Array.from({ length: lobby.emptySlots }).map((_, i) => (

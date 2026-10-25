@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest'
 import type { PlayerDto, PublicRoomDto } from './index'
 import {
   protocolAnnouncementSchema,
+  REALTIME_PROTOCOL_VERSION,
   roomCreatedMessageSchema,
   wsIncomingMessageSchema,
   wsServerEnvelopeSchema,
@@ -54,7 +55,7 @@ const notification = {
 }
 
 const serverMessages = [
-  { type: 'protocol', payload: { version: 2 } },
+  { type: 'protocol', payload: { version: 3 } },
   {
     type: 'room_snapshot',
     payload: {
@@ -62,10 +63,18 @@ const serverMessages = [
       players: [player],
       readyAt: null,
       expiresAt: publicRoom.updatedAt,
-      presence: [{ playerId: player.id, online: true }],
+      presence: [{ playerId: player.id, online: true, offlineSince: null }],
     },
   },
-  { type: 'presence_updated', payload: { roomCode: 'ABC123', playerId: player.id, online: false } },
+  {
+    type: 'presence_updated',
+    payload: {
+      roomCode: 'ABC123',
+      playerId: player.id,
+      online: false,
+      offlineSince: '2026-10-24T12:00:00.000Z',
+    },
+  },
   { type: 'room_removed', payload: { roomId: ROOM_ID, roomCode: 'ABC123' } },
   { type: 'error', payload: { code: 'ROOM_NOT_FOUND', message: 'Room not found' } },
   { type: 'pong' },
@@ -137,6 +146,65 @@ describe('wsServerMessageSchema', () => {
     expectTypeOf<Created['payload']['room']>().toEqualTypeOf<PublicRoomDto>()
     expectTypeOf<Snapshot['payload']['players']>().toEqualTypeOf<PlayerDto[]>()
     expectTypeOf<WsServerEventPayload<'room_created'>>().toEqualTypeOf<Created['payload']>()
+  })
+})
+
+describe('member presence', () => {
+  const snapshotWith = (presence: unknown[]) => ({
+    type: 'room_snapshot',
+    timestamp: 0,
+    payload: {
+      room: { ...publicRoom, discordLink: INVITE },
+      players: [player],
+      readyAt: null,
+      expiresAt: publicRoom.updatedAt,
+      presence,
+    },
+  })
+  const updateWith = (offlineSince?: unknown) => ({
+    type: 'presence_updated',
+    timestamp: 0,
+    payload: {
+      roomCode: 'ABC123',
+      playerId: player.id,
+      online: false,
+      ...(offlineSince === undefined ? {} : { offlineSince }),
+    },
+  })
+
+  it.each([
+    ['an ISO time', '2026-10-24T12:00:00.000Z'],
+    ['null', null],
+  ])('accepts offlineSince as %s in a snapshot and an update', (_label, offlineSince) => {
+    const entry = { playerId: player.id, online: false, offlineSince }
+
+    expect(wsServerMessageSchema.safeParse(snapshotWith([entry])).success).toBe(true)
+    expect(wsServerMessageSchema.safeParse(updateWith(offlineSince)).success).toBe(true)
+  })
+
+  it.each([
+    ['a missing offlineSince', undefined],
+    ['a value that is not an ISO time', 'yesterday'],
+    ['a timestamp number', 1_769_000_000_000],
+  ])('rejects %s', (_label, offlineSince) => {
+    const entry = { playerId: player.id, online: false, offlineSince }
+
+    expect(wsServerMessageSchema.safeParse(snapshotWith([entry])).success).toBe(false)
+    expect(wsServerMessageSchema.safeParse(updateWith(offlineSince)).success).toBe(false)
+  })
+})
+
+describe('REALTIME_PROTOCOL_VERSION', () => {
+  it('is 3 and is the only version the protocol message accepts', () => {
+    expect(REALTIME_PROTOCOL_VERSION).toBe(3)
+    expect(
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 3 } })
+        .success
+    ).toBe(true)
+    expect(
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 2 } })
+        .success
+    ).toBe(false)
   })
 })
 

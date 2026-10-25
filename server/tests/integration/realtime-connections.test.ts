@@ -49,7 +49,7 @@ describe('connection identity', () => {
     expect(guest.protocol).toEqual({
       type: 'protocol',
       timestamp: expect.any(Number),
-      payload: { version: 2 },
+      payload: { version: 3 },
     })
 
     guest.send({ type: 'ping' })
@@ -109,7 +109,7 @@ describe('connection identity', () => {
       players: [{ id: host.id, name: 'Host', image: host.image, isHost: true }],
       readyAt: null,
       expiresAt: expect.any(String),
-      presence: [{ playerId: host.id, online: true }],
+      presence: [{ playerId: host.id, online: true, offlineSince: null }],
     })
   })
 
@@ -289,7 +289,7 @@ describe('room channel subscription', () => {
       {
         type: 'presence_updated',
         timestamp: expect.any(Number),
-        payload: { roomCode: room.code, playerId: member!.id, online: true },
+        payload: { roomCode: room.code, playerId: member!.id, online: true, offlineSince: null },
       },
     ])
     expect(subscriptionState(server).roomSockets(room.code)).toBe(3)
@@ -314,8 +314,8 @@ describe('room channel subscription', () => {
             expect.objectContaining({ id: member!.id }),
           ]),
           presence: [
-            { playerId: host!.id, online: true },
-            { playerId: member!.id, online: false },
+            { playerId: host!.id, online: true, offlineSince: null },
+            { playerId: member!.id, online: false, offlineSince: null },
           ],
         }),
       }),

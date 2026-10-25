@@ -117,7 +117,7 @@ describe('squad lobby — snapshot handshake', () => {
       type: 'room_snapshot',
       payload: lobbySnapshot({
         players: [hostPlayer],
-        presence: [{ playerId: hostPlayer.id, online: true }],
+        presence: [{ playerId: hostPlayer.id, online: true, offlineSince: null }],
       }),
     })
     await waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument())
@@ -150,7 +150,7 @@ describe('squad lobby — snapshot handshake', () => {
 
     sendFromServer({
       type: 'presence_updated',
-      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true },
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true, offlineSince: null },
     })
     await waitFor(() => expect(screen.getAllByText('Online')).toHaveLength(2))
 
@@ -158,7 +158,7 @@ describe('squad lobby — snapshot handshake', () => {
     // client applies the boolean it receives in both directions.
     sendFromServer({
       type: 'presence_updated',
-      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false },
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false, offlineSince: null },
     })
     await waitFor(() => expect(screen.getAllByText('Offline')).toHaveLength(1))
     expect(screen.getAllByText('Online')).toHaveLength(1)
@@ -167,16 +167,61 @@ describe('squad lobby — snapshot handshake', () => {
     // idempotent: Presence never adds or removes a Membership.
     sendFromServer({
       type: 'presence_updated',
-      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false },
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false, offlineSince: null },
     })
     sendFromServer({
       type: 'presence_updated',
-      payload: { roomCode: 'LOBBY1', playerId: 'user-ghost', online: true },
+      payload: { roomCode: 'LOBBY1', playerId: 'user-ghost', online: true, offlineSince: null },
     })
     expect(screen.getAllByText('Offline')).toHaveLength(1)
     expect(screen.getAllByText('Online')).toHaveLength(1)
     expect(screen.getByText('2/3 players')).toBeInTheDocument()
     expect(screen.getAllByText('Ana')).toHaveLength(1)
+  })
+
+  it('tells how long a member has been offline and falls back to plain Offline without a known time', async () => {
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    const minutesAgo = (minutes: number) =>
+      new Date(Date.now() - minutes * 60_000 - 10_000).toISOString()
+
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        presence: [
+          { playerId: hostPlayer.id, online: true, offlineSince: null },
+          { playerId: guestPlayer.id, online: false, offlineSince: minutesAgo(3) },
+        ],
+      }),
+    })
+    expect(await screen.findByText('Offline · 3m ago')).toBeInTheDocument()
+    expect(screen.queryByText('Offline')).not.toBeInTheDocument()
+
+    // presence_updated carries the time too, and a member who returns reads Online again.
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true, offlineSince: null },
+    })
+    await waitFor(() => expect(screen.queryByText(/^Offline/)).not.toBeInTheDocument())
+    sendFromServer({
+      type: 'presence_updated',
+      payload: {
+        roomCode: 'LOBBY1',
+        playerId: guestPlayer.id,
+        online: false,
+        offlineSince: minutesAgo(5),
+      },
+    })
+    expect(await screen.findByText('Offline · 5m ago')).toBeInTheDocument()
+
+    // A member the server has no time for reads plain Offline; the client never invents one.
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false, offlineSince: null },
+    })
+    expect(await screen.findByText('Offline')).toBeInTheDocument()
+    expect(screen.queryByText(/Offline ·/)).not.toBeInTheDocument()
   })
 
   it('shows the overall connection state with accessible text', async () => {
@@ -477,7 +522,11 @@ describe('squad lobby — full reload of a full squad', () => {
         room: { ...lobbySquad, memberCount: fullRoster.length, isMember: true },
         players: fullRoster,
         readyAt: new Date().toISOString(),
-        presence: fullRoster.map((player) => ({ playerId: player.id, online: true })),
+        presence: fullRoster.map((player) => ({
+          playerId: player.id,
+          online: true,
+          offlineSince: null,
+        })),
       }),
     })
 
