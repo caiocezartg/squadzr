@@ -75,7 +75,7 @@ error rather than a contract error, and calls without a signal stay unchanged). 
 files, so `client:unit` measures 58 files / 488 tests on the merged tree.
 
 CCC-101 adds the Redesign v2 motion base with three client suites: `use-reduced-motion.spec.tsx` (3
-tests, the preference and its changes), `reveal.spec.tsx` (5 tests, the in-view reveal, its viewport
+tests, the preference and its changes), `reveal.spec.tsx` (6 tests, the in-view reveal, its viewport
 margin and its final state under reduced motion) and `reduced-motion.spec.ts` (11 tests, the
 properties the reduced-motion block keeps in transitions and the loops it removes). `client:unit`
 measures 61 files / 507 tests on the merged tree.
