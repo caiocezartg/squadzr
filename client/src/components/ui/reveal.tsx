@@ -11,6 +11,12 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion'
 const REVEAL_ROOT_MARGIN = '0px 0px -15% 0px'
 
 /**
+ * The margin never fires for a short element at the very end of the page, whose top cannot rise past
+ * 85% of the viewport at the maximum scroll. Fully visible is the fallback that reveals it.
+ */
+const FULLY_VISIBLE: IntersectionObserverInit = { threshold: 1 }
+
+/**
  * `idle`: rendered as is, which is how the server HTML and any content already in view stay.
  * `hidden`: out of sight below the viewport, waiting to enter. `shown`: entered, plays the reveal.
  */
@@ -44,17 +50,19 @@ export function Reveal({ as = 'div', stagger = false, children, ...props }: Reve
     if (!element || !isBelowViewport(element)) return
 
     setPhase('hidden')
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return
-        setPhase('shown')
-        observer.disconnect()
-      },
-      { rootMargin: REVEAL_ROOT_MARGIN }
+    const observers: IntersectionObserver[] = []
+    const onIntersect: IntersectionObserverCallback = (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      setPhase('shown')
+      for (const observer of observers) observer.disconnect()
+    }
+    observers.push(
+      new IntersectionObserver(onIntersect, { rootMargin: REVEAL_ROOT_MARGIN }),
+      new IntersectionObserver(onIntersect, FULLY_VISIBLE)
     )
-    observer.observe(element)
+    for (const observer of observers) observer.observe(element)
     return () => {
-      observer.disconnect()
+      for (const observer of observers) observer.disconnect()
     }
   }, [])
 

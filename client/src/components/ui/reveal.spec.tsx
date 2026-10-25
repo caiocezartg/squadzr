@@ -43,9 +43,10 @@ function placeBelowViewport() {
   } as DOMRect)
 }
 
-function enterViewport() {
+function enterViewport(only?: (typeof observers)[number]) {
   act(() => {
-    for (const observer of observers.filter((entry) => !entry.disconnected)) {
+    const targets = only ? [only] : observers.filter((entry) => !entry.disconnected)
+    for (const observer of targets) {
       observer.callback(
         [{ isIntersecting: true } as IntersectionObserverEntry],
         observer as unknown as IntersectionObserver
@@ -88,14 +89,32 @@ describe('Reveal', () => {
     expect(observers.every((observer) => observer.disconnected)).toBe(true)
   })
 
-  it('reveals by a viewport margin and not a share of the element, so a tall element still reveals', () => {
+  it('reveals an element taller than the viewport through the viewport margin', () => {
     mockMediaQuery(REDUCED_MOTION_QUERY, false)
     placeBelowViewport()
 
-    render(<Reveal>Squads</Reveal>)
+    render(<Reveal data-testid="section">Squads</Reveal>)
+    const section = screen.getByTestId('section')
 
-    expect(observers).toHaveLength(1)
-    expect(observers[0]?.options).toEqual({ rootMargin: '0px 0px -15% 0px' })
+    const margin = observers.find((observer) => observer.options?.rootMargin === '0px 0px -15% 0px')
+    expect(margin?.options?.threshold).toBeUndefined()
+    enterViewport(margin)
+    expect(section).toHaveAttribute('data-reveal', 'shown')
+    expect(observers.every((observer) => observer.disconnected)).toBe(true)
+  })
+
+  it('reveals a short element at the end of the page once it is fully visible', () => {
+    mockMediaQuery(REDUCED_MOTION_QUERY, false)
+    placeBelowViewport()
+
+    render(<Reveal data-testid="section">Squads</Reveal>)
+    const section = screen.getByTestId('section')
+
+    const fullyVisible = observers.find((observer) => observer.options?.threshold === 1)
+    expect(fullyVisible?.options?.rootMargin).toBeUndefined()
+    enterViewport(fullyVisible)
+    expect(section).toHaveAttribute('data-reveal', 'shown')
+    expect(observers.every((observer) => observer.disconnected)).toBe(true)
   })
 
   it('reveals the children one after another when staggered', () => {
