@@ -74,9 +74,11 @@ and 3 `api` cancellation cases (the signal reaches `fetch`, an aborted call reje
 error rather than a contract error, and calls without a signal stay unchanged). It adds no suite
 files, so `client:unit` measures 58 files / 488 tests on the merged tree.
 
-CCC-101 adds the Redesign v2 motion base with two client suites: `use-reduced-motion.spec.tsx` (3
-tests, the preference and its changes) and `reveal.spec.tsx` (4 tests, the in-view reveal and its
-final state under reduced motion). `client:unit` measures 60 files / 495 tests on the merged tree.
+CCC-101 adds the Redesign v2 motion base with three client suites: `use-reduced-motion.spec.tsx` (3
+tests, the preference and its changes), `reveal.spec.tsx` (5 tests, the in-view reveal, its viewport
+margin and its final state under reduced motion) and `reduced-motion.spec.ts` (11 tests, the
+properties the reduced-motion block keeps in transitions and the loops it removes). `client:unit`
+measures 61 files / 507 tests on the merged tree.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.

@@ -3,8 +3,12 @@
 import { createElement, useEffect, useRef, useState, type ComponentPropsWithoutRef } from 'react'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 
-/** The share of the element that must enter the viewport (reference, Landing sections). */
-const REVEAL_THRESHOLD = 0.15
+/**
+ * The reveal fires when the element's top is 15% of the viewport above its bottom edge (reference,
+ * Landing sections). It is a margin and not a share of the element, so an element taller than the
+ * viewport still reveals: a share of 15% would never be reached by one taller than ~6.7 viewports.
+ */
+const REVEAL_ROOT_MARGIN = '0px 0px -15% 0px'
 
 /**
  * `idle`: rendered as is, which is how the server HTML and any content already in view stay.
@@ -23,8 +27,8 @@ function isBelowViewport(element: Element): boolean {
 }
 
 /**
- * Fades its content in with a 16px rise once, when 15% of it enters the viewport. The motion itself
- * is CSS (`[data-reveal]` in the global styles).
+ * Fades its content in with a 16px rise once, when its top rises 15% of the viewport above the
+ * bottom edge. The motion itself is CSS (`[data-reveal]` in the global styles).
  *
  * Content that is in view or above it when the page mounts never animates: only an element still
  * below the viewport is hidden, and it is out of sight when that happens. Under reduced motion the
@@ -46,7 +50,7 @@ export function Reveal({ as = 'div', stagger = false, children, ...props }: Reve
         setPhase('shown')
         observer.disconnect()
       },
-      { threshold: REVEAL_THRESHOLD }
+      { rootMargin: REVEAL_ROOT_MARGIN }
     )
     observer.observe(element)
     return () => {

@@ -431,23 +431,45 @@
 /*
   Reduced motion keeps opacity and colour changes and removes movement, scale and loops (reference,
   Rules). The motion utilities above gate their own movement; this rule covers the rest:
-  - Tailwind's transition classes stop animating transforms, so a moved or scaled state applies at
-    once while its colour and opacity still transition;
+  - Tailwind's transition classes, and the arbitrary lists (`transition-[scale,opacity]`), stop
+    animating transforms and sizes, so a moved, scaled or resized state applies at once while its
+    colour and opacity still transition;
   - the movement keyframes become fades;
-  - a loop runs once, and the loops that only move or scale do not run.
+  - the loops do not run.
 */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
 
-  /* Tailwind's default transition list without transform, translate, scale and rotate. */
+  /*
+    Tailwind's default transition list without transform, translate, scale and rotate. The arbitrary
+    lists get it too, plus visibility (a fade that hides its element needs it): any property not in
+    it, such as height or width, changes at once.
+  */
   .transition,
-  .transition-all {
+  .transition-all,
+  [class*='transition-['] {
     transition-property:
-      color, background-color, border-color, outline-color, text-decoration-color, fill, stroke,
-      --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, filter,
-      -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay,
+      color,
+      background-color,
+      border-color,
+      outline-color,
+      text-decoration-color,
+      fill,
+      stroke,
+      --tw-gradient-from,
+      --tw-gradient-via,
+      --tw-gradient-to,
+      opacity,
+      box-shadow,
+      filter,
+      -webkit-backdrop-filter,
+      backdrop-filter,
+      visibility,
+      display,
+      content-visibility,
+      overlay,
       pointer-events;
   }
 
@@ -455,15 +477,11 @@
     transition-property: none;
   }
 
-  *,
-  *::before,
-  *::after {
-    animation-iteration-count: 1 !important;
-  }
-
   .animate-spin,
   .animate-ping,
-  .animate-bounce {
+  .animate-bounce,
+  .animate-pulse,
+  .animate-pulse-glow {
     animation: none;
   }
 

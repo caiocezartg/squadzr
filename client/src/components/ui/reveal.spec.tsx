@@ -11,13 +11,17 @@ import { Reveal } from './reveal'
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 
 /** The observers the reveals created, so a spec can report an element entering the viewport. */
-const observers: { callback: IntersectionObserverCallback; disconnected: boolean }[] = []
+const observers: {
+  callback: IntersectionObserverCallback
+  options: IntersectionObserverInit | undefined
+  disconnected: boolean
+}[] = []
 
 class ControlledIntersectionObserver {
   private readonly record: (typeof observers)[number]
 
-  constructor(callback: IntersectionObserverCallback) {
-    this.record = { callback, disconnected: false }
+  constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+    this.record = { callback, options, disconnected: false }
     observers.push(this.record)
   }
 
@@ -82,6 +86,16 @@ describe('Reveal', () => {
     enterViewport()
     expect(section).toHaveAttribute('data-reveal', 'shown')
     expect(observers.every((observer) => observer.disconnected)).toBe(true)
+  })
+
+  it('reveals by a viewport margin and not a share of the element, so a tall element still reveals', () => {
+    mockMediaQuery(REDUCED_MOTION_QUERY, false)
+    placeBelowViewport()
+
+    render(<Reveal>Squads</Reveal>)
+
+    expect(observers).toHaveLength(1)
+    expect(observers[0]?.options).toEqual({ rootMargin: '0px 0px -15% 0px' })
   })
 
   it('reveals the children one after another when staggered', () => {
