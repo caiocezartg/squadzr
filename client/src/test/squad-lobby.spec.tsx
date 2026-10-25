@@ -155,7 +155,7 @@ describe('squad lobby — snapshot handshake', () => {
     await waitFor(() => expect(screen.getAllByText('Online')).toHaveLength(2))
 
     // The server owns the aggregation (multiple sessions, grace window): the
-    // client applies the boolean it receives in both directions.
+    // client applies the online flag and offlineSince it receives in both directions.
     sendFromServer({
       type: 'presence_updated',
       payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false, offlineSince: null },

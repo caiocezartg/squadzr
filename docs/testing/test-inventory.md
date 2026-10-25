@@ -30,7 +30,7 @@ inventory (see the equivalence proof below).
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-24 on the
-merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96 and CCC-98. CCC-90 adds the
+merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98 and CCC-105. CCC-90 adds the
 IGDB adapter suite (`igdb-game-catalog-source.spec.ts`, +1 file / +10 tests, with a recorded IGDB
 page as fixture) and the import environment suite (`catalog-import-env.spec.ts`, +1 file / +9
 tests), plus one curated-id case in `curated-games.spec.ts` (+1). It adds no integration suite: the
@@ -190,9 +190,9 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
   collecting tests. The script was removed instead of being restored with a new dependency;
   introducing coverage tooling is a deliberate follow-up decision, not an accidental default.
 
-## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98)
+## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-105)
 
-### Current counts (recounted 2026-10-24 on the merged tree, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96 and CCC-98)
+### Current counts (recounted 2026-10-24 on the merged tree, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98 and CCC-105)
 
 | Command | Test files | Tests |
 | --- | --- | --- |
@@ -220,16 +220,19 @@ drifted to 26 files / 119 tests since CCC-70, so the CCC-89 recount corrected it
 tests with `curated-games.spec.ts` (+1 file / +3 tests); CCC-93 adds its create-room delisted-game
 cases, CCC-95 adds 3 cover cases and CCC-92 adds one projection case and one create-path case, and
 CCC-90 adds the IGDB adapter (10 tests) and import environment (9 tests) suites plus one curated-id
-case, so the merged tree measured 29 files / 148 tests before CCC-105 added 7 Presence tracker cases (155). CCC-59 removed the `types:unit` project (1
-file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 90 tests across
-4 files (CCC-105 added 6: presence with an ISO time, with `null` and without it, and protocol version 3; CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
-contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 489
-tests (CCC-105 added the Lobby's offline-time case; CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
+case, so the merged tree measured 29 files / 148 tests before CCC-105 added 7 Presence tracker cases
+(155). CCC-59 removed the `types:unit` project (1 file, 1 test) together with the `@squadzr/types`
+workspace. The schemas suite measures 90 tests across 4 files (CCC-105 added 6: presence with an ISO
+time, with `null` and without it, and protocol version 3; CCC-89 corrected a drift to 76, CCC-93
+added the game genre, cover-thumbnail and games-query contract cases, CCC-95 added 2 and CCC-92
+added 3), and the client suite measures 58 files / 489 tests (CCC-105 added the Lobby's offline-time
+case; CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
 CCC-95 added 2, CCC-92 added none, CCC-96 replaced the landing's random-pick cases with the
 popular read and added the FAQ and IGDB-credit cases: net 0, and CCC-98 added 7 cancellation and
 placeholder flow cases); both drifts predate CCC-89 and were
 corrected by its recount. CCC-96's 10 popular-games cases plus CCC-90's invalid-summary case are the
-difference between the CCC-95 row of 27 files / 269 tests and the current 28 files / 280.
+difference between the CCC-95 row of 27 files / 269 tests and the current 28 files / 285 once
+CCC-105's 5 `offlineSince` cases are added.
 
 ### Historical record (CCC-28, 2026-09-25)
 

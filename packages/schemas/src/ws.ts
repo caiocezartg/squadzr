@@ -149,7 +149,7 @@ export const roomSnapshotMessageSchema = baseWsMessageSchema.extend({
   }),
 })
 
-// Presence assigns a boolean; it never adds or removes a Membership.
+// Presence assigns online plus offlineSince; it never adds or removes a Membership.
 const presenceUpdatedMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('presence_updated'),
   payload: memberPresenceSchema.extend({ roomCode: z.string().length(6) }),
