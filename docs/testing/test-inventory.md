@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | --- | --- | --- | --- | --- | --- |
 | `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 29 | 148 |
 | `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 28 | 280 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 488 |
+| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 60 | 495 |
 | `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 84 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
@@ -73,6 +73,12 @@ superseded request's signal aborts, and a warm term answers from the cache witho
 and 3 `api` cancellation cases (the signal reaches `fetch`, an aborted call rejects with its abort
 error rather than a contract error, and calls without a signal stay unchanged). It adds no suite
 files, so `client:unit` measures 58 files / 488 tests on the merged tree.
+
+CCC-101 adds the Redesign v2 motion base with three client suites: `use-reduced-motion.spec.tsx` (3
+tests, the preference and its changes), `reveal.spec.tsx` (6 tests, the in-view reveal, its viewport
+margin and its final state under reduced motion) and `reduced-motion.spec.ts` (11 tests, the
+properties the reduced-motion block keeps in transitions and the loops it removes). `client:unit`
+measures 61 files / 508 tests on the merged tree.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
@@ -194,10 +200,10 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 91 | 720 |
-| `bunx vitest run` (direct root composition) | 91 | 720 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 93 | 727 |
+| `bunx vitest run` (direct root composition) | 93 | 727 |
 | `bunx turbo test --filter=server` | 29 | 148 |
-| `bunx turbo test --filter=client` | 58 | 488 |
+| `bunx turbo test --filter=client` | 60 | 495 |
 | `bunx turbo test --filter=@squadzr/schemas` | 4 | 84 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
@@ -219,11 +225,11 @@ CCC-90 adds the IGDB adapter (10 tests) and import environment (9 tests) suites 
 case, so the merged tree measures 29 files / 148 tests. CCC-59 removed the `types:unit` project (1
 file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 84 tests across
 4 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
-contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 58 files / 488
+contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 60 files / 495
 tests (CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
 CCC-95 added 2, CCC-92 added none, CCC-96 replaced the landing's random-pick cases with the
 popular read and added the FAQ and IGDB-credit cases: net 0, and CCC-98 added 7 cancellation and
-placeholder flow cases); both drifts predate CCC-89 and were
+placeholder flow cases, and CCC-101 added 7 motion-base cases in 2 files); both drifts predate CCC-89 and were
 corrected by its recount. CCC-96's 10 popular-games cases plus CCC-90's invalid-summary case are the
 difference between the CCC-95 row of 27 files / 269 tests and the current 28 files / 280.
 
