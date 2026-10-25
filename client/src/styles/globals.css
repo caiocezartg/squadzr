@@ -48,6 +48,43 @@
   --font-heading: var(--font-exo-2), sans-serif;
   --font-body: var(--font-plus-jakarta-sans), sans-serif;
 
+  /*
+    Redesign v2 palette (docs/design/reference.md, Colour tokens). It sits next to today's palette
+    until CCC-118 removes the old tokens. Three names clash with today's tokens, so they carry a
+    ds- prefix until then: ds-muted, ds-discord and ds-danger.
+  */
+  --color-bg: #07080a;
+  --color-menu: #0b0c0f;
+  --color-panel: #0f1013;
+  --color-card: #121317;
+  --color-raised: #17181d;
+  --color-raised-2: #1a1b20;
+  --color-line: #1f2026;
+  --color-track: #24252b;
+  --color-text: #f2f3f5;
+  --color-text-2: #c9cbd1;
+  --color-text-3: #a9abb3;
+  --color-ds-muted: #80838c;
+  --color-faint: #5f626b;
+  --color-mint: #00ffa2;
+  --color-mint-hover: #5cffc4;
+  --color-mint-ink: #03140d;
+  --color-amber: #ffb547;
+  --color-ds-discord: #4e5ae8;
+  --color-discord-hover: #5d68f0;
+  --color-discord-soft: #8b93f5;
+  --color-ds-danger: #ff8a8a;
+  --color-danger-ground: rgba(239, 68, 68, 0.1);
+  --color-danger-ground-hover: rgba(239, 68, 68, 0.18);
+
+  /* Redesign v2 families. Mono is ds-mono until CCC-118, because today's screens use font-mono. */
+  --font-display: var(--font-big-shoulders), sans-serif;
+  --font-ds-mono: var(--font-jetbrains-mono), monospace;
+
+  /* Motion curves (reference, Motion tokens). They also drive the ease-out and ease-in-out classes. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
   --animate-fade-in: fade-in 0.4s ease-out;
   --animate-slide-up: slide-up 0.5s ease-out;
   --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
@@ -79,6 +116,144 @@
     }
     50% {
       box-shadow: 0 0 20px rgba(0, 255, 162, 0.4);
+    }
+  }
+}
+
+/* Motion durations (reference, Motion tokens). */
+:root {
+  --dur-press: 160ms;
+  --dur-fast: 150ms;
+  --dur-ui: 200ms;
+  --dur-modal: 280ms;
+  --dur-modal-exit: 180ms;
+}
+
+/*
+  Type scale (reference, Typography). The counter and UI roles leave the size to the caller, because
+  it varies per use: `type-counter text-[64px]`.
+*/
+@utility type-display {
+  font-family: var(--font-display);
+  font-size: clamp(88px, 11vw, 176px);
+  font-weight: 900;
+  line-height: 0.94;
+  text-transform: uppercase;
+}
+
+@utility type-section-title {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 6.4vw, 92px);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+@utility type-page-title {
+  font-family: var(--font-display);
+  font-size: 60px;
+  font-weight: 900;
+  line-height: 0.96;
+  text-transform: uppercase;
+}
+
+/* Modal title; a popover's title is type-panel-title-sm. */
+@utility type-panel-title {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+@utility type-panel-title-sm {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* Large card and Lobby; a medium card's name is type-squad-name-md. */
+@utility type-squad-name {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+@utility type-squad-name-md {
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+@utility type-counter {
+  font-family: var(--font-display);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility type-body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+@utility type-ui {
+  font-family: var(--font-body);
+  font-weight: 700;
+}
+
+@utility type-label {
+  font-family: var(--font-ds-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* A Squad code such as #VLR77: the label's metrics, in the code's own case. */
+@utility type-code {
+  font-family: var(--font-ds-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+/*
+  Press feedback for any pressable control (reference, Per element). It also carries the control's
+  hover colour transition, so a control needs no second transition that would replace this one.
+*/
+@utility press {
+  transition-property: transform, color, background-color, border-color, box-shadow;
+  transition-duration:
+    var(--dur-press), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast);
+  transition-timing-function: var(--ease-out), ease, ease, ease, ease;
+
+  @media (prefers-reduced-motion: no-preference) {
+    &:active:not(:disabled, [aria-disabled='true']) {
+      transform: scale(0.97);
+    }
+  }
+}
+
+/* Hover for a fine pointer only: a touch screen fires hover on tap and leaves it stuck. */
+@custom-variant hover-fine {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
+@custom-variant group-hover-fine {
+  @media (hover: hover) and (pointer: fine) {
+    &:is(:where(.group):hover *) {
+      @slot;
     }
   }
 }
@@ -212,13 +387,113 @@
   }
 }
 
+/*
+  In-view reveal (src/components/ui/reveal.tsx): fade and rise 16px once, 400ms --ease-out, with
+  children 50ms apart when staggered. The animation fills backwards only, so once it ends the
+  element's own opacity and transform apply again. Under reduced motion the component sets no state,
+  so the content renders in its final state.
+*/
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@layer components {
+  [data-reveal='hidden']:not([data-reveal-stagger]),
+  [data-reveal-stagger][data-reveal='hidden'] > * {
+    opacity: 0;
+  }
+
+  [data-reveal='shown']:not([data-reveal-stagger]),
+  [data-reveal-stagger][data-reveal='shown'] > * {
+    animation: reveal-rise 400ms var(--ease-out) backwards;
+  }
+
+  [data-reveal-stagger][data-reveal='shown'] > :nth-child(2) {
+    animation-delay: 50ms;
+  }
+  [data-reveal-stagger][data-reveal='shown'] > :nth-child(3) {
+    animation-delay: 100ms;
+  }
+  [data-reveal-stagger][data-reveal='shown'] > :nth-child(4) {
+    animation-delay: 150ms;
+  }
+  [data-reveal-stagger][data-reveal='shown'] > :nth-child(5) {
+    animation-delay: 200ms;
+  }
+  [data-reveal-stagger][data-reveal='shown'] > :nth-child(n + 6) {
+    animation-delay: 250ms;
+  }
+}
+
+/*
+  Reduced motion keeps opacity and colour changes and removes movement, scale and loops (reference,
+  Rules). The motion utilities above gate their own movement; this rule covers the rest:
+  - Tailwind's transition classes, and the arbitrary lists (`transition-[scale,opacity]`), stop
+    animating transforms and sizes, so a moved, scaled or resized state applies at once while its
+    colour and opacity still transition;
+  - the movement keyframes become fades;
+  - the loops do not run.
+*/
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+  html {
+    scroll-behavior: auto;
+  }
+
+  /*
+    Tailwind's default transition list without transform, translate, scale and rotate. The arbitrary
+    lists get it too, plus visibility (a fade that hides its element needs it): any property not in
+    it, such as height or width, changes at once.
+  */
+  .transition,
+  .transition-all,
+  [class*='transition-['] {
+    transition-property:
+      color,
+      background-color,
+      border-color,
+      outline-color,
+      text-decoration-color,
+      fill,
+      stroke,
+      --tw-gradient-from,
+      --tw-gradient-via,
+      --tw-gradient-to,
+      opacity,
+      box-shadow,
+      filter,
+      -webkit-backdrop-filter,
+      backdrop-filter,
+      visibility,
+      display,
+      content-visibility,
+      overlay,
+      pointer-events;
+  }
+
+  .transition-transform {
+    transition-property: none;
+  }
+
+  .animate-spin,
+  .animate-ping,
+  .animate-bounce,
+  .animate-pulse,
+  .animate-pulse-glow {
+    animation: none;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+    }
   }
 }
