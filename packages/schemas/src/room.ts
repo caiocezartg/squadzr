@@ -4,10 +4,23 @@ import { gameSummarySchema } from './game'
 
 export const roomLanguageSchema = z.enum(['en', 'pt-br'])
 
+// The most members a Squad's preview carries.
+export const MEMBER_PREVIEW_LIMIT = 5
+
+// One member in a Squad's preview: just enough to draw an avatar and a name.
+export const memberPreviewSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  image: z.string().nullable(),
+})
+
+export type MemberPreviewDto = z.infer<typeof memberPreviewSchema>
+
 // Public room projection: what the catalog and guest realtime events may carry.
-// It never holds the Discord invite, the roster, or the internal lifecycle
-// timestamps (`readyAt` / `lastActivityAt`): readiness is not part of the
-// coordinated HTTP contract.
+// It carries a preview of up to five members (host first, then by join time),
+// never the full roster or the invite. It also never holds the internal
+// lifecycle timestamps (`readyAt` / `lastActivityAt`): readiness is not part of
+// the coordinated HTTP contract.
 export const publicRoomSchema = z.object({
   id: z.uuid(),
   code: z.string(),
@@ -21,6 +34,7 @@ export const publicRoomSchema = z.object({
   tags: z.array(z.string()).default([]),
   language: roomLanguageSchema.default('pt-br'),
   memberCount: z.number().int().optional(),
+  memberPreview: z.array(memberPreviewSchema).max(MEMBER_PREVIEW_LIMIT),
   isMember: z.boolean().optional(),
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,
@@ -115,10 +129,10 @@ export const roomLobbyResponseSchema = z.object({
 
 export type RoomLobbyResponse = z.infer<typeof roomLobbyResponseSchema>
 
-// Non-member answer: the public projection and nothing else. A payload that
-// carries a roster or an invite claims to be lobby details, so it is refused
-// here instead of being stripped down to a public room: it has to satisfy
-// `roomLobbyResponseSchema` in full or fail.
+// Non-member answer: the public projection and nothing else (its member preview
+// is not the roster). A payload that carries a roster or an invite claims to be
+// lobby details, so it is refused here instead of being stripped down to a
+// public room: it has to satisfy `roomLobbyResponseSchema` in full or fail.
 const publicRoomResponseSchema = z.object({
   room: publicRoomSchema.extend({ discordLink: z.never().optional() }),
   players: z.never().optional(),

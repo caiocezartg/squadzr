@@ -60,6 +60,7 @@ const extraSquad: Squad = {
   tags: [],
   language: 'en',
   memberCount: 1,
+  memberPreview: [{ id: 'user-9', name: 'Mia', image: null }],
   isMember: false,
   createdAt: new Date(Date.now() - 300_000).toISOString(),
   updatedAt: new Date(Date.now() - 300_000).toISOString(),

@@ -39,6 +39,7 @@ describe('toPublicRoom', () => {
       maxPlayers: 5,
       tags: [],
       language: 'pt-br',
+      memberPreview: [],
       createdAt: '2024-01-01T08:30:00.000Z',
       updatedAt: '2024-01-01T09:45:00.000Z',
     })
@@ -51,6 +52,27 @@ describe('toPublicRoom', () => {
     expect(projection).not.toHaveProperty('discordLink')
     expect(projection).not.toHaveProperty('readyAt')
     expect(projection).not.toHaveProperty('lastActivityAt')
+  })
+
+  it('carries the member preview entries and nothing else about the roster', () => {
+    const projection = toPublicRoom(
+      createMockRoom({
+        id: ROOM_ID,
+        gameId: GAME_ID,
+        game,
+        memberPreview: [
+          { id: 'host', name: 'Host', image: 'https://cdn.test/host.png' },
+          { id: 'guest', name: 'Guest', image: null },
+        ],
+      })
+    )
+
+    expect(projection.memberPreview).toEqual([
+      { id: 'host', name: 'Host', image: 'https://cdn.test/host.png' },
+      { id: 'guest', name: 'Guest', image: null },
+    ])
+    expect(projection).not.toHaveProperty('players')
+    expect(publicRoomSchema.parse(projection)).toEqual(projection)
   })
 
   it('includes memberCount and isMember only when the room carries them', () => {

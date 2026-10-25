@@ -2,10 +2,12 @@ import type { NewRoom, Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
+import type { IUserRepository } from '@domain/repositories/user.repository'
 import {
   GameNotAvailableError,
   InvalidGameError,
   RoomCreateLimitReachedError,
+  UserNotFoundError,
 } from '@application/errors'
 import { ROOM } from '@config/constants'
 
@@ -24,7 +26,8 @@ export interface ICreateRoomUseCase {
 export class CreateRoomUseCase implements ICreateRoomUseCase {
   constructor(
     private readonly roomRepository: IRoomRepository,
-    private readonly gameRepository: IGameRepository
+    private readonly gameRepository: IGameRepository,
+    private readonly userRepository: IUserRepository
   ) {}
 
   async execute(input: CreateRoomInput): Promise<CreateRoomOutput> {
@@ -37,6 +40,13 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
     // may point at it.
     if (!game.listed) {
       throw new GameNotAvailableError(input.gameId)
+    }
+
+    // A new Squad has only its host, so the host's entry is the whole preview.
+    // Read before creating: a missing host fails here, before any Squad exists.
+    const host = await this.userRepository.findById(input.hostId)
+    if (!host) {
+      throw new UserNotFoundError(input.hostId)
     }
 
     const maxPlayers = input.maxPlayers ?? game.maxPlayers
@@ -60,6 +70,13 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
     // The Game read to validate `gameId` is the one the response and the
     // `room_created` broadcast carry: the create path never reads it again.
-    return { room: { ...outcome.room, game }, hostMember: outcome.hostMember }
+    return {
+      room: {
+        ...outcome.room,
+        game,
+        memberPreview: [{ id: host.id, name: host.name, image: host.avatarUrl }],
+      },
+      hostMember: outcome.hostMember,
+    }
   }
 }

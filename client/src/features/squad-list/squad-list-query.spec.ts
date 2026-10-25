@@ -31,6 +31,7 @@ function squad(overrides: Partial<PublicSquad> & { id: string }): PublicSquad {
     tags: [],
     language: 'en',
     memberCount: 1,
+    memberPreview: [],
     isMember: false,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
