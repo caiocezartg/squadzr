@@ -119,7 +119,7 @@ describe('CreateRoomUseCase', () => {
       ])
     })
 
-    it('throws UserNotFoundError when the host cannot be read', async () => {
+    it('throws UserNotFoundError without creating the Squad when the host cannot be read', async () => {
       mockGameRepository.findById.mockResolvedValue(createMockGame({ id: 'game-123' }))
       mockUserRepository.findById.mockResolvedValue(null)
 
@@ -131,6 +131,7 @@ describe('CreateRoomUseCase', () => {
           discordLink: 'https://discord.gg/test',
         })
       ).rejects.toThrow(UserNotFoundError)
+      expect(mockRoomRepository.create).not.toHaveBeenCalled()
     })
 
     it('should return the host membership created in the same transaction', async () => {

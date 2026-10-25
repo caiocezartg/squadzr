@@ -42,6 +42,13 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       throw new GameNotAvailableError(input.gameId)
     }
 
+    // A new Squad has only its host, so the host's entry is the whole preview.
+    // Read before creating: a missing host fails here, before any Squad exists.
+    const host = await this.userRepository.findById(input.hostId)
+    if (!host) {
+      throw new UserNotFoundError(input.hostId)
+    }
+
     const maxPlayers = input.maxPlayers ?? game.maxPlayers
 
     // Room and host Membership are one transaction, with Room Activity stamped
@@ -59,13 +66,6 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
     if (outcome.status === 'limit_reached') {
       throw new RoomCreateLimitReachedError(ROOM.CREATE_LIMIT)
-    }
-
-    // A new Squad has only its host, so the host's entry is the whole preview.
-    // The user row was locked by the creation, so a missing host is unexpected.
-    const host = await this.userRepository.findById(input.hostId)
-    if (!host) {
-      throw new UserNotFoundError(input.hostId)
     }
 
     // The Game read to validate `gameId` is the one the response and the

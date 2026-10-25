@@ -14,13 +14,20 @@ import type {
   Squad,
   UserNotification,
 } from '@/types'
+import { MEMBER_PREVIEW_LIMIT } from '@squadzr/schemas'
 import type { WsServerEventPayload } from '@squadzr/schemas/ws'
 
-/** A Squad's member preview: the host `user-9`, then guests, at most five entries. */
-export function previewMembers(count: number): Squad['memberPreview'] {
-  return Array.from({ length: Math.min(count, 5) }, (_, i) =>
+/**
+ * A Squad's member preview: the host first (`user-9` Mia unless given), then guests, at most
+ * MEMBER_PREVIEW_LIMIT entries.
+ */
+export function previewMembers(
+  count: number,
+  host: Squad['memberPreview'][number] = { id: 'user-9', name: 'Mia', image: null }
+): Squad['memberPreview'] {
+  return Array.from({ length: Math.min(count, MEMBER_PREVIEW_LIMIT) }, (_, i) =>
     i === 0
-      ? { id: 'user-9', name: 'Mia', image: null }
+      ? { id: host.id, name: host.name, image: host.image }
       : {
           id: `guest-${i}`,
           name: `Guest ${i}`,
@@ -226,7 +233,7 @@ export const createdSquad: Squad = {
   tags: ['ranked'],
   language: 'pt-br',
   memberCount: 1,
-  memberPreview: previewMembers(1),
+  memberPreview: previewMembers(1, hostPlayer),
   isMember: true,
   createdAt: hoursAgo(0),
   updatedAt: hoursAgo(0),
@@ -239,9 +246,17 @@ type LobbySnapshot = WsServerEventPayload<'room_snapshot'>
  * projection, complete roster, readiness, expiration and per-member Presence.
  */
 export function lobbySnapshot(overrides: Partial<LobbySnapshot> = {}): LobbySnapshot {
+  const players = overrides.players ?? [hostPlayer, guestPlayer]
   return {
-    room: { ...lobbySquad, memberCount: 2, isMember: true },
-    players: [hostPlayer, guestPlayer],
+    room: {
+      ...lobbySquad,
+      memberCount: 2,
+      memberPreview: players
+        .slice(0, MEMBER_PREVIEW_LIMIT)
+        .map(({ id, name, image }) => ({ id, name, image })),
+      isMember: true,
+    },
+    players,
     readyAt: null,
     expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
     presence: [
