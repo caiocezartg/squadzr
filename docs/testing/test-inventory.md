@@ -78,7 +78,7 @@ CCC-101 adds the Redesign v2 motion base with three client suites: `use-reduced-
 tests, the preference and its changes), `reveal.spec.tsx` (6 tests, the in-view reveal, its viewport
 margin and its final state under reduced motion) and `reduced-motion.spec.ts` (11 tests, the
 properties the reduced-motion block keeps in transitions and the loops it removes). `client:unit`
-measures 61 files / 507 tests on the merged tree.
+measures 61 files / 508 tests on the merged tree.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
