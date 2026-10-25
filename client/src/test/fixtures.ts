@@ -14,7 +14,27 @@ import type {
   Squad,
   UserNotification,
 } from '@/types'
+import { MEMBER_PREVIEW_LIMIT } from '@squadzr/schemas'
 import type { WsServerEventPayload } from '@squadzr/schemas/ws'
+
+/**
+ * A Squad's member preview: the host first (`user-9` Mia unless given), then guests, at most
+ * MEMBER_PREVIEW_LIMIT entries.
+ */
+export function previewMembers(
+  count: number,
+  host: Squad['memberPreview'][number] = { id: 'user-9', name: 'Mia', image: null }
+): Squad['memberPreview'] {
+  return Array.from({ length: Math.min(count, MEMBER_PREVIEW_LIMIT) }, (_, i) =>
+    i === 0
+      ? { id: host.id, name: host.name, image: host.image }
+      : {
+          id: `guest-${i}`,
+          name: `Guest ${i}`,
+          image: `https://cdn.squadzr.test/players/guest-${i}.png`,
+        }
+  )
+}
 
 /** ISO 8601 string, as transport dates travel in JSON. */
 function hoursAgo(hours: number): string {
@@ -93,6 +113,7 @@ export const openSquad: Squad = {
   tags: ['ranked', 'chill'],
   language: 'en',
   memberCount: 1,
+  memberPreview: previewMembers(1),
   isMember: false,
   createdAt: hoursAgo(2),
   updatedAt: hoursAgo(2),
@@ -111,6 +132,7 @@ export const fullSquad: Squad = {
   tags: [],
   language: 'pt-br',
   memberCount: 4,
+  memberPreview: previewMembers(4),
   isMember: false,
   createdAt: hoursAgo(4),
   updatedAt: hoursAgo(4),
@@ -129,6 +151,7 @@ export const memberSquad: Squad = {
   tags: ['chill'],
   language: 'pt-br',
   memberCount: 3,
+  memberPreview: previewMembers(3),
   isMember: true,
   createdAt: hoursAgo(6),
   updatedAt: hoursAgo(6),
@@ -153,6 +176,7 @@ export function squadsForPagination(): RoomsResponse {
       tags: [],
       language: 'en',
       memberCount: 1,
+      memberPreview: previewMembers(1),
       isMember: false,
       createdAt: hoursAgo(index + 5),
       updatedAt: hoursAgo(index + 5),
@@ -173,6 +197,7 @@ export const lobbySquad: Squad = {
   discordLink: 'https://discord.gg/lobby',
   tags: ['squad'],
   language: 'en',
+  memberPreview: [{ id: 'user-1', name: 'Caio', image: null }],
   createdAt: hoursAgo(1),
   updatedAt: hoursAgo(1),
 }
@@ -208,6 +233,7 @@ export const createdSquad: Squad = {
   tags: ['ranked'],
   language: 'pt-br',
   memberCount: 1,
+  memberPreview: previewMembers(1, hostPlayer),
   isMember: true,
   createdAt: hoursAgo(0),
   updatedAt: hoursAgo(0),
@@ -220,9 +246,17 @@ type LobbySnapshot = WsServerEventPayload<'room_snapshot'>
  * projection, complete roster, readiness, expiration and per-member Presence.
  */
 export function lobbySnapshot(overrides: Partial<LobbySnapshot> = {}): LobbySnapshot {
+  const players = overrides.players ?? [hostPlayer, guestPlayer]
   return {
-    room: { ...lobbySquad, memberCount: 2, isMember: true },
-    players: [hostPlayer, guestPlayer],
+    room: {
+      ...lobbySquad,
+      memberCount: 2,
+      memberPreview: players
+        .slice(0, MEMBER_PREVIEW_LIMIT)
+        .map(({ id, name, image }) => ({ id, name, image })),
+      isMember: true,
+    },
+    players,
     readyAt: null,
     expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
     presence: [

@@ -5,13 +5,13 @@ remains the package manager and the server runtime.
 
 ## Commands
 
-| Purpose | Command |
-| --- | --- |
-| Full suite (single root entry) | `bun run test` (delegates to `turbo test`) |
-| Direct root composition | `bunx vitest run` (composes `vitest.workspace.ts`) |
-| Root watch composition | `bun run test:watch` (same composition, watch mode) |
-| Focused workspace run | `bunx turbo test --filter=<workspace>` |
-| Direct workspace run | `bun run test` inside the workspace directory |
+| Purpose                        | Command                                             |
+| ------------------------------ | --------------------------------------------------- |
+| Full suite (single root entry) | `bun run test` (delegates to `turbo test`)          |
+| Direct root composition        | `bunx vitest run` (composes `vitest.workspace.ts`)  |
+| Root watch composition         | `bun run test:watch` (same composition, watch mode) |
+| Focused workspace run          | `bunx turbo test --filter=<workspace>`              |
+| Direct workspace run           | `bun run test` inside the workspace directory       |
 
 `vitest.workspace.ts` composes the three projects by pointing at each workspace directory, whose own
 `vitest.config.ts` stays the single source of truth (see
@@ -21,16 +21,16 @@ inventory (see the equivalence proof below).
 
 ## Projects
 
-| Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
-| --- | --- | --- | --- | --- | --- |
-| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 29 | 148 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 28 | 280 |
-| `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 60 | 495 |
-| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 84 |
-| `@squadzr/typescript-config` | — | — | — | — | — |
+| Workspace                    | Vitest project       | Environment | Include pattern                                   | Suites | Tests |
+| ---------------------------- | -------------------- | ----------- | ------------------------------------------------- | ------ | ----- |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`                                | 29     | 153   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts`                  | 29     | 289   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 61     | 508   |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`                                | 4      | 92    |
+| `@squadzr/typescript-config` | —                    | —           | —                                                 | —      | —     |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-24 on the
-merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96 and CCC-98. CCC-90 adds the
+merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96 and CCC-98, plus CCC-104. CCC-104 puts `memberPreview` on every Squad and orders the roster: it adds `tests/integration/member-preview.test.ts` (+1 file / +9 tests: the preview on the list, the single read for non-members and members, My Squads, `POST /api/rooms` with `room_created`, and `room_snapshot`, with its content, the limit of five and the order), the contract cases in `schemas:unit` (+8), the use-case, projection and ordering cases in `server:unit` (+5), and updates the client fixtures without adding client tests. CCC-90 adds the
 IGDB adapter suite (`igdb-game-catalog-source.spec.ts`, +1 file / +10 tests, with a recorded IGDB
 page as fixture) and the import environment suite (`catalog-import-env.spec.ts`, +1 file / +9
 tests), plus one curated-id case in `curated-games.spec.ts` (+1). It adds no integration suite: the
@@ -104,8 +104,8 @@ with its project entry.
 Project names carry the suite kind after the `:` separator. Unit projects (`*:unit`) run against
 mock/in-memory dependencies:
 
-- `server:unit` — 148 tests across 29 spec files as of 2026-10-23 (merged tree, CCC-89, CCC-90,
-  CCC-92, CCC-93 and CCC-95). CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
+- `server:unit` — 153 tests across 29 spec files as of 2026-10-25 (merged tree, CCC-89, CCC-90,
+  CCC-92, CCC-93, CCC-95 and CCC-104). CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
   specs together with their use cases. The CCC-28 baseline of 39 tests across 10 specs is historical; see
   the equivalence proof below. CCC-90 adds the IGDB adapter and Catalog Import environment suites.
 - `client:unit` — runs in jsdom; the environment is proven by an assertion on `document`, which
@@ -140,7 +140,7 @@ Integration projects follow the same naming convention:
   asserts the exit code, the single structured summary and that the database pool closed; it spawns
   no child process. `squad-game-summary` (CCC-92) asserts every Squad response and realtime message
   carries its Game summary, including a Squad on a legacy Game, and counts repository reads to prove
-  the Game is joined in the same query as the Squad.
+  the Game is joined in the same query as the Squad. `member-preview` (CCC-104) asserts the member preview on the board, the single Squad read, My Squads, the create response, `room_created` and `room_snapshot`: host first, then join time, at most five, no full roster and no invite on public surfaces, and the roster of the member read and the snapshot in the same order.
 - Client and realtime flows stay in jsdom projects under the planned capability work
   (CCC-32/CCC-33).
 
@@ -194,24 +194,24 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
   collecting tests. The script was removed instead of being restored with a new dependency;
   introducing coverage tooling is a deliberate follow-up decision, not an accidental default.
 
-## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98)
+## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104)
 
-### Current counts (recounted 2026-10-24 on the merged tree, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96 and CCC-98)
+### Current counts (recounted 2026-10-24 on the merged tree, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98 and CCC-104)
 
-| Command | Test files | Tests |
-| --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 93 | 727 |
-| `bunx vitest run` (direct root composition) | 93 | 727 |
-| `bunx turbo test --filter=server` | 29 | 148 |
-| `bunx turbo test --filter=client` | 60 | 495 |
-| `bunx turbo test --filter=@squadzr/schemas` | 4 | 84 |
+| Command                                                             | Test files | Tests |
+| ------------------------------------------------------------------- | ---------- | ----- |
+| `bun run test` (root, all projects; sum of the three unit projects) | 94         | 753   |
+| `bunx vitest run` (direct root composition)                         | 94         | 753   |
+| `bunx turbo test --filter=server`                                   | 29         | 153   |
+| `bunx turbo test --filter=client`                                   | 61         | 508   |
+| `bunx turbo test --filter=@squadzr/schemas`                         | 4          | 92    |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
 numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
 specs together with their use cases, so the server unit suite has 5 fewer tests than before that
 change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
 16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
-current run passes 28 files / 280 tests (measured 2026-10-23 against the test PostgreSQL on port
+current run passes 29 files / 289 tests (measured 2026-10-25 against the test PostgreSQL on port
 5433): the CCC-88 row of 25 files / 231 tests plus CCC-89's changes — the 2 child-process seed
 tests removed with the static seed, the Catalog Import suites (+2 files / +16 tests), two extra
 IGDB-id cases in `games-postgres` — plus CCC-93's cases in the existing games and rooms HTTP suites
@@ -222,30 +222,30 @@ drifted to 26 files / 119 tests since CCC-70, so the CCC-89 recount corrected it
 tests with `curated-games.spec.ts` (+1 file / +3 tests); CCC-93 adds its create-room delisted-game
 cases, CCC-95 adds 3 cover cases and CCC-92 adds one projection case and one create-path case, and
 CCC-90 adds the IGDB adapter (10 tests) and import environment (9 tests) suites plus one curated-id
-case, so the merged tree measures 29 files / 148 tests. CCC-59 removed the `types:unit` project (1
-file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 84 tests across
+case, and CCC-104 adds 5 more, so the merged tree measures 29 files / 153 tests. CCC-59 removed the `types:unit` project (1
+file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 92 tests across
 4 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
-contract cases, CCC-95 added 2 and CCC-92 added 3), and the client suite measures 60 files / 495
+contract cases, CCC-95 added 2 and CCC-92 added 3 and CCC-104 added 8), and the client suite measures 61 files / 508
 tests (CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
 CCC-95 added 2, CCC-92 added none, CCC-96 replaced the landing's random-pick cases with the
 popular read and added the FAQ and IGDB-credit cases: net 0, and CCC-98 added 7 cancellation and
-placeholder flow cases, and CCC-101 added 7 motion-base cases in 2 files); both drifts predate CCC-89 and were
+placeholder flow cases, and CCC-101 added 20 motion-base cases in 3 files); both drifts predate CCC-89 and were
 corrected by its recount. CCC-96's 10 popular-games cases plus CCC-90's invalid-summary case are the
-difference between the CCC-95 row of 27 files / 269 tests and the current 28 files / 280.
+difference between the CCC-95 row of 27 files / 269 tests and the 28 files / 280 tests measured before CCC-104, whose member-preview suite adds 1 file / 9 tests (29 files / 289).
 
 ### Historical record (CCC-28, 2026-09-25)
 
 The table below is the CCC-28 measurement, kept for traceability; it is not the current
 inventory. Recorded on 2026-09-25 (review round), Bun 1.3.8, Vitest 2.1.9, Windows:
 
-| Command | Test files | Tests |
-| --- | --- | --- |
-| `bun run test` (root, all projects) | 13 | 50 |
-| `bunx vitest run` (direct root composition) | 13 | 50 |
-| `bunx turbo test --filter=server` | 10 | 39 |
-| `bunx turbo test --filter=client` | 1 | 3 |
-| `bunx turbo test --filter=@squadzr/schemas` | 1 | 6 |
-| `bunx turbo test --filter=@squadzr/types` | 1 | 2 |
+| Command                                     | Test files | Tests |
+| ------------------------------------------- | ---------- | ----- |
+| `bun run test` (root, all projects)         | 13         | 50    |
+| `bunx vitest run` (direct root composition) | 13         | 50    |
+| `bunx turbo test --filter=server`           | 10         | 39    |
+| `bunx turbo test --filter=client`           | 1          | 3     |
+| `bunx turbo test --filter=@squadzr/schemas` | 1          | 6     |
+| `bunx turbo test --filter=@squadzr/types`   | 1          | 2     |
 
 At that time the direct root composition matched the Turbo run, the focused runs matched the
 per-workspace numbers of the root run, and the server suite had 39 tests / 10 suites with

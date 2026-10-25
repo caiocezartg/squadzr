@@ -35,6 +35,28 @@ function setup() {
 }
 
 describe('realtime snapshot read', () => {
+  it('orders the roster host first and previews its first five players', async () => {
+    const { useCase, room, members, users } = setup()
+    const ids = ['m-6', 'm-2', room.hostId, 'm-1', 'm-4', 'm-3', 'm-5']
+    const joinedAt = (id: string) => new Date(NOW.getTime() + Number(id.replace('m-', '')) * 1_000)
+    members.findByRoomId.mockResolvedValue(
+      ids.map((userId) =>
+        createMockRoomMember({
+          roomId: room.id,
+          userId,
+          joinedAt: userId === room.hostId ? new Date(NOW.getTime() + 60_000) : joinedAt(userId),
+        })
+      )
+    )
+    users.findByIds.mockResolvedValue(ids.map((id) => createMockUser({ id, name: id })))
+
+    const snapshot = await useCase.execute({ code: 'ABC123' })
+
+    const ordered = [room.hostId, 'm-1', 'm-2', 'm-3', 'm-4', 'm-5', 'm-6']
+    expect(snapshot?.players.map((player) => player.id)).toEqual(ordered)
+    expect(snapshot?.room.memberPreview.map((entry) => entry.id)).toEqual(ordered.slice(0, 5))
+  })
+
   it('answers null for a Ready Room at its exact retention deadline', async () => {
     const { useCase, rooms, room, clock } = setup()
     rooms.findByCode.mockResolvedValue({ ...room, readyAt: NOW })
@@ -54,7 +76,13 @@ describe('realtime snapshot read', () => {
       createMockUser({ id: room.hostId, name: 'Host' }),
     ])
     expect(await useCase.execute({ code: 'ABC123' })).toMatchObject({
-      room,
+      room: {
+        ...room,
+        memberPreview: [
+          { id: room.hostId, name: 'Host', image: null },
+          { id: 'member', name: 'Member', image: 'https://cdn.test/member.png' },
+        ],
+      },
       players: [
         { id: room.hostId, name: 'Host', image: null, isHost: true },
         { id: 'member', name: 'Member', image: 'https://cdn.test/member.png', isHost: false },
@@ -80,7 +108,7 @@ describe('realtime snapshot read', () => {
     users.findByIds.mockResolvedValue([createMockUser({ id: 'member', name: 'Member' })])
 
     expect(await useCase.execute({ code: 'ABC123' })).toEqual({
-      room: publicationRoom,
+      room: { ...publicationRoom, memberPreview: [{ id: 'member', name: 'Member', image: null }] },
       players: [{ id: 'member', name: 'Member', image: null, isHost: false }],
       expiresAt: new Date(
         NOW.getTime() + (readyAt ? ROOM.READY_ROOM_RETENTION_MS : ROOM.OPEN_ROOM_TTL_MS)

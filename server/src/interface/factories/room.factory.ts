@@ -19,7 +19,7 @@ export function createRoomController(db: Database, broadcaster: IRoomBroadcaster
   const gameRepository = new DrizzleGameRepository(db, clock)
   const userRepository = new DrizzleUserRepository(db)
 
-  const createRoomUseCase = new CreateRoomUseCase(roomRepository, gameRepository)
+  const createRoomUseCase = new CreateRoomUseCase(roomRepository, gameRepository, userRepository)
   const getAvailableRoomsUseCase = new GetAvailableRoomsUseCase(
     roomRepository,
     roomMemberRepository,

@@ -30,6 +30,7 @@ const publicRoom = {
   maxPlayers: 5,
   tags: [],
   language: 'en',
+  memberPreview: [{ id: 'user-1', name: 'Caio', image: null }],
   createdAt: '2026-09-27T12:30:00.000Z',
   updatedAt: '2026-09-27T12:30:00.000Z',
 }
@@ -151,6 +152,57 @@ describe('room_created', () => {
     expect(parsed.payload.room).toEqual(publicRoom)
     expect(JSON.stringify(parsed)).not.toContain(INVITE)
     expectTypeOf(parsed.payload.room).not.toHaveProperty('discordLink')
+  })
+})
+
+describe('member preview on realtime payloads', () => {
+  const sixMembers = Array.from({ length: 6 }, (_, i) => ({
+    id: `u${i}`,
+    name: `P${i}`,
+    image: null,
+  }))
+
+  it('rides on room_created and on the room_snapshot room', () => {
+    const [snapshot] = serverMessages.filter((message) => message.type === 'room_snapshot')
+    const [created] = serverMessages.filter((message) => message.type === 'room_created')
+
+    expect(wsServerMessageSchema.parse(created)).toMatchObject({
+      payload: { room: { memberPreview: publicRoom.memberPreview } },
+    })
+    expect(wsServerMessageSchema.parse(snapshot)).toMatchObject({
+      payload: { room: { memberPreview: publicRoom.memberPreview } },
+    })
+  })
+
+  it('rejects a sixth entry in room_created and in room_snapshot', () => {
+    const room = { ...publicRoom, memberPreview: sixMembers }
+
+    expect(
+      wsServerMessageSchema.safeParse({ type: 'room_created', timestamp: 0, payload: { room } })
+        .success
+    ).toBe(false)
+    expect(
+      wsServerMessageSchema.safeParse({
+        type: 'room_snapshot',
+        timestamp: 0,
+        payload: {
+          room: { ...room, discordLink: INVITE },
+          players: [player],
+          readyAt: null,
+          expiresAt: publicRoom.updatedAt,
+          presence: [],
+        },
+      }).success
+    ).toBe(false)
+  })
+
+  it('requires the preview on room_created', () => {
+    const { memberPreview: _preview, ...room } = publicRoom
+
+    expect(
+      wsServerMessageSchema.safeParse({ type: 'room_created', timestamp: 0, payload: { room } })
+        .success
+    ).toBe(false)
   })
 })
 

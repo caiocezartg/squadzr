@@ -99,6 +99,44 @@ describe('GetRoomByCodeUseCase', () => {
       expect(mockRoomMemberRepository.findByRoomAndUser).toHaveBeenCalledWith('room-1', 'member-1')
     })
 
+    it('orders the roster host first, then by join time, then by user id, and previews the first five', async () => {
+      const room = createMockRoom({
+        id: 'room-1',
+        hostId: 'host-1',
+        maxPlayers: 8,
+        lastActivityAt: ACTIVITY,
+        createdAt: ACTIVITY,
+      })
+      const joined = (userId: string, minutes: number) =>
+        createMockRoomMember({
+          roomId: 'room-1',
+          userId,
+          joinedAt: new Date(ACTIVITY.getTime() + minutes * 60_000),
+        })
+      const members = [
+        joined('late', 9),
+        joined('tie-b', 3),
+        joined('host-1', 5),
+        joined('tie-a', 3),
+        joined('early', 1),
+        joined('last', 20),
+      ]
+      mockRoomRepository.findByCode.mockResolvedValue(room)
+      mockRoomMemberRepository.findByRoomAndUser.mockResolvedValue(members[0]!)
+      mockRoomMemberRepository.findByRoomId.mockResolvedValue(members)
+      mockUserRepository.findByIds.mockResolvedValue(
+        members.map((member) => createMockUser({ id: member.userId, name: member.userId }))
+      )
+
+      const result = await useCase.execute({ code: 'ABC123', viewerId: 'late' })
+
+      const order = ['host-1', 'early', 'tie-a', 'tie-b', 'late', 'last']
+      expect(result.players.map((player) => player.id)).toEqual(order)
+      expect(result.room.memberPreview).toEqual(
+        order.slice(0, 5).map((id) => ({ id, name: id, image: null }))
+      )
+    })
+
     it('should not resolve the roster for a viewer without membership', async () => {
       mockRoomRepository.findByCode.mockResolvedValue(
         createMockRoom({ id: 'room-1', lastActivityAt: ACTIVITY, createdAt: ACTIVITY })
