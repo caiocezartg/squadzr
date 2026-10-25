@@ -23,14 +23,14 @@ inventory (see the equivalence proof below).
 
 | Workspace | Vitest project | Environment | Include pattern | Suites | Tests |
 | --- | --- | --- | --- | --- | --- |
-| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 29 | 148 |
-| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 28 | 280 |
+| `server` | `server:unit` | `node` | `src/**/*.spec.ts` | 29 | 153 |
+| `server` | `server:integration` | `node` | `tests/integration/**/*.test.ts` | 29 | 289 |
 | `client` | `client:unit` | `jsdom` | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 58 | 488 |
-| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 84 |
+| `@squadzr/schemas` | `schemas:unit` | `node` | `src/**/*.spec.ts` | 4 | 92 |
 | `@squadzr/typescript-config` | — | — | — | — | — |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-24 on the
-merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96 and CCC-98. CCC-90 adds the
+merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96 and CCC-98, plus CCC-104. CCC-104 puts `memberPreview` on every Squad and orders the roster: it adds `tests/integration/member-preview.test.ts` (+1 file / +9 tests: the preview on the list, the single read for non-members and members, My Squads, `POST /api/rooms` with `room_created`, and `room_snapshot`, with its content, the limit of five and the order), the contract cases in `schemas:unit` (+8), the use-case, projection and ordering cases in `server:unit` (+5), and updates the client fixtures without adding client tests. CCC-90 adds the
 IGDB adapter suite (`igdb-game-catalog-source.spec.ts`, +1 file / +10 tests, with a recorded IGDB
 page as fixture) and the import environment suite (`catalog-import-env.spec.ts`, +1 file / +9
 tests), plus one curated-id case in `curated-games.spec.ts` (+1). It adds no integration suite: the
@@ -134,7 +134,7 @@ Integration projects follow the same naming convention:
   asserts the exit code, the single structured summary and that the database pool closed; it spawns
   no child process. `squad-game-summary` (CCC-92) asserts every Squad response and realtime message
   carries its Game summary, including a Squad on a legacy Game, and counts repository reads to prove
-  the Game is joined in the same query as the Squad.
+  the Game is joined in the same query as the Squad. `member-preview` (CCC-104) asserts the member preview on the board, the single Squad read, My Squads, the create response, `room_created` and `room_snapshot`: host first, then join time, at most five, no full roster and no invite on public surfaces, and the roster of the member read and the snapshot in the same order.
 - Client and realtime flows stay in jsdom projects under the planned capability work
   (CCC-32/CCC-33).
 
@@ -188,17 +188,17 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
   collecting tests. The script was removed instead of being restored with a new dependency;
   introducing coverage tooling is a deliberate follow-up decision, not an accidental default.
 
-## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98)
+## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104)
 
-### Current counts (recounted 2026-10-24 on the merged tree, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96 and CCC-98)
+### Current counts (recounted 2026-10-24 on the merged tree, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98 and CCC-104)
 
 | Command | Test files | Tests |
 | --- | --- | --- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 91 | 720 |
-| `bunx vitest run` (direct root composition) | 91 | 720 |
-| `bunx turbo test --filter=server` | 29 | 148 |
+| `bun run test` (root, all projects; sum of the three unit projects) | 91 | 733 |
+| `bunx vitest run` (direct root composition) | 91 | 733 |
+| `bunx turbo test --filter=server` | 29 | 153 |
 | `bunx turbo test --filter=client` | 58 | 488 |
-| `bunx turbo test --filter=@squadzr/schemas` | 4 | 84 |
+| `bunx turbo test --filter=@squadzr/schemas` | 4 | 92 |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
 numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)

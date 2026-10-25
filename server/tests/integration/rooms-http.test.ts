@@ -65,6 +65,7 @@ describe('POST /api/rooms', () => {
         'id',
         'language',
         'maxPlayers',
+        'memberPreview',
         'name',
         'tags',
         'updatedAt',

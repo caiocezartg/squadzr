@@ -16,6 +16,19 @@ import type {
 } from '@/types'
 import type { WsServerEventPayload } from '@squadzr/schemas/ws'
 
+/** A Squad's member preview: the host `user-9`, then guests, at most five entries. */
+export function previewMembers(count: number): Squad['memberPreview'] {
+  return Array.from({ length: Math.min(count, 5) }, (_, i) =>
+    i === 0
+      ? { id: 'user-9', name: 'Mia', image: null }
+      : {
+          id: `guest-${i}`,
+          name: `Guest ${i}`,
+          image: `https://cdn.squadzr.test/players/guest-${i}.png`,
+        }
+  )
+}
+
 /** ISO 8601 string, as transport dates travel in JSON. */
 function hoursAgo(hours: number): string {
   // Two extra minutes of margin keep the rendered label exactly "Xh ago".
@@ -93,6 +106,7 @@ export const openSquad: Squad = {
   tags: ['ranked', 'chill'],
   language: 'en',
   memberCount: 1,
+  memberPreview: previewMembers(1),
   isMember: false,
   createdAt: hoursAgo(2),
   updatedAt: hoursAgo(2),
@@ -111,6 +125,7 @@ export const fullSquad: Squad = {
   tags: [],
   language: 'pt-br',
   memberCount: 4,
+  memberPreview: previewMembers(4),
   isMember: false,
   createdAt: hoursAgo(4),
   updatedAt: hoursAgo(4),
@@ -129,6 +144,7 @@ export const memberSquad: Squad = {
   tags: ['chill'],
   language: 'pt-br',
   memberCount: 3,
+  memberPreview: previewMembers(3),
   isMember: true,
   createdAt: hoursAgo(6),
   updatedAt: hoursAgo(6),
@@ -153,6 +169,7 @@ export function squadsForPagination(): RoomsResponse {
       tags: [],
       language: 'en',
       memberCount: 1,
+      memberPreview: previewMembers(1),
       isMember: false,
       createdAt: hoursAgo(index + 5),
       updatedAt: hoursAgo(index + 5),
@@ -173,6 +190,7 @@ export const lobbySquad: Squad = {
   discordLink: 'https://discord.gg/lobby',
   tags: ['squad'],
   language: 'en',
+  memberPreview: [{ id: 'user-1', name: 'Caio', image: null }],
   createdAt: hoursAgo(1),
   updatedAt: hoursAgo(1),
 }
@@ -208,6 +226,7 @@ export const createdSquad: Squad = {
   tags: ['ranked'],
   language: 'pt-br',
   memberCount: 1,
+  memberPreview: previewMembers(1),
   isMember: true,
   createdAt: hoursAgo(0),
   updatedAt: hoursAgo(0),

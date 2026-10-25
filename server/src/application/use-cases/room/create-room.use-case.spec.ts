@@ -4,6 +4,7 @@ import {
   GameNotAvailableError,
   InvalidGameError,
   RoomCreateLimitReachedError,
+  UserNotFoundError,
 } from '@application/errors'
 import {
   createMockRoom,
@@ -11,17 +12,24 @@ import {
   createMockRoomMember,
   createMockGameRepository,
   createMockGame,
+  createMockUser,
+  createMockUserRepository,
 } from '@test/mocks'
 
 describe('CreateRoomUseCase', () => {
   let useCase: CreateRoomUseCase
   let mockRoomRepository: ReturnType<typeof createMockRoomRepository>
   let mockGameRepository: ReturnType<typeof createMockGameRepository>
+  let mockUserRepository: ReturnType<typeof createMockUserRepository>
 
   beforeEach(() => {
     mockRoomRepository = createMockRoomRepository()
     mockGameRepository = createMockGameRepository()
-    useCase = new CreateRoomUseCase(mockRoomRepository, mockGameRepository)
+    mockUserRepository = createMockUserRepository()
+    mockUserRepository.findById.mockImplementation((id) =>
+      Promise.resolve(createMockUser({ id, name: 'Host', avatarUrl: null }))
+    )
+    useCase = new CreateRoomUseCase(mockRoomRepository, mockGameRepository, mockUserRepository)
   })
 
   describe('execute', () => {
@@ -82,6 +90,47 @@ describe('CreateRoomUseCase', () => {
       expect(result.room.game).toBe(game)
       expect(mockGameRepository.findById).toHaveBeenCalledOnce()
       expect(mockGameRepository.findById).toHaveBeenCalledWith('game-123')
+    })
+
+    it("carries the host's entry as the whole member preview", async () => {
+      mockGameRepository.findById.mockResolvedValue(createMockGame({ id: 'game-123' }))
+      mockUserRepository.findById.mockResolvedValue(
+        createMockUser({
+          id: 'host-123',
+          name: 'Host Name',
+          avatarUrl: 'https://cdn.discordapp.com/avatars/host.png',
+        })
+      )
+
+      const result = await useCase.execute({
+        name: 'My Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        discordLink: 'https://discord.gg/test',
+      })
+
+      expect(mockUserRepository.findById).toHaveBeenCalledWith('host-123')
+      expect(result.room.memberPreview).toEqual([
+        {
+          id: 'host-123',
+          name: 'Host Name',
+          image: 'https://cdn.discordapp.com/avatars/host.png',
+        },
+      ])
+    })
+
+    it('throws UserNotFoundError when the host cannot be read', async () => {
+      mockGameRepository.findById.mockResolvedValue(createMockGame({ id: 'game-123' }))
+      mockUserRepository.findById.mockResolvedValue(null)
+
+      await expect(
+        useCase.execute({
+          name: 'My Room',
+          hostId: 'host-123',
+          gameId: 'game-123',
+          discordLink: 'https://discord.gg/test',
+        })
+      ).rejects.toThrow(UserNotFoundError)
     })
 
     it('should return the host membership created in the same transaction', async () => {

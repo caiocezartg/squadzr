@@ -24,6 +24,7 @@ import {
   gameLolSummary,
   guestPlayer,
   hostPlayer,
+  previewMembers,
 } from './fixtures'
 import type { MyRoomsResponse, Squad } from '@/types'
 
@@ -44,6 +45,7 @@ const readyHostedSquad: Squad = {
   tags: ['ranked'],
   language: 'en',
   memberCount: 5,
+  memberPreview: previewMembers(5),
   isMember: true,
   createdAt: new Date(Date.now() - 65 * 60_000).toISOString(),
   updatedAt: new Date(Date.now() - 5 * 60_000).toISOString(),

@@ -1,5 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import {
+  MEMBER_PREVIEW_LIMIT,
+  createRoomResponseSchema,
   describeContractIssues,
   isRoomLobbyResponse,
   notificationsResponseSchema,
@@ -53,6 +55,10 @@ const publicRoom = {
   tags: ['ranked'],
   language: 'en',
   memberCount: 2,
+  memberPreview: [
+    { id: 'user-1', name: 'Caio', image: null },
+    { id: 'user-2', name: 'Ana', image: 'https://cdn.squadzr.test/ana.png' },
+  ],
   isMember: false,
   createdAt: CREATED_AT,
   updatedAt: CREATED_AT,
@@ -238,6 +244,59 @@ describe('public and private room projections', () => {
     expectTypeOf<RoomsResponse['rooms'][number]>().toEqualTypeOf<PublicRoomDto>()
     expectTypeOf<RoomsResponse>().not.toHaveProperty('players')
     expectTypeOf<RoomDto['discordLink']>().toEqualTypeOf<string | null>()
+  })
+})
+
+describe('member preview', () => {
+  const entry = (n: number) => ({ id: `user-${n}`, name: `Player ${n}`, image: null })
+
+  it('is required on the public and the member Squad', () => {
+    const { memberPreview: _preview, ...withoutPreview } = publicRoom
+
+    expect(publicRoomSchema.parse(publicRoom).memberPreview).toEqual(publicRoom.memberPreview)
+    expect(roomSchema.parse(memberRoom).memberPreview).toEqual(publicRoom.memberPreview)
+    expect(publicRoomSchema.safeParse(withoutPreview).success).toBe(false)
+    expect(roomSchema.safeParse({ ...withoutPreview, discordLink: INVITE }).success).toBe(false)
+  })
+
+  it('reaches the create response and the member lobby response', () => {
+    expect(createRoomResponseSchema.parse({ room: memberRoom }).room.memberPreview).toHaveLength(2)
+    expect(roomLobbyResponseSchema.parse({ room: memberRoom, players }).room.memberPreview).toEqual(
+      publicRoom.memberPreview
+    )
+  })
+
+  it('accepts up to five entries and rejects a sixth', () => {
+    const preview = (count: number) => Array.from({ length: count }, (_, i) => entry(i + 1))
+
+    expect(MEMBER_PREVIEW_LIMIT).toBe(5)
+    expect(publicRoomSchema.safeParse({ ...publicRoom, memberPreview: [] }).success).toBe(true)
+    expect(publicRoomSchema.safeParse({ ...publicRoom, memberPreview: preview(5) }).success).toBe(
+      true
+    )
+    const sixth = publicRoomSchema.safeParse({ ...publicRoom, memberPreview: preview(6) })
+    if (sixth.success) throw new Error('expected a sixth entry to be rejected')
+    expect(describeContractIssues(sixth.error).map((issue) => issue.path)).toEqual([
+      'memberPreview',
+    ])
+  })
+
+  it('holds only the id, the name and a nullable image of each member', () => {
+    const parsed = publicRoomSchema.parse({
+      ...publicRoom,
+      memberPreview: [{ ...entry(1), isHost: true, email: 'caio@squadzr.test' }],
+    })
+
+    expect(parsed.memberPreview).toEqual([entry(1)])
+    expect(
+      publicRoomSchema.safeParse({ ...publicRoom, memberPreview: [{ id: 'u', name: 'N' }] }).success
+    ).toBe(false)
+  })
+
+  it('does not lift the refusal of the roster and the invite on a non-member response', () => {
+    expect(roomResponseSchema.parse({ room: publicRoom }).room.memberPreview).toHaveLength(2)
+    expect(roomResponseSchema.safeParse({ room: publicRoom, players }).success).toBe(false)
+    expect(roomResponseSchema.safeParse({ room: memberRoom }).success).toBe(false)
   })
 })
 
