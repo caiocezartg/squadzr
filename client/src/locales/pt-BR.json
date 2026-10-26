@@ -30,6 +30,19 @@
         "awaySince": "Fora da sala · {time}",
         "open": "Aguardando jogador"
       }
+    },
+    "close": "Fechar",
+    "pagination": {
+      "label": "Paginação",
+      "previous": "Página anterior",
+      "next": "Próxima página",
+      "page": "Página {page}"
+    },
+    "searchField": {
+      "clear": "Limpar busca"
+    },
+    "steps": {
+      "done": "Concluída"
     }
   },
   "nav": {
@@ -279,21 +292,6 @@
     "previous": "Ir para a página anterior",
     "next": "Ir para a próxima página",
     "page": "Ir para a página {page}"
-  },
-  "ds": {
-    "close": "Fechar",
-    "pagination": {
-      "label": "Paginação",
-      "previous": "Página anterior",
-      "next": "Próxima página",
-      "page": "Página {page}"
-    },
-    "searchField": {
-      "clear": "Limpar busca"
-    },
-    "steps": {
-      "done": "Concluída"
-    }
   },
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",
