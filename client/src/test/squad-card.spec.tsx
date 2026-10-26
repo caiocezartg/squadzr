@@ -42,6 +42,18 @@ function memberAvatars(): HTMLElement[] {
   return screen.getAllByRole('img', { name: /^(Mia|Guest \d)$/ })
 }
 
+/**
+ * The circles of the rail, in order, as what each one draws: a member (a named avatar), a neutral
+ * filled circle, or a vacant one. The filled and vacant circles are decorative, so they have no role;
+ * every circle is the one element that carries the rail's `ring-card` cut-out.
+ */
+function railKinds(card: HTMLElement): Array<'member' | 'filled' | 'vacant'> {
+  return Array.from(card.querySelectorAll('.ring-card'), (circle) => {
+    if (circle.querySelector('[role="img"]')) return 'member'
+    return circle.querySelector('.bg-faint') ? 'filled' : 'vacant'
+  })
+}
+
 describe('squad card — no entrance animation', () => {
   it('starts visible on mount, with no animation and no inline opacity', () => {
     render(<SquadCard squad={openSquad} />)
@@ -242,13 +254,24 @@ describe('squad card — full, non-member', () => {
 
 describe('squad card — who joined', () => {
   it('draws the members of the preview in order, then the vacant circles', () => {
-    render(<SquadCard squad={{ ...openSquad, memberCount: 3, memberPreview: previewMembers(3) }} />)
+    render(
+      <SquadCard
+        squad={{ ...openSquad, maxPlayers: 5, memberCount: 3, memberPreview: previewMembers(3) }}
+      />
+    )
 
     const names = memberAvatars()
     expect(names.map((avatar) => avatar.getAttribute('aria-label'))).toEqual([
       'Mia',
       'Guest 1',
       'Guest 2',
+    ])
+    expect(railKinds(screen.getByRole('button'))).toEqual([
+      'member',
+      'member',
+      'member',
+      'vacant',
+      'vacant',
     ])
   })
 
@@ -267,9 +290,20 @@ describe('squad card — who joined', () => {
   })
 
   it('fills the circles a short preview does not reach with a neutral circle', () => {
-    render(<SquadCard squad={{ ...openSquad, memberCount: 4, memberPreview: previewMembers(2) }} />)
+    render(
+      <SquadCard
+        squad={{ ...openSquad, maxPlayers: 5, memberCount: 4, memberPreview: previewMembers(2) }}
+      />
+    )
 
     expect(memberAvatars()).toHaveLength(2)
+    expect(railKinds(screen.getByRole('button'))).toEqual([
+      'member',
+      'member',
+      'filled',
+      'filled',
+      'vacant',
+    ])
   })
 
   it('caps the rail at five circles and counts the other slots as +N', () => {
@@ -280,6 +314,13 @@ describe('squad card — who joined', () => {
     )
 
     expect(memberAvatars()).toHaveLength(5)
+    expect(railKinds(screen.getByRole('button'))).toEqual([
+      'member',
+      'member',
+      'member',
+      'member',
+      'member',
+    ])
     expect(screen.getByText('+5')).toBeInTheDocument()
     expect(screen.getByText('8')).toBeInTheDocument()
     expect(screen.getByText('/10')).toBeInTheDocument()
