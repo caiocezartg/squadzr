@@ -262,6 +262,21 @@
     "next": "Go to next page",
     "page": "Go to page {page}"
   },
+  "ds": {
+    "close": "Close",
+    "pagination": {
+      "label": "Pagination",
+      "previous": "Previous page",
+      "next": "Next page",
+      "page": "Page {page}"
+    },
+    "searchField": {
+      "clear": "Clear search"
+    },
+    "steps": {
+      "done": "Completed"
+    }
+  },
   "errors": {
     "GAME_NOT_FOUND": "This game could not be found.",
     "INVALID_GAME": "This game is no longer available. Please choose another game.",
