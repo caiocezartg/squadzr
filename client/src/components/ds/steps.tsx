@@ -36,7 +36,7 @@ export function Steps({ steps, current, label, className }: StepsProps) {
             <span aria-hidden className="bg-track block h-[3px] overflow-hidden">
               <span
                 className={cn(
-                  'bg-mint block h-full origin-left transition-transform duration-[240ms] ease-out',
+                  'bg-mint block h-full origin-left motion-safe:transition-transform duration-[240ms] ease-out',
                   number <= current ? 'scale-x-100' : 'scale-x-0'
                 )}
               />

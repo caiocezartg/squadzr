@@ -3,7 +3,7 @@
  * Escape with focus back on the trigger. Below 640px a popover can render as the sheet.
  */
 
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockMediaQuery } from '@/test/media-query'
@@ -120,6 +120,28 @@ describe('popover as a bottom sheet', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(trigger).toHaveFocus()
+  })
+
+  it('stays open when the screen crosses 640px, in whichever surface renders', async () => {
+    const user = userEvent.setup({ delay: null })
+    const viewport = mockMediaQuery(NARROW_QUERY, false)
+    render(<Filters bottomSheet />)
+
+    await user.click(screen.getByRole('button', { name: 'Open filters' }))
+    await screen.findByRole('dialog', { name: 'Filters' })
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+
+    act(() => viewport.set(true))
+
+    expect(await screen.findByRole('button', { name: 'Close' })).toBeVisible()
+    expect(screen.getByRole('dialog', { name: 'Filters' })).toBeVisible()
+
+    act(() => viewport.set(false))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+    )
+    expect(screen.getByRole('dialog', { name: 'Filters' })).toBeVisible()
   })
 
   it('closes from its close button', async () => {
