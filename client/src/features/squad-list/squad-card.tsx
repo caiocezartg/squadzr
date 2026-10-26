@@ -1,141 +1,314 @@
 import { useCallback, useState } from 'react'
+import { ArrowRight, Check } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useTimeAgo } from '@/hooks/use-time-ago'
+import { AppLink } from '@/components/layout/app-link'
+import { Avatar } from '@/components/ds/avatar'
+import { Tag } from '@/components/ds/tag'
 import { languageBadgeKey } from '@/lib/language-badge'
-import { Check, Users } from 'lucide-react'
+import { lobbyHref } from '@/lib/squad-links'
+import { cn } from '@/lib/utils'
 import type { PublicSquad } from '@/types'
+import { avatarRail, type RailSlot } from './avatar-rail'
 
 export interface SquadCardProps {
   /** The Squad carries its own game summary, so the card never reads the catalog. */
   squad: PublicSquad
+  /** Runs the join workflow for a Squad the viewer has not joined. A member's card links to the Lobby. */
   onJoin?: (squadCode: string) => void
+  /** The join request is in flight, so the card ignores further clicks. */
   isLoading?: boolean
 }
 
+/** Tags a card names before the rest collapse into `+N`. */
+const VISIBLE_TAGS = 2
+
+const CARD_CLASSES =
+  'group relative grid w-full min-h-44 grid-cols-[118px_minmax(0,1fr)] overflow-hidden bg-card ' +
+  'text-left text-text no-underline transition-colors duration-200 ' +
+  'lg:min-h-[214px] lg:grid-cols-[160px_minmax(0,1fr)] ' +
+  'hover-fine:bg-raised ' +
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint'
+
+/**
+ * The Redesign v2 Squad card (reference, Components, SquadCard). It is a link to the Lobby for a
+ * member, a button that joins for an open Squad, and a disabled card for a full Squad the viewer
+ * has not joined. The medium size is the default; the large one takes over at wide widths, where
+ * the board lays two cards in a row.
+ */
 export function SquadCard({ squad, onJoin, isLoading }: SquadCardProps) {
   const t = useTranslations()
-  const timeAgo = useTimeAgo(squad.createdAt)
   const members = squad.memberCount ?? 1
-  const isFull = members >= squad.maxPlayers
-  const isDisabled = isLoading || (isFull && !squad.isMember)
-  const squadTags = squad.tags ?? []
-  const game = squad.game
-  const coverUrl = game.coverUrl
-  // The card never waits for the network: the cover fades in on its own when
-  // it loads, over the placeholder background, and stays hidden if it fails.
-  const [loadedCover, setLoadedCover] = useState<string | null>(null)
-  const coverLoaded = loadedCover === coverUrl
+  const isMember = squad.isMember === true
+  const isFull = members >= squad.maxPlayers && !isMember
+  const language = t(languageBadgeKey(squad.language))
+  const label = t('squads.card.label', {
+    name: squad.name,
+    game: squad.game.name,
+    language,
+    members,
+    max: squad.maxPlayers,
+  })
 
-  // A server-rendered card puts the `<img>` in the HTML, so the browser can finish loading it before
-  // React attaches `onLoad`. That load never fires again, so the ref checks the image once attached.
-  const markCoverIfAlreadyLoaded = useCallback(
-    (img: HTMLImageElement | null) => {
-      if (img?.complete && img.naturalWidth > 0) setLoadedCover(coverUrl)
-    },
-    [coverUrl]
-  )
+  const body = <SquadCardBody squad={squad} members={members} language={language} isFull={isFull} />
 
-  const MAX_DOTS = 8
-  const visibleSlots = Math.min(squad.maxPlayers, MAX_DOTS)
-  const extraSlots = squad.maxPlayers > MAX_DOTS ? squad.maxPlayers - MAX_DOTS : 0
+  if (isMember) {
+    return (
+      <AppLink href={lobbyHref(squad.code)} aria-label={label} className={CARD_CLASSES}>
+        <CardRing />
+        {body}
+        <JoinedBadge />
+        <HoverCta label={t('squads.card.openRoom')} />
+      </AppLink>
+    )
+  }
+
+  if (isFull) {
+    return (
+      <button
+        type="button"
+        aria-disabled="true"
+        aria-label={label}
+        className={cn(CARD_CLASSES, 'cursor-not-allowed opacity-[0.62] hover-fine:bg-card')}
+      >
+        {body}
+        <FullOverlay />
+      </button>
+    )
+  }
 
   return (
     <button
       type="button"
-      onClick={() => onJoin?.(squad.code)}
-      disabled={isDisabled}
-      className={`group relative w-full overflow-hidden rounded-xl border bg-surface text-left transition-[transform,border-color,box-shadow,filter] duration-300 ease-in-out ${
-        isDisabled
-          ? 'cursor-not-allowed border-border grayscale opacity-50'
-          : 'cursor-pointer border-border hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-[0_6px_32px_rgba(0,255,162,0.07)]'
-      }`}
+      aria-label={label}
+      aria-disabled={isLoading || undefined}
+      aria-busy={isLoading || undefined}
+      onClick={() => {
+        if (!isLoading) onJoin?.(squad.code)
+      }}
+      className={cn(CARD_CLASSES, isLoading ? 'cursor-progress' : 'cursor-pointer')}
     >
-      <div className="relative h-40 overflow-hidden bg-surface-light">
-        <img
-          ref={markCoverIfAlreadyLoaded}
-          src={coverUrl}
-          alt={game.name}
-          className={`h-full w-full object-cover transition-opacity duration-300 ease-out ${
-            coverLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
-          loading="lazy"
-          onLoad={() => setLoadedCover(coverUrl)}
-        />
+      <CardRing />
+      {body}
+      <HoverCta label={t('squads.card.enter')} />
+    </button>
+  )
+}
 
-        <div className="absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-surface/40 to-transparent" />
+/**
+ * The poster is the one place the card shows its game. A cover that fails leaves the ground, rather
+ * than the browser's broken-image alt text. A failed URL is remembered by value, so a different cover
+ * gets its own try.
+ */
+function Poster({
+  src,
+  alt,
+  isFull,
+}: {
+  readonly src: string
+  readonly alt: string
+  readonly isFull: boolean
+}) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
 
-        <span className="absolute bottom-2 left-3 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs">
-          {game.name}
+  // The server HTML starts the image loading before React attaches `onError`, and an image that
+  // already failed by then never fires it again, so the ref checks the image once it is attached.
+  const checkAttachedImage = useCallback(
+    (img: HTMLImageElement | null) => {
+      if (img?.complete && img.naturalWidth === 0) setFailedSrc(src)
+    },
+    [src]
+  )
+
+  if (src === failedSrc) return null
+
+  return (
+    <img
+      ref={checkAttachedImage}
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailedSrc(src)}
+      className={cn(
+        'absolute inset-0 block size-full object-cover',
+        'motion-safe:transition-transform motion-safe:duration-400 motion-safe:ease-out',
+        isFull ? 'grayscale' : 'motion-safe:group-hover-fine:scale-[1.03]'
+      )}
+    />
+  )
+}
+
+/** The poster and the info column, which every state of the card shares. */
+function SquadCardBody({
+  squad,
+  members,
+  language,
+  isFull,
+}: {
+  readonly squad: PublicSquad
+  readonly members: number
+  readonly language: string
+  /** A full Squad the viewer has not joined: grayscale, with no hover. */
+  readonly isFull: boolean
+}) {
+  const tags = squad.tags ?? []
+  const rail = avatarRail(members, squad.maxPlayers, squad.memberPreview)
+
+  return (
+    <>
+      <span className="relative block overflow-hidden bg-raised-2">
+        <Poster src={squad.game.coverUrl} alt={squad.game.name} isFull={isFull} />
+      </span>
+
+      <span className="relative flex min-w-0 flex-col gap-2 px-4 py-3.5 lg:gap-2.5 lg:px-[22px] lg:py-[18px]">
+        <span className="flex items-center justify-between gap-2.5">
+          <Tag variant="lang" label={language} />
+          <span className="type-code shrink-0 text-faint">#{squad.code}</span>
         </span>
 
-        {squad.isMember && (
-          <span className="absolute right-3 top-2 flex items-center gap-1 rounded-md border border-accent/20 bg-surface/80 px-2 py-0.5 text-[10px] font-semibold text-accent backdrop-blur-xs">
-            <Check className="size-3" />
-            {t('squads.card.joined')}
-          </span>
-        )}
+        <span className="type-squad-name-md line-clamp-2 wrap-anywhere lg:type-squad-name">
+          {squad.name}
+        </span>
 
-        {!isDisabled && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/80 opacity-0 backdrop-blur-md transition-opacity duration-300 group-hover:opacity-100">
-            <span className="font-body text-xl font-bold uppercase tracking-widest text-accent drop-shadow-[0_0_24px_rgba(0,255,162,0.7)]">
-              {squad.isMember ? t('squads.card.seeSquad') : t('squads.card.joinSquad')}
+        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {tags.slice(0, VISIBLE_TAGS).map((tag) => (
+            <Tag key={tag} variant="tag" label={tag} />
+          ))}
+          {tags.length > VISIBLE_TAGS && (
+            <span className="px-0.5 py-1 text-xs font-semibold text-muted">
+              +{tags.length - VISIBLE_TAGS}
             </span>
-          </div>
-        )}
+          )}
+        </span>
 
-        {isFull && !squad.isMember && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-            <span className="text-lg font-bold uppercase tracking-[0.2em] text-offwhite">
-              {t('squads.card.full')}
-            </span>
-          </div>
-        )}
-      </div>
+        <span className="grow" />
 
-      <div className="flex flex-col gap-2.5 px-4 py-3">
-        <div>
-          <h3 className="truncate font-heading text-base font-bold leading-snug">{squad.name}</h3>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <span className="badge-muted px-1.5 py-0.5 text-[10px]">
-              {t(languageBadgeKey(squad.language))}
-            </span>
-            {squadTags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center rounded-md border border-accent/20 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent"
-              >
-                #{tag}
+        <span className="flex items-center justify-between gap-2.5">
+          <span className="flex items-center">
+            {rail.slots.map((slot, index) => (
+              <RailCircle key={index} slot={slot} first={index === 0} lit={!isFull} />
+            ))}
+            {rail.extra > 0 && (
+              <span className="ml-3.5 shrink-0 font-ds-mono text-xs font-bold text-text-3">
+                +{rail.extra}
               </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-muted-light">#{squad.code}</span>
-          <span className="text-[10px] text-muted/40">|</span>
-          <span className="text-[11px] text-muted/50">{timeAgo}</span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: visibleSlots }).map((_, i) => (
-              <span
-                key={i}
-                className={`size-2.5 shrink-0 rounded-full transition-colors ${
-                  i < members
-                    ? 'bg-accent shadow-[0_0_6px_rgba(0,255,162,0.3)]'
-                    : 'bg-surface-light ring-1 ring-border-light'
-                }`}
-              />
-            ))}
-            {extraSlots > 0 && <span className="ml-0.5 text-[10px] text-muted">+{extraSlots}</span>}
-          </div>
-          <span className="flex items-center gap-1 text-xs text-muted">
-            <Users className="size-3" />
-            <span className="font-medium text-offwhite">{members}</span>/{squad.maxPlayers}
+            )}
           </span>
-        </div>
-      </div>
-    </button>
+          <span
+            className={cn(
+              'shrink-0 font-display text-xl leading-none font-extrabold tabular-nums lg:text-2xl',
+              'transition-opacity duration-200',
+              !isFull && 'group-hover-fine:opacity-0'
+            )}
+          >
+            <span className={isFull ? 'text-text-3' : 'text-text'}>{members}</span>
+            <span className="text-faint">/{squad.maxPlayers}</span>
+          </span>
+        </span>
+      </span>
+    </>
+  )
+}
+
+/**
+ * One circle of the rail. The avatar draws at its 34px size and shrinks to 28px below the wide
+ * breakpoint, so the size follows the card without a media query in script. The ring cuts the circle
+ * out of its neighbour and follows the card's ground when it lights on hover.
+ */
+function RailCircle({
+  slot,
+  first,
+  lit,
+}: {
+  readonly slot: RailSlot
+  readonly first: boolean
+  /** The ring follows the card's ground on hover; a full card never lights. */
+  readonly lit: boolean
+}) {
+  return (
+    <span
+      className={cn(
+        'relative block size-7 shrink-0 rounded-full ring-2 ring-card lg:size-[34px]',
+        'transition-shadow duration-200',
+        lit && 'group-hover-fine:ring-raised',
+        !first && '-ml-1.5'
+      )}
+    >
+      <span className="block size-[34px] origin-top-left scale-[0.8235] lg:scale-100">
+        <RailAvatar slot={slot} />
+      </span>
+    </span>
+  )
+}
+
+function RailAvatar({ slot }: { readonly slot: RailSlot }) {
+  switch (slot.kind) {
+    case 'member':
+      return (
+        <Avatar
+          size={34}
+          playerId={slot.member.id}
+          name={slot.member.name}
+          image={slot.member.image}
+          label={slot.member.name}
+        />
+      )
+    case 'filled':
+      return <span className="block size-[34px] rounded-full bg-faint" />
+    case 'vacant':
+      return <Avatar size={34} state="vacant" />
+  }
+}
+
+/** The 1.5px mint ring of the hover, drawn over the poster and fading with the ground. */
+function CardRing() {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'pointer-events-none absolute inset-0 z-10 opacity-0 shadow-[inset_0_0_0_1.5px_var(--color-mint)]',
+        'transition-opacity duration-200 group-hover-fine:opacity-100'
+      )}
+    />
+  )
+}
+
+function JoinedBadge() {
+  const t = useTranslations('squads.card')
+
+  return (
+    <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-mint px-1.5 py-1 font-ds-mono text-[9.5px] font-bold tracking-[0.08em] text-mint-ink uppercase">
+      <Check aria-hidden="true" className="size-2.5 [stroke-width:3.5]" />
+      {t('joined')}
+    </span>
+  )
+}
+
+function FullOverlay() {
+  const t = useTranslations('squads.card')
+
+  return (
+    <span className="absolute inset-y-0 left-0 flex w-[118px] items-center justify-center bg-bg/55 lg:w-40">
+      <span className="font-display text-2xl font-black tracking-[0.12em] text-text uppercase">
+        {t('full')}
+      </span>
+    </span>
+  )
+}
+
+/** The call to action that slides in over the count on hover. It repeats what the card's name says. */
+function HoverCta({ label }: { readonly label: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'pointer-events-none absolute right-4 bottom-3 z-20 inline-flex h-[34px] items-center gap-[7px] bg-mint px-3 text-[13px] font-extrabold text-mint-ink opacity-0 lg:right-[22px] lg:bottom-4',
+        'transition-[opacity,translate] [transition-duration:200ms,250ms] ease-out',
+        'motion-safe:translate-x-2.5 motion-safe:group-hover-fine:translate-x-0',
+        'group-hover-fine:opacity-100'
+      )}
+    >
+      {label}
+      <ArrowRight className="size-[13px] [stroke-width:2.8]" />
+    </span>
   )
 }

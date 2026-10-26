@@ -1,19 +1,21 @@
 /**
- * Regression tests for the SquadCard (CCC-40 r4–r6, CCC-79).
+ * Tests for the SquadCard (CCC-40 r4–r6, CCC-79, CCC-109).
  *
  * The card is part of the server HTML of the Squad Board, so it must be visible before any script
- * runs and through hydration: it never starts at zero opacity, and nothing fades it in on mount. Its
- * cover is the one exception, and it starts hidden over the placeholder until the image loads.
+ * runs and through hydration: it never starts at zero opacity, and nothing animates it on mount. Its
+ * three states are a link to the Lobby for a member, a button that joins for an open Squad, and a
+ * disabled card for a full Squad. Tests find the card by its role and accessible name.
  *
  * jsdom has no `Element.animate`, so each test installs a recorder and asserts that no animation starts.
  */
 
 import { StrictMode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SquadCard } from '@/features/squad-list'
-import { openSquad } from './fixtures'
+import type { Squad } from '@/types'
+import { fullSquad, memberSquad, openSquad, previewMembers } from './fixtures'
 import { EnglishIntlProvider } from './intl'
 
 let animateCalls: Array<{ element: Element; keyframes: unknown }> = []
@@ -34,11 +36,29 @@ afterEach(() => {
   Reflect.deleteProperty(Element.prototype, 'animate')
 })
 
-describe('squad card — no entrance fade', () => {
+const OPEN_NAME = 'Ranked grind — League of Legends, EN-US, 1 of 5 players'
+
+function memberAvatars(): HTMLElement[] {
+  return screen.getAllByRole('img', { name: /^(Mia|Guest \d)$/ })
+}
+
+/**
+ * The circles of the rail, in order, as what each one draws: a member (a named avatar), a neutral
+ * filled circle, or a vacant one. The filled and vacant circles are decorative, so they have no role;
+ * every circle is the one element that carries the rail's `ring-card` cut-out.
+ */
+function railKinds(card: HTMLElement): Array<'member' | 'filled' | 'vacant'> {
+  return Array.from(card.querySelectorAll('.ring-card'), (circle) => {
+    if (circle.querySelector('[role="img"]')) return 'member'
+    return circle.querySelector('.bg-faint') ? 'filled' : 'vacant'
+  })
+}
+
+describe('squad card — no entrance animation', () => {
   it('starts visible on mount, with no animation and no inline opacity', () => {
     render(<SquadCard squad={openSquad} />)
 
-    const card = screen.getByRole('button')
+    const card = screen.getByRole('button', { name: OPEN_NAME })
     expect(card.style.opacity).toBe('')
     expect(card.className).not.toMatch(/(^|\s)opacity-0(\s|$)/)
     expect(animateCalls).toHaveLength(0)
@@ -51,11 +71,11 @@ describe('squad card — no entrance fade', () => {
       </StrictMode>
     )
 
-    expect(screen.getByRole('button').style.opacity).toBe('')
+    expect(screen.getByRole('button', { name: OPEN_NAME }).style.opacity).toBe('')
     expect(animateCalls).toHaveLength(0)
   })
 
-  it('is visible in the server HTML, so hydration has nothing to fade in', () => {
+  it('is visible in the server HTML, so hydration has nothing to animate', () => {
     const markup = renderToStaticMarkup(
       <EnglishIntlProvider>
         <SquadCard squad={openSquad} />
@@ -68,15 +88,54 @@ describe('squad card — no entrance fade', () => {
     expect(card).not.toMatch(/style="[^"]*opacity/)
   })
 
-  it('counts the members the card was given, one for a squad without a count', () => {
-    render(<SquadCard squad={{ ...openSquad, memberCount: 3 }} />)
+  it('reveals its hover state for fine pointers only', () => {
+    render(<SquadCard squad={openSquad} />)
 
-    expect(screen.getByText('3')).toBeInTheDocument()
+    const card = screen.getByRole('button', { name: OPEN_NAME })
+    expect(card.className).toContain('hover-fine:bg-raised')
+    expect(card.className).not.toMatch(/(^|\s)hover:/)
+    expect(screen.getByText('Enter').className).toContain('group-hover-fine:opacity-100')
   })
 })
 
-describe('squad card — cover', () => {
-  it('renders the game name and IGDB cover the Squad carries, without a per-game crop', () => {
+describe('squad card — layout', () => {
+  it('shows the language, the code, the name and the members over the maximum', () => {
+    render(<SquadCard squad={{ ...openSquad, memberCount: 3 }} />)
+
+    const card = screen.getByRole('button', {
+      name: 'Ranked grind — League of Legends, EN-US, 3 of 5 players',
+    })
+    expect(within(card).getByText('EN-US')).toBeInTheDocument()
+    expect(within(card).getByText('#ABC123')).toBeInTheDocument()
+    expect(within(card).getByText('Ranked grind')).toHaveClass('line-clamp-2')
+    expect(within(card).getByText('3')).toBeInTheDocument()
+    expect(within(card).getByText('/5')).toBeInTheDocument()
+  })
+
+  it('counts one member for a squad without a count', () => {
+    const { memberCount: _count, ...withoutCount } = openSquad
+    render(<SquadCard squad={withoutCount as Squad} />)
+
+    expect(screen.getByRole('button', { name: OPEN_NAME })).toBeInTheDocument()
+  })
+
+  it('shows the first two tags and the rest as +N', () => {
+    render(<SquadCard squad={{ ...openSquad, tags: ['ranked', 'chill', 'mic', 'duo'] }} />)
+
+    expect(screen.getByText('#ranked')).toBeInTheDocument()
+    expect(screen.getByText('#chill')).toBeInTheDocument()
+    expect(screen.queryByText('#mic')).not.toBeInTheDocument()
+    expect(screen.getByText('+2')).toBeInTheDocument()
+  })
+
+  it('shows no +N for two tags or fewer', () => {
+    render(<SquadCard squad={openSquad} />)
+
+    expect(screen.getByText('#ranked')).toBeInTheDocument()
+    expect(screen.queryByText(/^\+\d/)).not.toBeInTheDocument()
+  })
+
+  it('names the game on the poster the Squad carries', () => {
     const squad = {
       ...openSquad,
       game: {
@@ -87,92 +146,189 @@ describe('squad card — cover', () => {
     }
     render(<SquadCard squad={squad} />)
 
-    const cover = screen.getByRole('img')
-    expect(cover).toHaveAttribute('src', squad.game.coverUrl)
-    expect(cover).toHaveAttribute('alt', 'Arc Raiders')
-    expect(cover.style.objectPosition).toBe('')
-    expect(screen.getByText('Arc Raiders')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Arc Raiders' })).toHaveAttribute(
+      'src',
+      squad.game.coverUrl
+    )
+    expect(
+      screen.getByRole('button', { name: 'Ranked grind — Arc Raiders, EN-US, 1 of 5 players' })
+    ).toBeInTheDocument()
   })
+})
 
-  it('keeps the cover hidden over the placeholder until it loads, then fades it in', () => {
+describe('squad card — poster', () => {
+  it('leaves the ground in place of a cover that fails to load', () => {
     render(<SquadCard squad={openSquad} />)
 
-    const cover = screen.getByRole('img')
-    expect(cover).toHaveClass('transition-opacity', 'opacity-0')
-    expect(cover).not.toHaveClass('opacity-100')
-    expect(cover.parentElement).toHaveClass('bg-surface-light')
+    fireEvent.error(screen.getByRole('img', { name: 'League of Legends' }))
 
-    fireEvent.load(cover)
-
-    expect(cover).toHaveClass('transition-opacity', 'opacity-100')
-    expect(cover).not.toHaveClass('opacity-0')
+    expect(screen.queryByRole('img', { name: 'League of Legends' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: OPEN_NAME })).toBeInTheDocument()
   })
 
-  it('keeps a broken cover hidden so the placeholder shows instead', () => {
-    render(<SquadCard squad={openSquad} />)
-
-    const cover = screen.getByRole('img')
-    fireEvent.error(cover)
-
-    expect(cover).toHaveClass('opacity-0')
-    expect(screen.getByRole('button').style.opacity).toBe('')
-  })
-
-  describe('when the browser loaded the cover before React attached', () => {
-    function stubImageState(state: { complete: boolean; naturalWidth: number }) {
-      Object.defineProperty(HTMLImageElement.prototype, 'complete', {
-        configurable: true,
-        get: () => state.complete,
-      })
-      Object.defineProperty(HTMLImageElement.prototype, 'naturalWidth', {
-        configurable: true,
-        get: () => state.naturalWidth,
-      })
-    }
-
-    afterEach(() => {
-      Reflect.deleteProperty(HTMLImageElement.prototype, 'complete')
-      Reflect.deleteProperty(HTMLImageElement.prototype, 'naturalWidth')
-    })
-
-    it('shows a cover that is already complete at mount, with no load event', () => {
-      stubImageState({ complete: true, naturalWidth: 460 })
-      render(<SquadCard squad={openSquad} />)
-
-      expect(screen.getByRole('img')).toHaveClass('opacity-100')
-    })
-
-    it('keeps a cover that already failed hidden', () => {
-      stubImageState({ complete: true, naturalWidth: 0 })
-      render(<SquadCard squad={openSquad} />)
-
-      expect(screen.getByRole('img')).toHaveClass('opacity-0')
-    })
-
-    it('keeps a cover that is still loading hidden until it loads', () => {
-      stubImageState({ complete: false, naturalWidth: 0 })
-      render(<SquadCard squad={openSquad} />)
-
-      const cover = screen.getByRole('img')
-      expect(cover).toHaveClass('opacity-0')
-      fireEvent.load(cover)
-      expect(cover).toHaveClass('opacity-100')
-    })
-  })
-
-  it('hides the cover again while a new cover URL loads', () => {
+  it('gives a different cover its own try after one failed', () => {
     const { rerender } = render(<SquadCard squad={openSquad} />)
-    fireEvent.load(screen.getByRole('img'))
+    fireEvent.error(screen.getByRole('img', { name: 'League of Legends' }))
 
-    const otherSquad = {
-      ...openSquad,
-      game: { ...openSquad.game, coverUrl: 'https://cdn.squadzr.test/covers/other.jpg' },
-    }
-    rerender(<SquadCard squad={otherSquad} />)
+    const otherGame = { ...openSquad.game, coverUrl: 'https://cdn.squadzr.test/covers/other.jpg' }
+    rerender(<SquadCard squad={{ ...openSquad, game: otherGame }} />)
 
-    const cover = screen.getByRole('img')
-    expect(cover).toHaveClass('opacity-0')
-    fireEvent.load(cover)
-    expect(cover).toHaveClass('opacity-100')
+    expect(screen.getByRole('img', { name: 'League of Legends' })).toHaveAttribute(
+      'src',
+      otherGame.coverUrl
+    )
+  })
+})
+
+describe('squad card — member', () => {
+  it('is a link to the Lobby with the Joined badge and the Open room call to action', () => {
+    const onJoin = vi.fn()
+    render(<SquadCard squad={memberSquad} onJoin={onJoin} />)
+
+    const card = screen.getByRole('link', {
+      name: 'Casual five stack — League of Legends, PT-BR, 3 of 4 players',
+    })
+    expect(card).toHaveAttribute('href', '/squads/MEM111')
+    expect(within(card).getByText('Joined')).toBeInTheDocument()
+    expect(within(card).getByText('Open room')).toBeInTheDocument()
+    expect(within(card).queryByText('Enter')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('stays a link to the Lobby when the Squad is full', () => {
+    render(<SquadCard squad={{ ...fullSquad, isMember: true }} />)
+
+    expect(
+      screen.getByRole('link', { name: 'Full lobby — Counter-Strike 2, PT-BR, 4 of 4 players' })
+    ).toHaveAttribute('href', '/squads/XYZ789')
+  })
+})
+
+describe('squad card — non-member, open', () => {
+  it('is a button that runs the join workflow with the Squad code', () => {
+    const onJoin = vi.fn()
+    render(<SquadCard squad={openSquad} onJoin={onJoin} />)
+
+    const card = screen.getByRole('button', { name: OPEN_NAME })
+    expect(within(card).getByText('Enter')).toBeInTheDocument()
+    expect(within(card).queryByText('Joined')).not.toBeInTheDocument()
+
+    fireEvent.click(card)
+
+    expect(onJoin).toHaveBeenCalledTimes(1)
+    expect(onJoin).toHaveBeenCalledWith('ABC123')
+  })
+
+  it('ignores clicks while its join request is in flight', () => {
+    const onJoin = vi.fn()
+    render(<SquadCard squad={openSquad} onJoin={onJoin} isLoading />)
+
+    const card = screen.getByRole('button', { name: OPEN_NAME })
+    expect(card).toHaveAttribute('aria-busy', 'true')
+    expect(card).toHaveAttribute('aria-disabled', 'true')
+
+    fireEvent.click(card)
+
+    expect(onJoin).not.toHaveBeenCalled()
+  })
+})
+
+describe('squad card — full, non-member', () => {
+  it('is not interactive, with the Full overlay and a grayscale poster', () => {
+    const onJoin = vi.fn()
+    render(<SquadCard squad={fullSquad} onJoin={onJoin} />)
+
+    const card = screen.getByRole('button', {
+      name: 'Full lobby — Counter-Strike 2, PT-BR, 4 of 4 players',
+    })
+    expect(card).toHaveAttribute('aria-disabled', 'true')
+    expect(within(card).getByText('Full')).toBeInTheDocument()
+    expect(within(card).getByRole('img', { name: 'Counter-Strike 2' })).toHaveClass('grayscale')
+    expect(within(card).queryByText('Enter')).not.toBeInTheDocument()
+
+    fireEvent.click(card)
+
+    expect(onJoin).not.toHaveBeenCalled()
+  })
+})
+
+describe('squad card — who joined', () => {
+  it('draws the members of the preview in order, then the vacant circles', () => {
+    render(
+      <SquadCard
+        squad={{ ...openSquad, maxPlayers: 5, memberCount: 3, memberPreview: previewMembers(3) }}
+      />
+    )
+
+    const names = memberAvatars()
+    expect(names.map((avatar) => avatar.getAttribute('aria-label'))).toEqual([
+      'Mia',
+      'Guest 1',
+      'Guest 2',
+    ])
+    expect(railKinds(screen.getByRole('button'))).toEqual([
+      'member',
+      'member',
+      'member',
+      'vacant',
+      'vacant',
+    ])
+  })
+
+  it('shows a member their image, and their initials when the image fails', () => {
+    render(<SquadCard squad={{ ...openSquad, memberCount: 2, memberPreview: previewMembers(2) }} />)
+
+    const guest = screen.getByRole('img', { name: 'Guest 1' })
+    const image = guest.querySelector('img')
+    expect(image).not.toBeNull()
+    expect(screen.getByText('MI')).toBeInTheDocument()
+
+    fireEvent.error(image!)
+
+    expect(within(guest).getByText('G1')).toBeInTheDocument()
+    expect(within(guest).queryByRole('img')).not.toBeInTheDocument()
+  })
+
+  it('fills the circles a short preview does not reach with a neutral circle', () => {
+    render(
+      <SquadCard
+        squad={{ ...openSquad, maxPlayers: 5, memberCount: 4, memberPreview: previewMembers(2) }}
+      />
+    )
+
+    expect(memberAvatars()).toHaveLength(2)
+    expect(railKinds(screen.getByRole('button'))).toEqual([
+      'member',
+      'member',
+      'filled',
+      'filled',
+      'vacant',
+    ])
+  })
+
+  it('caps the rail at five circles and counts the other slots as +N', () => {
+    render(
+      <SquadCard
+        squad={{ ...openSquad, maxPlayers: 10, memberCount: 8, memberPreview: previewMembers(5) }}
+      />
+    )
+
+    expect(memberAvatars()).toHaveLength(5)
+    expect(railKinds(screen.getByRole('button'))).toEqual([
+      'member',
+      'member',
+      'member',
+      'member',
+      'member',
+    ])
+    expect(screen.getByText('+5')).toBeInTheDocument()
+    expect(screen.getByText('8')).toBeInTheDocument()
+    expect(screen.getByText('/10')).toBeInTheDocument()
+  })
+
+  it('shows no +N when every slot has a circle', () => {
+    render(<SquadCard squad={openSquad} />)
+
+    expect(screen.queryByText(/^\+\d/)).not.toBeInTheDocument()
   })
 })

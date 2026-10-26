@@ -158,9 +158,10 @@
     },
     "card": {
       "joined": "Entrou",
-      "seeSquad": "VER SQUAD",
-      "joinSquad": "ENTRAR",
-      "full": "Cheio"
+      "openRoom": "Abrir sala",
+      "enter": "Entrar",
+      "full": "Cheio",
+      "label": "{name} — {game}, {language}, {members} de {max} jogadores"
     },
     "filters": {
       "searchPlaceholder": "Buscar por jogo ou nome do squad...",

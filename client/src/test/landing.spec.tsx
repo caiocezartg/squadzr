@@ -8,7 +8,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { NextIntlClientProvider } from 'next-intl'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionDto } from '@squadzr/schemas'
 import LandingPage, { metadata } from '@/app/(landing)/page'
@@ -110,7 +110,7 @@ describe('landing page', () => {
 })
 
 describe('hero squad showcase', () => {
-  it('times its sample squads from the now that next-intl hands to the client', () => {
+  it('renders its sample squads from the now that next-intl hands to the client', () => {
     render(
       <NextIntlClientProvider locale="en" messages={en} now={NOW}>
         <ClockProvider>
@@ -119,13 +119,19 @@ describe('hero squad showcase', () => {
       </NextIntlClientProvider>
     )
 
-    expect(screen.getByText('8m ago')).toBeInTheDocument()
-    expect(screen.getByText('3m ago')).toBeInTheDocument()
-    expect(screen.getByText('15m ago')).toBeInTheDocument()
-    // Each sample card reads its game from the Squad summary it carries.
-    expect(screen.getByText('League of Legends')).toBeInTheDocument()
-    expect(screen.getByText('Counter-Strike 2')).toBeInTheDocument()
-    expect(screen.getByText('Dota 2')).toBeInTheDocument()
+    // Each sample card reads its game from the Squad summary it carries, and shows who joined.
+    const lol = screen.getByRole('button', {
+      name: 'Ranked climbing - Gold+ — League of Legends, EN-US, 3 of 5 players',
+    })
+    expect(within(lol).getByRole('img', { name: 'Mia Ferraz' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', {
+        name: 'Competitive 5v5 tryhard — Counter-Strike 2, PT-BR, 4 of 5 players',
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Fun match no stress — Dota 2, EN-US, 2 of 5 players' })
+    ).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Counter-Strike 2' })).toHaveAttribute(
       'src',
       'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/coaczd.webp'
