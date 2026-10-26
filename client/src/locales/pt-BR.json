@@ -14,6 +14,24 @@
     "language": "Idioma",
     "close": "Fechar"
   },
+  "ds": {
+    "tag": {
+      "remove": "Remover {label}"
+    },
+    "avatar": {
+      "host": "Dono do squad"
+    },
+    "member": {
+      "you": "você",
+      "openSlot": "Vaga aberta",
+      "presence": {
+        "online": "Na sala agora",
+        "away": "Fora da sala",
+        "awaySince": "Fora da sala · {time}",
+        "open": "Aguardando jogador"
+      }
+    }
+  },
   "nav": {
     "allSquads": "TODOS OS SQUADS",
     "mySquads": "MEUS SQUADS",
