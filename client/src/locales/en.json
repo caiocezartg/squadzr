@@ -6,7 +6,6 @@
     "daysAgo": "{count}d ago"
   },
   "common": {
-    "signIn": "Sign In",
     "signOut": "Sign Out",
     "createSquad": "Create Squad",
     "createNewSquad": "Create new squad",
@@ -43,16 +42,25 @@
     },
     "steps": {
       "done": "Completed"
+    },
+    "shell": {
+      "menu": "Menu",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "home": "Squadzr — home",
+      "createSquad": "Create squad",
+      "codeLabel": "Join by code",
+      "codePlaceholder": "CODE",
+      "codeSubmit": "Join the squad with this code",
+      "codeInvalid": "A squad code has 6 letters or digits.",
+      "squads": "Squads",
+      "allSquads": "All squads",
+      "signIn": "Sign in with Discord",
+      "account": "Account menu",
+      "createSignIn": "You can explore squads as a guest, but creating a squad requires signing in with Discord."
     }
   },
-  "nav": {
-    "allSquads": "ALL SQUADS",
-    "mySquads": "MY SQUADS",
-    "closeMenu": "Close menu",
-    "openMenu": "Open menu"
-  },
   "footer": {
-    "line": "© {year} Squadzr — Find your gaming squad",
     "gameDataByIgdb": "game data by IGDB"
   },
   "hero": {

@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | ------------------------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`                                | 29     | 160   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts`                  | 29     | 294   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 61     | 509   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 75     | 645   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`                                | 4      | 98    |
 | `@squadzr/typescript-config` | —                    | —           | —                                                 | —      | —     |
 
@@ -82,6 +82,17 @@ properties the reduced-motion block keeps in transitions and the loops it remove
 measures 61 files / 509 tests on the merged tree (CCC-105 added the Lobby offline-time case).
 
 CCC-109 puts the Redesign v2 Squad card on the board and adds one client suite, `avatar-rail.spec.ts` (8 tests: the rail formula for 3/5, 5/5, 3/10, 8/10, a preview shorter than the count, the preview order, a smaller squad and a count above the maximum). It rewrites `squad-card.spec.tsx` against roles and names (11 tests before, 21 after: no entrance animation, layout and tags, the member link, the non-member join, the full state, the poster fallback, the preview avatars with their image fallback, and the rail circles counted by kind: member, neutral filled circle and vacant), so the card adds 1 file / 18 tests to `client:unit`. It also rewrites the card assertions in `squad-board.spec.tsx` and `landing.spec.tsx` without changing their test counts. The totals below do not include it, nor CCC-102 and CCC-103, whose suites the counts do not record yet.
+
+CCC-106 moves the app pages into the sidebar shell and recounts `client:unit` at 75 files / 645 tests on
+its branch (the row had not been recounted since CCC-101, so the difference also holds CCC-102, CCC-103
+and CCC-104's client work). It adds `src/test/sidebar-flows.spec.tsx` (+1 file / +34 tests: the squad
+count from the board's cache and its refresh on focus and navigation, "Create squad" on the board and in
+the Lobby, a visitor's create prompt, `?create=1`, the visitor and signed-in `?join=`, the code form,
+the language switch, the drawer's keyboard behaviour, the one bell and the warm-cache navigation board
+→ Lobby → board → Lobby) and rewrites `app-shell.spec.tsx` (12 tests: links, the current item, title,
+account, and the sidebar and count in the server HTML), `session.spec.tsx`, `notifications.spec.tsx`,
+`use-sign-out.spec.tsx` and `language-toggle.spec.tsx` for the sidebar and the top bar. The harness
+gains a `shell` option, and the capability-boundaries spec accepts a capability's `server` entry.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.

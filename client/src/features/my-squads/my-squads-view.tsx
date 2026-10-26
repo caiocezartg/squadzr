@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus } from 'lucide-react'
 import { useSession } from '@/hooks/use-session'
+import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { AlertBox } from '@/components/ui/alert-box'
 import { SquadFilters, useAppSquadSearch, useSquadFilters } from '@/features/squad-list'
 import { MySquadsErrorBoundary } from './my-squads-error-boundary'
@@ -64,10 +65,13 @@ export function MySquadsView() {
           <h1 className="font-heading text-2xl font-bold sm:text-3xl">{t('mySquads.title')}</h1>
           <p className="mt-1 text-sm text-muted">{t('mySquads.subtitle')}</p>
         </div>
-        <button onClick={() => setCreateOpen(true)} className="btn-accent gap-2">
-          <Plus className="size-4" />
-          {t('common.createNewSquad')}
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setCreateOpen(true)} className="btn-accent gap-2">
+            <Plus className="size-4" />
+            {t('common.createNewSquad')}
+          </button>
+          <NotificationsBell placement="page" />
+        </div>
       </div>
 
       {/* Filters */}

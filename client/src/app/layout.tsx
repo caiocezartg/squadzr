@@ -4,8 +4,6 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getLocale } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { Toaster } from 'sonner'
-import { AppFooter } from '@/components/layout/app-footer'
-import { AppHeader } from '@/components/layout/app-header'
 import { DocumentTitle } from '@/components/layout/document-title'
 import { QueryProvider } from '@/components/layout/query-provider'
 import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
@@ -72,8 +70,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // The session is read once per request and seeded into the client, so the first render already
   // knows the viewer.
   const session = await getRequestSession()
-  // The footer's year is read on the server, so the server HTML carries it.
-  const year = new Date().getFullYear()
 
   return (
     <html lang={locale} className={fontVariables}>
@@ -83,16 +79,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <NextIntlClientProvider>
             <ClockProvider>
               <QueryProvider>
-                <div id="root" className="flex min-h-screen flex-col bg-background">
-                  <AppHeader />
-
-                  <main className="flex-1">{children}</main>
-
-                  <AppFooter year={year} />
-
-                  {/* Eager, so an error toast shows on the first failure instead of waiting for a chunk. */}
-                  <Toaster theme="dark" position="top-center" richColors />
-                </div>
+                {children}
+                {/* Eager, so an error toast shows on the first failure instead of waiting for a chunk. */}
+                <Toaster theme="dark" position="top-center" richColors />
                 <DocumentTitle />
                 <RealtimeUpdateNotice />
               </QueryProvider>

@@ -25,7 +25,7 @@ describe('LanguageToggle', () => {
     const user = userEvent.setup({ delay: null })
     render(<LanguageToggle />)
 
-    await user.click(screen.getByRole('radio', { name: 'PT' }))
+    await user.click(screen.getByRole('button', { name: 'PT' }))
 
     expect(readLocaleCookie()).toBe('pt-BR')
     expect(navigation.calls).toEqual([{ method: 'refresh' }])
@@ -36,15 +36,23 @@ describe('LanguageToggle', () => {
     const user = userEvent.setup({ delay: null })
     render(<LanguageToggle />)
 
-    await user.click(screen.getByRole('radio', { name: 'EN' }))
+    await user.click(screen.getByRole('button', { name: 'EN' }))
 
     expect(readLocaleCookie()).toBeUndefined()
     expect(navigation.calls).toEqual([])
   })
 
+  it('presses the current language, in the order of the sidebar artboard', () => {
+    render(<LanguageToggle />)
+
+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['PT', 'EN'])
+    expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'PT' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
   it('names the group in the active language', () => {
     render(<LanguageToggle />)
 
-    expect(screen.getByRole('radiogroup', { name: 'Language' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Language' })).toBeInTheDocument()
   })
 })

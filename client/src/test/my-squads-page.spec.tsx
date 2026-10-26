@@ -1,6 +1,6 @@
 /**
  * My Squads on the App Router (CCC-81). These tests render the route's own server component,
- * `app/squads/my/page.tsx`, inside the providers the root layout gives it. The request's session
+ * `app/(app)/squads/my/page.tsx`, inside the providers the root layout gives it. The request's session
  * cookie decides the redirect (no API call), and the route hands the server reads to the browser
  * through the query client without waiting for them.
  */
@@ -11,7 +11,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import MySquadsRoute from '@/app/squads/my/page'
+import MySquadsRoute from '@/app/(app)/squads/my/page'
 import { mySquadsQueryKey } from '@/features/my-squads/my-squads-cache'
 import { memberSquad, openSquad } from './fixtures'
 import { createTestQueryClient } from './harness'

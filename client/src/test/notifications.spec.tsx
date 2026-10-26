@@ -1,5 +1,5 @@
 /**
- * Notification changes from the header bell (CCC-71). Marking one notification read, marking all
+ * Notification changes from the top bar bell (CCC-71, CCC-106). Marking one notification read, marking all
  * read and dismissing one share one mutation helper: a success refetches the list, and a failure
  * shows one error toast while the list keeps its last state.
  */
@@ -10,7 +10,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { AppHeader } from '@/components/layout/app-header'
+import { AppShell } from '@/components/layout/app-shell'
 import type { UserNotification } from '@/types'
 import { createTestQueryClient } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
@@ -36,24 +36,23 @@ function squadNotification(
   }
 }
 
-/** The header around a page: the bell, the squad pages it opens and the page itself. */
-function HeaderScene() {
+/** The shell around a page: the bell in its top bar, the squad pages it opens and the page itself. */
+function ShellScene() {
   const pathname = usePathname()
 
   return (
-    <>
-      <AppHeader />
+    <AppShell>
       {pathname.startsWith('/squads/') ? <div>Lobby page</div> : <div>Home page</div>}
-    </>
+    </AppShell>
   )
 }
 
-function renderHeader(): UserEvent {
+function renderShell(): UserEvent {
   createHarnessNavigation('/')
 
   render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <HeaderScene />
+      <ShellScene />
     </QueryClientProvider>
   )
 
@@ -79,6 +78,7 @@ beforeEach(() => {
     squadNotification(BETA_ID, 'Beta squad', 'BETA22', null),
   ]
 
+  onHttp('GET', '/api/rooms', () => httpOk({ rooms: [] }))
   onHttp('GET', '/api/notifications', () => httpOk({ notifications }))
   onHttp('POST', '/api/notifications/read-all', () => {
     notifications = notifications.map((n) => ({ ...n, readAt: n.readAt ?? n.createdAt }))
@@ -98,7 +98,7 @@ beforeEach(() => {
 
 describe('notification changes from the bell', () => {
   it('marks one notification read, opens its squad and refreshes the list', async () => {
-    const user = renderHeader()
+    const user = renderShell()
     await openNotifications(user, 2)
 
     await user.click(squadEntry(/Alpha squad/))
@@ -111,7 +111,7 @@ describe('notification changes from the bell', () => {
   })
 
   it('marks every notification read in one request', async () => {
-    const user = renderHeader()
+    const user = renderShell()
     await openNotifications(user, 2)
 
     await user.click(screen.getByRole('button', { name: 'Mark all read' }))
@@ -126,7 +126,7 @@ describe('notification changes from the bell', () => {
   })
 
   it('deletes a notification when it is dismissed and refreshes the list', async () => {
-    const user = renderHeader()
+    const user = renderShell()
     await openNotifications(user, 2)
 
     const alphaRow = squadEntry(/Alpha squad/).parentElement as HTMLElement
@@ -145,7 +145,7 @@ describe('notification changes from the bell', () => {
     onHttp('POST', `/api/notifications/${ALPHA_ID}/read`, () =>
       httpError(500, { message: 'boom', error: 'INTERNAL_ERROR' })
     )
-    const user = renderHeader()
+    const user = renderShell()
     await openNotifications(user, 2)
 
     await user.click(squadEntry(/Alpha squad/))
@@ -160,7 +160,7 @@ describe('notification changes from the bell', () => {
     onHttp('POST', '/api/notifications/read-all', () =>
       httpError(500, { message: 'boom', error: 'INTERNAL_ERROR' })
     )
-    const user = renderHeader()
+    const user = renderShell()
     await openNotifications(user, 2)
 
     await user.click(screen.getByRole('button', { name: 'Mark all read' }))
@@ -174,7 +174,7 @@ describe('notification changes from the bell', () => {
     onHttp('DELETE', `/api/notifications/${ALPHA_ID}`, () =>
       httpError(500, { message: 'boom', error: 'INTERNAL_ERROR' })
     )
-    const user = renderHeader()
+    const user = renderShell()
     await openNotifications(user, 2)
 
     const alphaRow = squadEntry(/Alpha squad/).parentElement as HTMLElement
@@ -194,7 +194,7 @@ describe('game cover in the bell', () => {
         ? { ...notification, payload: { ...notification.payload, gameCoverUrl: COVER_URL } }
         : notification
     )
-    const user = renderHeader()
+    const user = renderShell()
     await openNotifications(user, 2)
 
     const cover = squadEntry(/Alpha squad/).querySelector('img')
@@ -205,7 +205,7 @@ describe('game cover in the bell', () => {
   })
 
   it('keeps the look without a cover for notifications written before it existed', async () => {
-    const user = renderHeader()
+    const user = renderShell()
     await openNotifications(user, 2)
 
     expect(squadEntry(/Beta squad/).querySelector('img')).toBeNull()

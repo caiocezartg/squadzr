@@ -1,9 +1,8 @@
 import { useCallback, useState } from 'react'
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
-import { roomsResponseSchema } from '@squadzr/schemas'
-import { api } from '@/lib/api'
 import type { PublicSquad } from '@/types'
 import { discardFailedBoardReads, squadBoardQueryKey } from './squad-board-cache'
+import { readSquadBoard } from './squad-board-read'
 
 /**
  * Clears the board's failed reads once, before the board's first render, and returns the command that
@@ -47,7 +46,7 @@ export function useSquadBoardBaseline(): number {
 export function useSquadBoardSquads(baseline: number): PublicSquad[] {
   const { data } = useSuspenseQuery({
     queryKey: squadBoardQueryKey,
-    queryFn: () => api.get('/api/rooms', roomsResponseSchema),
+    queryFn: readSquadBoard,
     refetchOnMount: (query) => (query.state.dataUpdateCount === baseline ? 'always' : false),
     refetchOnWindowFocus: true,
   })

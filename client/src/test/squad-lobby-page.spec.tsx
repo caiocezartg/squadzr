@@ -1,6 +1,6 @@
 /**
  * The Lobby on the App Router (CCC-80). These tests render the route's own server component,
- * `app/squads/[code]/page.tsx`, inside the providers the root layout gives it, with no TanStack router and
+ * `app/(app)/squads/[code]/page.tsx`, inside the providers the root layout gives it, with no TanStack router and
  * no app shell. The server reads the Squad for the viewer and hands the read to the browser, so each state
  * arrives through the dehydrated read and then the realtime snapshot.
  */
@@ -9,7 +9,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import LobbyRoute from '@/app/squads/[code]/page'
+import LobbyRoute from '@/app/(app)/squads/[code]/page'
 import {
   gameCs2,
   gameCs2Summary,

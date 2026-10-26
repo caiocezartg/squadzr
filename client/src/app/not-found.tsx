@@ -6,7 +6,11 @@ export const metadata: Metadata = {
   title: 'Page not found',
 }
 
-/** Unknown URLs render this page, with its content in the server HTML. */
+/** Unknown URLs render this page on its own, with no shell around it and its content in the server HTML. */
 export default function NotFoundPage() {
-  return <NotFound />
+  return (
+    <main className="min-h-screen">
+      <NotFound />
+    </main>
+  )
 }
