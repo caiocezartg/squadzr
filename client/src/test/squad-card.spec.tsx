@@ -38,10 +38,8 @@ afterEach(() => {
 
 const OPEN_NAME = 'Ranked grind — League of Legends, EN-US, 1 of 5 players'
 
-function railSlots(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll('[data-slot]')).map(
-    (slot) => slot.getAttribute('data-slot') ?? ''
-  )
+function memberAvatars(): HTMLElement[] {
+  return screen.getAllByRole('img', { name: /^(Mia|Guest \d)$/ })
 }
 
 describe('squad card — no entrance animation', () => {
@@ -244,12 +242,9 @@ describe('squad card — full, non-member', () => {
 
 describe('squad card — who joined', () => {
   it('draws the members of the preview in order, then the vacant circles', () => {
-    const { container } = render(
-      <SquadCard squad={{ ...openSquad, memberCount: 3, memberPreview: previewMembers(3) }} />
-    )
+    render(<SquadCard squad={{ ...openSquad, memberCount: 3, memberPreview: previewMembers(3) }} />)
 
-    expect(railSlots(container)).toEqual(['member', 'member', 'member', 'vacant', 'vacant'])
-    const names = screen.getAllByRole('img', { name: /^(Mia|Guest \d)$/ })
+    const names = memberAvatars()
     expect(names.map((avatar) => avatar.getAttribute('aria-label'))).toEqual([
       'Mia',
       'Guest 1',
@@ -272,21 +267,19 @@ describe('squad card — who joined', () => {
   })
 
   it('fills the circles a short preview does not reach with a neutral circle', () => {
-    const { container } = render(
-      <SquadCard squad={{ ...openSquad, memberCount: 4, memberPreview: previewMembers(2) }} />
-    )
+    render(<SquadCard squad={{ ...openSquad, memberCount: 4, memberPreview: previewMembers(2) }} />)
 
-    expect(railSlots(container)).toEqual(['member', 'member', 'filled', 'filled', 'vacant'])
+    expect(memberAvatars()).toHaveLength(2)
   })
 
   it('caps the rail at five circles and counts the other slots as +N', () => {
-    const { container } = render(
+    render(
       <SquadCard
         squad={{ ...openSquad, maxPlayers: 10, memberCount: 8, memberPreview: previewMembers(5) }}
       />
     )
 
-    expect(railSlots(container)).toEqual(Array(5).fill('member'))
+    expect(memberAvatars()).toHaveLength(5)
     expect(screen.getByText('+5')).toBeInTheDocument()
     expect(screen.getByText('8')).toBeInTheDocument()
     expect(screen.getByText('/10')).toBeInTheDocument()

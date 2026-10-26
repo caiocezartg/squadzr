@@ -27,7 +27,7 @@ export interface SquadJoining {
    * get the sign-in prompt, authenticated users join the squad.
    */
   requestJoin: (squad: JoinableSquad) => void
-  /** Squad code with a join request in flight, for the card spinner. */
+  /** Squad code with a join request in flight, for the card loading state. */
   joiningSquadCode: string | null
   /** The guest sign-in prompt; render once in the page. */
   authPrompt: ReactNode

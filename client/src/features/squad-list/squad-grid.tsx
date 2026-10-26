@@ -5,7 +5,7 @@ export interface SquadGridProps {
   readonly squads: readonly PublicSquad[]
   /** Opens the Squad a card names, whether that joins it or opens its Lobby. */
   readonly onSelect: (squad: PublicSquad) => void
-  /** The Squad whose join request is in flight, so its card shows the spinner. */
+  /** The Squad whose join request is in flight, so its card shows the loading state. */
   readonly loadingSquadCode?: string | null
   readonly id?: string
 }

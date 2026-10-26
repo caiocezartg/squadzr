@@ -1,7 +1,6 @@
 'use client'
 
 import * as m from 'motion/react-m'
-import { useNow } from 'next-intl'
 import { SquadCard } from '@/features/squad-list'
 import type { Squad } from '@/types'
 
@@ -12,22 +11,16 @@ interface ShowcaseItem {
   readonly floatDelay: number
 }
 
-const MINUTE_MS = 60_000
-
 /** The members a sample Squad shows on its card: initials only, as a member without a Discord image. */
 function sampleMembers(...names: string[]): Squad['memberPreview'] {
   return names.map((name) => ({ id: `sample-${name}`, name, image: null }))
 }
 
-/**
- * The sample Squads, timed from `now`, the time next-intl hands to the client. Their relative times
- * are the same in the server HTML and in the browser, and they do not depend on when the module loaded.
- * Each sample carries its game summary, as every Squad the API sends does.
- */
-function sampleSquads(now: Date): ShowcaseItem[] {
-  const nowIso = now.toISOString()
-  const minutesAgo = (minutes: number) =>
-    new Date(now.getTime() - minutes * MINUTE_MS).toISOString()
+/** The card shows no timestamp, so every sample shares one fixed time. */
+const SAMPLE_TIME = '2026-01-01T00:00:00.000Z'
+
+/** The sample Squads. Each carries its game summary, as every Squad the API sends does. */
+function sampleSquads(): ShowcaseItem[] {
   const sampleGame = (id: string, name: string, slug: string, coverUrl: string): Squad['game'] => ({
     id,
     name,
@@ -75,8 +68,8 @@ function sampleSquads(now: Date): ShowcaseItem[] {
         memberCount: 3,
         memberPreview: sampleMembers('Caio Cezar', 'Mia Ferraz', 'Bruno Reis'),
         isMember: false,
-        createdAt: minutesAgo(8),
-        updatedAt: nowIso,
+        createdAt: SAMPLE_TIME,
+        updatedAt: SAMPLE_TIME,
       },
     },
     {
@@ -97,8 +90,8 @@ function sampleSquads(now: Date): ShowcaseItem[] {
         memberCount: 4,
         memberPreview: sampleMembers('Kaz Ito', 'Luna Pires', 'Tales Aguiar', 'Jade Pons'),
         isMember: false,
-        createdAt: minutesAgo(3),
-        updatedAt: nowIso,
+        createdAt: SAMPLE_TIME,
+        updatedAt: SAMPLE_TIME,
       },
     },
     {
@@ -119,8 +112,8 @@ function sampleSquads(now: Date): ShowcaseItem[] {
         memberCount: 2,
         memberPreview: sampleMembers('Mia Ferraz', 'Bruno Reis'),
         isMember: false,
-        createdAt: minutesAgo(15),
-        updatedAt: nowIso,
+        createdAt: SAMPLE_TIME,
+        updatedAt: SAMPLE_TIME,
       },
     },
   ]
@@ -131,11 +124,9 @@ function sampleSquads(now: Date): ShowcaseItem[] {
  * motion only decorates them: each card drifts up and down on its own cycle.
  */
 export function HeroSquadShowcase() {
-  const now = useNow()
-
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pointer-events-none">
-      {sampleSquads(now).map(({ squad, floatAmount, floatDuration, floatDelay }) => (
+      {sampleSquads().map(({ squad, floatAmount, floatDuration, floatDelay }) => (
         <m.div
           key={squad.id}
           animate={{ y: [0, -floatAmount, 0] }}

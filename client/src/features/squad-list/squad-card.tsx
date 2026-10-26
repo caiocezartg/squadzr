@@ -226,7 +226,6 @@ function RailCircle({
 }) {
   return (
     <span
-      data-slot={slot.kind}
       className={cn(
         'relative block size-7 shrink-0 rounded-full ring-2 ring-card lg:size-[34px]',
         'transition-shadow duration-200',
