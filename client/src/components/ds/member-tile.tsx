@@ -1,3 +1,5 @@
+'use client'
+
 import type { ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import { useTimeAgo } from '@/hooks/use-time-ago'
