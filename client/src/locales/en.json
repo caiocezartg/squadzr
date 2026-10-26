@@ -14,6 +14,24 @@
     "language": "Language",
     "close": "Close"
   },
+  "ds": {
+    "tag": {
+      "remove": "Remove {label}"
+    },
+    "avatar": {
+      "host": "Host"
+    },
+    "member": {
+      "you": "you",
+      "openSlot": "Open slot",
+      "presence": {
+        "online": "In the room now",
+        "away": "Out of the room",
+        "awaySince": "Out of the room · {time}",
+        "open": "Waiting for a player"
+      }
+    }
+  },
   "nav": {
     "allSquads": "ALL SQUADS",
     "mySquads": "MY SQUADS",
