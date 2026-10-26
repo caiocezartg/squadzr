@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | ------------------------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`                                | 29     | 160   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts`                  | 29     | 294   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 61     | 509   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 77     | 668   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`                                | 4      | 98    |
 | `@squadzr/typescript-config` | —                    | —           | —                                                 | —      | —     |
 
@@ -81,7 +81,21 @@ margin and its final state under reduced motion) and `reduced-motion.spec.ts` (1
 properties the reduced-motion block keeps in transitions and the loops it removes). `client:unit`
 measures 61 files / 509 tests on the merged tree (CCC-105 added the Lobby offline-time case).
 
-CCC-109 puts the Redesign v2 Squad card on the board and adds one client suite, `avatar-rail.spec.ts` (8 tests: the rail formula for 3/5, 5/5, 3/10, 8/10, a preview shorter than the count, the preview order, a smaller squad and a count above the maximum). It rewrites `squad-card.spec.tsx` against roles and names (11 tests before, 21 after: no entrance animation, layout and tags, the member link, the non-member join, the full state, the poster fallback, the preview avatars with their image fallback, and the rail circles counted by kind: member, neutral filled circle and vacant), so the card adds 1 file / 18 tests to `client:unit`. It also rewrites the card assertions in `squad-board.spec.tsx` and `landing.spec.tsx` without changing their test counts. The totals below do not include it, nor CCC-102 and CCC-103, whose suites the counts do not record yet.
+CCC-109 puts the Redesign v2 Squad card on the board and adds one client suite, `avatar-rail.spec.ts` (8 tests: the rail formula for 3/5, 5/5, 3/10, 8/10, a preview shorter than the count, the preview order, a smaller squad and a count above the maximum). It rewrites `squad-card.spec.tsx` against roles and names (11 tests before, 21 after: no entrance animation, layout and tags, the member link, the non-member join, the full state, the poster fallback, the preview avatars with their image fallback, and the rail circles counted by kind: member, neutral filled circle and vacant), so the card adds 1 file / 18 tests to `client:unit`. It also rewrites the card assertions in `squad-board.spec.tsx` and `landing.spec.tsx` without changing their test counts. The totals below were recounted by CCC-106 and include it, CCC-102 and CCC-103.
+
+CCC-106 moves the app pages into the sidebar shell and recounts `client:unit` at 77 files / 668 tests on
+the merged tree, with CCC-109 (the row had not been recounted since CCC-101, so the difference also holds
+CCC-102, CCC-103, CCC-104 and CCC-109's client work). It adds two suites, `src/test/app-layout.spec.tsx`
+(+6 tests: the `(app)` layout's server render with and without a session, no footer, and the My Squads
+visitor redirect in the proxy) and `src/test/sidebar-flows.spec.tsx` (+34 tests: the squad
+count from the board's cache and its refresh on focus and navigation, "Create squad" on the board and in
+the Lobby, a visitor's create prompt, `?create=1`, the visitor and signed-in `?join=`, the code form,
+the language switch, the drawer's keyboard behaviour, the one bell and the warm-cache navigation board
+→ Lobby → board → Lobby) and rewrites `app-shell.spec.tsx` (9 tests: the logos, the All squads link and its current item,
+the notification link, the title, and the account button and the visitor sign-in; the server HTML cases live in
+`app-layout.spec.tsx`), `session.spec.tsx`, `notifications.spec.tsx`,
+`use-sign-out.spec.tsx` and `language-toggle.spec.tsx` for the sidebar and the top bar. The harness
+gains a `shell` option, and the capability-boundaries spec accepts a capability's `server` entry.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
@@ -204,10 +218,10 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 
 | Command                                                             | Test files | Tests |
 | ------------------------------------------------------------------- | ---------- | ----- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 94         | 767   |
-| `bunx vitest run` (direct root composition)                         | 94         | 767   |
+| `bun run test` (root, all projects; sum of the three unit projects) | 110        | 926   |
+| `bunx vitest run` (direct root composition)                         | 110        | 926   |
 | `bunx turbo test --filter=server`                                   | 29         | 160   |
-| `bunx turbo test --filter=client`                                   | 61         | 509   |
+| `bunx turbo test --filter=client`                                   | 77         | 668   |
 | `bunx turbo test --filter=@squadzr/schemas`                         | 4          | 98    |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
@@ -232,8 +246,8 @@ case, CCC-104 adds 5 more and CCC-105 adds 7 Presence tracker cases, so the merg
 file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 98 tests across
 4 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
 contract cases, CCC-95 added 2, CCC-92 added 3, CCC-104 added 8 and CCC-105 added 6: presence with an ISO
-time, with `null` and without it, and protocol version 3), and the client suite measures 61 files / 509
-tests (CCC-105 added the Lobby's offline-time case; CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
+time, with `null` and without it, and protocol version 3), and the client suite measures 77 files / 668
+tests (CCC-106 recounted it on the merged tree, adding 2 suites and 40 tests; CCC-105 added the Lobby's offline-time case; CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
 CCC-95 added 2, CCC-92 added none, CCC-96 replaced the landing's random-pick cases with the
 popular read and added the FAQ and IGDB-credit cases: net 0, and CCC-98 added 7 cancellation and
 placeholder flow cases, and CCC-101 added 20 motion-base cases in 3 files); both drifts predate CCC-89 and were

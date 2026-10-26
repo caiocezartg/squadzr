@@ -31,7 +31,7 @@ export function HeroSection({ gameCount }: { readonly gameCount: number }) {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_50%,rgba(0,255,162,0.06),transparent_55%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_80%,rgba(88,101,242,0.04),transparent_50%)] pointer-events-none" />
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-20 sm:pt-28 sm:pb-24">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:pt-28 sm:pb-24">
         <div className="max-w-full flex flex-col items-center">
           <HeroGameBadge count={gameCount} />
 
@@ -42,7 +42,7 @@ export function HeroSection({ gameCount }: { readonly gameCount: number }) {
             <span className="relative text-accent">
               {t('hero.titleAccent')}
               <m.span
-                className="absolute bottom-0 left-0 h-[3px] bg-accent/60 rounded-full"
+                className="absolute bottom-0 left-0 h-0.75 bg-accent/60 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: '100%' }}
                 transition={{ duration: 0.6, delay: 0.7, ease: 'easeOut' }}
@@ -51,7 +51,7 @@ export function HeroSection({ gameCount }: { readonly gameCount: number }) {
           </h1>
 
           <p
-            className={`mt-6 text-base text-muted leading-relaxed sm:text-lg sm:leading-7 ${lang === 'pt-BR' ? 'max-w-lg' : 'max-w-md'} text-center`}
+            className={`mt-6 text-base/relaxed text-muted sm:text-lg/7 ${lang === 'pt-BR' ? 'max-w-lg' : 'max-w-md'} text-center`}
           >
             {t.rich('hero.subtitle', {
               bold: (chunks) => <strong className="text-offwhite">{chunks}</strong>,

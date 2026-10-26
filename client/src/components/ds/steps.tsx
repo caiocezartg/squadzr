@@ -31,23 +31,23 @@ export function Steps({ steps, current, label, className }: StepsProps) {
           <li
             key={step}
             aria-current={active ? 'step' : undefined}
-            className="flex flex-col gap-[9px]"
+            className="flex flex-col gap-2.25"
           >
-            <span aria-hidden className="bg-track block h-[3px] overflow-hidden">
+            <span aria-hidden className="bg-track block h-0.75 overflow-hidden">
               <span
                 className={cn(
-                  'bg-mint block h-full origin-left motion-safe:transition-transform duration-[240ms] ease-out',
+                  'bg-mint block h-full origin-left motion-safe:transition-transform duration-240 ease-out',
                   number <= current ? 'scale-x-100' : 'scale-x-0'
                 )}
               />
             </span>
             <span
               className={cn(
-                'type-label inline-flex items-center gap-[7px] tracking-[0.12em]',
+                'type-label inline-flex items-center gap-1.75 tracking-[0.12em]',
                 active ? 'text-text' : done ? 'text-mint' : 'text-faint'
               )}
             >
-              {done && <Check aria-hidden className="size-[11px]" strokeWidth={3.4} />}
+              {done && <Check aria-hidden className="size-2.75" strokeWidth={3.4} />}
               {step}
               {done && <span className="sr-only">{t('done')}</span>}
             </span>

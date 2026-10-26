@@ -25,7 +25,7 @@ const VISIBLE_TAGS = 2
 const CARD_CLASSES =
   'group relative grid w-full min-h-44 grid-cols-[118px_minmax(0,1fr)] overflow-hidden bg-card ' +
   'text-left text-text no-underline transition-colors duration-200 ' +
-  'lg:min-h-[214px] lg:grid-cols-[160px_minmax(0,1fr)] ' +
+  'lg:min-h-53.5 lg:grid-cols-[160px_minmax(0,1fr)] ' +
   'hover-fine:bg-raised ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint'
 
@@ -159,7 +159,7 @@ function SquadCardBody({
         <Poster src={squad.game.coverUrl} alt={squad.game.name} isFull={isFull} />
       </span>
 
-      <span className="relative flex min-w-0 flex-col gap-2 px-4 py-3.5 lg:gap-2.5 lg:px-[22px] lg:py-[18px]">
+      <span className="relative flex min-w-0 flex-col gap-2 px-4 py-3.5 lg:gap-2.5 lg:px-5.5 lg:py-4.5">
         <span className="flex items-center justify-between gap-2.5">
           <Tag variant="lang" label={language} />
           <span className="type-code shrink-0 text-faint">#{squad.code}</span>
@@ -227,13 +227,13 @@ function RailCircle({
   return (
     <span
       className={cn(
-        'relative block size-7 shrink-0 rounded-full ring-2 ring-card lg:size-[34px]',
+        'relative block size-7 shrink-0 rounded-full ring-2 ring-card lg:size-8.5',
         'transition-shadow duration-200',
         lit && 'group-hover-fine:ring-raised',
         !first && '-ml-1.5'
       )}
     >
-      <span className="block size-[34px] origin-top-left scale-[0.8235] lg:scale-100">
+      <span className="block size-8.5 origin-top-left scale-[0.8235] lg:scale-100">
         <RailAvatar slot={slot} />
       </span>
     </span>
@@ -253,7 +253,7 @@ function RailAvatar({ slot }: { readonly slot: RailSlot }) {
         />
       )
     case 'filled':
-      return <span className="block size-[34px] rounded-full bg-faint" />
+      return <span className="block size-8.5 rounded-full bg-faint" />
     case 'vacant':
       return <Avatar size={34} state="vacant" />
   }
@@ -277,7 +277,7 @@ function JoinedBadge() {
 
   return (
     <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-mint px-1.5 py-1 font-ds-mono text-[9.5px] font-bold tracking-[0.08em] text-mint-ink uppercase">
-      <Check aria-hidden="true" className="size-2.5 [stroke-width:3.5]" />
+      <Check aria-hidden="true" className="size-2.5 stroke-[3.5]" />
       {t('joined')}
     </span>
   )
@@ -287,7 +287,7 @@ function FullOverlay() {
   const t = useTranslations('squads.card')
 
   return (
-    <span className="absolute inset-y-0 left-0 flex w-[118px] items-center justify-center bg-bg/55 lg:w-40">
+    <span className="absolute inset-y-0 left-0 flex w-29.5 items-center justify-center bg-bg/55 lg:w-40">
       <span className="font-display text-2xl font-black tracking-[0.12em] text-text uppercase">
         {t('full')}
       </span>
@@ -301,14 +301,14 @@ function HoverCta({ label }: { readonly label: string }) {
     <span
       aria-hidden="true"
       className={cn(
-        'pointer-events-none absolute right-4 bottom-3 z-20 inline-flex h-[34px] items-center gap-[7px] bg-mint px-3 text-[13px] font-extrabold text-mint-ink opacity-0 lg:right-[22px] lg:bottom-4',
+        'pointer-events-none absolute right-4 bottom-3 z-20 inline-flex h-8.5 items-center gap-1.75 bg-mint px-3 text-[13px] font-extrabold text-mint-ink opacity-0 lg:right-5.5 lg:bottom-4',
         'transition-[opacity,translate] [transition-duration:200ms,250ms] ease-out',
         'motion-safe:translate-x-2.5 motion-safe:group-hover-fine:translate-x-0',
         'group-hover-fine:opacity-100'
       )}
     >
       {label}
-      <ArrowRight className="size-[13px] [stroke-width:2.8]" />
+      <ArrowRight className="size-3.25 stroke-[2.8]" />
     </span>
   )
 }

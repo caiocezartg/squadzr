@@ -47,10 +47,8 @@ function JoinSquadAuthDialog({ open, squadCode, onOpenChange, onSignIn }: JoinSq
               </Dialog.Close>
             </div>
 
-            <div className="px-6 py-6">
-              <p className="text-sm leading-relaxed text-offwhite">
-                {t('squads.authModal.description')}
-              </p>
+            <div className="p-6">
+              <p className="text-sm/relaxed text-offwhite">{t('squads.authModal.description')}</p>
               {squadCode && (
                 <p className="mt-3 text-sm text-muted">
                   {t('squads.authModal.squadCode')}{' '}
@@ -62,7 +60,7 @@ function JoinSquadAuthDialog({ open, squadCode, onOpenChange, onSignIn }: JoinSq
                 <Dialog.Close className="btn-ghost h-11 flex-1 justify-center">
                   {t('squads.authModal.maybeLater')}
                 </Dialog.Close>
-                <button onClick={onSignIn} className="btn-discord h-11 flex-1 justify-center gap-2">
+                <button onClick={onSignIn} className="btn-discord h-11 flex-1 gap-2">
                   <DiscordIcon className="size-4" />
                   {t('squads.authModal.continueWithDiscord')}
                 </button>

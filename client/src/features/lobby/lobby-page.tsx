@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { Copy, LogOut } from 'lucide-react'
+import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { AlertBox } from '@/components/ui/alert-box'
 import { MotionProvider } from '@/components/ui/motion-provider'
 import { useSession } from '@/hooks/use-session'
@@ -118,15 +119,19 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
       {/* Top navigation bar */}
       <div className="flex items-center justify-between mb-6">
         <LobbyBackLink />
-        <button
-          onClick={() => void lobby.leaveSquad()}
-          disabled={lobby.isReady}
-          className="flex items-center gap-2 rounded-lg border border-danger/20 bg-danger/5 px-4 py-2 text-sm text-danger/80 hover:text-danger hover:bg-danger/10 hover:border-danger/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          title={lobby.isReady ? t('lobby.cannotLeave') : undefined}
-        >
-          <LogOut className="size-4" />
-          {lobby.isReady ? t('lobby.squadLocked') : t('lobby.leaveSquad')}
-        </button>
+        <div className="flex items-center gap-3">
+          {/* At 1024px and up the bell sits in the Lobby's header; below, the top bar has it. */}
+          <NotificationsBell placement="page" />
+          <button
+            onClick={() => void lobby.leaveSquad()}
+            disabled={lobby.isReady}
+            className="flex items-center gap-2 rounded-lg border border-danger/20 bg-danger/5 px-4 py-2 text-sm text-danger/80 hover:text-danger hover:bg-danger/10 hover:border-danger/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            title={lobby.isReady ? t('lobby.cannotLeave') : undefined}
+          >
+            <LogOut className="size-4" />
+            {lobby.isReady ? t('lobby.squadLocked') : t('lobby.leaveSquad')}
+          </button>
+        </div>
       </div>
 
       {/* Squad header with game cover background */}
@@ -137,10 +142,10 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
             <img
               src={lobby.game.coverUrl}
               alt=""
-              className="w-full h-full object-cover scale-110 blur-xs"
+              className="size-full object-cover scale-110 blur-xs"
             />
           ) : (
-            <div className="w-full h-full bg-surface-light" />
+            <div className="size-full bg-surface-light" />
           )}
           <div className="absolute inset-0 bg-linear-to-r from-background/95 via-background/85 to-background/70" />
         </div>

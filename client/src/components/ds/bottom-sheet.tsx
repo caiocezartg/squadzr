@@ -32,16 +32,16 @@ export function BottomSheet({
       <Dialog.Portal>
         <Dialog.Backdrop
           data-instant={instantAttribute}
-          className="fixed inset-0 z-50 bg-black/60 transition-opacity duration-[280ms] ease-out data-ending-style:opacity-0 data-ending-style:duration-[180ms] data-instant:data-ending-style:duration-0 data-starting-style:opacity-0"
+          className="fixed inset-0 z-50 bg-black/60 transition-opacity duration-280 ease-out data-ending-style:opacity-0 data-ending-style:duration-180 data-instant:data-ending-style:duration-0 data-starting-style:opacity-0"
         />
         <Dialog.Popup
           data-instant={instantAttribute}
           className={cn(
             'bg-raised text-text fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col overflow-y-auto p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_-24px_60px_-20px_rgba(0,0,0,0.9)] outline-none',
-            'transition-[translate,opacity] duration-[280ms] ease-out',
+            'transition-[translate,opacity] duration-280 ease-out',
             'motion-safe:data-starting-style:translate-y-full motion-safe:data-ending-style:translate-y-full',
             'motion-reduce:data-starting-style:opacity-0 motion-reduce:data-ending-style:opacity-0',
-            'data-ending-style:duration-[180ms] data-instant:data-ending-style:duration-0',
+            'data-ending-style:duration-180 data-instant:data-ending-style:duration-0',
             className
           )}
         >

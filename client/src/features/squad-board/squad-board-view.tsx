@@ -9,6 +9,7 @@ import { useWebSocket } from '@/hooks/use-websocket'
 import { useNotificationEvents } from '@/hooks/use-notification-events'
 import { SquadFilters, useAppSquadSearch, useSquadFilters } from '@/features/squad-list'
 import { useSquadJoining } from '@/features/squad-joining'
+import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { AlertBox } from '@/components/ui/alert-box'
 import { BoardErrorBoundary } from './board-error-boundary'
 import { SquadBoardResults } from './squad-board-results'
@@ -77,16 +78,20 @@ export function SquadBoardView() {
             </Suspense>
           </BoardErrorBoundary>
         </div>
-        {session?.user && (
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="btn-accent gap-2 shrink-0 whitespace-nowrap"
-          >
-            <Plus className="size-4" />
-            <span className="hidden sm:inline">{t('common.createNewSquad')}</span>
-            <span className="sm:hidden">{t('common.createSquad')}</span>
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {session?.user && (
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="btn-accent gap-2 shrink-0 whitespace-nowrap"
+            >
+              <Plus className="size-4" />
+              <span className="hidden sm:inline">{t('common.createNewSquad')}</span>
+              <span className="sm:hidden">{t('common.createSquad')}</span>
+            </button>
+          )}
+          {/* At 1024px and up the bell sits at the right of the title row; below, the top bar has it. */}
+          <NotificationsBell placement="page" />
+        </div>
       </div>
 
       {/* Filters */}

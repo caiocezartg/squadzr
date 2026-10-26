@@ -6,7 +6,6 @@
     "daysAgo": "há {count}d"
   },
   "common": {
-    "signIn": "Entrar",
     "signOut": "Sair",
     "createSquad": "Criar novo squad",
     "createNewSquad": "Criar novo squad",
@@ -43,16 +42,25 @@
     },
     "steps": {
       "done": "Concluída"
+    },
+    "shell": {
+      "menu": "Menu",
+      "openMenu": "Abrir menu",
+      "closeMenu": "Fechar menu",
+      "home": "Squadzr — início",
+      "createSquad": "Criar squad",
+      "codeLabel": "Entrar por código",
+      "codePlaceholder": "CÓDIGO",
+      "codeSubmit": "Entrar no squad com este código",
+      "codeInvalid": "O código de um squad tem 6 letras ou números.",
+      "squads": "Squads",
+      "allSquads": "Todos os squads",
+      "signIn": "Entrar com Discord",
+      "account": "Menu da conta",
+      "createSignIn": "Você pode explorar os squads como visitante, mas criar um squad exige entrar com o Discord."
     }
   },
-  "nav": {
-    "allSquads": "TODOS OS SQUADS",
-    "mySquads": "MEUS SQUADS",
-    "closeMenu": "Fechar menu",
-    "openMenu": "Abrir menu"
-  },
   "footer": {
-    "line": "© {year} Squadzr — Encontre seu time gamer",
     "gameDataByIgdb": "dados de jogos por IGDB"
   },
   "hero": {

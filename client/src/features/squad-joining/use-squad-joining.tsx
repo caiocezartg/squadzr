@@ -8,7 +8,7 @@ import { signInWithDiscord } from '@/lib/auth-client'
 import { useAppNavigation } from '@/lib/navigation'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { notifyError } from '@/lib/notify'
-import { lobbyHref } from '@/lib/squad-links'
+import { joinHref, lobbyHref } from '@/lib/squad-links'
 // The board's barrel exports only its cache commands, so this import cannot close a cycle back to the page.
 import { useSquadBoardCommands } from '@/features/squad-board'
 import type { SquadSearchAccess } from '@/features/squad-list'
@@ -37,8 +37,9 @@ export interface SquadJoining {
  * The join workflow for the Squad Board: the mutation validates the shared
  * response contract, typed application errors become toasts, the board is
  * refreshed before navigating to the lobby, and the `?join=` invite link
- * auto-joins once. The sign-in callback keeps the intended squad code so it
- * survives the Discord round trip. `invite` is the board's URL access.
+ * auto-joins once. A visitor who opens the invite link gets the sign-in prompt for its code. The
+ * sign-in callback keeps the intended squad code so it survives the Discord round trip. `invite`
+ * is the board's URL access.
  */
 export function useSquadJoining(invite: SquadSearchAccess): SquadJoining {
   const t = useTranslations()
@@ -46,6 +47,8 @@ export function useSquadJoining(invite: SquadSearchAccess): SquadJoining {
   const session = useSession()
   const { refreshSquads } = useSquadBoardCommands()
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null)
+  // The invite code of a visitor's link whose prompt the visitor closed, so closing it holds.
+  const [dismissedInviteCode, setDismissedInviteCode] = useState<string | null>(null)
   const [joiningSquadCode, setJoiningSquadCode] = useState<string | null>(null)
 
   const joinSquadMutation = useMutation({
@@ -74,19 +77,30 @@ export function useSquadJoining(invite: SquadSearchAccess): SquadJoining {
     }
   }
 
-  const handleSignIn = () => {
-    if (!pendingJoinCode) return
+  // A visitor who opens an invite link is asked to sign in for that squad before anything else.
+  const inviteCode = invite.search.join
+  const visitorInviteCode =
+    !session?.user && inviteCode && inviteCode !== dismissedInviteCode ? inviteCode : null
+  const promptCode = pendingJoinCode ?? visitorInviteCode
 
-    signInWithDiscord(`/squads?join=${encodeURIComponent(pendingJoinCode)}`)
+  const closePrompt = () => {
+    setPendingJoinCode(null)
+    setDismissedInviteCode(inviteCode ?? null)
+  }
+
+  const handleSignIn = () => {
+    if (!promptCode) return
+
+    signInWithDiscord(joinHref(promptCode))
   }
 
   const authPrompt =
-    pendingJoinCode !== null ? (
+    promptCode !== null ? (
       <JoinSquadAuthModal
         open
-        squadCode={pendingJoinCode}
+        squadCode={promptCode}
         onOpenChange={(open) => {
-          if (!open) setPendingJoinCode(null)
+          if (!open) closePrompt()
         }}
         onSignIn={handleSignIn}
       />

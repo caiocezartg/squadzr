@@ -27,7 +27,7 @@ function DiscordClickIllustration() {
 
       {/* Animated cursor */}
       <m.svg
-        className="absolute z-20 size-5 [filter:drop-shadow(0_4px_3px_rgb(0_0_0/0.07))_drop-shadow(0_2px_2px_rgb(0_0_0/0.06))]"
+        className="absolute z-20 size-5 filter-[drop-shadow(0_4px_3px_rgb(0_0_0/0.07))_drop-shadow(0_2px_2px_rgb(0_0_0/0.06))]"
         viewBox="0 0 24 24"
         fill="#F0F0F0"
         style={{ top: '50%', left: '50%' }}
@@ -98,7 +98,7 @@ function SquadBrowseIllustration() {
 
       {/* Cursor near selected card */}
       <m.svg
-        className="absolute z-20 size-4 [filter:drop-shadow(0_1px_2px_rgb(0_0_0/0.1))_drop-shadow(0_1px_1px_rgb(0_0_0/0.06))] right-5 sm:right-8 bottom-5 sm:bottom-7"
+        className="absolute z-20 size-4 filter-[drop-shadow(0_1px_2px_rgb(0_0_0/0.1))_drop-shadow(0_1px_1px_rgb(0_0_0/0.06))] right-5 sm:right-8 bottom-5 sm:bottom-7"
         viewBox="0 0 24 24"
         fill="rgba(240,240,240,0.7)"
         initial={{ opacity: 0, x: 16 }}
@@ -213,7 +213,7 @@ export function HowItWorks() {
           <div className="relative">
             {/* Connector line */}
             <m.div
-              className="absolute top-5 left-[calc(16.666%)] right-[calc(16.666%)] h-[2px] bg-border-light origin-left"
+              className="absolute top-5 inset-x-[calc(16.666%)] h-0.5 bg-border-light origin-left"
               initial={{ scaleX: 0 }}
               whileInView={{ scaleX: 1 }}
               viewport={{ once: true, margin: '-80px' }}
@@ -251,7 +251,7 @@ export function HowItWorks() {
                     </div>
                     <div className="p-5">
                       <h3 className="font-heading text-base font-bold mb-1.5">{step.title}</h3>
-                      <p className="text-sm text-muted leading-relaxed">{step.description}</p>
+                      <p className="text-sm/relaxed text-muted">{step.description}</p>
                     </div>
                   </m.div>
                 </div>
@@ -265,7 +265,7 @@ export function HowItWorks() {
           <div className="relative">
             {/* Vertical line */}
             <m.div
-              className="absolute left-[15px] top-0 bottom-0 w-[2px] bg-border-light origin-top"
+              className="absolute left-3.75 inset-y-0 w-0.5 bg-border-light origin-top"
               initial={{ scaleY: 0 }}
               whileInView={{ scaleY: 1 }}
               viewport={{ once: true, margin: '-50px' }}
@@ -303,7 +303,7 @@ export function HowItWorks() {
                     </div>
                     <div className="p-4">
                       <h3 className="font-heading text-base font-bold mb-1">{step.title}</h3>
-                      <p className="text-sm text-muted leading-relaxed">{step.description}</p>
+                      <p className="text-sm/relaxed text-muted">{step.description}</p>
                     </div>
                   </m.div>
                 </div>

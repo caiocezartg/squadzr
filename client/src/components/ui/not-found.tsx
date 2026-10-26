@@ -39,7 +39,7 @@ export function NotFound() {
           </h1>
 
           {/* Description */}
-          <p className="text-sm text-muted leading-relaxed mb-8">{t('notFound.description')}</p>
+          <p className="text-sm/relaxed text-muted mb-8">{t('notFound.description')}</p>
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">

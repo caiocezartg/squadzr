@@ -49,21 +49,21 @@ interface SizeClasses {
 
 const SIZE_CLASSES: Record<ButtonSize, SizeClasses> = {
   sm: {
-    box: 'min-h-9 gap-[7px] px-3 text-[12.5px]',
+    box: 'min-h-9 gap-1.75 px-3 text-[12.5px]',
     mono: 'text-[11px]',
-    icon: '[&_svg]:size-[13px]',
+    icon: '[&_svg]:size-3.25',
     square: 'size-9',
   },
   md: {
     box: 'min-h-11 gap-2 px-4 text-sm',
     mono: 'text-[12.5px]',
-    icon: '[&_svg]:size-[15px]',
+    icon: '[&_svg]:size-3.75',
     square: 'size-11',
   },
   lg: {
     box: 'min-h-14 gap-2.5 px-6 text-base',
     mono: 'text-[14.5px]',
-    icon: '[&_svg]:size-[17px]',
+    icon: '[&_svg]:size-4.25',
     square: 'size-14',
   },
 }
@@ -233,7 +233,7 @@ function buttonClassName({
     BASE_CLASSES,
     sizeClasses.box,
     sizeClasses.icon,
-    mono ? ['font-ds-mono tracking-[0.1em]', sizeClasses.mono] : 'font-body',
+    mono ? ['font-ds-mono tracking-widest', sizeClasses.mono] : 'font-body',
     HEAVY_VARIANTS.includes(variant) ? 'font-extrabold' : 'font-bold',
     disabled
       ? QUIET_VARIANTS.includes(variant)
@@ -257,7 +257,7 @@ function ButtonFace({
   readonly children: ReactNode
 }) {
   const iconNode = icon ? (
-    <span aria-hidden="true" className="inline-flex shrink-0 [&_svg]:[stroke-width:2.6]">
+    <span aria-hidden="true" className="inline-flex shrink-0 [&_svg]:stroke-[2.6]">
       {icon}
     </span>
   ) : null

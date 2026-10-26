@@ -1,6 +1,7 @@
 // `zod/mini` keeps the same contracts as the classic build while letting the
 // bundler drop every schema the route validation does not use.
 import * as z from 'zod/mini'
+import { SQUAD_CODE_PATTERN } from '@/lib/squad-links'
 
 const filterSchema = z.enum(['all', 'has-space', 'almost-full'])
 const sortSchema = z.enum(['newest', 'oldest'])
@@ -19,7 +20,7 @@ function lenient<T extends z.ZodMiniType>(schema: T) {
  * A squad code as the contract writes it: six letters or digits. The server reads a code without
  * regard to case, so a lowercase invite still joins. Anything else never reaches a request path.
  */
-const squadCodeSchema = z.string().check(z.regex(/^[A-Za-z0-9]{6}$/))
+const squadCodeSchema = z.string().check(z.regex(SQUAD_CODE_PATTERN))
 
 /**
  * The URL search contract of the squad lists. Every parameter is parsed on its

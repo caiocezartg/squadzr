@@ -40,7 +40,7 @@ export function Segmented<T extends string>({
       className={cn(
         'box-border',
         fluid ? 'flex w-full' : 'inline-flex',
-        small ? 'bg-card p-[3px]' : 'bg-[#0c0d10] p-1 shadow-[inset_0_0_0_1px_var(--color-line)]',
+        small ? 'bg-card p-0.75' : 'bg-[#0c0d10] p-1 shadow-[inset_0_0_0_1px_var(--color-line)]',
         className
       )}
     >
@@ -57,7 +57,7 @@ export function Segmented<T extends string>({
               'press focus-visible:outline-text focus-visible:outline-2 focus-visible:-outline-offset-2',
               fluid && 'flex-1',
               small
-                ? 'font-ds-mono min-h-9 px-[9px] text-[11px] font-bold'
+                ? 'font-ds-mono min-h-9 px-2.25 text-[11px] font-bold'
                 : 'type-ui min-h-11 px-4 text-[13px]',
               pressed ? 'bg-mint text-mint-ink' : 'text-text-3 hover-fine:text-text bg-transparent'
             )}

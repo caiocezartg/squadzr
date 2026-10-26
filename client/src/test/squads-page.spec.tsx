@@ -1,7 +1,7 @@
 /**
  * The Squad Board on the App Router (CCC-79, round 2).
  *
- * These tests render the route's own server component, `app/squads/page.tsx`, inside the providers the
+ * These tests render the route's own server component, `app/(app)/squads/page.tsx`, inside the providers the
  * root layout gives it, with no TanStack router and no app shell. The flow harness renders the board
  * without checking that a dialog is visible, and it never mounts the App Router page, so it cannot show
  * a dialog that the App Router renders without its animation features.
@@ -12,7 +12,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import SquadsPage from '@/app/squads/page'
+import SquadsPage from '@/app/(app)/squads/page'
 import { getQueryClient } from '@/lib/query-client'
 import { boardSquads, openSquad } from './fixtures'
 import { createTestQueryClient } from './harness'

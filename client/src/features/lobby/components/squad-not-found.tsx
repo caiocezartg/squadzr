@@ -37,7 +37,7 @@ export function SquadNotFound({ code }: SquadNotFoundProps) {
         </h1>
 
         {/* Description */}
-        <p className="text-sm text-muted leading-relaxed mb-5">{t('squadNotFound.description')}</p>
+        <p className="text-sm/relaxed text-muted mb-5">{t('squadNotFound.description')}</p>
 
         {/* Code badge */}
         <div className="card flex items-center gap-2.5 px-4 py-2.5 mb-8 border-border-light">

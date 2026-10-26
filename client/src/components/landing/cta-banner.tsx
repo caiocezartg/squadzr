@@ -19,7 +19,7 @@ export function CTABanner() {
     <section className="relative py-24 border-t border-border/50">
       {/* Background glow */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[500px] h-[300px] bg-accent/5 rounded-full blur-[100px]" />
+        <div className="w-125 h-75 bg-accent/5 rounded-full blur-[100px]" />
       </div>
 
       <m.div
