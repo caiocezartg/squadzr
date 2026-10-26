@@ -32,6 +32,7 @@ export function LanguageToggle() {
   return (
     <Segmented
       size="sm"
+      fluid
       label={t('common.language')}
       options={LANGUAGE_OPTIONS}
       value={locale}

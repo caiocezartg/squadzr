@@ -50,6 +50,14 @@ describe('LanguageToggle', () => {
     expect(screen.getByRole('button', { name: 'PT' })).toHaveAttribute('aria-pressed', 'false')
   })
 
+  it('fills the sidebar column, PT and EN sharing the width', () => {
+    render(<LanguageToggle />)
+
+    expect(screen.getByRole('group', { name: 'Language' })).toHaveClass('flex', 'w-full')
+    expect(screen.getByRole('button', { name: 'PT' })).toHaveClass('flex-1')
+    expect(screen.getByRole('button', { name: 'EN' })).toHaveClass('flex-1')
+  })
+
   it('names the group in the active language', () => {
     render(<LanguageToggle />)
 

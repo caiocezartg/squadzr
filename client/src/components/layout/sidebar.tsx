@@ -76,9 +76,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
       <SidebarMySquads />
 
       <div className="flex flex-col gap-2.5">
-        <div className="ml-2 self-start">
-          <LanguageToggle />
-        </div>
+        <LanguageToggle />
         <UserMenu />
       </div>
     </div>
