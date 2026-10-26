@@ -91,8 +91,9 @@ visitor redirect in the proxy) and `src/test/sidebar-flows.spec.tsx` (+34 tests:
 count from the board's cache and its refresh on focus and navigation, "Create squad" on the board and in
 the Lobby, a visitor's create prompt, `?create=1`, the visitor and signed-in `?join=`, the code form,
 the language switch, the drawer's keyboard behaviour, the one bell and the warm-cache navigation board
-→ Lobby → board → Lobby) and rewrites `app-shell.spec.tsx` (12 tests: links, the current item, title,
-account, and the sidebar and count in the server HTML), `session.spec.tsx`, `notifications.spec.tsx`,
+→ Lobby → board → Lobby) and rewrites `app-shell.spec.tsx` (9 tests: the logos, the All squads link and its current item,
+the notification link, the title, and the account button and the visitor sign-in; the server HTML cases live in
+`app-layout.spec.tsx`), `session.spec.tsx`, `notifications.spec.tsx`,
 `use-sign-out.spec.tsx` and `language-toggle.spec.tsx` for the sidebar and the top bar. The harness
 gains a `shell` option, and the capability-boundaries spec accepts a capability's `server` entry.
 
