@@ -74,7 +74,7 @@ export function SquadFilters({
         <select
           value={sort}
           onChange={(e) => onSortChange(e.target.value)}
-          className="input-field w-auto min-w-[120px]"
+          className="input-field w-auto min-w-30"
         >
           {sorts.map((s) => (
             <option key={s.value} value={s.value}>

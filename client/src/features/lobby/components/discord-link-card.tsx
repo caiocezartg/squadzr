@@ -61,7 +61,7 @@ export function DiscordLinkCard({ discordLink, isReady }: DiscordLinkCardProps) 
             href={discordLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-discord gap-2 px-5 py-2.5"
+            className="btn-discord gap-2"
           >
             <ExternalLink className="size-4" />
             {t('discordCard.joinDiscord')}

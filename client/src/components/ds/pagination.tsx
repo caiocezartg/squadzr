@@ -46,7 +46,7 @@ export function Pagination({
         onClick={() => onPageChange(current - 1)}
         className={step}
       >
-        <ChevronLeft aria-hidden className="size-[15px]" strokeWidth={2.6} />
+        <ChevronLeft aria-hidden className="size-3.75" strokeWidth={2.6} />
       </button>
       {Array.from({ length: pageCount }, (_, index) => {
         const number = index + 1
@@ -82,7 +82,7 @@ export function Pagination({
         onClick={() => onPageChange(current + 1)}
         className={step}
       >
-        <ChevronRight aria-hidden className="size-[15px]" strokeWidth={2.6} />
+        <ChevronRight aria-hidden className="size-3.75" strokeWidth={2.6} />
       </button>
     </nav>
   )

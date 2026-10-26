@@ -42,11 +42,11 @@ export function MobileDrawer() {
       <Dialog.Portal>
         <Dialog.Backdrop
           data-instant={instantAttribute}
-          className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-[250ms] ease-out data-ending-style:opacity-0 data-ending-style:duration-[180ms] data-instant:data-ending-style:duration-0 data-starting-style:opacity-0"
+          className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-250 ease-out data-ending-style:opacity-0 data-ending-style:duration-180 data-instant:data-ending-style:duration-0 data-starting-style:opacity-0"
         />
         <Dialog.Popup
           data-instant={instantAttribute}
-          className="bg-menu fixed inset-y-0 left-0 z-50 w-[min(260px,calc(100vw-3rem))] overflow-y-auto shadow-[inset_-1px_0_0_#16171b,0_0_60px_rgba(0,0,0,0.6)] outline-none transition-[opacity,translate] duration-[250ms] ease-out data-starting-style:opacity-0 data-ending-style:opacity-0 motion-safe:data-starting-style:-translate-x-full motion-safe:data-ending-style:-translate-x-full data-ending-style:duration-[180ms] data-instant:data-ending-style:duration-0"
+          className="bg-menu fixed inset-y-0 left-0 z-50 w-[min(260px,calc(100vw-3rem))] overflow-y-auto shadow-[inset_-1px_0_0_#16171b,0_0_60px_rgba(0,0,0,0.6)] outline-none transition-[opacity,translate] duration-250 ease-out data-starting-style:opacity-0 data-ending-style:opacity-0 motion-safe:data-starting-style:-translate-x-full motion-safe:data-ending-style:-translate-x-full data-ending-style:duration-180 data-instant:data-ending-style:duration-0"
         >
           <Dialog.Title className="sr-only">{t('menu')}</Dialog.Title>
           <Dialog.Close

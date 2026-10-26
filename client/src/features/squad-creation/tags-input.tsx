@@ -54,7 +54,7 @@ export function TagsInput({ value: tags, onChange, onBlur, hasError }: TagsInput
 
   return (
     <div
-      className={`input-field flex min-h-[44px] cursor-text flex-wrap items-center gap-2 ${
+      className={`input-field flex min-h-11 cursor-text flex-wrap items-center gap-2 ${
         hasError ? 'border-danger/50 focus-within:border-danger/70 focus-within:ring-danger/20' : ''
       }`}
       onClick={() => inputRef.current?.focus()}
@@ -74,7 +74,7 @@ export function TagsInput({ value: tags, onChange, onBlur, hasError }: TagsInput
             className="ml-0.5 flex items-center justify-center text-muted transition-colors hover:text-offwhite"
             aria-label={t('squads.createModal.removeTag', { tag })}
           >
-            <X className="size-[10px]" strokeWidth={3} />
+            <X className="size-2.5" strokeWidth={3} />
           </button>
         </span>
       ))}
@@ -88,7 +88,7 @@ export function TagsInput({ value: tags, onChange, onBlur, hasError }: TagsInput
           onKeyDown={handleKeyDown}
           onBlur={onBlur}
           maxLength={15}
-          className="min-w-[96px] flex-1 bg-transparent text-sm text-offwhite outline-hidden placeholder:text-muted/60"
+          className="min-w-24 flex-1 bg-transparent text-sm text-offwhite outline-hidden placeholder:text-muted/60"
           placeholder={
             tags.length === 0
               ? t('squads.createModal.tagsPlaceholder')

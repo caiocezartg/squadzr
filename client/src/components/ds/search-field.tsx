@@ -59,13 +59,13 @@ export function SearchField({
       className={cn(
         'font-body flex w-full items-center gap-2.5',
         field
-          ? 'min-h-[54px] bg-[#0c0d10] pr-2 pl-4 shadow-[inset_0_0_0_1.5px_var(--color-track)] focus-within:shadow-[inset_0_0_0_1.5px_var(--color-mint)]'
-          : 'min-h-[46px] pr-1.5 pl-3',
+          ? 'min-h-13.5 bg-[#0c0d10] pr-2 pl-4 shadow-[inset_0_0_0_1.5px_var(--color-track)] focus-within:shadow-[inset_0_0_0_1.5px_var(--color-mint)]'
+          : 'min-h-11.5 pr-1.5 pl-3',
         field && hasValue && 'shadow-[inset_0_0_0_1.5px_var(--color-mint)]',
         className
       )}
     >
-      <Search aria-hidden className="text-ds-muted size-[18px] shrink-0" strokeWidth={2.4} />
+      <Search aria-hidden className="text-ds-muted size-4.5 shrink-0" strokeWidth={2.4} />
       <label htmlFor={inputId} className="sr-only">
         {label}
       </label>
@@ -86,7 +86,7 @@ export function SearchField({
             }
           : { type: 'search' })}
         className={cn(
-          'text-text placeholder:text-faint min-w-0 flex-1 appearance-none border-0 bg-transparent py-[13px] outline-none',
+          'text-text placeholder:text-faint min-w-0 flex-1 appearance-none border-0 bg-transparent py-3.25 outline-none',
           '[&::-webkit-search-cancel-button]:hidden',
           field ? 'text-base font-semibold' : 'text-[15px] font-medium'
         )}
@@ -96,9 +96,9 @@ export function SearchField({
           type="button"
           aria-label={t('clear')}
           onClick={clear}
-          className="press bg-raised-2 text-text-3 focus-visible:outline-text hover-fine:text-text flex size-[38px] shrink-0 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2"
+          className="press bg-raised-2 text-text-3 focus-visible:outline-text hover-fine:text-text flex size-9.5 shrink-0 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2"
         >
-          <X aria-hidden className="size-[13px]" strokeWidth={2.8} />
+          <X aria-hidden className="size-3.25" strokeWidth={2.8} />
         </button>
       )}
     </div>

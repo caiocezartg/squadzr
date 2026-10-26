@@ -15,7 +15,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
     <CreateSquadLauncher>
       <div id="root" className="bg-bg min-h-screen">
         <Sidebar />
-        <div className="lg:pl-[260px]">
+        <div className="lg:pl-65">
           <TopBar />
           <main>{children}</main>
         </div>

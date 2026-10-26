@@ -42,7 +42,7 @@ export function HeroSection({ gameCount }: { readonly gameCount: number }) {
             <span className="relative text-accent">
               {t('hero.titleAccent')}
               <m.span
-                className="absolute bottom-0 left-0 h-[3px] bg-accent/60 rounded-full"
+                className="absolute bottom-0 left-0 h-0.75 bg-accent/60 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: '100%' }}
                 transition={{ duration: 0.6, delay: 0.7, ease: 'easeOut' }}

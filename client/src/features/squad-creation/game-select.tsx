@@ -239,7 +239,7 @@ export function GameSelect({
         onFocus={openList}
         onClick={openList}
         onKeyDown={handleInputKeyDown}
-        className={`flex h-[44px] w-full rounded-lg border bg-surface px-4 pr-10 text-sm text-offwhite transition-colors duration-200 placeholder:text-muted/60 focus:outline-hidden focus:ring-1 ${
+        className={`flex h-11 w-full rounded-lg border bg-surface px-4 pr-10 text-sm text-offwhite transition-colors duration-200 placeholder:text-muted/60 focus:outline-hidden focus:ring-1 ${
           hasError
             ? 'border-danger/50 focus:border-danger/70 focus:ring-danger/20'
             : 'border-border-light hover:border-muted/30 focus:border-accent/50 focus:ring-accent/20'

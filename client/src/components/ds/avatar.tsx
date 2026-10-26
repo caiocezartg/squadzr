@@ -29,11 +29,11 @@ const SIZE_STYLES: Record<AvatarSize, SizeStyle> = {
     circle: 'size-7',
     initials: 'text-[10px]',
     plus: 'size-2.5',
-    crown: 'size-3.5 -top-[7px]',
+    crown: 'size-3.5 -top-1.75',
     crownIcon: 8,
   },
   34: {
-    circle: 'size-[34px]',
+    circle: 'size-8.5',
     initials: 'text-[11.5px]',
     plus: 'size-3',
     crown: 'size-4 -top-2',
@@ -42,8 +42,8 @@ const SIZE_STYLES: Record<AvatarSize, SizeStyle> = {
   36: {
     circle: 'size-9',
     initials: 'text-xs',
-    plus: 'size-[13px]',
-    crown: 'size-[18px] -top-[9px]',
+    plus: 'size-3.25',
+    crown: 'size-4.5 -top-2.25',
     crownIcon: 10,
   },
   44: {
@@ -124,7 +124,7 @@ export function Avatar({
         )}
         style={isSlot ? undefined : { background: colors.background, color: colors.foreground }}
       >
-        {state === 'open' && <Plus className={cn(sizeStyle.plus, '[stroke-width:2.6]')} />}
+        {state === 'open' && <Plus className={cn(sizeStyle.plus, 'stroke-[2.6]')} />}
         {!isSlot && <AvatarFace name={name} image={image} size={size} />}
       </span>
       {host && (

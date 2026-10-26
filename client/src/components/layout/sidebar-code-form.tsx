@@ -38,7 +38,7 @@ export function SidebarCodeForm({ onNavigate }: SidebarCodeFormProps) {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <div className="bg-card focus-within:shadow-[inset_0_0_0_1.5px_var(--color-track)] flex items-center gap-1.5 py-[3px] pr-[3px] pl-3">
+      <div className="bg-card focus-within:shadow-[inset_0_0_0_1.5px_var(--color-track)] flex items-center gap-1.5 py-0.75 pr-0.75 pl-3">
         <label htmlFor={inputId} className="sr-only">
           {t('codeLabel')}
         </label>
@@ -60,13 +60,13 @@ export function SidebarCodeForm({ onNavigate }: SidebarCodeFormProps) {
           spellCheck={false}
           aria-invalid={invalid}
           aria-describedby={invalid ? messageId : undefined}
-          className="font-ds-mono text-text placeholder:text-faint min-w-0 flex-1 bg-transparent py-2.5 text-[13px] font-bold tracking-[0.1em] uppercase outline-none"
+          className="font-ds-mono text-text placeholder:text-faint min-w-0 flex-1 bg-transparent py-2.5 text-[13px] font-bold tracking-widest uppercase outline-none"
         />
         <button
           type="submit"
           aria-label={t('codeSubmit')}
           className={cn(
-            'press bg-line text-text hover-fine:bg-track focus-visible:outline-mint flex size-[38px] shrink-0 items-center justify-center',
+            'press bg-line text-text hover-fine:bg-track focus-visible:outline-mint flex size-9.5 shrink-0 items-center justify-center',
             'focus-visible:outline-2 focus-visible:-outline-offset-2'
           )}
         >

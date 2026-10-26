@@ -24,7 +24,7 @@ export function CreateSignInPrompt({ onClose, onSignIn }: CreateSignInPromptProp
         if (!open) onClose()
       }}
       title={t('squads.authModal.title')}
-      className="max-w-[460px]"
+      className="max-w-115"
     >
       <div className="flex flex-col gap-6 p-6">
         <p className="type-body text-text-3">{t('ds.shell.createSignIn')}</p>

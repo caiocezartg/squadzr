@@ -30,14 +30,14 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
   const onBoard = pathname === '/squads'
 
   return (
-    <div className="flex h-full flex-col gap-[26px] px-4 pt-6 pb-5">
+    <div className="flex h-full flex-col gap-6.5 px-4 pt-6 pb-5">
       <AppLink
         href="/"
         aria-label={t('home')}
         onClick={onNavigate}
         className="block self-start px-2"
       >
-        <img src="/squadzr-logo.svg" alt="" className="block w-[104px]" />
+        <img src="/squadzr-logo.svg" alt="" className="block w-26" />
       </AppLink>
 
       <div className="flex flex-col gap-2">
@@ -67,7 +67,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
               : 'text-text-3 hover-fine:bg-card hover-fine:text-text'
           )}
         >
-          <LayoutGrid aria-hidden className="size-[17px] shrink-0" strokeWidth={2.2} />
+          <LayoutGrid aria-hidden className="size-4.25 shrink-0" strokeWidth={2.2} />
           {t('allSquads')}
           <OpenSquadCount className="font-ds-mono text-text-3 ml-auto text-[11px] font-bold" />
         </AppLink>
@@ -90,7 +90,7 @@ export function Sidebar() {
   return (
     <aside
       aria-label={t('menu')}
-      className="bg-menu fixed inset-y-0 left-0 z-30 hidden w-[260px] overflow-y-auto shadow-[inset_-1px_0_0_#16171b] lg:block"
+      className="bg-menu fixed inset-y-0 left-0 z-30 hidden w-65 overflow-y-auto shadow-[inset_-1px_0_0_#16171b] lg:block"
     >
       <SidebarContent />
     </aside>

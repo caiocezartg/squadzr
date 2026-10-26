@@ -47,7 +47,7 @@ export function AccountPopover({ user, defaultOpen, takeFocus }: AccountPopoverP
       onOpenChange={setOpen}
       title={t('ds.shell.account')}
       hideTitle
-      className="w-[228px] p-1.5"
+      className="w-57 p-1.5"
       trigger={<AccountButton user={user} ref={focusOnce} />}
     >
       <p className="text-ds-muted truncate px-3 pt-2 pb-3 text-xs">{user.email}</p>

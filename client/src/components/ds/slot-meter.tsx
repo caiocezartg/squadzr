@@ -16,7 +16,7 @@ const TONE_CLASSES: Record<SlotMeterTone, string> = {
 const VARIANT_CLASSES: Record<SlotMeterVariant, { meter: string; segment: string }> = {
   blocks: { meter: 'gap-1', segment: 'h-2' },
   line: { meter: 'w-full gap-0.5', segment: 'h-1 flex-1' },
-  pips: { meter: 'gap-0.5', segment: 'h-[5px] w-2.5' },
+  pips: { meter: 'gap-0.5', segment: 'h-1.25 w-2.5' },
 }
 
 interface SlotMeterProps {
@@ -47,7 +47,7 @@ export function SlotMeter({ filled, total, variant = 'blocks', tone = 'mint' }: 
           className={cn(
             'bg-track transition-colors duration-200 data-filled:bg-current',
             classes.segment,
-            variant === 'blocks' && (slots > 5 ? 'w-[18px]' : 'w-10')
+            variant === 'blocks' && (slots > 5 ? 'w-4.5' : 'w-10')
           )}
         />
       ))}

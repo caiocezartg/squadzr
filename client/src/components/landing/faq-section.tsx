@@ -47,7 +47,7 @@ export function FAQSection() {
                   </Accordion.Trigger>
                 </Accordion.Header>
                 <Accordion.Panel className="h-(--accordion-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0">
-                  <p className="px-5 pb-4 text-sm leading-relaxed text-muted">{item.answer}</p>
+                  <p className="px-5 pb-4 text-sm/relaxed text-muted">{item.answer}</p>
                 </Accordion.Panel>
               </Accordion.Item>
             </m.div>

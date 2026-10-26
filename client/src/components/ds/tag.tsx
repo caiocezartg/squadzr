@@ -47,12 +47,12 @@ const STATIC_STYLES: Record<StaticTagVariant, StaticTagStyle> = {
 }
 
 const STATIC_SIZES = {
-  sm: { text: 'text-xs', tag: 'px-[9px] py-1', lang: 'px-2 py-[3px]', globe: 'size-[11px]' },
+  sm: { text: 'text-xs', tag: 'px-2.25 py-1', lang: 'px-2 py-0.75', globe: 'size-2.75' },
   md: {
     text: 'text-[13px]',
-    tag: 'px-2.5 py-[5px]',
-    lang: 'px-2.5 py-[5px]',
-    globe: 'size-[13px]',
+    tag: 'px-2.5 py-1.25',
+    lang: 'px-2.5 py-1.25',
+    globe: 'size-3.25',
   },
 } as const
 
@@ -61,7 +61,7 @@ const STATIC_SIZES = {
  * Spacing and layout), without changing the layout.
  */
 const BUTTON_BASE =
-  'press relative inline-flex items-center gap-[7px] whitespace-nowrap font-bold ' +
+  'press relative inline-flex items-center gap-1.75 whitespace-nowrap font-bold ' +
   'after:absolute after:inset-x-0 after:-inset-y-2 after:content-[""] ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint'
 
@@ -89,7 +89,7 @@ function StaticTag({ variant = 'tag', size = 'sm', label }: StaticTagProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-[5px] whitespace-nowrap leading-[1.3]',
+        'inline-flex items-center gap-1.25 whitespace-nowrap leading-[1.3]',
         style.classes,
         sizes.text,
         style.hashed ? sizes.tag : sizes.lang
@@ -109,7 +109,7 @@ function ToggleTag({ label, pressed, onClick }: ToggleTagProps) {
       onClick={onClick}
       className={cn(
         BUTTON_BASE,
-        'min-h-8 px-[11px] text-xs',
+        'min-h-8 px-2.75 text-xs',
         pressed
           ? 'bg-mint text-mint-ink hover-fine:bg-mint-hover'
           : 'bg-mint/8 text-mint hover-fine:bg-mint/16'
@@ -127,7 +127,7 @@ function SuggestTag({ label, onClick }: SuggestTagProps) {
       onClick={onClick}
       className={cn(
         BUTTON_BASE,
-        'min-h-[30px] bg-mint/8 px-2.5 text-xs text-mint hover-fine:bg-mint/16'
+        'min-h-7.5 bg-mint/8 px-2.5 text-xs text-mint hover-fine:bg-mint/16'
       )}
     >
       + #{label}
@@ -145,11 +145,11 @@ function RemovableTag({ label, onClick }: RemovableTagProps) {
       onClick={onClick}
       className={cn(
         BUTTON_BASE,
-        'min-h-[34px] bg-line pr-[9px] pl-[11px] text-[12.5px] text-text hover-fine:bg-[#2a2b31]'
+        'min-h-8.5 bg-line pr-2.25 pl-2.75 text-[12.5px] text-text hover-fine:bg-[#2a2b31]'
       )}
     >
       {label}
-      <X aria-hidden="true" className="size-[11px] shrink-0 text-text-3 [stroke-width:2.8]" />
+      <X aria-hidden="true" className="size-2.75 shrink-0 text-text-3 stroke-[2.8]" />
     </button>
   )
 }
