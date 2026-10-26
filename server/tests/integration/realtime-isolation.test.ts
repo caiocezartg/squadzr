@@ -368,7 +368,11 @@ describe('realtime isolation under subscription load', () => {
       const snapshot = roomSnapshotMessageSchema.parse(
         await withinBound(joinRoomChannel(newcomer, room.code))
       )
-      expect(snapshot.payload.presence).toContainEqual({ playerId: member.id, online: true })
+      expect(snapshot.payload.presence).toContainEqual({
+        playerId: member.id,
+        online: true,
+        offlineSince: null,
+      })
       expect(broadcaster['presence'].isOnline(room.code, member.id)).toBe(true)
     } finally {
       gate.resolve()
@@ -379,6 +383,7 @@ describe('realtime isolation under subscription load', () => {
     expect(roomSnapshotMessageSchema.parse(published[1]).payload.presence).toContainEqual({
       playerId: member.id,
       online: true,
+      offlineSince: null,
     })
     expect(broadcaster['presence'].isOnline(room.code, member.id)).toBe(true)
   })

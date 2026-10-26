@@ -24,7 +24,7 @@ const wsMessageTypeSchema = z.enum([
   'room_removed',
 ])
 
-export const REALTIME_PROTOCOL_VERSION = 2
+export const REALTIME_PROTOCOL_VERSION = 3
 export const WS_MAX_PAYLOAD_BYTES = 16 * 1024
 
 const baseWsMessageSchema = z.object({
@@ -130,7 +130,12 @@ export const protocolAnnouncementSchema = z.object({
   version: z.number().int().positive(),
 })
 
-const memberPresenceSchema = z.object({ playerId: z.string(), online: z.boolean() })
+// `offlineSince` is when the member's last session closed, or null when the server never saw it.
+const memberPresenceSchema = z.object({
+  playerId: z.string(),
+  online: z.boolean(),
+  offlineSince: isoDateTimeSchema.nullable(),
+})
 
 // Replaces the live roster in its entirety; applying it twice has the same effect.
 export const roomSnapshotMessageSchema = baseWsMessageSchema.extend({
@@ -144,7 +149,7 @@ export const roomSnapshotMessageSchema = baseWsMessageSchema.extend({
   }),
 })
 
-// Presence assigns a boolean; it never adds or removes a Membership.
+// Presence assigns online plus offlineSince; it never adds or removes a Membership.
 const presenceUpdatedMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('presence_updated'),
   payload: memberPresenceSchema.extend({ roomCode: z.string().length(6) }),

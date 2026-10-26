@@ -4,15 +4,16 @@ import { useTranslations } from 'next-intl'
 import { UserAvatar } from '@/components/ui/user-avatar'
 import { PresenceIndicator } from './presence-indicator'
 import type { Player } from '@/types'
+import type { MemberPresence } from '../squad-snapshot'
 
 interface PlayerSlotProps {
   player?: Player
   index: number
   /** Authoritative Presence from the squad snapshot; unknown members read offline. */
-  online?: boolean
+  presence?: MemberPresence
 }
 
-export function PlayerSlot({ player, index, online = false }: PlayerSlotProps) {
+export function PlayerSlot({ player, index, presence }: PlayerSlotProps) {
   const t = useTranslations()
 
   if (!player) {
@@ -37,7 +38,10 @@ export function PlayerSlot({ player, index, online = false }: PlayerSlotProps) {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-offwhite truncate">{player.name}</p>
       </div>
-      <PresenceIndicator online={online} />
+      <PresenceIndicator
+        online={presence?.online ?? false}
+        offlineSince={presence?.offlineSince ?? null}
+      />
       {player.isHost && (
         <span className="badge-accent text-[10px] shrink-0">{t('lobby.host')}</span>
       )}

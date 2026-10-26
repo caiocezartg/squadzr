@@ -249,7 +249,8 @@
     "reconnecting": "Reconnecting…",
     "disconnected": "Disconnected",
     "online": "Online",
-    "offline": "Offline"
+    "offline": "Offline",
+    "offlineSince": "Offline · {time}"
   },
   "languages": {
     "ptBr": "PT-BR",
