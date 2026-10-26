@@ -47,7 +47,7 @@ function JoinSquadAuthDialog({ open, squadCode, onOpenChange, onSignIn }: JoinSq
               </Dialog.Close>
             </div>
 
-            <div className="px-6 py-6">
+            <div className="p-6">
               <p className="text-sm/relaxed text-offwhite">{t('squads.authModal.description')}</p>
               {squadCode && (
                 <p className="mt-3 text-sm text-muted">

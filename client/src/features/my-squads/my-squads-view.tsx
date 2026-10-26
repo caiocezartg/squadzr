@@ -91,7 +91,7 @@ export function MySquadsView() {
       <MySquadsErrorBoundary
         key={`results-${attempt}`}
         fallback={
-          <div className="mb-6 mt-6 flex flex-col items-start gap-3">
+          <div className="my-6 flex flex-col items-start gap-3">
             <AlertBox type="error" message={t('mySquads.loadError')} />
             <button onClick={retry} className="btn-ghost">
               {t('squads.page.retry')}

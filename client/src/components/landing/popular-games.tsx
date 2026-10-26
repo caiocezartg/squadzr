@@ -47,7 +47,7 @@ export function PopularGames({ games }: PopularGamesProps) {
               <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent" />
 
               {/* Game info */}
-              <div className="absolute bottom-0 left-0 right-0 p-3">
+              <div className="absolute inset-x-0 bottom-0 p-3">
                 <p className="text-xs font-semibold text-accent">
                   {t('popularGames.openSquads', { count: openSquadCount })}
                 </p>

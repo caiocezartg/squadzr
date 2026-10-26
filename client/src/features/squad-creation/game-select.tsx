@@ -275,7 +275,7 @@ export function GameSelect({
       {listMounted && (
         <div
           aria-hidden={closing || undefined}
-          className={`absolute z-60 mt-2 w-full origin-top overflow-hidden rounded-xl border border-border bg-surface shadow-2xl shadow-black/50 transition-[scale,opacity] duration-150 ease-out starting:scale-95 starting:opacity-0 ${
+          className={`absolute z-60 mt-2 w-full origin-top card shadow-2xl shadow-black/50 transition-[scale,opacity] duration-150 ease-out starting:scale-95 starting:opacity-0 ${
             closing ? 'pointer-events-none scale-95 opacity-0' : 'scale-100 opacity-100'
           }`}
         >

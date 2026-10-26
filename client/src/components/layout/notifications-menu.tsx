@@ -64,7 +64,7 @@ function NotificationItem({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <p
-                className={`text-xs leading-tight ${
+                className={`text-xs/tight ${
                   isUnread ? 'font-semibold text-offwhite' : 'font-medium text-muted'
                 }`}
               >

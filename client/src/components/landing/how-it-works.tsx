@@ -213,7 +213,7 @@ export function HowItWorks() {
           <div className="relative">
             {/* Connector line */}
             <m.div
-              className="absolute top-5 left-[calc(16.666%)] right-[calc(16.666%)] h-0.5 bg-border-light origin-left"
+              className="absolute top-5 inset-x-[calc(16.666%)] h-0.5 bg-border-light origin-left"
               initial={{ scaleX: 0 }}
               whileInView={{ scaleX: 1 }}
               viewport={{ once: true, margin: '-80px' }}
@@ -265,7 +265,7 @@ export function HowItWorks() {
           <div className="relative">
             {/* Vertical line */}
             <m.div
-              className="absolute left-3.75 top-0 bottom-0 w-0.5 bg-border-light origin-top"
+              className="absolute left-3.75 inset-y-0 w-0.5 bg-border-light origin-top"
               initial={{ scaleY: 0 }}
               whileInView={{ scaleY: 1 }}
               viewport={{ once: true, margin: '-50px' }}
