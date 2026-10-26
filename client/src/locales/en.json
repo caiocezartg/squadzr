@@ -158,9 +158,10 @@
     },
     "card": {
       "joined": "Joined",
-      "seeSquad": "SEE SQUAD",
-      "joinSquad": "JOIN SQUAD",
-      "full": "Full"
+      "openRoom": "Open room",
+      "enter": "Enter",
+      "full": "Full",
+      "label": "{name} — {game}, {language}, {members} of {max} players"
     },
     "filters": {
       "searchPlaceholder": "Search by game or squad name...",

@@ -14,6 +14,11 @@ interface ShowcaseItem {
 
 const MINUTE_MS = 60_000
 
+/** The members a sample Squad shows on its card: initials only, as a member without a Discord image. */
+function sampleMembers(...names: string[]): Squad['memberPreview'] {
+  return names.map((name) => ({ id: `sample-${name}`, name, image: null }))
+}
+
 /**
  * The sample Squads, timed from `now`, the time next-intl hands to the client. Their relative times
  * are the same in the server HTML and in the browser, and they do not depend on when the module loaded.
@@ -68,7 +73,7 @@ function sampleSquads(now: Date): ShowcaseItem[] {
         tags: ['ranked', 'chill'],
         language: 'en',
         memberCount: 3,
-        memberPreview: [],
+        memberPreview: sampleMembers('Caio Cezar', 'Mia Ferraz', 'Bruno Reis'),
         isMember: false,
         createdAt: minutesAgo(8),
         updatedAt: nowIso,
@@ -90,7 +95,7 @@ function sampleSquads(now: Date): ShowcaseItem[] {
         tags: ['competitive'],
         language: 'pt-br',
         memberCount: 4,
-        memberPreview: [],
+        memberPreview: sampleMembers('Kaz Ito', 'Luna Pires', 'Tales Aguiar', 'Jade Pons'),
         isMember: false,
         createdAt: minutesAgo(3),
         updatedAt: nowIso,
@@ -112,7 +117,7 @@ function sampleSquads(now: Date): ShowcaseItem[] {
         tags: ['casual', 'fun'],
         language: 'en',
         memberCount: 2,
-        memberPreview: [],
+        memberPreview: sampleMembers('Mia Ferraz', 'Bruno Reis'),
         isMember: false,
         createdAt: minutesAgo(15),
         updatedAt: nowIso,

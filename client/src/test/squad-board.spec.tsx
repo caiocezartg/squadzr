@@ -38,6 +38,15 @@ import { MockWebSocket } from './ws-mock'
 import type { JoinRoomResponse } from '@squadzr/schemas'
 import type { RoomsResponse, Squad } from '@/types'
 
+/** The listed Squads' names in grid order, read from the cards' accessible names ("name — game, …"). */
+function listedSquadNames(): string[] {
+  const grid = document.getElementById('squads-grid')
+  if (!grid) throw new Error('The squad grid is not on the page')
+  return within(grid)
+    .getAllByLabelText(/ — /)
+    .map((card) => (card.getAttribute('aria-label') ?? '').split(' — ')[0] ?? '')
+}
+
 const joinSquadResponse: JoinRoomResponse = {
   message: 'Joined squad',
   roomMember: {
@@ -89,19 +98,28 @@ describe('squad board — rendering', () => {
   it('renders every squad with its game, member count and join state', async () => {
     renderSquadsFlow('/squads')
 
-    expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
-    expect(screen.getByText('Full lobby')).toBeInTheDocument()
-    expect(screen.getByText('Casual five stack')).toBeInTheDocument()
-    expect(screen.getAllByText('League of Legends')).toHaveLength(2)
-    expect(screen.getByText('Counter-Strike 2')).toBeInTheDocument()
-    for (const cover of screen.getAllByRole('img', { name: 'League of Legends' })) {
-      expect(cover).toHaveAttribute('src', openSquad.game.coverUrl)
-    }
-    expect(screen.getByRole('img', { name: 'Counter-Strike 2' })).toHaveAttribute(
+    const open = await screen.findByRole('button', {
+      name: 'Ranked grind — League of Legends, EN-US, 1 of 5 players',
+    })
+    expect(within(open).getByRole('img', { name: 'League of Legends' })).toHaveAttribute(
+      'src',
+      openSquad.game.coverUrl
+    )
+
+    const full = screen.getByRole('button', {
+      name: 'Full lobby — Counter-Strike 2, PT-BR, 4 of 4 players',
+    })
+    expect(full).toHaveAttribute('aria-disabled', 'true')
+    expect(within(full).getByRole('img', { name: 'Counter-Strike 2' })).toHaveAttribute(
       'src',
       fullSquad.game.coverUrl
     )
-    expect(screen.getByText('Joined')).toBeInTheDocument()
+
+    const joined = screen.getByRole('link', {
+      name: 'Casual five stack — League of Legends, PT-BR, 3 of 4 players',
+    })
+    expect(joined).toHaveAttribute('href', '/squads/MEM111')
+    expect(within(joined).getByText('Joined')).toBeInTheDocument()
     expect(screen.getByText('3 squads available')).toBeInTheDocument()
   })
 
@@ -175,13 +193,11 @@ describe('squad board — filters', () => {
     const { user } = renderSquadsFlow('/squads')
     await screen.findByText('Ranked grind')
 
-    const titles = () =>
-      screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
-    expect(titles()).toEqual(['Ranked grind', 'Full lobby', 'Casual five stack'])
+    expect(listedSquadNames()).toEqual(['Ranked grind', 'Full lobby', 'Casual five stack'])
 
     await user.selectOptions(screen.getByRole('combobox'), 'oldest')
     await waitFor(() =>
-      expect(titles()).toEqual(['Casual five stack', 'Full lobby', 'Ranked grind'])
+      expect(listedSquadNames()).toEqual(['Casual five stack', 'Full lobby', 'Ranked grind'])
     )
   })
 })
@@ -772,9 +788,7 @@ describe('squad board — join flows', () => {
     expect(params.get('join')).toBe('ABC123')
 
     // The valid language filters the board; the invalid filter, sort and page use their defaults.
-    const titles = () =>
-      screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
-    await waitFor(() => expect(titles()).toEqual(['Full lobby', 'Casual five stack']))
+    await waitFor(() => expect(listedSquadNames()).toEqual(['Full lobby', 'Casual five stack']))
   })
 
   it('opens the lobby directly for squads the user already belongs to', async () => {
