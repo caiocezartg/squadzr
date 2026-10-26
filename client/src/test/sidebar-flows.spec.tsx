@@ -7,7 +7,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react'
 import { focusManager } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { WIDE_QUERY } from '@/components/layout/notifications-bell'
+import { WIDE_QUERY } from '@/components/layout/wide-query'
 import { LOCALE_COOKIE } from '@/i18n/locales'
 import { squadQueryKey } from '@/features/lobby/squad-details'
 import {

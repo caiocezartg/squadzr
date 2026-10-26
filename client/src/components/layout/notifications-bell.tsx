@@ -4,9 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useMediaQuery } from '@/components/ds/use-media-query'
 import { useSession } from '@/hooks/use-session'
 import { NotificationsMenu } from './notifications-menu'
-
-/** 1024px and up: the widths where the sidebar is a column and the page header carries the bell. */
-export const WIDE_QUERY = '(min-width: 1024px)'
+import { WIDE_QUERY } from './wide-query'
 
 interface NotificationsBellProps {
   /**

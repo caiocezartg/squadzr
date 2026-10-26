@@ -1,3 +1,5 @@
+import 'server-only'
+
 /**
  * The Squad Board's server entry point, for a layout that needs the board's list but not the board.
  * It stays apart from the `page` entry, which carries the board's client view: a server module that

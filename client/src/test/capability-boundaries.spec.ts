@@ -244,4 +244,11 @@ describe('capability boundaries', () => {
 
     expect(violations).toEqual([])
   })
+
+  it('keeps the Squad Board server entry server-only', () => {
+    // `server` is a public entry for layouts; a client module that imported it must fail the build.
+    const source = readFileSync(join(FEATURES_DIR, 'squad-board', 'server.ts'), 'utf8')
+
+    expect(importSpecifiers(source)).toContain('server-only')
+  })
 })

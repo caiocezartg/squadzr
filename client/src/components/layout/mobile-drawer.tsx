@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useInstantDismiss } from '@/components/ds/use-instant-dismiss'
 import { useMediaQuery } from '@/components/ds/use-media-query'
-import { WIDE_QUERY } from './notifications-bell'
+import { WIDE_QUERY } from './wide-query'
 import { SidebarContent } from './sidebar'
 
 /**
