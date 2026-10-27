@@ -84,9 +84,9 @@ export function MembersPanel({
       <h2 id="lobby-members-heading" className="sr-only">
         {t('members')}
       </h2>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex items-end justify-between gap-3">
         <RosterCounter current={players.length} max={maxPlayers} live={live} ready={isReady} />
-        <div className="flex flex-col items-end gap-2.5 pb-0.5">
+        <div className="flex min-w-0 flex-1 flex-col items-end gap-2.5 pb-0.5">
           <Button
             variant="secondary"
             size="sm"
@@ -95,6 +95,7 @@ export function MembersPanel({
             onClick={() => void copyCode()}
           >
             <CopySwap
+              gap="gap-1.75"
               copied={codeCopied}
               idle={
                 <>
@@ -152,7 +153,7 @@ export function MembersPanel({
         page={page}
         pageCount={pageCount}
         onPageChange={setPage}
-        className="justify-end"
+        className="justify-center"
       />
     </section>
   )

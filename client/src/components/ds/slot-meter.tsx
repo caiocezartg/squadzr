@@ -39,7 +39,7 @@ export function SlotMeter({ filled, total, variant = 'blocks', tone = 'mint' }: 
   const classes = VARIANT_CLASSES[variant]
 
   return (
-    <span aria-hidden="true" className={cn('flex', classes.meter, TONE_CLASSES[tone])}>
+    <span aria-hidden="true" className={cn('flex max-w-full', classes.meter, TONE_CLASSES[tone])}>
       {Array.from({ length: segments }, (_, index) => (
         <span
           key={index}

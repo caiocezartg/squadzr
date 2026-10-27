@@ -15,11 +15,11 @@ function CornerMarks() {
     <>
       <span
         aria-hidden="true"
-        className="border-mint/70 absolute -top-2.5 -left-2.5 z-10 size-6 border-t-2 border-l-2"
+        className="border-mint/70 absolute -top-1 -left-1 z-10 sm:-top-2.5 sm:-left-2.5 size-6 border-t-2 border-l-2"
       />
       <span
         aria-hidden="true"
-        className="border-mint/70 absolute -right-2.5 -bottom-2.5 z-10 size-6 border-r-2 border-b-2"
+        className="border-mint/70 absolute -right-1 -bottom-1 z-10 sm:-right-2.5 sm:-bottom-2.5 size-6 border-r-2 border-b-2"
       />
     </>
   )
@@ -50,6 +50,7 @@ export function LobbyCover({ squad }: LobbyCoverProps) {
               className="absolute inset-0 size-full object-cover"
             />
           )}
+          <div aria-hidden="true" className="bg-bg/70 absolute inset-0 lg:hidden" />
           <div
             aria-hidden="true"
             className="from-bg/55 absolute inset-0 bg-linear-to-b to-transparent to-25%"

@@ -33,4 +33,19 @@ describe('CopySwap', () => {
     expect(screen.getByText('#ABC123')).toBeInTheDocument()
     expect(screen.getByText('Copied')).toBeInTheDocument()
   })
+
+  it('spaces the icon from the label, with the gap the caller picks', () => {
+    const { rerender } = renderSwap(false)
+    expect(screen.getByText('#ABC123').parentElement).toHaveClass('gap-2')
+
+    rerender(
+      <CopySwap
+        copied={false}
+        gap="gap-1.75"
+        idle={<span>#ABC123</span>}
+        done={<span>Copied</span>}
+      />
+    )
+    expect(screen.getByText('#ABC123').parentElement).toHaveClass('gap-1.75')
+  })
 })

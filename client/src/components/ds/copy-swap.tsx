@@ -7,10 +7,12 @@ interface CopySwapProps {
   /** The face that confirms the copy. */
   readonly done: ReactNode
   readonly copied: boolean
+  /** The gap between a face's icon and label: the button's own gap, which a face does not inherit. @default 'gap-2' */
+  readonly gap?: string
 }
 
 const FACE =
-  'transition-[opacity,filter] duration-200 ease-out col-start-1 row-start-1 inline-flex items-center justify-center gap-[inherit]'
+  'transition-[opacity,filter] duration-200 ease-out col-start-1 row-start-1 inline-flex items-center justify-center'
 
 /**
  * The copy feedback (reference, Per element): the label and icon crossfade with a 2px blur over 200ms.
@@ -18,14 +20,11 @@ const FACE =
  * and never jumps. Both are hidden from assistive technology: the button's own accessible name carries
  * the state.
  */
-export function CopySwap({ idle, done, copied }: CopySwapProps) {
+export function CopySwap({ idle, done, copied, gap = 'gap-2' }: CopySwapProps) {
   return (
-    <span
-      aria-hidden="true"
-      className="inline-grid items-center justify-items-center gap-[inherit]"
-    >
-      <span className={cn(FACE, copied && 'opacity-0 blur-[2px]')}>{idle}</span>
-      <span className={cn(FACE, !copied && 'opacity-0 blur-[2px]')}>{done}</span>
+    <span aria-hidden="true" className="inline-grid items-center justify-items-center">
+      <span className={cn(FACE, gap, copied && 'opacity-0 blur-[2px]')}>{idle}</span>
+      <span className={cn(FACE, gap, !copied && 'opacity-0 blur-[2px]')}>{done}</span>
     </span>
   )
 }

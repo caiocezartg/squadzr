@@ -20,6 +20,8 @@ interface LobbyActionsProps {
 
 /** Below 640px the label goes and the button is the icon alone (reference, Responsive). */
 const ICON_ON_NARROW = 'max-sm:size-11 max-sm:px-0'
+/** The way back keeps its label until the row runs out of room, so the actions stay on one line. */
+const ICON_ON_TIGHT = 'max-[26rem]:size-11 max-[26rem]:px-0'
 
 /**
  * The Lobby's header actions (reference, Lobby): the way back to the board, the connection, the squad
@@ -44,11 +46,17 @@ export function LobbyActions({
   const leaveLabel = isHost ? t('endSquad') : t('leaveSquad')
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <Button variant="secondary" href="/squads" icon={<ArrowLeft />}>
-        {t('exploreSquads')}
+    <div className="flex items-center justify-between gap-2">
+      <Button
+        variant="secondary"
+        href="/squads"
+        aria-label={t('exploreSquads')}
+        className={ICON_ON_TIGHT}
+        icon={<ArrowLeft />}
+      >
+        <span className="max-[26rem]:hidden">{t('exploreSquads')}</span>
       </Button>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <ConnectionStatus status={connectionStatus} />
         <Button
           variant="secondary"

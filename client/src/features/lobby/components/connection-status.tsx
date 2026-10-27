@@ -36,7 +36,7 @@ export function ConnectionStatus({ status }: ConnectionStatusProps) {
     <span
       role="status"
       className={cn(
-        'font-ds-mono inline-flex min-h-11 items-center gap-2 px-3 text-[11.5px] font-bold tracking-[0.08em] uppercase',
+        'font-ds-mono inline-flex min-h-11 items-center gap-2 px-3 max-[26rem]:px-2.5 text-[11.5px] font-bold tracking-[0.08em] uppercase',
         TONE_CLASSES[status]
       )}
     >
@@ -48,11 +48,13 @@ export function ConnectionStatus({ status }: ConnectionStatusProps) {
       />
       {live ? (
         <>
-          <span aria-hidden="true">{t('ds.lobby.live')}</span>
+          <span aria-hidden="true" className="max-[26rem]:hidden">
+            {t('ds.lobby.live')}
+          </span>
           <span className="sr-only">{label}</span>
         </>
       ) : (
-        label
+        <span className="max-[26rem]:sr-only">{label}</span>
       )}
     </span>
   )

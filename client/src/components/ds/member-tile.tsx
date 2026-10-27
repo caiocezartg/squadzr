@@ -120,7 +120,10 @@ function Tile({
       ref={host.ref}
       style={host.style}
       title={presence}
-      className={cn('flex min-h-16 items-center gap-3.5 py-2.5 pr-3.5 pl-3 text-text', look.ground)}
+      className={cn(
+        'flex min-h-16 items-center gap-3.5 pt-4.5 pr-3.5 pb-3.5 pl-3 text-text',
+        look.ground
+      )}
     >
       {children}
       <span className="sr-only">{presence}</span>

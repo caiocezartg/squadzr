@@ -21,7 +21,10 @@ export function RosterCounter({ current, max, live, ready }: RosterCounterProps)
   const t = useTranslations('ds.lobby')
 
   return (
-    <p role="status" className="font-display text-[56px] leading-[0.9] font-black tabular-nums">
+    <p
+      role="status"
+      className="font-display shrink-0 text-[40px] leading-[0.9] font-black tabular-nums sm:text-[56px]"
+    >
       <span className="sr-only">{t('playerCount', { current, max })}</span>
       <span aria-hidden="true" className="flex">
         <span className={cn('flex', ready ? 'text-mint' : 'text-text')}>
