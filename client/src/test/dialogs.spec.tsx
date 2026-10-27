@@ -25,14 +25,14 @@ beforeEach(() => {
 })
 
 describe('eager dialogs', () => {
-  it('opens the create dialog with its form at once', async () => {
+  it('opens the create dialog with its game step at once', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await screen.findByText('Ranked grind')
 
     await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
-    expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
-    expect(screen.getByLabelText('Squad Name')).toBeInTheDocument()
+    expect(await screen.findByText('Choose the game')).toBeInTheDocument()
+    expect(screen.getByLabelText('Which game will you play?')).toBeInTheDocument()
   })
 
   it('opens the guest sign-in prompt with its actions at once', async () => {

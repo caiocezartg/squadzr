@@ -140,7 +140,7 @@ describe('squad board — rendering', () => {
     expect(await screen.findByText('No squads yet')).toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: 'Create Squad' }).at(-1)!)
 
-    expect(await screen.findByText('Create a Squad', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByText('Choose the game', {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
   it('shows the inline load error when the board request fails', async () => {

@@ -12,7 +12,7 @@
  * toasts are module mocks (./stubs). No test touches private hook state.
  */
 
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { renderSquadsFlow } from './harness'
 import { settleNavigation } from './navigation'
@@ -52,7 +52,7 @@ function hasSearched(term: string): boolean {
 
 /** The popup that carries the list and its loading/empty copy. */
 function gameListPopup(): HTMLElement {
-  return screen.getByRole('listbox', { name: 'Select a game' }).parentElement as HTMLElement
+  return screen.getByRole('listbox', { name: 'Games found' }).parentElement as HTMLElement
 }
 
 /**
@@ -120,11 +120,13 @@ function mirrorEscapeOnDocument(): void {
   stopEscapeMirror = () => document.removeEventListener('keydown', mirror, true)
 }
 
+const GAME_LABEL = 'Which game will you play?'
+
 async function openCreateModal(
   user: Awaited<ReturnType<typeof renderSquadsFlow>['user']>
 ): Promise<void> {
   await user.click(await screen.findByRole('button', { name: 'Create squad' }))
-  await screen.findByText('Create a Squad', {}, { timeout: 5000 })
+  await screen.findByText('Choose the game', {}, { timeout: 5000 })
 }
 
 /** Types into the game combobox and picks the named result, as a keyboard user would. */
@@ -133,12 +135,31 @@ async function pickGame(
   search: string,
   optionName: string | RegExp
 ): Promise<void> {
-  const input = screen.getByLabelText('Game')
+  const input = screen.getByLabelText(GAME_LABEL)
   await user.click(input)
   await user.type(input, search)
   await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
   expect(await screen.findByRole('option', { name: optionName })).toBeInTheDocument()
   await user.keyboard('{ArrowDown}{Enter}')
+}
+
+/** Moves from the current step to the next one, as the footer's primary button does. */
+async function continueStep(
+  user: Awaited<ReturnType<typeof renderSquadsFlow>['user']>
+): Promise<void> {
+  await user.click(screen.getByRole('button', { name: 'Continue' }))
+}
+
+/** Walks the three steps with valid values, stopping on the Discord step before it is submitted. */
+async function fillWizard(
+  user: Awaited<ReturnType<typeof renderSquadsFlow>['user']>,
+  squadName = 'Created squad'
+): Promise<void> {
+  await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+  await continueStep(user)
+  await user.type(await screen.findByLabelText('Squad Name'), squadName)
+  await continueStep(user)
+  await user.type(await screen.findByLabelText('Discord Invite Link'), 'https://discord.gg/created')
 }
 
 describe('create squad — entry point', () => {
@@ -154,20 +175,43 @@ describe('create squad — entry point', () => {
     await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
     expect(await screen.findByText('Sign in required')).toBeInTheDocument()
-    expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument()
+    expect(screen.queryByText('Choose the game')).not.toBeInTheDocument()
   })
 })
 
 describe('create squad — client validation', () => {
-  it('blocks submission and shows field errors for an empty form', async () => {
+  it('keeps Continue disabled on the game step until a game is picked', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    await user.click(screen.getByRole('button', { name: 'Create Squad' }))
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+  })
+
+  it('blocks the details step and shows the name error', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+    await continueStep(user)
+
+    await continueStep(user)
 
     expect(await screen.findByText('Squad name is required')).toBeInTheDocument()
-    expect(screen.getByText('Please select a game')).toBeInTheDocument()
-    expect(screen.getByText('Please enter a valid URL')).toBeInTheDocument()
+    expect(screen.getByText('Squad details')).toBeInTheDocument()
+  })
+
+  it('blocks submission and shows the invite error on the last step', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+    await continueStep(user)
+    await user.type(await screen.findByLabelText('Squad Name'), 'Created squad')
+    await continueStep(user)
+
+    await user.click(await screen.findByRole('button', { name: 'Create Squad' }))
+
+    expect(await screen.findByText('Please enter a valid URL')).toBeInTheDocument()
     expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
   })
 })
@@ -177,14 +221,14 @@ describe('create squad — game search', () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    const input = screen.getByLabelText('Game')
+    const input = screen.getByLabelText(GAME_LABEL)
     await user.click(input)
     expect(input).toHaveAttribute('role', 'combobox')
     expect(input).toHaveAttribute('aria-expanded', 'true')
-    const listbox = screen.getByRole('listbox', { name: 'Select a game' })
+    const listbox = screen.getByRole('listbox', { name: 'Games found' })
     expect(input).toHaveAttribute('aria-controls', listbox.id)
     expect(
-      await screen.findByRole('option', { name: 'League of Legends (1-5 players)' })
+      await screen.findByRole('option', { name: 'League of Legends, MOBA · 1–5 players' })
     ).toBeInTheDocument()
 
     await user.type(input, 'count')
@@ -200,17 +244,17 @@ describe('create squad — game search', () => {
     expect(
       await screen.findByRole(
         'option',
-        { name: 'Counter-Strike 2 (1-5 players)' },
+        { name: 'Counter-Strike 2, Shooter · 1–5 players' },
         { timeout: 3000 }
       )
     ).toBeInTheDocument()
     await waitFor(() =>
       expect(
-        screen.queryByRole('option', { name: 'League of Legends (1-5 players)' })
+        screen.queryByRole('option', { name: 'League of Legends, MOBA · 1–5 players' })
       ).not.toBeInTheDocument()
     )
     const counterStrike = screen.getByRole('option', {
-      name: 'Counter-Strike 2 (1-5 players)',
+      name: 'Counter-Strike 2, Shooter · 1–5 players',
     })
     expect(input).toHaveFocus()
     await user.keyboard('{ArrowDown}')
@@ -233,7 +277,7 @@ describe('create squad — game search', () => {
 
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
-    const input = screen.getByLabelText('Game')
+    const input = screen.getByLabelText(GAME_LABEL)
     await user.click(input)
     await user.type(input, 'league')
     await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
@@ -250,18 +294,18 @@ describe('create squad — game search', () => {
 
     // The first term's result stays listed instead of the list blanking to the loading copy.
     expect(
-      screen.getByRole('option', { name: 'League of Legends (1-5 players)' })
+      screen.getByRole('option', { name: 'League of Legends, MOBA · 1–5 players' })
     ).toBeInTheDocument()
     expect(within(gameListPopup()).queryByText('Searching games…')).not.toBeInTheDocument()
 
     counter.respond(httpOk({ games: [gameCs2] }))
 
     expect(
-      await screen.findByRole('option', { name: 'Counter-Strike 2 (1-5 players)' })
+      await screen.findByRole('option', { name: 'Counter-Strike 2, Shooter · 1–5 players' })
     ).toBeInTheDocument()
     await waitFor(() =>
       expect(
-        screen.queryByRole('option', { name: 'League of Legends (1-5 players)' })
+        screen.queryByRole('option', { name: 'League of Legends, MOBA · 1–5 players' })
       ).not.toBeInTheDocument()
     )
     popupWatch.stop()
@@ -280,7 +324,7 @@ describe('create squad — game search', () => {
 
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
-    const input = screen.getByLabelText('Game')
+    const input = screen.getByLabelText(GAME_LABEL)
     await user.click(input)
     await user.type(input, 'league')
     await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
@@ -292,17 +336,13 @@ describe('create squad — game search', () => {
 
     // The previous match is still listed, and the empty copy waits for the answer.
     expect(
-      screen.getByRole('option', { name: 'League of Legends (1-5 players)' })
+      screen.getByRole('option', { name: 'League of Legends, MOBA · 1–5 players' })
     ).toBeInTheDocument()
-    expect(
-      within(gameListPopup()).queryByText('No games found. Try another name.')
-    ).not.toBeInTheDocument()
+    expect(within(gameListPopup()).queryByText(/No game found for/)).not.toBeInTheDocument()
 
     noMatches.respond(httpOk({ games: [] }))
 
-    expect(
-      await within(gameListPopup()).findByText('No games found. Try another name.')
-    ).toBeInTheDocument()
+    expect(await within(gameListPopup()).findByText('No game found for “zzz”')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryAllByRole('option')).toHaveLength(0))
   })
 
@@ -321,7 +361,7 @@ describe('create squad — game search', () => {
 
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
-    const input = screen.getByLabelText('Game')
+    const input = screen.getByLabelText(GAME_LABEL)
     await user.click(input)
     await user.type(input, 'league')
     await waitFor(() => expect(hasSearched('league')).toBe(true))
@@ -332,10 +372,10 @@ describe('create squad — game search', () => {
 
     await waitFor(() => expect(leagueSignal?.aborted).toBe(true))
     expect(
-      await screen.findByRole('option', { name: 'Counter-Strike 2 (1-5 players)' })
+      await screen.findByRole('option', { name: 'Counter-Strike 2, Shooter · 1–5 players' })
     ).toBeInTheDocument()
     // The abandoned request never surfaces as an error or an empty list.
-    expect(screen.queryByText('No games found. Try another name.')).not.toBeInTheDocument()
+    expect(screen.queryByText(/No game found for/)).not.toBeInTheDocument()
 
     // Settle the mock behind the aborted request; the cancellation already won.
     league.respond(httpOk({ games: [gameLol] }))
@@ -354,7 +394,7 @@ describe('create squad — game search', () => {
 
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
-    const input = screen.getByLabelText('Game')
+    const input = screen.getByLabelText(GAME_LABEL)
     await user.click(input)
     await user.type(input, 'counter')
     await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
@@ -368,7 +408,7 @@ describe('create squad — game search', () => {
     await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
 
     expect(
-      screen.getByRole('option', { name: 'Counter-Strike 2 (1-5 players)' })
+      screen.getByRole('option', { name: 'Counter-Strike 2, Shooter · 1–5 players' })
     ).toBeInTheDocument()
     expect(counterRequests).toBe(1)
     expect(screen.getByRole('status')).toHaveTextContent('1 game found')
@@ -379,18 +419,23 @@ describe('create squad — game search', () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
-    const gameInput = screen.getByLabelText('Game')
+    const gameInput = screen.getByLabelText(GAME_LABEL)
     await user.click(gameInput)
     await user.type(gameInput, 'counter')
     await user.click(
       await screen.findByRole(
         'option',
-        { name: 'Counter-Strike 2 (1-5 players)' },
+        { name: 'Counter-Strike 2, Shooter · 1–5 players' },
         { timeout: 3000 }
       )
     )
-    await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
+    await continueStep(user)
+    await user.type(await screen.findByLabelText('Squad Name'), 'Created squad')
+    await continueStep(user)
+    await user.type(
+      await screen.findByLabelText('Discord Invite Link'),
+      'https://discord.gg/created'
+    )
 
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
 
@@ -406,33 +451,31 @@ describe('create squad — game picker', () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    const name = screen.getByLabelText('Squad Name')
-    await user.type(name, 'Draft squad')
-    await user.click(screen.getByLabelText('Game'))
-    expect(await screen.findByRole('listbox', { name: 'Select a game' })).toBeInTheDocument()
+    const search = screen.getByLabelText(GAME_LABEL)
+    await user.type(search, 'lea')
+    expect(await screen.findByRole('listbox', { name: 'Games found' })).toBeInTheDocument()
 
     // The first Escape belongs to the list: Base UI's dialog ignores
     // `defaultPrevented`, so the event must not reach it.
     await user.keyboard('{Escape}')
 
     await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
-    expect(screen.getByText('Create a Squad')).toBeInTheDocument()
-    expect(name).toHaveValue('Draft squad')
+    expect(screen.getByText('Choose the game')).toBeInTheDocument()
+    expect(search).toHaveValue('lea')
 
     // With the list closed, Escape closes the dialog as before.
     await user.keyboard('{Escape}')
 
-    await waitFor(() => expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Choose the game')).not.toBeInTheDocument())
   })
 
   it('keeps the dialog when the document listener hears the first Escape', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    const name = screen.getByLabelText('Squad Name')
-    await user.type(name, 'Draft squad')
-    await user.click(screen.getByLabelText('Game'))
-    expect(await screen.findByRole('listbox', { name: 'Select a game' })).toBeInTheDocument()
+    const search = screen.getByLabelText(GAME_LABEL)
+    await user.type(search, 'lea')
+    expect(await screen.findByRole('listbox', { name: 'Games found' })).toBeInTheDocument()
 
     // Base UI's dismiss listener sits on the document, where Next also mounts
     // React; the picker cannot stop this event from reaching it.
@@ -440,34 +483,43 @@ describe('create squad — game picker', () => {
     await user.keyboard('{Escape}')
 
     await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
-    expect(screen.getByText('Create a Squad')).toBeInTheDocument()
-    expect(name).toHaveValue('Draft squad')
+    expect(screen.getByText('Choose the game')).toBeInTheDocument()
+    expect(search).toHaveValue('lea')
 
     await user.keyboard('{Escape}')
 
-    await waitFor(() => expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Choose the game')).not.toBeInTheDocument())
   })
 
-  it('toggles the list from the chevron button', async () => {
+  it('closes the list first on Escape even when focus is outside the search', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    expect(await screen.findByRole('listbox', { name: 'Games found' })).toBeInTheDocument()
+    expect(screen.getByLabelText(GAME_LABEL)).not.toHaveFocus()
+
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
+    expect(screen.getByText('Choose the game')).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByText('Choose the game')).not.toBeInTheDocument())
+  })
+
+  it('reopens the closed list when the player presses ArrowDown', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    await user.click(screen.getByLabelText('Game'))
-    const listbox = await screen.findByRole('listbox', { name: 'Select a game' })
+    const input = screen.getByLabelText(GAME_LABEL)
+    await user.click(input)
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-expanded', 'false')
 
-    const hide = screen.getByRole('button', { name: 'Hide games' })
-    expect(hide).toHaveAttribute('tabindex', '-1')
-    expect(hide).toHaveAttribute('aria-controls', listbox.id)
-
-    await user.click(hide)
-    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
-    expect(screen.getByRole('button', { name: 'Show games' })).toHaveAttribute(
-      'aria-expanded',
-      'false'
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Show games' }))
-    expect(await screen.findByRole('listbox', { name: 'Select a game' })).toBeInTheDocument()
+    await user.keyboard('{ArrowDown}')
+    expect(await screen.findByRole('listbox', { name: 'Games found' })).toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('announces the number of games the search found', async () => {
@@ -475,10 +527,10 @@ describe('create squad — game picker', () => {
     await openCreateModal(user)
 
     const status = screen.getByRole('status')
-    await user.click(screen.getByLabelText('Game'))
+    await user.click(screen.getByLabelText(GAME_LABEL))
     await waitFor(() => expect(status).toHaveTextContent('2 games found'))
 
-    const gameInput = screen.getByLabelText('Game')
+    const gameInput = screen.getByLabelText(GAME_LABEL)
     await user.type(gameInput, 'counter')
     await waitFor(() => expect(status).toHaveTextContent('1 game found'))
 
@@ -486,22 +538,128 @@ describe('create squad — game picker', () => {
     await waitFor(() => expect(status).toHaveTextContent('No games found. Try another name.'))
   })
 
-  it('marks the chosen game as selected when the list reopens', async () => {
+  it('marks the picked game and enables Continue', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
-    await pickGame(user, 'league', 'League of Legends (1-5 players)')
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
 
-    await user.click(screen.getByLabelText('Game'))
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
 
-    const chosen = await screen.findByRole('option', {
-      name: 'League of Legends (1-5 players)',
-    })
+    const chosen = screen.getByRole('option', { name: 'League of Legends, MOBA · 1–5 players' })
     expect(chosen).toHaveAttribute('aria-selected', 'true')
     expect(chosen.querySelector('svg')).not.toBeNull()
-    // The chosen label stops the search, so the popular games return after the debounce.
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+
+    // The marked game stays picked while the player searches on.
+    await user.clear(screen.getByLabelText(GAME_LABEL))
     expect(
-      await screen.findByRole('option', { name: 'Counter-Strike 2 (1-5 players)' })
+      await screen.findByRole('option', { name: 'Counter-Strike 2, Shooter · 1–5 players' })
     ).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+  })
+
+  it('lists the popular games under a heading while the field is empty', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+
+    expect(await screen.findAllByRole('option')).toHaveLength(2)
+    expect(screen.getByText('Popular now')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText(GAME_LABEL), 'count')
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
+    expect(screen.queryByText('Popular now')).not.toBeInTheDocument()
+  })
+
+  it('highlights the typed term in the name and shows the genre and size', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+
+    await user.type(screen.getByLabelText(GAME_LABEL), 'Count')
+    const option = await screen.findByRole('option', {
+      name: 'Counter-Strike 2, Shooter · 1–5 players',
+    })
+
+    await waitFor(() => expect(option.querySelector('mark')).toHaveTextContent('Count'))
+    expect(option).toHaveTextContent('Shooter · 1–5 players')
+  })
+
+  it('shows the initials tile when a cover does not load', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    const option = await screen.findByRole('option', {
+      name: 'League of Legends, MOBA · 1–5 players',
+    })
+
+    fireEvent.error(option.querySelector('img')!)
+
+    expect(within(option).getByTestId('game-initials')).toHaveTextContent('LO')
+  })
+
+  it('does not offer to suggest a game when nothing matches', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+
+    await user.type(screen.getByLabelText(GAME_LABEL), 'zzz')
+
+    expect(await screen.findByText('No game found for “zzz”')).toBeInTheDocument()
+    expect(screen.queryByText(/suggest/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('create squad — step flow', () => {
+  it('goes forward and back, keeping what the player entered', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+    await continueStep(user)
+
+    const name = await screen.findByLabelText('Squad Name')
+    expect(screen.getByRole('heading', { name: 'Squad details' })).toBeInTheDocument()
+    expect(screen.getByRole('listitem', { current: 'step' })).toHaveTextContent('02 · DETAILS')
+    await user.type(name, 'Draft squad')
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByLabelText(GAME_LABEL)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+
+    await continueStep(user)
+    expect(await screen.findByLabelText('Squad Name')).toHaveValue('Draft squad')
+  })
+
+  it('closes the dialog with Escape on step 2 after a keyboard Continue', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+
+    // A new term, then Enter with no active option: the form continues from the open search.
+    await user.type(screen.getByLabelText(GAME_LABEL), 'x')
+    await user.keyboard('{Enter}')
+    await screen.findByLabelText('Squad Name')
+
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByText('Squad details')).not.toBeInTheDocument())
+  })
+
+  it('closes from Cancel on the first step', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    await waitFor(() => expect(screen.queryByText('Choose the game')).not.toBeInTheDocument())
+  })
+})
+
+describe('create squad — layout', () => {
+  it('fills the screen below 640px and pins the footer to the bottom', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveClass('max-sm:h-dvh', 'max-sm:w-full', 'max-sm:max-w-none')
+    const footer = screen.getByRole('button', { name: 'Continue' }).parentElement!
+    expect(footer).toHaveClass('sticky', 'bottom-0')
   })
 })
 
@@ -510,14 +668,15 @@ describe('create squad — reopening', () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    await user.type(screen.getByLabelText('Squad Name'), 'Draft squad')
-    await user.keyboard('{Escape}')
+    await user.type(screen.getByLabelText(GAME_LABEL), 'lea')
+    // The first Escape closes the game list, the second the dialog.
+    await user.keyboard('{Escape}{Escape}')
 
-    await waitFor(() => expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Choose the game')).not.toBeInTheDocument())
 
     await user.click(screen.getByRole('button', { name: 'Create squad' }))
-    expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
-    expect(screen.getByLabelText('Squad Name')).toHaveValue('')
+    expect(await screen.findByText('Choose the game')).toBeInTheDocument()
+    expect(screen.getByLabelText(GAME_LABEL)).toHaveValue('')
   })
 })
 
@@ -527,17 +686,23 @@ describe('create squad — success flow', () => {
     const { navigation, user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
-    await pickGame(user, 'league', 'League of Legends (1-5 players)')
-    expect(
-      await screen.findByText('Leave empty to use 5 players (League of Legends default).')
-    ).toBeInTheDocument()
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+    await continueStep(user)
 
-    await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
+    await user.type(await screen.findByLabelText('Squad Name'), 'Created squad')
+    expect(
+      screen.getByText('Leave empty to use 5 players (League of Legends default).')
+    ).toBeInTheDocument()
     const tagInput = screen.getByPlaceholderText('Type a tag...')
     await user.type(tagInput, 'ranked,')
     await user.type(tagInput, 'flex')
     await user.keyboard('{Enter}')
+    await continueStep(user)
+
+    await user.type(
+      await screen.findByLabelText('Discord Invite Link'),
+      'https://discord.gg/created'
+    )
 
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
 
@@ -568,9 +733,7 @@ describe('create squad — returning to the board', () => {
     const { navigation, user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
-    await pickGame(user, 'league', 'League of Legends (1-5 players)')
-    await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
+    await fillWizard(user)
 
     // The server lists the squad as soon as it exists.
     serverSquads.rooms = [...serverSquads.rooms, createdSquad]
@@ -606,10 +769,8 @@ describe('create squad — sidebar my squads', () => {
     // The server lists the new squad as soon as it exists.
     mySquads.hosted = [createdSquad]
     await user.click(sidebar.getByRole('button', { name: 'Create squad' }))
-    await screen.findByText('Create a Squad', {}, { timeout: 5000 })
-    await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
-    await pickGame(user, 'league', 'League of Legends (1-5 players)')
-    await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
+    await screen.findByText('Choose the game', {}, { timeout: 5000 })
+    await fillWizard(user)
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
 
     await waitFor(
@@ -630,16 +791,14 @@ describe('create squad — server error', () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
-    await pickGame(user, 'league', 'League of Legends (1-5 players)')
-    await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
+    await fillWizard(user)
 
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
 
     await waitFor(() =>
       expect(toastStore.errorCalls[0]).toBe('You have reached the maximum number of active squads.')
     )
-    expect(screen.getByLabelText('Squad Name')).toBeInTheDocument()
+    expect(screen.getByLabelText('Discord Invite Link')).toBeInTheDocument()
     expect(countHttpCalls('POST', '/api/rooms')).toBe(1)
   })
 
@@ -653,9 +812,7 @@ describe('create squad — server error', () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
-    await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
-    await pickGame(user, 'league', 'League of Legends (1-5 players)')
-    await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
+    await fillWizard(user)
 
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
 
@@ -664,6 +821,6 @@ describe('create squad — server error', () => {
         'This game is no longer available. Please choose another game.'
       )
     )
-    expect(screen.getByLabelText('Squad Name')).toBeInTheDocument()
+    expect(screen.getByLabelText('Discord Invite Link')).toBeInTheDocument()
   })
 })
