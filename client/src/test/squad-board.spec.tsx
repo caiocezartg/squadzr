@@ -450,8 +450,10 @@ describe('squad board — page changes and grid', () => {
     const list = document.getElementById('squads-grid')!
     expect(list).toHaveClass('@container')
     const columns = list.firstElementChild!
-    expect(columns).toHaveClass('grid-cols-1', '@4xl:grid-cols-2')
+    expect(columns).toHaveClass('grid-cols-1', 'lg:@4xl:grid-cols-2')
+    // Two columns need the sidebar (lg) as well as the room: no window-only rule, no room-only rule.
     expect(columns.className).not.toMatch(/(^| )(sm|md|lg|xl):grid-cols-2/)
+    expect(columns.className).not.toMatch(/(^| )@4xl:grid-cols-2/)
   })
 })
 
