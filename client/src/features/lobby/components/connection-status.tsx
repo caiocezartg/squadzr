@@ -1,4 +1,6 @@
+import * as m from 'motion/react-m'
 import { useTranslations } from 'next-intl'
+import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { cn } from '@/lib/utils'
 import type { RealtimeStatus } from '@/lib/ws-client'
 
@@ -28,6 +30,7 @@ export function ConnectionStatus({ status }: ConnectionStatusProps) {
   const t = useTranslations()
   const label = t(LABEL_KEYS[status])
   const live = status === 'open'
+  const reducedMotion = useReducedMotion()
 
   return (
     <span
@@ -37,12 +40,11 @@ export function ConnectionStatus({ status }: ConnectionStatusProps) {
         TONE_CLASSES[status]
       )}
     >
-      <span
+      <m.span
         aria-hidden="true"
-        className={cn(
-          'size-1.75 rounded-full bg-current',
-          live && 'animate-pulse [animation-duration:1.6s] motion-reduce:animate-none'
-        )}
+        className="size-1.75 rounded-full bg-current"
+        animate={live && !reducedMotion ? { opacity: [1, 0.35, 1] } : undefined}
+        transition={{ duration: 1.6, ease: 'easeInOut', repeat: Infinity }}
       />
       {live ? (
         <>

@@ -17,7 +17,7 @@
  */
 
 import { act, screen, waitFor, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderSquadsFlow } from './harness'
 import { httpError, httpOk, onHttp } from './http-router'
 import { mockMediaQuery } from './media-query'
@@ -543,6 +543,11 @@ describe('squad lobby — full reload of a full squad', () => {
 describe('squad lobby — the member Lobby', () => {
   const thirdPlayer = { id: 'user-3', name: 'Bruno', image: null, isHost: false }
 
+  // The reduced-motion case spies on matchMedia; the cases after it run under full motion again.
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   /** A squad of ten with `count` members, the host first, as the server orders them. */
   function bigSquadSnapshot(count: number) {
     const players = [
@@ -647,8 +652,8 @@ describe('squad lobby — the member Lobby', () => {
   it('does not animate the first snapshot, and enters a member of a later one from opacity 0 and scale 0.9', async () => {
     await renderLobbyWithSnapshot()
 
-    expect(tileOf('Ana').style.opacity).toBe('')
-    expect(tileOf('Ana').style.transform).toBe('')
+    // The first snapshot renders its tiles in their final state: nothing starts from the entrance state.
+    expect(tileOf('Ana').style.opacity).toBe('1')
 
     sendFromServer({
       type: 'room_snapshot',
@@ -659,8 +664,22 @@ describe('squad lobby — the member Lobby', () => {
     // The entrance has started: the tile is on its way from opacity 0 and scale(0.9).
     expect(Number(tileOf('Bruno').style.opacity)).toBeLessThan(0.5)
     expect(tileOf('Bruno').style.transform).toMatch(/^scale\(0\.9/)
-    expect(tileOf('Ana').style.opacity).toBe('')
+    expect(tileOf('Ana').style.opacity).toBe('1')
     await waitFor(() => expect(tileOf('Bruno').style.opacity).toBe('1'))
+  })
+
+  it('does not replay an entrance when the viewer pages away and back', async () => {
+    const { user } = await renderLobbyWithSnapshot(bigSquadSnapshot(7))
+
+    sendFromServer({ type: 'room_snapshot', payload: bigSquadSnapshot(8) })
+    await screen.findByText('Member 7')
+    await waitFor(() => expect(tileOf('Member 7').style.opacity).toBe('1'))
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }))
+    await user.click(screen.getByRole('button', { name: 'Page 1' }))
+
+    // Back on page 1 the tile is already in its final state: it does not start from opacity 0 again.
+    expect(tileOf('Member 7').style.opacity).toBe('1')
   })
 
   it('enters a new member with the fade alone under reduced motion, ending in the final state', async () => {

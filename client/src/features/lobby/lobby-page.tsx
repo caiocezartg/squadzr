@@ -124,6 +124,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
       <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
         <LobbyCover squad={lobby.squad} />
         <MembersPanel
+          key={squadCode}
           squadCode={squadCode}
           players={lobby.players}
           maxPlayers={lobby.maxPlayers}

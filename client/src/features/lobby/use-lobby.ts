@@ -19,7 +19,6 @@ export interface LobbyView {
   game: PublicSquad['game'] | null
   players: Player[]
   maxPlayers: number
-  emptySlots: number
   presence: PresenceState
   discordLink: string | null
   isReady: boolean
@@ -91,7 +90,6 @@ export function useLobbyView(squadCode: string, channel: SquadChannel): LobbyVie
     game: squad?.game ?? null,
     players,
     maxPlayers,
-    emptySlots: Math.max(0, maxPlayers - players.length),
     presence: channel.presence,
     discordLink,
     isReady: channel.snapshot?.readyAt != null,

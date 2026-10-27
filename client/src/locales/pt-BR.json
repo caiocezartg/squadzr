@@ -287,15 +287,8 @@
   },
   "lobby": {
     "backToSquads": "Voltar aos squads",
-    "leaveSquad": "Sair do squad",
-    "squadLocked": "Time fechado",
     "cannotLeave": "Não é possível sair de um squad cheio",
-    "pleaseSignIn": "Por favor, entre com sua conta para ver este squad.",
-    "playerCount": "{current}/{max} jogadores",
-    "players": "Jogadores ({current}/{max})",
-    "copied": "Copiado!",
-    "waitingForPlayer": "Aguardando jogador...",
-    "host": "Anfitrião"
+    "pleaseSignIn": "Por favor, entre com sua conta para ver este squad."
   },
   "discordCard": {
     "title": "Seu time está pronto!",

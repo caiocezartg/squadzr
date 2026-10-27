@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Player } from '@/types'
 
 interface RosterMemory {
@@ -24,6 +24,11 @@ export interface RosterArrivals {
  */
 export function useRosterArrivals(players: readonly Player[]): RosterArrivals {
   const [memory, setMemory] = useState<RosterMemory>({ seen: null, arrivals: NO_ARRIVALS })
+
+  // The entrance plays when the tile mounts, so once it is on screen the member is no longer an arrival.
+  useEffect(() => {
+    if (memory.arrivals.size > 0) setMemory((current) => ({ ...current, arrivals: NO_ARRIVALS }))
+  }, [memory.arrivals])
 
   if (memory.seen === null) {
     if (players.length > 0) {

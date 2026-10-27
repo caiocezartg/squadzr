@@ -127,16 +127,17 @@ export function MembersPanel({
             offlineSince: memberPresence?.offlineSince ?? null,
           }
 
-          return arrivals.has(player.id) ? (
+          const arriving = arrivals.has(player.id)
+
+          // Every member is the same component, so a tile never remounts when it stops being an arrival. Only an arrival starts from the entrance state; the rest render in their final state.
+          return (
             <ArrivingMemberTile
               key={player.id}
               {...tile}
-              initial={reducedMotion ? { opacity: 0 } : ARRIVAL_FROM}
+              initial={arriving ? (reducedMotion ? { opacity: 0 } : ARRIVAL_FROM) : false}
               animate={reducedMotion ? { opacity: 1 } : ARRIVAL_TO}
               transition={reducedMotion ? ARRIVAL_FADE : ARRIVAL_SPRING}
             />
-          ) : (
-            <MemberTile key={player.id} {...tile} />
           )
         })}
         {Array.from({ length: openSlots }, (_, index) => (

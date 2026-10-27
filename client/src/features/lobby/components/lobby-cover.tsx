@@ -41,7 +41,7 @@ export function LobbyCover({ squad }: LobbyCoverProps) {
       className="relative flex flex-col lg:w-72 lg:shrink-0 xl:w-95"
     >
       <CornerMarks />
-      <div className="bg-raised-2 relative flex aspect-video flex-1 flex-col justify-between gap-6 p-4 sm:p-5.5 lg:aspect-auto lg:min-h-96">
+      <div className="bg-raised-2 relative flex aspect-video flex-1 flex-col justify-between gap-6 p-4 sm:p-5.5 lg:aspect-3/4">
         <div className="absolute inset-0 overflow-hidden">
           {game?.coverUrl && (
             <img
