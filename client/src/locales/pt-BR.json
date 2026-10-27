@@ -30,6 +30,22 @@
         "open": "Aguardando jogador"
       }
     },
+    "lobby": {
+      "live": "AO VIVO",
+      "exploreSquads": "Explorar squads",
+      "copyLink": "Copiar link do squad",
+      "linkCopied": "Link copiado",
+      "copyCode": "Copiar código {code}",
+      "copied": "Copiado",
+      "endSquad": "Encerrar squad",
+      "leaveSquad": "Sair do squad",
+      "teamClosed": "Time fechado",
+      "aboutSquad": "Sobre o squad",
+      "coverAlt": "Capa de {game}",
+      "created": "Criado {time}",
+      "members": "Membros",
+      "playerCount": "{current}/{max} jogadores"
+    },
     "close": "Fechar",
     "pagination": {
       "label": "Paginação",

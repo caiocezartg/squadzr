@@ -94,7 +94,7 @@ describe('the Lobby on the App Router', () => {
     // The server's read is in the first render: the name and the size come before any snapshot.
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
     expect(screen.getByText('0/3 players')).toBeInTheDocument()
-    expect(screen.getAllByText('Waiting for player...')).toHaveLength(3)
+    expect(screen.getAllByText('Open slot')).toHaveLength(3)
 
     openLatestWebSocket()
     sendFromServer({
@@ -113,7 +113,7 @@ describe('the Lobby on the App Router', () => {
     await renderLobbyRoute(lobbySquad.code)
 
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
-    expect(screen.getAllByText('Waiting for player...')).toHaveLength(3)
+    expect(screen.getAllByText('Open slot')).toHaveLength(3)
     // The HTTP response carries the roster too, but the Lobby shows only the snapshot's.
     expect(screen.queryByText('Caio')).not.toBeInTheDocument()
 
@@ -122,7 +122,7 @@ describe('the Lobby on the App Router', () => {
 
     expect(await screen.findByText('Ana')).toBeInTheDocument()
     expect(screen.getByText('2/3 players')).toBeInTheDocument()
-    expect(screen.getAllByText('Waiting for player...')).toHaveLength(1)
+    expect(screen.getAllByText('Open slot')).toHaveLength(1)
   })
 
   it('renders its game from the Squad before and after a snapshot replaces it', async () => {
@@ -134,7 +134,7 @@ describe('the Lobby on the App Router', () => {
     // The HTTP read carries League of Legends; the snapshot below carries Counter-Strike 2.
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
     expect(screen.getByText(lobbySquad.game.name)).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: lobbySquad.game.name })).toHaveAttribute(
+    expect(screen.getByRole('img', { name: `${lobbySquad.game.name} cover` })).toHaveAttribute(
       'src',
       lobbySquad.game.coverUrl
     )
@@ -150,7 +150,7 @@ describe('the Lobby on the App Router', () => {
 
     expect(await screen.findByText('2/3 players')).toBeInTheDocument()
     expect(screen.getByText(gameCs2Summary.name)).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: gameCs2Summary.name })).toHaveAttribute(
+    expect(screen.getByRole('img', { name: `${gameCs2Summary.name} cover` })).toHaveAttribute(
       'src',
       gameCs2Summary.coverUrl
     )
@@ -173,7 +173,7 @@ describe('the Lobby on the App Router', () => {
       'href',
       'https://discord.gg/lobby'
     )
-    expect(screen.getByRole('button', { name: 'Squad locked' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Team closed' })).toBeDisabled()
   })
 
   it('shows a signed-in viewer the not-found state for a missing Squad', async () => {
@@ -195,13 +195,13 @@ describe('the Lobby on the App Router', () => {
     openLatestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
 
-    const slot = (await screen.findByText(guestPlayer.name)).closest('.rounded-xl')
-    if (!slot) throw new Error('The roster slot is not rendered')
+    const slot = (await screen.findByText(guestPlayer.name)).closest('li')
+    if (!slot) throw new Error('The member tile is not rendered')
     const image = slot.querySelector('img')
     if (!image) throw new Error('The avatar image is not rendered')
     fireEvent.error(image)
 
-    expect(within(slot as HTMLElement).getByText('A')).toBeInTheDocument()
+    expect(within(slot as HTMLElement).getByText('AN')).toBeInTheDocument()
     expect(slot.querySelector('img')).toBeNull()
   })
 

@@ -137,7 +137,7 @@ describe('lobby', () => {
 
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
     expect(screen.getByText('0/3 players')).toBeInTheDocument()
-    expect(screen.getAllByText('Waiting for player...')).toHaveLength(3)
+    expect(screen.getAllByText('Open slot')).toHaveLength(3)
 
     // Readiness comes only from a member snapshot, which a non-member never
     // receives, so nothing can unlock the invite or lock the leave button.
