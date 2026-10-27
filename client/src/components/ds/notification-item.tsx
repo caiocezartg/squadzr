@@ -59,7 +59,7 @@ export function NotificationItem({
         aria-disabled={disabled || undefined}
         onClick={handleClick}
         className={cn(
-          'hover-fine:bg-line hover-fine:[--ground:var(--color-line)] focus-visible:outline-text flex w-full items-center gap-3.5 py-2.5 pr-11 pl-2.5 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:pr-14',
+          'hover-fine:bg-line hover-fine:[--ground:var(--color-line)] focus-visible:outline-text flex w-full items-center gap-3.5 py-2.5 pr-14 pl-2.5 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2',
           unread
             ? 'bg-raised-2 [--ground:var(--color-raised-2)] shadow-[inset_2px_0_0_var(--color-mint)]'
             : 'bg-raised [--ground:var(--color-raised)]'
@@ -111,7 +111,7 @@ export function NotificationItem({
         disabled={disabled}
         onClick={onDismiss}
         aria-label={t('dismiss', { squad: squadName })}
-        className="bg-track text-text-2 hover-fine:text-text focus-visible:outline-text absolute top-2 right-2 flex size-7.5 items-center justify-center opacity-0 transition-[opacity,color] duration-150 group-hover-fine:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:size-11 pointer-coarse:opacity-100"
+        className="bg-track text-text-2 hover-fine:text-text focus-visible:outline-text absolute top-1/2 right-2 flex size-11 -translate-y-1/2 items-center justify-center opacity-0 transition-[opacity,color] duration-150 group-hover-fine:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:opacity-100"
       >
         <X aria-hidden className="size-3" strokeWidth={2.8} />
       </button>

@@ -35,7 +35,7 @@ export function NotificationsPanel({
         The popover has no padding of its own (see the menu); the bottom sheet keeps its own, and its
         close button sits in the top right corner, so the row clears it.
       */}
-      <div className="flex items-center justify-between gap-3 pb-3.5 max-sm:pr-12 sm:pt-4.5 sm:pr-4.5 sm:pl-5">
+      <div className="flex min-h-11 items-center justify-between gap-2 pb-3.5 max-sm:-mt-2 max-sm:pr-11 sm:pt-4.5 sm:pr-4.5 sm:pl-5">
         <span aria-hidden className="type-panel-title-sm text-text">
           {t('title')}
         </span>
@@ -45,7 +45,7 @@ export function NotificationsPanel({
           disabled={unreadCount === 0 || busy}
           aria-label={t('markAllRead')}
           title={t('markAllRead')}
-          className="press bg-line text-mint hover-fine:bg-track disabled:text-faint disabled:hover-fine:bg-line focus-visible:outline-text flex size-10 shrink-0 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:size-11"
+          className="press bg-line text-mint hover-fine:bg-track disabled:text-faint disabled:hover-fine:bg-line focus-visible:outline-text flex size-11 shrink-0 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2"
         >
           <CheckCheck aria-hidden className="size-4.25" strokeWidth={2.4} />
         </button>
