@@ -24,7 +24,9 @@ const TONE_CLASSES: Record<RealtimeStatus, string> = {
 
 /**
  * The overall realtime connection (reference, Lobby): "LIVE" with a pulsing dot while connected, and the
- * state's own words otherwise. Every state has its text, so the colour is never alone.
+ * state's own words otherwise. In a narrow row the pill is the dot alone, a square like the icon buttons
+ * beside it; its text then stays for assistive technology (and as the tooltip), so the colour never
+ * stands alone.
  */
 export function ConnectionStatus({ status }: ConnectionStatusProps) {
   const t = useTranslations()
@@ -37,7 +39,8 @@ export function ConnectionStatus({ status }: ConnectionStatusProps) {
       role="status"
       title={label}
       className={cn(
-        'font-ds-mono inline-flex min-h-11 whitespace-nowrap items-center gap-2 px-3 @max-[52rem]:px-2.5 text-[11.5px] font-bold tracking-[0.08em] uppercase',
+        'font-ds-mono inline-flex min-h-11 min-w-11 items-center justify-center gap-2 text-[11.5px] font-bold tracking-[0.08em] whitespace-nowrap uppercase',
+        live ? '@min-[41rem]:px-3' : '@min-[45rem]:px-3',
         TONE_CLASSES[status]
       )}
     >
@@ -49,13 +52,13 @@ export function ConnectionStatus({ status }: ConnectionStatusProps) {
       />
       {live ? (
         <>
-          <span aria-hidden="true" className="@max-[41rem]:hidden">
+          <span aria-hidden="true" className="hidden @min-[41rem]:inline">
             {t('ds.lobby.live')}
           </span>
           <span className="sr-only">{label}</span>
         </>
       ) : (
-        <span className="@max-[52rem]:sr-only">{label}</span>
+        <span className="sr-only @min-[45rem]:not-sr-only">{label}</span>
       )}
     </span>
   )

@@ -265,7 +265,7 @@ function ButtonFace({
   return (
     <>
       {iconPosition === 'start' && iconNode}
-      {children !== undefined && <span>{children}</span>}
+      {children !== undefined && <span className="contents">{children}</span>}
       {iconPosition === 'end' && iconNode}
     </>
   )
