@@ -142,6 +142,10 @@ describe('sidebar my squads — list', () => {
     expect(within(readyItem).getByText('5/5')).toHaveClass('text-discord-soft')
     expect(within(readyItem).getByText('5/5')).not.toHaveClass('text-amber')
     expect(within(openItem).queryByRole('img', { name: 'Invite unlocked' })).not.toBeInTheDocument()
+    // The line meter is the item's decorative span: Discord tone when Ready, mint otherwise.
+    expect(readyItem.querySelector('span[aria-hidden="true"].text-discord-soft')).not.toBeNull()
+    expect(openItem.querySelector('span[aria-hidden="true"].text-discord-soft')).toBeNull()
+    expect(openItem.querySelector('span[aria-hidden="true"].text-mint')).not.toBeNull()
   })
 
   it('shows a sign-in call to action to a visitor, with no read of the list', async () => {
@@ -160,6 +164,15 @@ describe('sidebar my squads — list', () => {
 })
 
 describe('sidebar my squads — freshness', () => {
+  it('reads the list in the browser when the server left it out of the page', async () => {
+    registerMySquads(() => ({ hosted: [older], joined: [] }))
+    renderSquadsFlow('/squads', { shell: true })
+    const menu = await sidebar()
+
+    expect(await menu.findByRole('link', { name: /Older squad/ })).toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(1)
+  })
+
   it('reads the list again when the window regains focus', async () => {
     const lists: MyRoomsResponse = { hosted: [older], joined: [] }
     registerMySquads(() => lists)

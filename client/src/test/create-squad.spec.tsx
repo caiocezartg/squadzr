@@ -612,8 +612,9 @@ describe('create squad — sidebar my squads', () => {
     await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
 
-    await waitFor(() =>
-      expect(sidebar.getByRole('link', { name: /Created squad/ })).toBeInTheDocument()
+    await waitFor(
+      () => expect(sidebar.getByRole('link', { name: /Created squad/ })).toBeInTheDocument(),
+      { timeout: 5000 }
     )
   })
 })

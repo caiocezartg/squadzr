@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { HydrationBoundary } from '@tanstack/react-query'
 import { LobbyPage, lobbyMetadata, prefetchLobby } from '@/features/lobby/page'
 import { prefetchRoute } from '@/lib/query-client'
@@ -8,9 +9,18 @@ interface LobbyRouteProps {
   readonly params: Promise<{ code: string }>
 }
 
+/**
+ * `my` is the retired My Squads page (`/squads/my`, and `/rooms/my` through its redirect). It is not
+ * a Squad code, since codes have six characters, so it ends in the app's 404 for every viewer.
+ */
+function rejectRetiredPath(code: string): void {
+  if (code.toLowerCase() === 'my') notFound()
+}
+
 /** The invite preview of the Squad: its name and game, or the generic metadata when there is no Squad to show. */
 export async function generateMetadata({ params }: LobbyRouteProps): Promise<Metadata> {
   const { code } = await params
+  rejectRetiredPath(code)
   return lobbyMetadata(code)
 }
 
@@ -21,6 +31,7 @@ export async function generateMetadata({ params }: LobbyRouteProps): Promise<Met
  */
 export default async function LobbyRoute({ params }: LobbyRouteProps) {
   const { code } = await params
+  rejectRetiredPath(code)
   const viewer = await getRequestViewer()
   const state = await prefetchRoute((queryClient) => prefetchLobby(queryClient, viewer, code))
 

@@ -121,9 +121,12 @@ describe('(app) layout server render', () => {
     viewer.current = { ...viewer.current, cookie: SESSION_COOKIE }
     createHarnessNavigation('/squads')
 
-    const html = await layoutHtml(<p>The page</p>, fakeSession())
+    const layout = await AppLayout({ children: <p>The page</p> })
+    const state = (layout.props as { state: { queries: { queryKey: unknown[] }[] } }).state
 
-    expect(html).toContain('The page')
-    expect(html).not.toContain(createdSquad.name)
+    // The failed read is left out of what the browser receives, so its own read (my-squads.spec,
+    // "reads the list in the browser") fetches the list.
+    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(1)
+    expect(state.queries.map((query) => query.queryKey)).toEqual([['squads']])
   })
 })
