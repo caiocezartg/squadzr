@@ -1,20 +1,18 @@
 /**
- * The (app) layout and the proxy in front of it (CCC-106). The layout reads the Squad Board's list on
- * the server and waits for it, so the sidebar's count and the board are in the HTML the server sends,
- * for a visitor too, since the board is public. A visitor on My Squads is turned away by the proxy
- * before the layout renders, so the redirect does not wait on that read.
+ * The (app) layout (CCC-106, CCC-107). The layout reads the Squad Board's list on the server and waits
+ * for it, so the sidebar's count and the board are in the HTML the server sends, for a visitor too,
+ * since the board is public. For a viewer with a session cookie it also reads their squads, so the
+ * sidebar's "My squads" list is in the first HTML; a visitor's request makes no such read.
  */
 
 import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AppLayout from '@/app/(app)/layout'
 import { SquadBoardPage } from '@/features/squad-board/page'
-import { proxy } from '@/proxy'
-import { boardSquads } from './fixtures'
+import { boardSquads, createdSquad, memberSquad } from './fixtures'
 import { createTestQueryClient } from './harness'
-import { countHttpCalls, httpOk, onHttp } from './http-router'
+import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import { EnglishIntlProvider } from './intl'
 import { createHarnessNavigation } from './navigation'
 import { fakeSession, signInAsFakeUser, signOutFakeUser } from './stubs'
@@ -53,6 +51,7 @@ async function layoutHtml(
 beforeEach(() => {
   viewer.current = { ...viewer.current, cookie: null }
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  onHttp('GET', '/api/rooms/my', () => httpOk({ hosted: [createdSquad], joined: [memberSquad] }))
 })
 
 describe('(app) layout server render', () => {
@@ -91,33 +90,43 @@ describe('(app) layout server render', () => {
     expect(html).toContain(boardSquads.rooms[0]!.name)
     expect(html).not.toContain('data-testid="squad-board-skeleton"')
   })
-})
 
-describe('proxy', () => {
-  function request(cookie?: string): NextRequest {
-    return new NextRequest('http://localhost:3000/squads/my', {
-      headers: cookie ? { cookie } : {},
-    })
-  }
+  it("puts the signed-in viewer's squads in the first HTML, with the layout's own read", async () => {
+    signInAsFakeUser()
+    viewer.current = { ...viewer.current, cookie: SESSION_COOKIE }
+    createHarnessNavigation('/squads')
 
-  it('redirects a visitor on My Squads to the landing, with no board read', () => {
-    const response = proxy(request('NEXT_LOCALE=en'))
+    const html = await layoutHtml(<p>The page</p>, fakeSession())
 
-    expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe('http://localhost:3000/')
-    expect(countHttpCalls('GET', '/api/rooms')).toBe(0)
+    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(1)
+    expect(html).toContain('My squads')
+    expect(html).toContain(createdSquad.name)
+    expect(html).toContain(memberSquad.name)
   })
 
-  it('lets a viewer with a session cookie through to My Squads', () => {
-    const response = proxy(request(SESSION_COOKIE))
+  it('makes no read of My squads for a visitor, and shows the sign-in call to action', async () => {
+    signOutFakeUser()
+    createHarnessNavigation('/squads')
 
-    expect(response.headers.get('location')).toBeNull()
-    expect(response.headers.get('x-middleware-next')).toBe('1')
+    const html = await layoutHtml(<p>The page</p>, null)
+
+    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(0)
+    expect(html).toContain('Sign in to see the squads you host or joined.')
   })
 
-  it('runs only on My Squads', async () => {
-    const { config } = await import('@/proxy')
+  it('leaves the list to the browser when the server read fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    onHttp('GET', '/api/rooms/my', () => httpError(500, { error: 'boom' }))
+    signInAsFakeUser()
+    viewer.current = { ...viewer.current, cookie: SESSION_COOKIE }
+    createHarnessNavigation('/squads')
 
-    expect(config.matcher).toBe('/squads/my')
+    const layout = await AppLayout({ children: <p>The page</p> })
+    const state = (layout.props as { state: { queries: { queryKey: unknown[] }[] } }).state
+
+    // The failed read is left out of what the browser receives, so its own read (my-squads.spec,
+    // "reads the list in the browser") fetches the list.
+    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(1)
+    expect(state.queries.map((query) => query.queryKey)).toEqual([['squads']])
   })
 })

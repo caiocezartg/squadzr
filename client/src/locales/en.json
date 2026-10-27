@@ -84,6 +84,10 @@
       "show": "{count, plural, one {Show {count} squad} other {Show {count} squads}}",
       "showUnknown": "Show squads"
     },
+    "sidebarSquad": {
+      "host": "You are the host",
+      "inviteUnlocked": "Invite unlocked"
+    },
     "shell": {
       "menu": "Menu",
       "openMenu": "Open menu",
@@ -96,6 +100,9 @@
       "codeInvalid": "A squad code has 6 letters or digits.",
       "squads": "Squads",
       "allSquads": "All squads",
+      "mySquads": "My squads",
+      "mySquadsSignIn": "Sign in to see the squads you host or joined.",
+      "mySquadsSignInAction": "Sign in",
       "signIn": "Sign in with Discord",
       "account": "Account menu",
       "createSignIn": "You can explore squads as a guest, but creating a squad requires signing in with Discord."
@@ -211,19 +218,6 @@
       "full": "Full",
       "label": "{name} — {game}, {language}, {members} of {max} players"
     },
-    "filters": {
-      "searchPlaceholder": "Search by game or squad name...",
-      "tagPlaceholder": "filter by tag...",
-      "lang": "Lang",
-      "statusAll": "ALL",
-      "statusHasSpace": "HAS SPACE",
-      "statusAlmostFull": "ALMOST FULL",
-      "sortNewest": "NEWEST",
-      "sortOldest": "OLDEST",
-      "langAll": "ALL LANGUAGES",
-      "langPtBr": "PT-BR",
-      "langEn": "EN-US"
-    },
     "authModal": {
       "title": "Sign in required",
       "description": "You can explore squads list as a guest, but joining a squad and viewing full details requires signing in with Discord.",
@@ -268,15 +262,6 @@
       "showGameList": "Show games",
       "hideGameList": "Hide games"
     }
-  },
-  "mySquads": {
-    "title": "My squads",
-    "subtitle": "Squads you created or joined",
-    "loadError": "Failed to load your squads. Please refresh the page.",
-    "tabCreated": "Created ({count})",
-    "tabJoined": "Joined ({count})",
-    "noSquadsYet": "No squads here yet.",
-    "noSquadsFiltered": "No squads match your filters."
   },
   "squadNotFound": {
     "title": "Squad not found",

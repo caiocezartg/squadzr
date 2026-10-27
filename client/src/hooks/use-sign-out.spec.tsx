@@ -66,7 +66,7 @@ describe('signing out from the sidebar', () => {
   it('ends the session, clears the cached data and sends the player to the landing', async () => {
     signInAsFakeUser({ name: 'Caio' })
     const { user, navigation, queryClient } = renderShellOver('/squads')
-    queryClient.setQueryData(['my-squads'], [])
+    queryClient.setQueryData(['my-squads'], { hosted: [], joined: [] })
 
     await signOutFromSidebar(user)
 

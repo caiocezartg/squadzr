@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useTranslations } from 'next-intl'
+import { useMySquadsCommands } from '@/features/my-squads'
 import type { SquadBoardCommands } from '@/features/squad-board'
 import { api } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
@@ -31,6 +32,7 @@ export function useSquadMembership({
 }: UseSquadMembershipOptions) {
   const navigateApp = useAppNavigation()
   const t = useTranslations()
+  const { refreshMySquads } = useMySquadsCommands()
 
   const leaveSquad = useCallback(async () => {
     try {
@@ -40,12 +42,12 @@ export function useSquadMembership({
       if (isHost && squad) {
         board.removeSquad(squad.id)
       }
-      await board.refreshSquads()
+      await Promise.all([board.refreshSquads(), refreshMySquads()])
       navigateApp('/squads')
     } catch (err) {
       notifyError(getUserFriendlyError(err, t, 'leave'))
     }
-  }, [squad, userId, squadCode, notifySquadLeave, board, navigateApp, t])
+  }, [squad, userId, squadCode, notifySquadLeave, board, refreshMySquads, navigateApp, t])
 
   return { leaveSquad }
 }

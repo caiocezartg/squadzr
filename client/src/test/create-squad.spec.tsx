@@ -1,6 +1,6 @@
 /**
  * Characterization tests for the create-squad flow on the Squad Board page
- * and on My Squads (`/squads/my`).
+ * and the sidebar's My squads.
  *
  * Covers the gating of the create button by session state, client-side
  * validation of the form, the payload posted to the API on success (including
@@ -592,45 +592,30 @@ describe('create squad — returning to the board', () => {
   })
 })
 
-describe('create squad — from my squads', () => {
-  it('refreshes the board so the new squad appears when returning to it', async () => {
-    const serverSquads = { rooms: [...boardSquads.rooms] }
+describe('create squad — sidebar my squads', () => {
+  it('lists the new squad in the sidebar once it is created', async () => {
     const mySquads: MyRoomsResponse = { hosted: [], joined: [] }
-    onHttp('GET', '/api/rooms', () => httpOk({ rooms: serverSquads.rooms }))
     registerCreateRoutes()
     // Registered after the lobby route so the exact segment wins over `:code`.
     onHttp('GET', '/api/rooms/my', () => httpOk(mySquads))
-    const { navigation, user } = renderSquadsFlow('/squads', { shell: true })
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    const sidebar = within(await screen.findByRole('complementary', { name: 'Menu' }))
+    await sidebar.findByText('My squads')
+    expect(sidebar.queryByText('Created squad')).not.toBeInTheDocument()
 
-    // The board is loaded and fresh when the user leaves for My Squads.
-    await screen.findByText('Ranked grind')
-    navigation.router.push('/squads/my')
-    await settleNavigation()
-    await screen.findByText('My squads')
-
-    // The server lists the new squad in both lists as soon as it exists.
-    serverSquads.rooms = [...serverSquads.rooms, createdSquad]
+    // The server lists the new squad as soon as it exists.
     mySquads.hosted = [createdSquad]
-    const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
-
-    await user.click(screen.getByRole('button', { name: 'Create new squad' }))
+    await user.click(sidebar.getByRole('button', { name: 'Create squad' }))
     await screen.findByText('Create a Squad', {}, { timeout: 5000 })
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
     await pickGame(user, 'league', 'League of Legends (1-5 players)')
     await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
 
-    await waitFor(() =>
-      expect(navigation.history.location.pathname).toBe(`/squads/${createdSquad.code}`)
+    await waitFor(
+      () => expect(sidebar.getByRole('link', { name: /Created squad/ })).toBeInTheDocument(),
+      { timeout: 5000 }
     )
-
-    // The create capability asked the board to refresh even though the
-    // board was unmounted: the next visit must re-read the authoritative
-    // list instead of trusting the cache for the whole staleTime.
-    navigation.router.push('/squads')
-    await settleNavigation()
-    expect(await screen.findByText('Created squad')).toBeInTheDocument()
-    expect(countHttpCalls('GET', '/api/rooms')).toBeGreaterThan(fetchesBeforeCreate)
   })
 })
 

@@ -73,7 +73,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         </AppLink>
       </nav>
 
-      <SidebarMySquads />
+      <SidebarMySquads onNavigate={onNavigate} />
 
       <div className="flex flex-col gap-2.5">
         <LanguageToggle />

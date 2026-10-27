@@ -9,7 +9,6 @@
  */
 export { SquadCard, type SquadCardProps } from './squad-card'
 export { SquadGrid, type SquadGridProps } from './squad-grid'
-export { SquadFilters } from './squad-filters'
 export {
   squadsSearchQuery,
   squadsSearchSchema,

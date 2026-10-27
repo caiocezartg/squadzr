@@ -28,6 +28,7 @@ import type { RoomsResponse } from '@/types'
 function registerRoutes(rooms: RoomsResponse = boardSquads): void {
   onHttp('GET', '/api/rooms', () => httpOk(rooms))
   onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
+  onHttp('GET', '/api/rooms/my', () => httpOk({ hosted: [], joined: [] }))
   onHttp('POST', '/api/rooms/:code/join', () => httpOk({ ok: true }))
   onHttp('GET', '/api/notifications', () => httpOk({ notifications: [] }))
   onHttp('GET', '/api/games', (request) => {
@@ -306,15 +307,25 @@ describe('the drawer', () => {
       hidden: true,
     })
 
+    // Base UI moves focus into the drawer on a frame after it opens, and back in from a focus guard on
+    // a frame after a Tab leaves an end. Each step waits for that frame, so a slow runner cannot press
+    // Tab while the last move is still pending.
+    const focusInside = () =>
+      waitFor(() => expect(dialog).toContainElement(document.activeElement as HTMLElement), {
+        timeout: 5000,
+      })
+    await focusInside()
+    const tabbables = dialog.querySelectorAll('a[href], button:not([disabled]), input').length
+
     // Tab and Shift+Tab past either end of the drawer: Base UI's focus guards send focus back in.
     for (const shift of [false, true]) {
-      for (let press = 0; press < 25; press += 1) {
+      for (let press = 0; press < tabbables + 2; press += 1) {
         await user.tab({ shift })
         expect(outside).not.toHaveFocus()
-        await waitFor(() => expect(dialog).toContainElement(document.activeElement as HTMLElement))
+        await focusInside()
       }
     }
-  })
+  }, 30_000)
 
   it('closes on navigation', async () => {
     const { user, navigation } = renderShell('/')
