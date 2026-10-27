@@ -13,7 +13,7 @@ export function LobbySkeleton() {
     >
       <div className="bg-card h-11 w-44 animate-pulse" />
       <div className="flex flex-col gap-5 lg:flex-row">
-        <div className="bg-card aspect-video animate-pulse lg:aspect-auto lg:min-h-96 lg:w-72 xl:w-95" />
+        <div className="bg-card aspect-video animate-pulse lg:aspect-3/4 lg:w-72 xl:w-95" />
         <div className="bg-panel h-80 flex-1 animate-pulse" />
       </div>
     </div>

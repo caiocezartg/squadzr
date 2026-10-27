@@ -5,6 +5,7 @@
  * arrives through the dehydrated read and then the realtime snapshot.
  */
 
+import type { ReactNode } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, within } from '@testing-library/react'
@@ -54,6 +55,15 @@ const { discordLink: _discordLink, ...publicLobbySquad } = lobbySquad
 
 const notFoundBody = { error: 'ROOM_NOT_FOUND', message: 'Room not found' }
 
+/** The providers of the root layout around a page. */
+function withProviders(page: ReactNode, queryClient: QueryClient) {
+  return (
+    <EnglishIntlProvider session={fakeSession()}>
+      <QueryClientProvider client={queryClient}>{page}</QueryClientProvider>
+    </EnglishIntlProvider>
+  )
+}
+
 /**
  * Renders the page as Next does: the server component's output, awaited as the server awaits it, inside the
  * providers of the root layout.
@@ -62,11 +72,8 @@ async function renderLobbyRoute(code: string, queryClient: QueryClient = createT
   createHarnessNavigation(`/squads/${code}`)
   const page = await LobbyRoute({ params: Promise.resolve({ code }) })
 
-  return render(
-    <EnglishIntlProvider session={fakeSession()}>
-      <QueryClientProvider client={queryClient}>{page}</QueryClientProvider>
-    </EnglishIntlProvider>
-  )
+  const view = render(withProviders(page, queryClient))
+  return { ...view, queryClient }
 }
 
 describe('the Lobby on the App Router', () => {
@@ -234,5 +241,40 @@ describe('the Lobby on the App Router', () => {
 
     expect(screen.getByText(lobbySquad.name)).toBeInTheDocument()
     expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()
+  })
+
+  it('does not animate the first snapshot of the next Squad on a warm-cache switch', async () => {
+    signInAsFakeUser()
+    const nextSquad = {
+      ...lobbySquad,
+      id: 'aaaaaaaa-0000-4000-8000-000000000008',
+      code: 'NEXT01',
+      name: 'Next squad',
+    }
+    const queryClient = createTestQueryClient()
+    for (const room of [lobbySquad, nextSquad]) {
+      queryClient.setQueryData(
+        squadQueryKey(room.code),
+        { room, players: [] },
+        { updatedAt: Date.now() - 120_000 }
+      )
+    }
+    onHttp('GET', '/api/rooms/:code', () => deferred<MockHttpResponse>().promise)
+
+    const view = await renderLobbyRoute(lobbySquad.code, queryClient)
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    expect(await screen.findByText('Ana')).toBeInTheDocument()
+
+    const nextPage = await LobbyRoute({ params: Promise.resolve({ code: nextSquad.code }) })
+    view.rerender(withProviders(nextPage, queryClient))
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({ room: { ...nextSquad, memberCount: 2, isMember: true } }),
+    })
+
+    // The next Squad's first snapshot is the room as it was: its tiles render in their final state.
+    expect(await screen.findByText('Next squad')).toBeInTheDocument()
+    expect(screen.getByText('Ana').closest('li')?.style.opacity).toBe('1')
   })
 })

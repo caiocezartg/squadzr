@@ -18,9 +18,10 @@ export interface RosterArrivals {
 }
 
 /**
- * Which members a snapshot brought in, for their entrance. A member keeps counting as an arrival until a later snapshot adds another, which is harmless: only a tile that
- * mounts reads it. The roster is empty until the first snapshot,
- * and that one never animates: only a member who appears in a later snapshot is an arrival.
+ * Which members a snapshot brought in, for their entrance. The roster is empty until the first snapshot, and
+ * that one never animates: only a member who appears in a later snapshot is an arrival. An arrival counts
+ * only until it has rendered once, so paging away and back never replays an entrance. An empty roster
+ * forgets what was seen, so the first snapshot of another Squad starts from the room as it was too.
  */
 export function useRosterArrivals(players: readonly Player[]): RosterArrivals {
   const [memory, setMemory] = useState<RosterMemory>({ seen: null, arrivals: NO_ARRIVALS })
@@ -34,6 +35,11 @@ export function useRosterArrivals(players: readonly Player[]): RosterArrivals {
     if (players.length > 0) {
       setMemory({ seen: new Set(players.map((player) => player.id)), arrivals: NO_ARRIVALS })
     }
+    return { live: false, arrivals: NO_ARRIVALS }
+  }
+
+  if (players.length === 0) {
+    setMemory({ seen: null, arrivals: NO_ARRIVALS })
     return { live: false, arrivals: NO_ARRIVALS }
   }
 
