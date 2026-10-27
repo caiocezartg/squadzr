@@ -70,4 +70,26 @@ describe('step panel', () => {
 
     expect(panel().parentElement).toHaveClass('overflow-x-clip')
   })
+
+  it('bounds the step to the dialog on a phone only when it fills, so a list inside can scroll', () => {
+    render(
+      <StepPanel step="game" direction={null} fill>
+        <span>Content</span>
+      </StepPanel>
+    )
+
+    expect(panel()).toHaveClass('max-sm:min-h-72')
+    expect(panel().parentElement).toHaveClass('max-sm:min-h-0')
+  })
+
+  it('keeps the natural height without fill', () => {
+    render(
+      <StepPanel step="details" direction={null}>
+        <span>Content</span>
+      </StepPanel>
+    )
+
+    expect(panel().className).not.toMatch(/min-h-72/)
+    expect(panel().parentElement).not.toHaveClass('max-sm:min-h-0')
+  })
 })

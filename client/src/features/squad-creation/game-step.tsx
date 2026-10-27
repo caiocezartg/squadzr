@@ -146,7 +146,7 @@ export function GameStep({ selectedGame, onSelect, onEscapeOwnerChange }: GameSt
   const showsPopular = debouncedTerm === '' && games.length > 0
 
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex flex-col gap-3.5 max-sm:min-h-0 max-sm:flex-1">
       <div className="flex flex-col gap-2.5">
         <p aria-hidden className="text-[15px] font-bold">
           {question}
@@ -168,7 +168,7 @@ export function GameStep({ selectedGame, onSelect, onEscapeOwnerChange }: GameSt
       </p>
 
       {open && (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 max-sm:min-h-0 max-sm:flex-1">
           {showsPopular && (
             <p className="type-label text-text-3 tracking-[0.12em]">
               {t('ds.createSquad.popular')}
@@ -178,7 +178,7 @@ export function GameStep({ selectedGame, onSelect, onEscapeOwnerChange }: GameSt
             id={listboxId}
             role="listbox"
             aria-label={t('ds.createSquad.results')}
-            className="scrollbar-thin m-0 flex max-h-96 list-none flex-col gap-0.5 overflow-y-auto p-0"
+            className="scrollbar-thin m-0 flex list-none max-sm:min-h-0 sm:max-h-96 flex-col gap-0.5 overflow-y-auto p-0"
           >
             {games.map((game, index) => (
               <GameOption

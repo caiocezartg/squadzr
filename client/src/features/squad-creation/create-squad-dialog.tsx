@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslations } from 'next-intl'
+import { cn } from '@/lib/utils'
 import { Dialog } from '@/components/ds/dialog'
 import { Steps } from '@/components/ds/steps'
 import { getUserFriendlyError } from '@/lib/error-messages'
@@ -115,14 +116,18 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
       }}
     >
       <FormProvider {...form}>
-        <form onSubmit={submit} noValidate className="flex flex-1 flex-col">
+        <form
+          onSubmit={submit}
+          noValidate
+          className={cn('flex flex-1 flex-col', step === 'game' && 'max-sm:min-h-0')}
+        >
           <Steps
             className="px-6 pt-5"
             label={t('progress')}
             steps={[t('stepLabels.game'), t('stepLabels.details'), t('stepLabels.discord')]}
             current={stepIndex + 1}
           />
-          <StepPanel step={step} direction={direction}>
+          <StepPanel step={step} direction={direction} fill={step === 'game'}>
             {step === 'game' && (
               <GameStep
                 selectedGame={selectedGame}
