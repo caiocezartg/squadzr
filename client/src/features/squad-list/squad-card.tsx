@@ -9,6 +9,7 @@ import { lobbyHref } from '@/lib/squad-links'
 import { cn } from '@/lib/utils'
 import type { PublicSquad } from '@/types'
 import { avatarRail, type RailSlot } from './avatar-rail'
+import { useFittingCircles } from './use-fitting-circles'
 
 export interface SquadCardProps {
   /** The Squad carries its own game summary, so the card never reads the catalog. */
@@ -152,6 +153,9 @@ function SquadCardBody({
 }) {
   const tags = squad.tags ?? []
   const rail = avatarRail(members, squad.maxPlayers, squad.memberPreview)
+  const { railRef, shown } = useFittingCircles(rail.slots.length, rail.extra > 0)
+  // The circles that do not fit join the slots past the rail in the `+N`.
+  const extra = rail.extra + (rail.slots.length - shown)
 
   return (
     <>
@@ -183,13 +187,16 @@ function SquadCardBody({
         <span className="grow" />
 
         <span className="flex items-center justify-between gap-2.5">
-          <span className="flex min-w-0 items-center overflow-hidden py-0.5 pr-0.5">
-            {rail.slots.map((slot, index) => (
+          <span
+            ref={railRef}
+            className="flex min-w-0 flex-1 items-center overflow-hidden py-0.5 pr-0.5"
+          >
+            {rail.slots.slice(0, shown).map((slot, index) => (
               <RailCircle key={index} slot={slot} first={index === 0} lit={!isFull} />
             ))}
-            {rail.extra > 0 && (
+            {extra > 0 && (
               <span className="ml-3.5 shrink-0 font-ds-mono text-xs font-bold text-text-3">
-                +{rail.extra}
+                +{extra}
               </span>
             )}
           </span>
@@ -226,6 +233,7 @@ function RailCircle({
 }) {
   return (
     <span
+      data-rail-circle=""
       className={cn(
         'relative block size-7 shrink-0 rounded-full ring-2 ring-card lg:size-8.5',
         'transition-shadow duration-200',
