@@ -16,6 +16,7 @@ import { boardSquads, lobbySquadResponse, memberSquad, openSquad } from './fixtu
 import { createTestQueryClient, renderSquadsFlow } from './harness'
 import { countHttpCalls, httpOk, onHttp } from './http-router'
 import { authStore } from './stubs'
+import { MockWebSocket } from './ws-mock'
 import type { MyRoomsResponse, Squad } from '@/types'
 
 const older: Squad = {
@@ -160,6 +161,75 @@ describe('sidebar my squads — list', () => {
     await user.click(within(section).getByRole('button', { name: 'Sign in' }))
     expect(authStore.signInSocialCalls[0]).toMatchObject({ provider: 'discord' })
     expect(countHttpCalls('GET', '/api/rooms/my')).toBe(0)
+  })
+})
+
+describe('sidebar my squads — realtime', () => {
+  function openSockets(): MockWebSocket[] {
+    const sockets = MockWebSocket.instances
+    for (const socket of sockets) socket.open()
+    return sockets
+  }
+
+  function announce(sockets: MockWebSocket[], type: string, squad: Squad, memberCount?: number) {
+    for (const socket of sockets) {
+      socket.serverSend({
+        type,
+        payload: {
+          roomId: squad.id,
+          roomCode: squad.code,
+          ...(memberCount === undefined ? {} : { memberCount }),
+        },
+      })
+    }
+  }
+
+  it('updates the count when another member joins a squad the viewer is not looking at', async () => {
+    const lists: MyRoomsResponse = { hosted: [{ ...older, memberCount: 2 }], joined: [] }
+    registerMySquads(() => lists)
+    renderSquadsFlow('/squads', { shell: true })
+    const menu = await sidebar()
+    const item = await menu.findByRole('link', { name: /Older squad/ })
+    expect(within(item).getByText('2/5')).toBeInTheDocument()
+    const sockets = openSockets()
+
+    lists.hosted = [{ ...older, memberCount: 3 }]
+    act(() => announce(sockets, 'room_updated', older, 3))
+
+    await waitFor(() =>
+      expect(
+        within(menu.getByRole('link', { name: /Older squad/ })).getByText('3/5')
+      ).toBeInTheDocument()
+    )
+  })
+
+  it('shows the Ready treatment when the last slot fills', async () => {
+    const lists: MyRoomsResponse = { hosted: [{ ...older, memberCount: 4 }], joined: [] }
+    registerMySquads(() => lists)
+    renderSquadsFlow('/squads', { shell: true })
+    const menu = await sidebar()
+    await menu.findByRole('link', { name: /Older squad/ })
+    const sockets = openSockets()
+
+    lists.hosted = [{ ...older, memberCount: 5 }]
+    act(() => announce(sockets, 'room_removed', older))
+
+    const item = await menu.findByRole('img', { name: 'Invite unlocked' })
+    expect(item).toBeInTheDocument()
+  })
+
+  it('does not read the list for a squad the viewer is not in', async () => {
+    registerMySquads(() => ({ hosted: [older], joined: [] }))
+    renderSquadsFlow('/squads', { shell: true })
+    const menu = await sidebar()
+    await menu.findByRole('link', { name: /Older squad/ })
+    const sockets = openSockets()
+    const reads = countHttpCalls('GET', '/api/rooms/my')
+
+    act(() => announce(sockets, 'room_updated', newer, 4))
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(reads)
   })
 })
 

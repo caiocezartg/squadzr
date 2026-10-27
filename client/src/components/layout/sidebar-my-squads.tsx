@@ -1,13 +1,15 @@
 'use client'
 
-import { useId } from 'react'
+import { useId, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
 import { SidebarSquadItem } from '@/components/ds/sidebar-squad-item'
 import { DiscordIcon } from '@/components/ui/icons'
-import { useMySquads } from '@/features/my-squads'
+import { useMySquads, useMySquadsEvents } from '@/features/my-squads'
 import { useSession } from '@/hooks/use-session'
+import { useWebSocket } from '@/hooks/use-websocket'
+import { WS_URL } from '@/env'
 import { signInWithDiscord } from '@/lib/auth-client'
 import { lobbyHref } from '@/lib/squad-links'
 
@@ -67,6 +69,10 @@ function MySquadsList({
   const t = useTranslations('ds.shell')
   const pathname = usePathname()
   const squads = useMySquads()
+  const { subscribe } = useWebSocket(WS_URL)
+  const squadIds = useMemo(() => squads.map((squad) => squad.id), [squads])
+
+  useMySquadsEvents({ squadIds, subscribe })
 
   return (
     <>
