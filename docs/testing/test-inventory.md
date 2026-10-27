@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | ------------------------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`                                | 29     | 160   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts`                  | 29     | 294   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 80     | 727   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 80     | 729   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`                                | 4      | 98    |
 | `@squadzr/typescript-config` | —                    | —           | —                                                 | —      | —     |
 
@@ -103,12 +103,13 @@ CCC-107 moves My Squads into the sidebar and removes `/squads/my`, and recounts 
 
 CCC-113 turns the create dialog into the three-step wizard and moves `create-squad.spec.tsx`,
 `dialogs.spec.tsx`, `my-squads.spec.tsx`, `sidebar-flows.spec.tsx` and `squads-page.spec.tsx` to the
-step flow. It adds one suite, `step-panel.spec.tsx` (the transition classes), and 15 tests to
-`client:unit` (712 → 727): Continue gating on the game step and the details and invite errors, the
+step flow. It adds one suite, `step-panel.spec.tsx` (the transition classes), and 17 tests to
+`client:unit` (712 → 729): Continue gating on the game step and the details and invite errors, the
 popular games and their heading, the highlighted match with genre and size, the initials tile, the
 empty state without a suggest link, reopening the closed list, going back and forward, Cancel, and
 the full-screen layout with the pinned footer, plus Escape on step 2 after a keyboard Continue and
-with focus outside the search. The chevron case and the old route-animation case are gone with their
+with focus outside the search, the horizontally clipped slide, and the keyboard-only scroll of
+the highlighted option. The chevron case and the old route-animation case are gone with their
 code.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
@@ -232,10 +233,10 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 
 | Command                                                             | Test files | Tests |
 | ------------------------------------------------------------------- | ---------- | ----- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 113        | 985   |
-| `bunx vitest run` (direct root composition)                         | 113        | 985   |
+| `bun run test` (root, all projects; sum of the three unit projects) | 113        | 987   |
+| `bunx vitest run` (direct root composition)                         | 113        | 987   |
 | `bunx turbo test --filter=server`                                   | 29         | 160   |
-| `bunx turbo test --filter=client`                                   | 80         | 727   |
+| `bunx turbo test --filter=client`                                   | 80         | 729   |
 | `bunx turbo test --filter=@squadzr/schemas`                         | 4          | 98    |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace
@@ -260,7 +261,7 @@ case, CCC-104 adds 5 more and CCC-105 adds 7 Presence tracker cases, so the merg
 file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 98 tests across
 4 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
 contract cases, CCC-95 added 2, CCC-92 added 3, CCC-104 added 8 and CCC-105 added 6: presence with an ISO
-time, with `null` and without it, and protocol version 3), and the client suite measures 80 files / 727
+time, with `null` and without it, and protocol version 3), and the client suite measures 80 files / 729
 tests (CCC-111 added 17 Lobby and copy-swap cases; CCC-106 recounted it on the merged tree, adding 2 suites and 40 tests; CCC-105 added the Lobby's offline-time case; CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
 CCC-95 added 2, CCC-92 added none, CCC-96 replaced the landing's random-pick cases with the
 popular read and added the FAQ and IGDB-credit cases: net 0, and CCC-98 added 7 cancellation and

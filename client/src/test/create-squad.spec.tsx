@@ -13,7 +13,7 @@
  */
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderSquadsFlow } from './harness'
 import { settleNavigation } from './navigation'
 import {
@@ -447,6 +447,27 @@ describe('create squad — game search', () => {
 })
 
 describe('create squad — game picker', () => {
+  it('scrolls the highlighted option into view for the keyboard only, never for the pointer', async () => {
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    const options = await screen.findAllByRole('option')
+    scroll.mockClear()
+
+    await user.hover(options[1]!)
+
+    expect(screen.getByLabelText(GAME_LABEL)).toHaveAttribute(
+      'aria-activedescendant',
+      options[1]!.id
+    )
+    expect(scroll).not.toHaveBeenCalled()
+
+    await user.click(screen.getByLabelText(GAME_LABEL))
+    await user.keyboard('{ArrowUp}')
+
+    expect(scroll).toHaveBeenCalledWith({ block: 'nearest' })
+  })
+
   it('closes the game list before the dialog on Escape, keeping the draft', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)

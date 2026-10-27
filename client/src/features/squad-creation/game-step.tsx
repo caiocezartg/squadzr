@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { SearchField } from '@/components/ds/search-field'
@@ -41,6 +41,9 @@ export function GameStep({ selectedGame, onSelect, onEscapeOwnerChange }: GameSt
   // The list is the step's content, so it starts open; Escape closes it and typing reopens it.
   const [open, setOpen] = useState(true)
   const [activeIndex, setActiveIndex] = useState(-1)
+  // Only the keyboard scrolls the highlighted option into view; a hover highlight scrolling the list
+  // under the pointer would move the next option under it and chase the pointer down the list.
+  const scrollActiveIntoView = useRef(false)
 
   const searchTerm = query.trim()
   const debouncedTerm = useDebouncedValue(searchTerm, SEARCH_DEBOUNCE_MS)
@@ -102,7 +105,7 @@ export function GameStep({ selectedGame, onSelect, onEscapeOwnerChange }: GameSt
 
   // Keep the highlighted option visible while the player moves with the keyboard.
   useEffect(() => {
-    if (!open || activeIndex < 0) return
+    if (!open || activeIndex < 0 || !scrollActiveIntoView.current) return
     document.getElementById(`${listboxId}-option-${activeIndex}`)?.scrollIntoView?.({
       block: 'nearest',
     })
@@ -121,6 +124,7 @@ export function GameStep({ selectedGame, onSelect, onEscapeOwnerChange }: GameSt
       event.preventDefault()
       setOpen(true)
       if (games.length === 0) return
+      scrollActiveIntoView.current = true
       const down = event.key === 'ArrowDown'
       setActiveIndex((index) =>
         down ? (index < 0 ? 0 : Math.min(index + 1, games.length - 1)) : Math.max(index - 1, 0)
@@ -174,7 +178,7 @@ export function GameStep({ selectedGame, onSelect, onEscapeOwnerChange }: GameSt
             id={listboxId}
             role="listbox"
             aria-label={t('ds.createSquad.results')}
-            className="m-0 flex max-h-96 list-none flex-col gap-0.5 overflow-y-auto p-0"
+            className="scrollbar-thin m-0 flex max-h-96 list-none flex-col gap-0.5 overflow-y-auto p-0"
           >
             {games.map((game, index) => (
               <GameOption
@@ -185,7 +189,10 @@ export function GameStep({ selectedGame, onSelect, onEscapeOwnerChange }: GameSt
                 selected={selectedGame?.id === game.id}
                 active={index === activeIndex}
                 onSelect={() => onSelect(game)}
-                onHover={() => setActiveIndex(index)}
+                onHover={() => {
+                  scrollActiveIntoView.current = false
+                  setActiveIndex(index)
+                }}
               />
             ))}
           </ul>

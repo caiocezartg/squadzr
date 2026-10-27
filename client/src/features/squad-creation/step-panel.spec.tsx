@@ -60,4 +60,14 @@ describe('step panel', () => {
 
     expect(panel().className).not.toMatch(/starting:|transition-/)
   })
+
+  it('clips the slide horizontally so the dialog does not flash a scrollbar', () => {
+    render(
+      <StepPanel step="details" direction="forward">
+        <span>Content</span>
+      </StepPanel>
+    )
+
+    expect(panel().parentElement).toHaveClass('overflow-x-clip')
+  })
 })
