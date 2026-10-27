@@ -1,5 +1,5 @@
 // Budget limits of the Next build (CCC-71, CCC-77, CCC-79, CCC-80, CCC-81, CCC-82): the landing's,
-// the Squad Board's, My Squads' and the Lobby's gzip limits and the raw limit of every chunk. The CLI
+// the Squad Board's and the Lobby's gzip limits and the raw limit of every chunk. The CLI
 // fails CI with these messages.
 import { describe, expect, it } from 'vitest'
 import { findBudgetViolations } from './bundle-limits.mjs'
@@ -7,14 +7,12 @@ import { findBudgetViolations } from './bundle-limits.mjs'
 const KB = 1000
 const LANDING_LIMIT_KB = 340
 const SQUAD_BOARD_LIMIT_KB = 375
-const MY_SQUADS_LIMIT_KB = 370
 const LOBBY_LIMIT_KB = 335
 
 /** A report shaped like `buildBundleReport`, with the landing, the pages and the largest chunk set. */
 function reportWith({
   landingGzipKb = 335,
   squadBoardGzipKb = 373.83,
-  mySquadsGzipKb = 364.5,
   lobbyGzipKb = 332.52,
   largestChunkRawKb = 355.84,
 } = {}) {
@@ -23,7 +21,6 @@ function reportWith({
       { route: '/', initialGzipKb: landingGzipKb },
       { route: '/_not-found', initialGzipKb: 312.79 },
       { route: '/squads', initialGzipKb: squadBoardGzipKb },
-      { route: '/squads/my', initialGzipKb: mySquadsGzipKb },
       { route: '/squads/[code]', initialGzipKb: lobbyGzipKb },
     ],
     largestChunk: {
@@ -86,25 +83,6 @@ describe('findBudgetViolations', () => {
 
     expect(findBudgetViolations(report)).toEqual([
       'Route /squads is missing from the bundle report, so its 375 kB limit is not checked.',
-    ])
-  })
-
-  it('passes when My Squads sits exactly at its limit', () => {
-    expect(findBudgetViolations(reportWith({ mySquadsGzipKb: MY_SQUADS_LIMIT_KB }))).toEqual([])
-  })
-
-  it('names the My Squads route and both numbers when its initial JavaScript is over the limit', () => {
-    expect(findBudgetViolations(reportWith({ mySquadsGzipKb: 370.5 }))).toEqual([
-      'Initial JavaScript for /squads/my is 370.5 kB gzip, above its 370 kB limit.',
-    ])
-  })
-
-  it('fails when the My Squads route is missing from the report, so its limit cannot pass unchecked', () => {
-    const report = reportWith()
-    report.routes = report.routes.filter((entry) => entry.route !== '/squads/my')
-
-    expect(findBudgetViolations(report)).toEqual([
-      'Route /squads/my is missing from the bundle report, so its 370 kB limit is not checked.',
     ])
   })
 

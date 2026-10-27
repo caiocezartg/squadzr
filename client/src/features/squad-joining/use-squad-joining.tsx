@@ -10,6 +10,7 @@ import { getUserFriendlyError } from '@/lib/error-messages'
 import { notifyError } from '@/lib/notify'
 import { joinHref, lobbyHref } from '@/lib/squad-links'
 // The board's barrel exports only its cache commands, so this import cannot close a cycle back to the page.
+import { useMySquadsCommands } from '@/features/my-squads'
 import { useSquadBoardCommands } from '@/features/squad-board'
 import type { SquadSearchAccess } from '@/features/squad-list'
 import { JoinSquadAuthModal } from './join-squad-auth-modal'
@@ -46,6 +47,7 @@ export function useSquadJoining(invite: SquadSearchAccess): SquadJoining {
   const navigateApp = useAppNavigation()
   const session = useSession()
   const { refreshSquads } = useSquadBoardCommands()
+  const { refreshMySquads } = useMySquadsCommands()
   const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null)
   // The invite code of a visitor's link whose prompt the visitor closed, so closing it holds.
   const [dismissedInviteCode, setDismissedInviteCode] = useState<string | null>(null)
@@ -55,7 +57,7 @@ export function useSquadJoining(invite: SquadSearchAccess): SquadJoining {
     mutationFn: (squadCode: string) =>
       api.post(`/api/rooms/${encodeURIComponent(squadCode)}/join`, {}, joinRoomResponseSchema),
     onSuccess: async (_, squadCode) => {
-      await refreshSquads()
+      await Promise.all([refreshSquads(), refreshMySquads()])
       navigateApp(lobbyHref(squadCode))
     },
     onError: (err) => {

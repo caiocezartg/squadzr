@@ -17,6 +17,7 @@ import { notifyError } from '@/lib/notify'
 import { useAppNavigation } from '@/lib/navigation'
 import { lobbyHref } from '@/lib/squad-links'
 // The board's barrel exports only its cache commands, so this import cannot close a cycle back to the page that renders this dialog.
+import { useMySquadsCommands } from '@/features/my-squads'
 import { useSquadBoardCommands } from '@/features/squad-board'
 import type { Game, Squad } from '@/types'
 import type { CreateRoomInput } from '@squadzr/schemas'
@@ -55,6 +56,7 @@ export function CreateSquadModal({ onClose, onCreated }: CreateSquadModalProps) 
   // The lobby is still served by the old app, so the navigation goes through the shell's helper.
   const navigateApp = useAppNavigation()
   const { refreshSquads } = useSquadBoardCommands()
+  const { refreshMySquads } = useMySquadsCommands()
   const {
     register,
     handleSubmit,
@@ -92,6 +94,7 @@ export function CreateSquadModal({ onClose, onCreated }: CreateSquadModalProps) 
       // like the join flow does. The navigate follows immediately; the
       // in-flight refresh survives the unmount.
       void refreshSquads()
+      void refreshMySquads()
       onCreated?.(result.room)
       navigateApp(lobbyHref(result.room.code))
     },

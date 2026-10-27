@@ -28,6 +28,7 @@ import type { RoomsResponse } from '@/types'
 function registerRoutes(rooms: RoomsResponse = boardSquads): void {
   onHttp('GET', '/api/rooms', () => httpOk(rooms))
   onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
+  onHttp('GET', '/api/rooms/my', () => httpOk({ hosted: [], joined: [] }))
   onHttp('POST', '/api/rooms/:code/join', () => httpOk({ ok: true }))
   onHttp('GET', '/api/notifications', () => httpOk({ notifications: [] }))
   onHttp('GET', '/api/games', (request) => {

@@ -1234,15 +1234,12 @@ describe('squad board — seeded server page', () => {
 })
 
 describe('squad board — warm cache across surfaces', () => {
-  it('navigates from the board to My Squads and to a Lobby with no loading state', async () => {
+  it('navigates from the board to a Lobby with no loading state', async () => {
     onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
     onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
-    // Registered last, so it wins over the `/api/rooms/:code` route above for this path.
-    onHttp('GET', '/api/rooms/my', () => httpOk({ hosted: [memberSquad], joined: [] }))
     const queryClient = createTestQueryClient()
-    // What the three routes' server reads have already dehydrated on a warm navigation.
+    // What the two routes' server reads have already dehydrated on a warm navigation.
     queryClient.setQueryData(['squads'], boardSquads)
-    queryClient.setQueryData(['my-squads'], { hosted: [memberSquad], joined: [] })
     queryClient.setQueryData(squadQueryKey(lobbySquad.code), lobbySquadResponse)
 
     const { navigation } = renderSquadsFlow('/squads', { queryClient })
@@ -1250,13 +1247,8 @@ describe('squad board — warm cache across surfaces', () => {
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
     expect(screen.queryByTestId('squad-board-skeleton')).not.toBeInTheDocument()
 
-    act(() => navigation.history.push('/squads/my'))
-    // The push commits synchronously, so a fallback would be in the DOM here if the cache missed.
-    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
-    expect(await screen.findByText('Casual five stack')).toBeInTheDocument()
-    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
-
     act(() => navigation.history.push(`/squads/${lobbySquad.code}`))
+    // The push commits synchronously, so a fallback would be in the DOM here if the cache missed.
     expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
     expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()

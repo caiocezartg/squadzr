@@ -1,20 +1,29 @@
-import type { QueryClient } from '@tanstack/react-query'
+import { useCallback, useMemo } from 'react'
+import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 
 /**
- * The My Squads list's query key. It stays private to the capability: callers refresh their own
- * data through the hook that owns the query, never through the key.
+ * The My Squads list's query key. It stays private to the capability: callers refresh the list
+ * through the commands below, never through the key.
  */
 export const mySquadsQueryKey = ['my-squads'] as const
 
+/** Marks the list stale and reads it again while the sidebar shows it. */
+export function invalidateMySquads(queryClient: QueryClient): Promise<void> {
+  return queryClient.invalidateQueries({ queryKey: mySquadsQueryKey }).then(() => undefined)
+}
+
+export interface MySquadsCommands {
+  /** The viewer's Memberships changed (a Squad was created, joined or left): read the list again. */
+  refreshMySquads: () => Promise<void>
+}
+
 /**
- * Drops the list when its read failed and left no data, so a later visit reads again. A failed
- * query stays in the cache and a suspending reader rethrows it without reading, so without this a
- * revisit with a healthy API would show the old error.
+ * The My Squads command other capabilities need. Creating, joining and leaving a Squad describe what
+ * happened to the viewer's list without knowing its query key.
  */
-export function discardFailedMySquadsRead(queryClient: QueryClient): void {
-  queryClient.removeQueries({
-    queryKey: mySquadsQueryKey,
-    exact: true,
-    predicate: (query) => query.state.status === 'error' && query.state.data === undefined,
-  })
+export function useMySquadsCommands(): MySquadsCommands {
+  const queryClient = useQueryClient()
+  const refreshMySquads = useCallback(() => invalidateMySquads(queryClient), [queryClient])
+
+  return useMemo(() => ({ refreshMySquads }), [refreshMySquads])
 }

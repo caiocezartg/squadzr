@@ -22,7 +22,6 @@ beforeEach(() => {
         .slice(0, limit),
     })
   })
-  onHttp('GET', '/api/rooms/my', () => httpOk({ hosted: [], joined: [] }))
 })
 
 describe('eager dialogs', () => {
@@ -44,15 +43,5 @@ describe('eager dialogs', () => {
 
     expect(await screen.findByText('Sign in required')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Continue with Discord' })).toBeInTheDocument()
-  })
-
-  it('opens the My Squads create dialog with its form at once', async () => {
-    const { user } = renderSquadsFlow('/squads/my')
-    await screen.findByText('My squads')
-
-    await user.click(screen.getByRole('button', { name: 'Create new squad' }))
-
-    expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
-    expect(screen.getByLabelText('Squad Name')).toBeInTheDocument()
   })
 })

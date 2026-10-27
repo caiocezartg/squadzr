@@ -84,6 +84,10 @@
       "show": "{count, plural, one {Mostrar {count} squad} other {Mostrar {count} squads}}",
       "showUnknown": "Mostrar squads"
     },
+    "sidebarSquad": {
+      "host": "Você é o dono",
+      "inviteUnlocked": "Convite liberado"
+    },
     "shell": {
       "menu": "Menu",
       "openMenu": "Abrir menu",
@@ -96,6 +100,9 @@
       "codeInvalid": "O código de um squad tem 6 letras ou números.",
       "squads": "Squads",
       "allSquads": "Todos os squads",
+      "mySquads": "Meus squads",
+      "mySquadsSignIn": "Entre para ver os squads que você criou ou entrou.",
+      "mySquadsSignInAction": "Entrar",
       "signIn": "Entrar com Discord",
       "account": "Menu da conta",
       "createSignIn": "Você pode explorar os squads como visitante, mas criar um squad exige entrar com o Discord."
@@ -268,15 +275,6 @@
       "showGameList": "Mostrar jogos",
       "hideGameList": "Ocultar jogos"
     }
-  },
-  "mySquads": {
-    "title": "Meus squads",
-    "subtitle": "Squads que você criou ou entrou",
-    "loadError": "Falha ao carregar seus squads. Por favor, atualize a página.",
-    "tabCreated": "Criados ({count})",
-    "tabJoined": "Participando ({count})",
-    "noSquadsYet": "Nenhum squad aqui ainda.",
-    "noSquadsFiltered": "Nenhum squad corresponde aos seus filtros."
   },
   "squadNotFound": {
     "title": "Squad não encontrado",

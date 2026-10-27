@@ -1,259 +1,211 @@
 /**
- * Characterization tests for My Squads (`/squads/my`) after the Next migration.
+ * The sidebar's "My squads" (CCC-107). It lists the Squads `/api/rooms/my` returns, hosted and joined
+ * merged into one list: a Squad in both appears once, newest first. Each item carries the cover, the
+ * host crown, the name, the slot meter and the count; a Ready Squad takes the Discord treatment. The
+ * list reads again on focus and after create, join and leave, and a visitor sees a sign-in call to
+ * action instead. The list in the first server HTML is covered by app-layout.spec.
  *
- * The page renders the lists `/api/rooms/my` returns: a Ready Squad kept by the
- * server inside its 60-minute retention window stays visible to its members
- * and every card opens the lobby, and a Squad the server no longer returns is
- * gone on the next read. The client never filters Ready Squads on its own.
- *
- * HTTP runs through the deterministic adapter (./http-router); the route tree
- * and session come from the shared harness (./harness).
+ * HTTP runs through the deterministic adapter (./http-router); the route tree and session come from
+ * the shared harness (./harness).
  */
 
-import { act, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act, screen, waitFor, within } from '@testing-library/react'
+import { focusManager, type QueryClient } from '@tanstack/react-query'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { boardSquads, lobbySquadResponse, memberSquad, openSquad } from './fixtures'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
-import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
-import { settleNavigation } from './navigation'
-import {
-  boardGames,
-  createdSquad,
-  gameCs2,
-  gameCs2Summary,
-  gameLol,
-  gameLolSummary,
-  guestPlayer,
-  hostPlayer,
-  previewMembers,
-} from './fixtures'
+import { countHttpCalls, httpOk, onHttp } from './http-router'
+import { authStore } from './stubs'
 import type { MyRoomsResponse, Squad } from '@/types'
 
-/**
- * A full Ready Squad as `/api/rooms/my` returns it to a member: the readiness
- * timestamp is not part of the coordinated HTTP contract, only the lifecycle
- * outcome (still inside retention → still listed).
- */
-const readyHostedSquad: Squad = {
-  id: 'aaaaaaaa-0000-4000-8000-00000000000c',
-  code: 'READY1',
-  name: 'Ready squad',
+const older: Squad = {
+  ...memberSquad,
+  id: 'aaaaaaaa-0000-4000-8000-0000000000a1',
+  code: 'OLD111',
+  name: 'Older squad',
   hostId: 'user-1',
-  gameId: gameLol.id,
-  game: gameLolSummary,
   maxPlayers: 5,
-  discordLink: 'https://discord.gg/ready',
-  tags: ['ranked'],
-  language: 'en',
-  memberCount: 5,
-  memberPreview: previewMembers(5),
-  isMember: true,
-  createdAt: new Date(Date.now() - 65 * 60_000).toISOString(),
-  updatedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+  memberCount: 2,
+  createdAt: new Date(Date.now() - 5 * 3_600_000).toISOString(),
 }
 
-const readyJoinedSquad: Squad = {
-  ...readyHostedSquad,
-  id: 'aaaaaaaa-0000-4000-8000-00000000000d',
-  code: 'READY2',
-  name: 'Joined ready squad',
+const newer: Squad = {
+  ...memberSquad,
+  id: 'aaaaaaaa-0000-4000-8000-0000000000a2',
+  code: 'NEW222',
+  name: 'Newer squad',
   hostId: 'user-9',
-  gameId: gameCs2.id,
-  game: gameCs2Summary,
+  maxPlayers: 5,
+  memberCount: 3,
+  createdAt: new Date(Date.now() - 1 * 3_600_000).toISOString(),
 }
 
-function mySquads(hosted: Squad[], joined: Squad[]): MyRoomsResponse {
-  return { hosted, joined }
+const oneSlotLeft: Squad = {
+  ...newer,
+  id: 'aaaaaaaa-0000-4000-8000-0000000000a3',
+  code: 'ONE333',
+  name: 'One slot left',
+  memberCount: 4,
+  createdAt: new Date(Date.now() - 30 * 60_000).toISOString(),
+}
+
+const ready: Squad = {
+  ...newer,
+  id: 'aaaaaaaa-0000-4000-8000-0000000000a4',
+  code: 'RDY444',
+  name: 'Ready squad',
+  memberCount: 5,
+}
+
+function registerMySquads(response: () => MyRoomsResponse): void {
+  onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
+  // Registered after the lobby route so the exact segment wins over `:code`.
+  onHttp('GET', '/api/rooms/my', () => httpOk(response()))
+}
+
+async function sidebar() {
+  return within(await screen.findByRole('complementary', { name: 'Menu' }))
 }
 
 beforeEach(() => {
-  onHttp('GET', '/api/games', (request) => {
-    const search = request.query.get('search')?.toLowerCase() ?? ''
-    return httpOk({
-      games: boardGames.games.filter((game) => game.name.toLowerCase().includes(search)),
-    })
-  })
-  onHttp('GET', '/api/rooms/:code', () =>
-    httpOk({ room: readyHostedSquad, players: [hostPlayer, guestPlayer] })
-  )
+  authStore.signInSocialCalls.length = 0
 })
 
-describe('my squads — filters through the URL', () => {
-  it('filters both lists by the search in the URL and keeps the filter on the route', async () => {
-    onHttp('GET', '/api/rooms/my', () => httpOk(mySquads([readyHostedSquad], [readyJoinedSquad])))
-    const { navigation, user } = renderSquadsFlow('/squads/my')
-    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
+afterEach(() => {
+  focusManager.setFocused(undefined)
+})
 
-    await user.type(screen.getByPlaceholderText('Search by game or squad name...'), 'Joined')
+describe('sidebar my squads — list', () => {
+  it('merges hosted and joined into one list, once per id, newest first', async () => {
+    registerMySquads(() => ({ hosted: [older, newer], joined: [newer, oneSlotLeft] }))
+    renderSquadsFlow('/squads', { shell: true })
+    const menu = await sidebar()
 
-    await waitFor(() =>
-      expect(
-        Object.fromEntries(new URLSearchParams(navigation.history.location.search))
-      ).toMatchObject({ search: 'Joined' })
-    )
-    expect(screen.queryByText('Ready squad')).not.toBeInTheDocument()
+    await menu.findByRole('link', { name: /Newer squad/ })
 
-    await user.click(screen.getByText('Joined (1)'))
-    expect(await screen.findByText('Joined ready squad')).toBeInTheDocument()
+    const section = menu.getByRole('region', { name: 'My squads' })
+    const links = within(section).getAllByRole('link')
+    expect(links).toHaveLength(3)
+    expect(links[0]).toHaveTextContent('One slot left')
+    expect(links[1]).toHaveTextContent('Newer squad')
+    expect(links[2]).toHaveTextContent('Older squad')
+    expect(section).toHaveTextContent('My squads3')
   })
 
-  it('filters both lists by the game name their own summaries carry', async () => {
-    onHttp('GET', '/api/rooms/my', () => httpOk(mySquads([readyHostedSquad], [readyJoinedSquad])))
-    const { user } = renderSquadsFlow('/squads/my')
-    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
+  it('links each item to its Lobby and marks only the squad being viewed as current', async () => {
+    registerMySquads(() => ({ hosted: [older], joined: [newer] }))
+    renderSquadsFlow(`/squads/${older.code}`, { shell: true })
+    const menu = await sidebar()
 
-    await user.type(screen.getByPlaceholderText('Search by game or squad name...'), 'Counter')
+    const current = await menu.findByRole('link', { name: /Older squad/ })
+    const other = menu.getByRole('link', { name: /Newer squad/ })
 
-    await waitFor(() => expect(screen.queryByText('Ready squad')).not.toBeInTheDocument())
-    expect(screen.getByText('Joined ready squad')).toBeInTheDocument()
+    expect(current).toHaveAttribute('href', `/squads/${older.code}`)
+    expect(current).toHaveAttribute('aria-current', 'page')
+    expect(other).not.toHaveAttribute('aria-current')
+  })
+
+  it('shows the host crown only on squads the viewer hosts', async () => {
+    registerMySquads(() => ({ hosted: [older], joined: [newer] }))
+    renderSquadsFlow('/squads', { shell: true })
+    const menu = await sidebar()
+
+    const hosted = await menu.findByRole('link', { name: /Older squad/ })
+    const joined = menu.getByRole('link', { name: /Newer squad/ })
+
+    expect(within(hosted).getByRole('img', { name: 'You are the host' })).toBeInTheDocument()
+    expect(within(joined).queryByRole('img', { name: 'You are the host' })).not.toBeInTheDocument()
+  })
+
+  it('shows the count, amber when one slot is left', async () => {
+    registerMySquads(() => ({ hosted: [older], joined: [oneSlotLeft] }))
+    renderSquadsFlow('/squads', { shell: true })
+    const menu = await sidebar()
+
+    const last = await menu.findByRole('link', { name: /One slot left/ })
+    const more = menu.getByRole('link', { name: /Older squad/ })
+
+    expect(within(last).getByText('4/5')).toHaveClass('text-amber')
+    expect(within(more).getByText('2/5')).not.toHaveClass('text-amber')
+  })
+
+  it('marks a squad whose members fill its slots as Ready, with the Discord badge and count', async () => {
+    registerMySquads(() => ({ hosted: [], joined: [ready, oneSlotLeft] }))
+    renderSquadsFlow('/squads', { shell: true })
+    const menu = await sidebar()
+
+    const readyItem = await menu.findByRole('link', { name: /Ready squad/ })
+    const openItem = menu.getByRole('link', { name: /One slot left/ })
+
+    expect(within(readyItem).getByRole('img', { name: 'Invite unlocked' })).toBeInTheDocument()
+    expect(within(readyItem).getByText('5/5')).toHaveClass('text-discord-soft')
+    expect(within(readyItem).getByText('5/5')).not.toHaveClass('text-amber')
+    expect(within(openItem).queryByRole('img', { name: 'Invite unlocked' })).not.toBeInTheDocument()
+  })
+
+  it('shows a sign-in call to action to a visitor, with no read of the list', async () => {
+    registerMySquads(() => ({ hosted: [older], joined: [] }))
+    const { user } = renderSquadsFlow('/squads', { shell: true, user: null })
+    const menu = await sidebar()
+
+    const section = menu.getByRole('region', { name: 'My squads' })
+    expect(within(section).getByText('Sign in to see the squads you host or joined.')).toBeVisible()
+    expect(within(section).queryByRole('link')).not.toBeInTheDocument()
+
+    await user.click(within(section).getByRole('button', { name: 'Sign in' }))
+    expect(authStore.signInSocialCalls[0]).toMatchObject({ provider: 'discord' })
+    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(0)
   })
 })
 
-describe('my squads — refresh behavior', () => {
-  it('re-reads on mount and surfaces a Squad created while the page was away', async () => {
-    onHttp('GET', '/api/rooms/my', () => httpOk(mySquads([readyHostedSquad], [])))
-    const queryClient = createTestQueryClient()
-    // What the server dehydrated for the cached visit: the new Squad is not in it yet.
-    queryClient.setQueryData(['my-squads'], mySquads([], []))
+describe('sidebar my squads — freshness', () => {
+  it('reads the list again when the window regains focus', async () => {
+    const lists: MyRoomsResponse = { hosted: [older], joined: [] }
+    registerMySquads(() => lists)
+    const queryClient: QueryClient = createTestQueryClient()
+    renderSquadsFlow('/squads', { shell: true, queryClient })
+    const menu = await sidebar()
+    await menu.findByRole('link', { name: /Older squad/ })
 
-    renderSquadsFlow('/squads/my', { queryClient })
-
-    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
-    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(1)
-  })
-
-  it('re-reads when the window regains focus', async () => {
-    const response = mySquads([], [])
-    onHttp('GET', '/api/rooms/my', () => httpOk(response))
-    const { queryClient } = renderSquadsFlow('/squads/my')
-    expect(await screen.findAllByText('No squads here yet.')).toHaveLength(2)
-
-    // The cached answer is older than the stale time, as it is after a minute away.
-    response.hosted = [readyHostedSquad]
+    lists.joined = [newer]
+    // The list is fresh for a minute, so the focus read applies to a list that went stale.
+    await act(() => queryClient.invalidateQueries({ queryKey: ['my-squads'], refetchType: 'none' }))
     act(() => {
-      queryClient.setQueryData(['my-squads'], mySquads([], []), {
-        updatedAt: Date.now() - 120_000,
+      focusManager.setFocused(false)
+      focusManager.setFocused(true)
+    })
+
+    expect(await menu.findByRole('link', { name: /Newer squad/ })).toBeInTheDocument()
+  })
+
+  it('lists a squad the viewer joins from the board', async () => {
+    const lists: MyRoomsResponse = { hosted: [], joined: [] }
+    registerMySquads(() => lists)
+    onHttp('POST', '/api/rooms/:code/join', () => {
+      lists.joined = [{ ...openSquad, isMember: true, memberCount: 2 }]
+      return httpOk({
+        message: 'Joined squad',
+        roomMember: {
+          id: 'bbbbbbbb-0000-4000-8000-000000000001',
+          roomId: openSquad.id,
+          userId: 'user-1',
+          joinedAt: new Date().toISOString(),
+        },
       })
     })
-    act(() => {
-      window.dispatchEvent(new Event('visibilitychange'))
-    })
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    const menu = await sidebar()
+    await menu.findByText('My squads')
+    expect(menu.queryByRole('link', { name: /Ranked grind/ })).not.toBeInTheDocument()
 
-    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
-    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(2)
-  })
-
-  it('re-reads after creating a Squad', async () => {
-    const response = mySquads([], [])
-    onHttp('GET', '/api/rooms/my', () => httpOk(response))
-    onHttp('POST', '/api/rooms', () => httpOk({ room: createdSquad }))
-    const { navigation, user } = renderSquadsFlow('/squads/my')
-    await screen.findAllByText('No squads here yet.')
-
-    await user.click(screen.getByRole('button', { name: 'Create new squad' }))
-    await screen.findByText('Create a Squad')
-    await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
-    const gameInput = screen.getByLabelText('Game')
-    await user.click(gameInput)
-    await user.type(gameInput, 'league')
-    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1))
-    expect(
-      await screen.findByRole('option', { name: 'League of Legends (1-5 players)' })
-    ).toBeInTheDocument()
-    await user.keyboard('{ArrowDown}{Enter}')
-    await user.type(screen.getByLabelText('Discord Invite Link'), 'https://discord.gg/created')
-
-    // The server lists the new Squad in My Squads as soon as it exists.
-    response.hosted = [createdSquad]
-    const readsBeforeCreate = countHttpCalls('GET', '/api/rooms/my')
-
-    await user.click(screen.getByRole('button', { name: 'Create Squad' }))
-    await waitFor(() =>
-      expect(navigation.history.location.pathname).toBe(`/squads/${createdSquad.code}`)
-    )
-    await waitFor(() =>
-      expect(countHttpCalls('GET', '/api/rooms/my')).toBeGreaterThan(readsBeforeCreate)
-    )
-
-    navigation.router.push('/squads/my')
-    await settleNavigation()
-    expect(await screen.findByText('Created squad')).toBeInTheDocument()
-  })
-})
-
-describe('my squads — expired session', () => {
-  it('sends the viewer to the landing, with no My Squads content, when the browser read answers 401', async () => {
-    onHttp('GET', '/api/rooms/my', () => httpError(401, { error: 'UNAUTHORIZED', message: 'No' }))
-    const { navigation, queryClient } = renderSquadsFlow('/squads/my')
-
-    await waitFor(() => expect(navigation.calls).toContainEqual({ method: 'replace', href: '/' }))
-
-    expect(screen.queryByRole('heading', { name: 'My squads' })).not.toBeInTheDocument()
-    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
-    expect(screen.queryByText('No squads here yet.')).not.toBeInTheDocument()
-    expect(countHttpCalls('GET', '/api/rooms/my')).toBe(1)
-    // The 401 is not kept once the page is gone, so signing in again reads the lists instead of
-    // redirecting on it.
-    await waitFor(() => expect(queryClient.getQueryData(['my-squads'])).toBeUndefined())
-  })
-
-  it('reads the lists again when the viewer signs back in and returns', async () => {
-    onHttp('GET', '/api/rooms/my', () => httpError(401, { error: 'UNAUTHORIZED', message: 'No' }))
-    const firstVisit = renderSquadsFlow('/squads/my')
-    await waitFor(() =>
-      expect(firstVisit.navigation.calls).toContainEqual({ method: 'replace', href: '/' })
-    )
-    firstVisit.unmount()
-
-    onHttp('GET', '/api/rooms/my', () => httpOk(mySquads([readyHostedSquad], [])))
-    const secondVisit = renderSquadsFlow('/squads/my', { queryClient: firstVisit.queryClient })
-
-    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
-    expect(secondVisit.navigation.calls).toEqual([])
-  })
-})
-
-describe('my squads — Ready Squad retention', () => {
-  it('keeps a Ready Squad the server still returns and opens its lobby', async () => {
-    onHttp('GET', '/api/rooms/my', () => httpOk(mySquads([readyHostedSquad], [])))
-    const { navigation, user } = renderSquadsFlow('/squads/my')
-
-    // A full Squad stays on screen and enabled for its member: the server's
-    // retention contract decides visibility, not the Squad's capacity.
-    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
-    expect(screen.getByText('Created (1)')).toBeInTheDocument()
-
-    await user.click(screen.getByText('Ready squad'))
+    await user.click(await screen.findByText('Ranked grind'))
 
     await waitFor(() =>
-      expect(navigation.history.location.pathname).toBe(`/squads/${readyHostedSquad.code}`)
+      expect(menu.getByRole('link', { name: /Ranked grind/ })).toHaveAttribute(
+        'href',
+        '/squads/ABC123'
+      )
     )
-  })
-
-  it('keeps a Ready Squad the user joined under the Joined tab and opens its lobby', async () => {
-    onHttp('GET', '/api/rooms/my', () => httpOk(mySquads([], [readyJoinedSquad])))
-    const { navigation, user } = renderSquadsFlow('/squads/my')
-    await screen.findByText('Joined (1)')
-
-    await user.click(screen.getByText('Joined (1)'))
-
-    expect(await screen.findByText('Joined ready squad')).toBeInTheDocument()
-    await user.click(screen.getByText('Joined ready squad'))
-
-    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/READY2'))
-  })
-
-  it('drops a Ready Squad once the server stops returning it', async () => {
-    onHttp('GET', '/api/rooms/my', () => httpOk(mySquads([readyHostedSquad], [])))
-    const firstVisit = renderSquadsFlow('/squads/my')
-    expect(await screen.findByText('Ready squad')).toBeInTheDocument()
-    firstVisit.unmount()
-
-    // The 60-minute retention deadline passed: the server's next answer no
-    // longer carries the Squad, so the next read drops it before any cleanup.
-    onHttp('GET', '/api/rooms/my', () => httpOk(mySquads([], [])))
-    renderSquadsFlow('/squads/my')
-
-    expect(await screen.findAllByText('No squads here yet.')).toHaveLength(2)
-    expect(screen.queryByText('Ready squad')).not.toBeInTheDocument()
   })
 })

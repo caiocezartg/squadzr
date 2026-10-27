@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { isRoomLobbyResponse } from '@squadzr/schemas'
+import { useMySquadsCommands } from '@/features/my-squads'
 import { useSquadBoardCommands } from '@/features/squad-board'
 import { useSession } from '@/hooks/use-session'
 import { useAppNavigation } from '@/lib/navigation'
@@ -38,14 +39,16 @@ export function useLobbyChannel(squadCode: string): SquadChannel {
   const session = useSession()
   const navigateApp = useAppNavigation()
   const board = useSquadBoardCommands()
+  const { refreshMySquads } = useMySquadsCommands()
   const userId = session?.user?.id
 
   const handleSquadRemoved = useCallback(
     (squadId: string) => {
       board.removeSquad(squadId)
+      void refreshMySquads()
       navigateApp('/squads')
     },
-    [board, navigateApp]
+    [board, refreshMySquads, navigateApp]
   )
 
   return useSquadChannel({ squadCode, enabled: !!userId, onSquadRemoved: handleSquadRemoved })

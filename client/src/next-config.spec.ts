@@ -33,28 +33,23 @@ describe('next.config startup validation', () => {
     await expect(loadConfig(undefined)).resolves.toHaveProperty('default')
   })
 
-  it('redirects /rooms/my to /squads/my permanently before the Lobby redirect', async () => {
+  it('redirects /rooms/:code to the Lobby permanently', async () => {
     const config = (await loadConfig('http://squadzr-api:3000')).default
     const redirects = (await config.redirects?.()) ?? []
 
-    expect(redirects[0]).toMatchObject({
-      source: '/rooms/my',
-      destination: '/squads/my',
+    expect(redirects).toContainEqual({
+      source: '/rooms/:code',
+      destination: '/squads/:code',
       permanent: true,
     })
-
-    const mySquadsIndex = redirects.findIndex((redirect) => redirect.source === '/rooms/my')
-    const lobbyIndex = redirects.findIndex((redirect) => redirect.destination === '/squads/:code')
-    expect(mySquadsIndex).toBeGreaterThanOrEqual(0)
-    expect(lobbyIndex).toBeGreaterThan(mySquadsIndex)
   })
 
-  it('keeps the Lobby redirect excluding My Squads', async () => {
+  it('no longer redirects /rooms/my to a My Squads page, so both /rooms/my and /squads/my end in the Lobby route', async () => {
     const config = (await loadConfig('http://squadzr-api:3000')).default
     const redirects = (await config.redirects?.()) ?? []
 
-    expect(redirects).toContainEqual(
-      expect.objectContaining({ source: '/rooms/:code((?![Mm][Yy]$)[^/]+)', permanent: true })
-    )
+    expect(redirects.map((redirect) => redirect.source)).not.toContain('/rooms/my')
+    expect(redirects.map((redirect) => redirect.destination)).not.toContain('/squads/my')
+    expect(redirects.map((redirect) => redirect.source)).toEqual(['/rooms', '/rooms/:code'])
   })
 })
