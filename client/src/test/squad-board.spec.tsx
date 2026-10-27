@@ -340,6 +340,35 @@ describe('squad board — filters', () => {
     expect(screen.getByRole('button', { name: 'Remove #ranked' })).toBeInTheDocument()
   })
 
+  it.each([
+    ['while the list is loading', () => new Promise<MockHttpResponse>(() => {})],
+    [
+      'when the list failed to load',
+      () => httpError(500, { message: 'boom', error: 'INTERNAL_ERROR' }),
+    ],
+  ])('opens the panel with its controls %s', async (_when, answer) => {
+    onHttp('GET', '/api/rooms', answer)
+    const { user } = renderSquadsFlow('/squads')
+
+    const panel = await openFilters(user)
+
+    expect(within(panel).getByRole('button', { name: 'Show squads' })).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: 'Oldest' })).toBeInTheDocument()
+    expect(within(panel).getByRole('textbox', { name: 'Add a tag' })).toBeInTheDocument()
+  })
+
+  it('empties the typed tag text with "Clear all"', async () => {
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Ranked grind')
+    const panel = await openFilters(user)
+    const field = within(panel).getByRole('textbox', { name: 'Add a tag' })
+
+    await user.type(field, 'half')
+    await user.click(within(panel).getByRole('button', { name: 'Clear all' }))
+
+    expect(field).toHaveValue('')
+  })
+
   it('opens the filters as a bottom sheet below 640px', async () => {
     mockMediaQuery(NARROW_QUERY, true)
     const { user } = renderSquadsFlow('/squads')
