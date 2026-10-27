@@ -64,7 +64,7 @@ export function SquadBoardView() {
         <NotificationsBell placement="page" />
       </div>
 
-      <BoardFilters filters={filters} baseline={baseline} />
+      <BoardFilters filters={filters} />
 
       <BoardErrorBoundary key={`results-${attempt}`} fallback={<BoardLoadError onRetry={retry} />}>
         <Suspense fallback={<SquadBoardSkeleton />}>

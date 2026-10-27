@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import type { PublicSquad } from '@/types'
 import { discardFailedBoardReads, squadBoardQueryKey } from './squad-board-cache'
 import { readSquadBoard } from './squad-board-read'
@@ -52,4 +52,16 @@ export function useSquadBoardSquads(baseline: number): PublicSquad[] {
   })
 
   return data.rooms
+}
+
+/**
+ * The board's squads when the cache holds them, and `undefined` while they load or after a failed read.
+ * It never suspends and never throws, so a part of the page that can work without the list (the
+ * filters panel) renders at once and fills in when the list lands. It reads the same entry as
+ * `useSquadBoardSquads`, so the two agree.
+ */
+export function useLoadedBoardSquads(): PublicSquad[] | undefined {
+  const { data } = useQuery({ queryKey: squadBoardQueryKey, queryFn: readSquadBoard })
+
+  return data?.rooms
 }

@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react'
+import type { KeyboardEvent } from 'react'
 import { useTranslations } from 'next-intl'
 import { Tag } from '@/components/ds/tag'
 import { normalizeTag } from '@/features/squad-list'
@@ -8,20 +8,22 @@ interface TagFilterProps {
   readonly options: readonly string[]
   readonly selected: readonly string[]
   readonly onToggle: (tag: string) => void
+  /** The text typed in the field; the panel owns it, so "Clear all" can empty it. */
+  readonly text: string
+  readonly onTextChange: (text: string) => void
 }
 
 /**
  * The tags control of the filters panel: a free-text field that selects the tag typed (Enter or a
  * comma), and the toggles of the tags the board uses most. A Squad must have every selected tag.
  */
-export function TagFilter({ options, selected, onToggle }: TagFilterProps) {
+export function TagFilter({ options, selected, onToggle, text, onTextChange }: TagFilterProps) {
   const t = useTranslations('ds.board')
-  const [text, setText] = useState('')
 
   const addTyped = () => {
     const tag = normalizeTag(text)
     if (tag !== '' && !selected.includes(tag)) onToggle(tag)
-    setText('')
+    onTextChange('')
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -38,13 +40,12 @@ export function TagFilter({ options, selected, onToggle }: TagFilterProps) {
           #
         </span>
         <input
-          id="board-tag-filter"
           type="text"
           value={text}
           aria-label={t('tagLabel')}
           placeholder={t('tagPlaceholder')}
           autoComplete="off"
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => onTextChange(event.target.value)}
           onKeyDown={handleKeyDown}
           className="text-text placeholder:text-faint font-body min-w-0 flex-1 border-0 bg-transparent text-sm font-medium outline-none"
         />

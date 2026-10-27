@@ -1,26 +1,23 @@
-import { Suspense, useState, type ComponentProps } from 'react'
+import { useState, type ComponentProps } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Popover } from '@/components/ds/popover'
 import { SearchField } from '@/components/ds/search-field'
 import type { UseSquadFiltersReturn } from '@/features/squad-list'
 import { cn } from '@/lib/utils'
-import { BoardErrorBoundary } from './board-error-boundary'
 import { FilterChips } from './filter-chips'
 import { FiltersPanel } from './filters-panel'
 
 interface BoardFiltersProps {
   readonly filters: UseSquadFiltersReturn
-  /** The list's update count when the board mounted (see `useSquadBoardBaseline`). */
-  readonly baseline: number
 }
 
 /**
  * The board's filter controls: one search bar with a "Filters" button, which opens the panel, and the
  * removable chips of the active filters under it. The bar and the chips come from the URL alone, so
- * they render while the list loads; the panel reads the list in its own boundary.
+ * they render while the list loads; the panel reads the list without waiting for it.
  */
-export function BoardFilters({ filters, baseline }: BoardFiltersProps) {
+export function BoardFilters({ filters }: BoardFiltersProps) {
   const t = useTranslations('ds.board')
   const [open, setOpen] = useState(false)
 
@@ -47,11 +44,7 @@ export function BoardFilters({ filters, baseline }: BoardFiltersProps) {
           className="w-105 max-w-[calc(100vw-2rem)] p-5.5"
           trigger={<FiltersButton open={open} count={filters.activeFilterCount} />}
         >
-          <BoardErrorBoundary fallback={null}>
-            <Suspense fallback={null}>
-              <FiltersPanel filters={filters} baseline={baseline} onClose={() => setOpen(false)} />
-            </Suspense>
-          </BoardErrorBoundary>
+          <FiltersPanel filters={filters} onClose={() => setOpen(false)} />
         </Popover>
       </div>
       <FilterChips filters={filters} />

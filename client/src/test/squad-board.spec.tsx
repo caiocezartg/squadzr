@@ -1027,6 +1027,7 @@ describe('squad board — URL state', () => {
 
   it('preserves the page from a shared URL with matching input values', async () => {
     const { navigation } = renderSquadsFlow('/squads?page=2&search=Ranked&tag=duo', {
+      shell: true,
       queryClient: seededClient(squadsForPagination()),
     })
     await screen.findByPlaceholderText(SEARCH_PLACEHOLDER)
@@ -1039,6 +1040,7 @@ describe('squad board — URL state', () => {
 
   it('debounces an edited search and resets the page only once', async () => {
     const { navigation } = renderSquadsFlow('/squads?page=2', {
+      shell: true,
       queryClient: seededClient(squadsForPagination()),
     })
     const input = await screen.findByPlaceholderText(SEARCH_PLACEHOLDER)
@@ -1056,6 +1058,7 @@ describe('squad board — URL state', () => {
 
   it('syncs URL navigation to the search and the tag chips without resetting its page', async () => {
     const { navigation } = renderSquadsFlow('/squads', {
+      shell: true,
       queryClient: seededClient(squadsForPagination()),
     })
     const search = await screen.findByPlaceholderText(SEARCH_PLACEHOLDER)

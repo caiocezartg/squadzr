@@ -1,28 +1,34 @@
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
 import { Segmented } from '@/components/ds/segmented'
 import { querySquadList, rankTagOptions, type UseSquadFiltersReturn } from '@/features/squad-list'
 import { AvailabilityOptions } from './availability-options'
 import { TagFilter } from './tag-filter'
-import { useSquadBoardSquads } from './use-squad-board-data'
+import { useLoadedBoardSquads } from './use-squad-board-data'
 
 interface FiltersPanelProps {
   readonly filters: UseSquadFiltersReturn
-  /** The list's update count when the board mounted (see `useSquadBoardBaseline`). */
-  readonly baseline: number
   /** Closes the panel: the main button does it once the viewer has seen the result. */
   readonly onClose: () => void
 }
 
 /**
- * The inside of the filters panel. It reads the board's list, so the tag options and the "Show N
- * squads" count follow the realtime updates; the tag options come from the whole list, so they stay
- * put as the filters narrow it. Every change applies at once.
+ * The inside of the filters panel. It reads the board's list without waiting for it, so the controls
+ * are there even while the list loads or when its read failed; the tag options and the "Show N
+ * squads" count fill in from the list, and follow the realtime updates. The tag options come from the
+ * whole list, so they stay put as the filters narrow it. Every change applies at once.
  */
-export function FiltersPanel({ filters, baseline, onClose }: FiltersPanelProps) {
+export function FiltersPanel({ filters, onClose }: FiltersPanelProps) {
   const t = useTranslations('ds.board')
-  const squads = useSquadBoardSquads(baseline)
-  const resultCount = querySquadList(squads, filters.query).matching.length
+  const squads = useLoadedBoardSquads()
+  const [tagText, setTagText] = useState('')
+  const resultCount = squads && querySquadList(squads, filters.query).matching.length
+
+  const clearAll = () => {
+    setTagText('')
+    filters.clearFilters()
+  }
 
   return (
     <div className="flex flex-col gap-5.5">
@@ -30,7 +36,7 @@ export function FiltersPanel({ filters, baseline, onClose }: FiltersPanelProps) 
         <span aria-hidden="true" className="type-panel-title-sm text-text">
           {t('panelTitle')}
         </span>
-        <Button variant="ghost" size="sm" onClick={filters.clearFilters}>
+        <Button variant="ghost" size="sm" onClick={clearAll}>
           {t('clearAll')}
         </Button>
       </div>
@@ -53,7 +59,9 @@ export function FiltersPanel({ filters, baseline, onClose }: FiltersPanelProps) 
       </fieldset>
 
       <TagFilter
-        options={rankTagOptions(squads, filters.tags)}
+        options={rankTagOptions(squads ?? [], filters.tags)}
+        text={tagText}
+        onTextChange={setTagText}
         selected={filters.tags}
         onToggle={filters.toggleTag}
       />
@@ -73,7 +81,7 @@ export function FiltersPanel({ filters, baseline, onClose }: FiltersPanelProps) 
       </fieldset>
 
       <Button size="lg" full onClick={onClose}>
-        {t('show', { count: resultCount })}
+        {resultCount === undefined ? t('showUnknown') : t('show', { count: resultCount })}
       </Button>
     </div>
   )

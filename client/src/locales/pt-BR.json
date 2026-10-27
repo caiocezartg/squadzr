@@ -65,7 +65,8 @@
       "sort": "Ordenar por",
       "sortNewest": "Mais recentes",
       "sortOldest": "Mais antigos",
-      "show": "{count, plural, one {Mostrar {count} squad} other {Mostrar {count} squads}}"
+      "show": "{count, plural, one {Mostrar {count} squad} other {Mostrar {count} squads}}",
+      "showUnknown": "Mostrar squads"
     },
     "shell": {
       "menu": "Menu",
@@ -180,7 +181,6 @@
   "squads": {
     "page": {
       "title": "Explorar squads",
-      "subtitle": "{count, plural, one {{count} squad disponível} other {{count} squads disponíveis}}",
       "retry": "Tentar novamente",
       "loadError": "Falha ao carregar squads. Por favor, atualize a página.",
       "emptyTitle": "Nenhum squad ainda",
