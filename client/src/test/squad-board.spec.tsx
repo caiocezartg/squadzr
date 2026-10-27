@@ -378,6 +378,9 @@ describe('squad board — filters', () => {
 
     expect(panel.className).toContain('inset-x-0')
     expect(panel.className).toContain('bottom-0')
+    // The sheet spans the screen: the popover's width applies from 640px up only.
+    expect(panel.className.split(' ')).not.toContain('w-105')
+    expect(panel.className).toContain('sm:w-105')
     expect(within(panel).getByRole('button', { name: 'Close' })).toBeInTheDocument()
     await user.click(within(panel).getByRole('button', { name: 'Show 3 squads' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -396,6 +399,59 @@ describe('squad board — pagination', () => {
 
     expect(await screen.findByText('Page squad 7')).toBeInTheDocument()
     expect(screen.queryByText('Page squad 1')).not.toBeInTheDocument()
+  })
+})
+
+describe('squad board — page changes and grid', () => {
+  it('scrolls the new page to the start of the list, smoothly', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk(squadsForPagination()))
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Page squad 1')
+    scroll.mockClear()
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }))
+
+    await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1))
+    expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+    expect(scroll.mock.contexts[0]).toBe(document.getElementById('squads-grid'))
+    expect(screen.getByText('Page squad 7')).toBeInTheDocument()
+  })
+
+  it('scrolls at once when the viewer prefers reduced motion', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk(squadsForPagination()))
+    mockMediaQuery('(prefers-reduced-motion: reduce)', true)
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Page squad 1')
+    scroll.mockClear()
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }))
+
+    await waitFor(() => expect(scroll).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' }))
+  })
+
+  it('does not scroll when the viewer stays on the current page', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk(squadsForPagination()))
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Page squad 1')
+    scroll.mockClear()
+
+    await user.click(screen.getByRole('button', { name: 'Page 1' }))
+
+    expect(scroll).not.toHaveBeenCalled()
+  })
+
+  it('lays two cards in a row only when the grid itself is wide enough for them', async () => {
+    renderSquadsFlow('/squads')
+    await screen.findByText('Ranked grind')
+
+    const list = document.getElementById('squads-grid')!
+    expect(list).toHaveClass('@container')
+    const columns = list.firstElementChild!
+    expect(columns).toHaveClass('grid-cols-1', '@4xl:grid-cols-2')
+    expect(columns.className).not.toMatch(/(^| )(sm|md|lg|xl):grid-cols-2/)
   })
 })
 

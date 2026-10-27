@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { useSession } from '@/hooks/use-session'
 import { useCreateSquadLauncher } from '@/components/layout/create-squad-launcher'
@@ -34,9 +35,23 @@ export function SquadBoardResults({
 
   const { matching, pageSquads, currentPage, totalPages } = querySquadList(squads, query)
 
+  // The list scrolls into view once the new page is on screen, not when it is asked for: the page
+  // swaps after the click, and a scroll aimed at the old layout stops short.
+  const scrollToList = useRef(false)
+  useEffect(() => {
+    if (!scrollToList.current) return
+    scrollToList.current = false
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    document
+      .getElementById('squads-grid')
+      ?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
+  }, [currentPage])
+
   const handlePageChange = (page: number) => {
-    setPage(Math.max(1, Math.min(page, totalPages)))
-    document.getElementById('squads-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const target = Math.max(1, Math.min(page, totalPages))
+    if (target === currentPage) return
+    scrollToList.current = true
+    setPage(target)
   }
 
   if (matching.length === 0) return <BoardEmptyState searchActive={searchActive} />

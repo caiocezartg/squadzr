@@ -160,12 +160,12 @@ function SquadCardBody({
       </span>
 
       <span className="relative flex min-w-0 flex-col gap-2 px-4 py-3.5 lg:gap-2.5 lg:px-5.5 lg:py-4.5">
-        <span className="flex items-center justify-between gap-2.5">
+        <span className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1">
           <Tag variant="lang" label={language} />
           <span className="type-code shrink-0 text-faint">#{squad.code}</span>
         </span>
 
-        <span className="type-squad-name-md line-clamp-2 wrap-anywhere lg:type-squad-name">
+        <span className="type-squad-name-md line-clamp-2 wrap-break-word lg:type-squad-name">
           {squad.name}
         </span>
 
@@ -183,7 +183,7 @@ function SquadCardBody({
         <span className="grow" />
 
         <span className="flex items-center justify-between gap-2.5">
-          <span className="flex items-center">
+          <span className="flex min-w-0 items-center overflow-hidden py-0.5 pr-0.5">
             {rail.slots.map((slot, index) => (
               <RailCircle key={index} slot={slot} first={index === 0} lit={!isFull} />
             ))}

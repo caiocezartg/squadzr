@@ -41,7 +41,7 @@ export function BoardFilters({ filters }: BoardFiltersProps) {
           align="end"
           open={open}
           onOpenChange={setOpen}
-          className="w-105 max-w-[calc(100vw-2rem)] p-5.5"
+          className="p-5.5 sm:w-105 sm:max-w-[calc(100vw-2rem)]"
           trigger={<FiltersButton open={open} count={filters.activeFilterCount} />}
         >
           <FiltersPanel filters={filters} onClose={() => setOpen(false)} />
