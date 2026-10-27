@@ -309,7 +309,7 @@ describe('squad lobby — leave flow', () => {
     })
     onHttp('GET', '/api/rooms', () => httpOk({ rooms: remainingSquads.rooms }))
 
-    const { navigation, user } = renderSquadsFlow('/squads/LOBBY1')
+    const { navigation, user } = renderSquadsFlow('/squads/LOBBY1', { shell: true })
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
 

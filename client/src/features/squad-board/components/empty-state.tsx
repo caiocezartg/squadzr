@@ -1,4 +1,5 @@
 import { LayoutGrid } from 'lucide-react'
+import { Button } from '@/components/ds/button'
 
 interface EmptyStateProps {
   title: string
@@ -11,16 +12,16 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="size-16 rounded-2xl bg-surface-light border border-border flex items-center justify-center mb-4">
-        <LayoutGrid className="size-7 text-muted" strokeWidth={1.5} />
-      </div>
-      <h3 className="font-heading text-lg font-bold text-offwhite">{title}</h3>
-      <p className="mt-1 text-sm text-muted max-w-sm">{description}</p>
+    <div className="bg-card flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+      <span className="bg-line text-ds-muted flex size-13 items-center justify-center">
+        <LayoutGrid aria-hidden="true" className="size-5.5" strokeWidth={2.2} />
+      </span>
+      <h2 className="type-panel-title-sm text-text">{title}</h2>
+      <p className="type-body text-text-3 max-w-sm">{description}</p>
       {action && (
-        <button onClick={action.onClick} className="btn-accent mt-4">
+        <Button className="mt-2" onClick={action.onClick}>
           {action.label}
-        </button>
+        </Button>
       )}
     </div>
   )

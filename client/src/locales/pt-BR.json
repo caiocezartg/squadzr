@@ -43,6 +43,30 @@
     "steps": {
       "done": "Concluída"
     },
+    "board": {
+      "openCount": "{count, plural, one {{count} squad aberto} other {{count} squads abertos}}",
+      "searchLabel": "Buscar squads",
+      "searchPlaceholder": "Buscar por jogo ou nome do squad…",
+      "filters": "Filtros",
+      "activeFilters": "{count, plural, one {{count} ativo} other {{count} ativos}}",
+      "panelTitle": "Filtros",
+      "clearAll": "Limpar tudo",
+      "clear": "Limpar",
+      "chipsLabel": "Filtros ativos",
+      "availability": "Disponibilidade",
+      "availabilityAll": "Todos",
+      "availabilityHasSpace": "Com vaga",
+      "availabilityAlmostFull": "Quase cheio",
+      "language": "Idioma",
+      "languageAll": "Todos",
+      "tags": "Tags",
+      "tagLabel": "Adicionar uma tag",
+      "tagPlaceholder": "digite uma tag…",
+      "sort": "Ordenar por",
+      "sortNewest": "Mais recentes",
+      "sortOldest": "Mais antigos",
+      "show": "{count, plural, one {Mostrar {count} squad} other {Mostrar {count} squads}}"
+    },
     "shell": {
       "menu": "Menu",
       "openMenu": "Abrir menu",

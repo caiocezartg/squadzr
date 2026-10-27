@@ -1,9 +1,9 @@
 import { useTranslations } from 'next-intl'
 import { useSession } from '@/hooks/use-session'
+import { useCreateSquadLauncher } from '@/components/layout/create-squad-launcher'
+import { Pagination } from '@/components/ds/pagination'
 import { SquadGrid, querySquadList, type SquadListQuery } from '@/features/squad-list'
 import type { SquadJoining } from '@/features/squad-joining'
-import { CreateSquadDialog } from '@/features/squad-creation'
-import { Pagination } from '@/components/ui/pagination'
 import { EmptyState } from './components/empty-state'
 import { useSquadBoardSquads } from './use-squad-board-data'
 
@@ -16,15 +16,12 @@ export interface SquadBoardResultsProps {
   readonly searchActive: boolean
   readonly setPage: (page: number) => void
   readonly joining: SquadJoining
-  /** The create dialog is opened from the page header, so its state comes from the page. */
-  readonly createOpen: boolean
-  readonly onCreateOpenChange: (open: boolean) => void
 }
 
 /**
- * The squads the board lists: the grid, its pagination, the empty state and the create dialog. It
- * reads the list, so it suspends until it is cached, and the page shows its title and filters in the
- * meantime. Each card renders its game from the Squad itself.
+ * The squads the board lists: the grid, its pagination and the empty state. It reads the list, so it
+ * suspends until it is cached, and the page shows its title and filters in the meantime. Each card
+ * renders its game from the Squad itself. Results and pages swap at once, with no transition.
  */
 export function SquadBoardResults({
   baseline,
@@ -32,70 +29,51 @@ export function SquadBoardResults({
   searchActive,
   setPage,
   joining,
-  createOpen,
-  onCreateOpenChange,
 }: SquadBoardResultsProps) {
-  const t = useTranslations()
-  const session = useSession()
   const squads = useSquadBoardSquads(baseline)
 
-  const { matching, pageSquads, currentPage, totalPages, hasPreviousPage, hasNextPage, pageRange } =
-    querySquadList(squads, query)
+  const { matching, pageSquads, currentPage, totalPages } = querySquadList(squads, query)
 
-  const goToPage = (target: number) => setPage(Math.max(1, Math.min(target, totalPages)))
-  const previousPage = () => goToPage(currentPage - 1)
-  const nextPage = () => goToPage(currentPage + 1)
-
-  const handlePageChange = (p: number) => {
-    goToPage(p)
+  const handlePageChange = (page: number) => {
+    setPage(Math.max(1, Math.min(page, totalPages)))
     document.getElementById('squads-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  if (matching.length === 0) return <BoardEmptyState searchActive={searchActive} />
+
   return (
     <>
-      {matching.length === 0 ? (
-        <EmptyState
-          title={searchActive ? t('squads.page.emptyTitleFiltered') : t('squads.page.emptyTitle')}
-          description={
-            searchActive
-              ? t('squads.page.emptyDescriptionFiltered')
-              : t('squads.page.emptyDescription')
-          }
-          action={
-            session?.user
-              ? {
-                  label: t('common.createSquad'),
-                  onClick: () => onCreateOpenChange(true),
-                }
-              : undefined
-          }
-        />
-      ) : (
-        <>
-          <SquadGrid
-            id="squads-grid"
-            squads={pageSquads}
-            onSelect={joining.requestJoin}
-            loadingSquadCode={joining.joiningSquadCode}
-          />
-
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageRange={pageRange}
-            hasPreviousPage={hasPreviousPage}
-            hasNextPage={hasNextPage}
-            onPageChange={handlePageChange}
-            onPreviousPage={previousPage}
-            onNextPage={nextPage}
-          />
-        </>
-      )}
-
-      {/* Create squad dialog, mounted only while it is open */}
-      {session?.user && createOpen && (
-        <CreateSquadDialog onClose={() => onCreateOpenChange(false)} />
-      )}
+      <SquadGrid
+        id="squads-grid"
+        squads={pageSquads}
+        onSelect={joining.requestJoin}
+        loadingSquadCode={joining.joiningSquadCode}
+      />
+      <Pagination
+        page={currentPage}
+        pageCount={totalPages}
+        onPageChange={handlePageChange}
+        className="mt-2 justify-center"
+      />
     </>
+  )
+}
+
+/** Nothing to list: the wording names the filters when they narrow the list, and a signed-in viewer can create. */
+function BoardEmptyState({ searchActive }: { readonly searchActive: boolean }) {
+  const t = useTranslations()
+  const session = useSession()
+  const { requestCreate } = useCreateSquadLauncher()
+
+  return (
+    <EmptyState
+      title={searchActive ? t('squads.page.emptyTitleFiltered') : t('squads.page.emptyTitle')}
+      description={
+        searchActive ? t('squads.page.emptyDescriptionFiltered') : t('squads.page.emptyDescription')
+      }
+      action={
+        session?.user ? { label: t('common.createSquad'), onClick: requestCreate } : undefined
+      }
+    />
   )
 }

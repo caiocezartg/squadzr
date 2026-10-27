@@ -108,12 +108,25 @@ describe('querySquadList — filters', () => {
     ])
   })
 
-  it('matches the tag by substring, ignoring case, spaces and a leading #', () => {
-    expect(ids(querySquadList(all, query({ tag: ' #RANK ' })).matching)).toEqual(['ranked'])
+  it('matches a tag exactly, not by part of it', () => {
+    expect(ids(querySquadList(all, query({ tag: ['ranked'] })).matching)).toEqual(['ranked'])
+    expect(querySquadList(all, query({ tag: ['rank'] })).matching).toHaveLength(0)
   })
 
-  it('ignores a blank tag', () => {
-    expect(querySquadList(all, query({ tag: ' ' })).matching).toHaveLength(4)
+  it('keeps only squads that have every selected tag', () => {
+    expect(ids(querySquadList(all, query({ tag: ['ranked', 'chill'] })).matching)).toEqual([
+      'ranked',
+    ])
+    expect(querySquadList(all, query({ tag: ['ranked', 'mic'] })).matching).toHaveLength(0)
+  })
+
+  it('compares a squad tag without regard to case or a leading #', () => {
+    const tagged = squad({ id: 'tagged', tags: ['#Mic'] })
+    expect(ids(querySquadList([tagged], query({ tag: ['mic'] })).matching)).toEqual(['tagged'])
+  })
+
+  it('keeps every squad when no tag is selected', () => {
+    expect(querySquadList(all, query({ tag: [] })).matching).toHaveLength(4)
   })
 
   it('combines every filter', () => {

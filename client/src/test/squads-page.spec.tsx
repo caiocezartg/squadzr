@@ -13,6 +13,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import SquadsPage from '@/app/(app)/squads/page'
+import { CreateSquadLauncher } from '@/components/layout/create-squad-launcher'
 import { getQueryClient } from '@/lib/query-client'
 import { boardSquads, openSquad } from './fixtures'
 import { createTestQueryClient } from './harness'
@@ -52,7 +53,9 @@ async function renderSquadsRoute(queryClient: QueryClient = createTestQueryClien
 
   return render(
     <EnglishIntlProvider session={fakeSession()}>
-      <QueryClientProvider client={queryClient}>{page}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <CreateSquadLauncher>{page}</CreateSquadLauncher>
+      </QueryClientProvider>
     </EnglishIntlProvider>
   )
 }
@@ -85,7 +88,7 @@ describe('squad board on the App Router', () => {
 
     expect(await screen.findByTestId('squad-board-skeleton')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Explore squads' })).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Search by game or squad name...')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Search by game or squad name…')).toBeInTheDocument()
 
     squadsRead.resolve(httpOk(boardSquads))
 
@@ -119,12 +122,12 @@ describe('squad board on the App Router', () => {
   it('opens the create dialog on the App Router page, and the dialog is visible', async () => {
     signInAsFakeUser()
     createHarnessNavigation('/squads')
-    registerBoardReads(() => httpOk(boardSquads))
+    registerBoardReads(() => httpOk({ rooms: [] }))
 
     await renderSquadsRoute()
     const user = userEvent.setup({ delay: null })
-    // The button's text is in two spans (wide and narrow screens), so the test finds the text.
-    await user.click(await screen.findByText('Create new squad'))
+    // The empty board offers the create action; the shell's launcher opens the dialog.
+    await user.click(await screen.findByRole('button', { name: 'Create Squad' }))
 
     // The dialog's card animates in from opacity 0. Without the route's animation features it stays
     // there, so the dialog shows nothing.
@@ -205,7 +208,7 @@ describe('squad board on the App Router', () => {
       await user.click(screen.getByRole('button', { name: 'Try again' }))
 
       expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
-      expect(screen.getByText('3 squads available')).toBeInTheDocument()
+      expect(screen.getByText('3 open squads')).toBeInTheDocument()
       expect(screen.queryByText(loadError)).not.toBeInTheDocument()
     })
   })

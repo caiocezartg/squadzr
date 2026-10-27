@@ -43,6 +43,30 @@
     "steps": {
       "done": "Completed"
     },
+    "board": {
+      "openCount": "{count, plural, one {{count} open squad} other {{count} open squads}}",
+      "searchLabel": "Search squads",
+      "searchPlaceholder": "Search by game or squad name…",
+      "filters": "Filters",
+      "activeFilters": "{count} active",
+      "panelTitle": "Filters",
+      "clearAll": "Clear all",
+      "clear": "Clear",
+      "chipsLabel": "Active filters",
+      "availability": "Availability",
+      "availabilityAll": "All",
+      "availabilityHasSpace": "With space",
+      "availabilityAlmostFull": "Almost full",
+      "language": "Language",
+      "languageAll": "All",
+      "tags": "Tags",
+      "tagLabel": "Add a tag",
+      "tagPlaceholder": "type a tag…",
+      "sort": "Sort by",
+      "sortNewest": "Newest",
+      "sortOldest": "Oldest",
+      "show": "{count, plural, one {Show {count} squad} other {Show {count} squads}}"
+    },
     "shell": {
       "menu": "Menu",
       "openMenu": "Open menu",

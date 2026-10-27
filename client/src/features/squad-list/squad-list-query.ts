@@ -1,4 +1,5 @@
 import type { PublicSquad } from '@/types'
+import { hasEveryTag } from './squad-tags'
 import type { ResolvedSquadsSearch } from './squads-search'
 
 const SQUAD_PAGE_SIZE = 6
@@ -34,18 +35,13 @@ function matchesStatus(squad: PublicSquad, filter: SquadListQuery['filter']): bo
   return true
 }
 
-function matchesTag(squad: PublicSquad, tag: string): boolean {
-  const term = tag.trim().toLowerCase().replace(/^#/, '')
-  return squad.tags.some((squadTag) => squadTag.toLowerCase().includes(term))
-}
-
 function filterSquads(squads: readonly PublicSquad[], query: SquadListQuery) {
   return squads.filter(
     (squad) =>
       (!query.search.trim() || matchesSearch(squad, query.search)) &&
       matchesStatus(squad, query.filter) &&
       (query.language === 'all' || squad.language === query.language) &&
-      (!query.tag.trim() || matchesTag(squad, query.tag))
+      hasEveryTag(squad, query.tag)
   )
 }
 
@@ -69,7 +65,7 @@ function listPages(currentPage: number, totalPages: number): number[] {
 
 /**
  * The Squad list: filters the squads by search term (the Squad's name or its own game's name),
- * status, language and tag, sorts them by creation date (newest first unless asked otherwise) and
+ * status, language and tags (a Squad needs every selected tag), sorts them by creation date (newest first unless asked otherwise) and
  * cuts the page the query asks for. Pure on purpose: the same inputs give the same list on the
  * server render and in the browser, and `squads` is never mutated. A page past the last one resolves
  * to the last.
