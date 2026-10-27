@@ -93,6 +93,7 @@ Each component lives once in the client's UI layer and is reused by every screen
 - "Sugerir um jogo" in the empty search state is dropped: there is no destination for it.
 - `/squads/my` does not exist; "Meus squads" lives only in the sidebar.
 - The board's tag filter accepts several tags; a Squad matches when it has every selected tag, compared exactly (case-insensitive, without `#`).
+- Create Squad's "Popular now" games are rows in the game search's listbox (cover, name, genre and size), not the artboard's six-column cover grid (`CriarSquad`), so arrow keys move through one list.
 - Avatars use the player's Discord image when there is one; the initials palette is the fallback.
 
 ## 4. Responsive

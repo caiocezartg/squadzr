@@ -58,7 +58,7 @@ export function Dialog({
         <BaseDialog.Popup
           data-instant={instantAttribute}
           className={cn(
-            'bg-card text-text fixed inset-0 z-50 m-auto flex h-fit max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-170 flex-col overflow-y-auto shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_50px_120px_-30px_rgba(0,0,0,0.95)] outline-none',
+            'bg-card text-text fixed inset-0 z-50 m-auto flex h-fit max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-170 flex-col overflow-y-auto scrollbar-thin shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_50px_120px_-30px_rgba(0,0,0,0.95)] outline-none',
             'transition-[opacity,translate,scale] duration-280 ease-out',
             'data-starting-style:opacity-0 data-ending-style:opacity-0',
             'motion-safe:data-starting-style:translate-y-4 motion-safe:data-starting-style:scale-[0.985]',

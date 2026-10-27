@@ -88,6 +88,31 @@
       "host": "Você é o dono",
       "inviteUnlocked": "Convite liberado"
     },
+    "createSquad": {
+      "progress": "Progresso da criação do squad",
+      "stepLabels": {
+        "game": "01 · JOGO",
+        "details": "02 · DETALHES",
+        "discord": "03 · DISCORD"
+      },
+      "titles": {
+        "game": "Escolha o jogo",
+        "details": "Detalhes do squad",
+        "discord": "Convite do Discord"
+      },
+      "cancel": "Cancelar",
+      "back": "Voltar",
+      "continue": "Continuar",
+      "gameQuestion": "Qual jogo vocês vão jogar?",
+      "searchPlaceholder": "Buscar no catálogo de jogos…",
+      "popular": "Populares agora",
+      "results": "Jogos encontrados",
+      "gameOption": "{name}, {detail}",
+      "gameDetail": "{genre} · {min}–{max} jogadores",
+      "gameDetailNoGenre": "{min}–{max} jogadores",
+      "emptyTitle": "Nenhum jogo encontrado para “{term}”",
+      "emptyBody": "Confira a grafia ou procure pelo nome curto (ex: “CS”, “LoL”)."
+    },
     "shell": {
       "menu": "Menu",
       "openMenu": "Abrir menu",
@@ -226,12 +251,8 @@
       "continueWithDiscord": "Continuar com Discord"
     },
     "createModal": {
-      "title": "Criar um Squad",
       "squadName": "Nome do Squad",
       "squadNamePlaceholder": "ex: Grind ranked hoje à noite",
-      "game": "Jogo",
-      "selectGame": "Selecione um jogo",
-      "gameWithPlayers": "{name} ({min}-{max} jogadores)",
       "playerLimit": "Jogadores",
       "optional": "(opcional)",
       "playerLimitHelperWithGame": "Deixe vazio para usar {maxPlayers} jogadores (padrão do {gameName}).",
@@ -249,7 +270,6 @@
       "language": "Idioma",
       "creating": "Criando...",
       "submit": "Criar Squad",
-      "selectGameError": "Por favor, selecione um jogo",
       "nameRequired": "Nome do squad é obrigatório",
       "nameTooLong": "Nome do squad muito longo (máx. 30 caracteres)",
       "discordLinkInvalid": "Por favor, insira uma URL válida",
@@ -258,9 +278,7 @@
       "maxPlayersTooMany": "Máximo de 40 jogadores",
       "searchingGames": "Buscando jogos…",
       "noGamesFound": "Nenhum jogo encontrado. Tente outro nome.",
-      "gamesFound": "{count, plural, one {# jogo encontrado} other {# jogos encontrados}}",
-      "showGameList": "Mostrar jogos",
-      "hideGameList": "Ocultar jogos"
+      "gamesFound": "{count, plural, one {# jogo encontrado} other {# jogos encontrados}}"
     }
   },
   "squadNotFound": {

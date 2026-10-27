@@ -112,8 +112,8 @@ describe('Create squad', () => {
 
     await user.click(sidebar().getByRole('button', { name: 'Create squad' }))
 
-    expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
-    expect(screen.getByLabelText('Squad Name')).toBeInTheDocument()
+    expect(await screen.findByText('Choose the game')).toBeInTheDocument()
+    expect(screen.getByLabelText('Which game will you play?')).toBeInTheDocument()
     expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
   })
 
@@ -122,8 +122,8 @@ describe('Create squad', () => {
 
     await user.click(sidebar().getByRole('button', { name: 'Create squad' }))
 
-    expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
-    expect(screen.getByLabelText('Squad Name')).toBeInTheDocument()
+    expect(await screen.findByText('Choose the game')).toBeInTheDocument()
+    expect(screen.getByLabelText('Which game will you play?')).toBeInTheDocument()
   })
 
   it('asks a visitor to sign in and returns to the same page with the create request', async () => {
@@ -148,7 +148,7 @@ describe('?create=1', () => {
   it('opens the create dialog on load and drops the parameter', async () => {
     const { navigation } = renderShell('/squads?create=1')
 
-    expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
+    expect(await screen.findByText('Choose the game')).toBeInTheDocument()
     await waitFor(() => expect(navigation.history.location.search).toBe(''))
     expect(navigation.history.location.pathname).toBe('/squads')
   })
@@ -156,7 +156,7 @@ describe('?create=1', () => {
   it('keeps the other parameters of the URL when it drops the parameter', async () => {
     const { navigation } = renderShell('/squads?language=en&create=1')
 
-    expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
+    expect(await screen.findByText('Choose the game')).toBeInTheDocument()
     await waitFor(() => expect(navigation.history.location.search).toBe('?language=en'))
   })
 
@@ -164,7 +164,7 @@ describe('?create=1', () => {
     const { user, navigation } = renderShell('/squads?create=1', { user: null })
 
     expect(await screen.findByText('Sign in required')).toBeInTheDocument()
-    expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument()
+    expect(screen.queryByText('Choose the game')).not.toBeInTheDocument()
     expect(navigation.history.location.search).toBe('?create=1')
     await user.click(screen.getByRole('button', { name: 'Continue with Discord' }))
 
@@ -372,7 +372,7 @@ describe('the drawer', () => {
       })
     )
 
-    expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
+    expect(await screen.findByText('Choose the game')).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Menu' })).not.toBeInTheDocument()
   })
 })

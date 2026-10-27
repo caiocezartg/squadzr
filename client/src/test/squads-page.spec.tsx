@@ -129,12 +129,9 @@ describe('squad board on the App Router', () => {
     // The empty board offers the create action; the shell's launcher opens the dialog.
     await user.click(await screen.findByRole('button', { name: 'Create Squad' }))
 
-    // The dialog's card animates in from opacity 0. Without the route's animation features it stays
-    // there, so the dialog shows nothing.
-    const title = await screen.findByText('Create a Squad', {}, { timeout: 5000 })
-    const card = title.closest('.max-w-2xl')
-    expect(card).not.toBeNull()
-    await waitFor(() => expect(card).toHaveStyle({ opacity: '1' }))
+    // The shared dialog fades in with CSS, so it needs no route animation features to show.
+    const dialog = await screen.findByRole('dialog', { name: 'Choose the game' }, { timeout: 5000 })
+    expect(dialog).toBeVisible()
   })
 
   it('opens the sign-in prompt for a guest on the App Router page, and the prompt is visible', async () => {

@@ -88,6 +88,31 @@
       "host": "You are the host",
       "inviteUnlocked": "Invite unlocked"
     },
+    "createSquad": {
+      "progress": "Create squad progress",
+      "stepLabels": {
+        "game": "01 · GAME",
+        "details": "02 · DETAILS",
+        "discord": "03 · DISCORD"
+      },
+      "titles": {
+        "game": "Choose the game",
+        "details": "Squad details",
+        "discord": "Discord invite"
+      },
+      "cancel": "Cancel",
+      "back": "Back",
+      "continue": "Continue",
+      "gameQuestion": "Which game will you play?",
+      "searchPlaceholder": "Search the game catalog…",
+      "popular": "Popular now",
+      "results": "Games found",
+      "gameOption": "{name}, {detail}",
+      "gameDetail": "{genre} · {min}–{max} players",
+      "gameDetailNoGenre": "{min}–{max} players",
+      "emptyTitle": "No game found for “{term}”",
+      "emptyBody": "Check the spelling or try a shorter name (e.g. “CS”, “LoL”)."
+    },
     "shell": {
       "menu": "Menu",
       "openMenu": "Open menu",
@@ -226,12 +251,8 @@
       "continueWithDiscord": "Continue with Discord"
     },
     "createModal": {
-      "title": "Create a Squad",
       "squadName": "Squad Name",
       "squadNamePlaceholder": "e.g. Ranked grind tonight",
-      "game": "Game",
-      "selectGame": "Select a game",
-      "gameWithPlayers": "{name} ({min}-{max} players)",
       "playerLimit": "Player Limit",
       "optional": "(optional)",
       "playerLimitHelperWithGame": "Leave empty to use {maxPlayers} players ({gameName} default).",
@@ -249,7 +270,6 @@
       "language": "Language",
       "creating": "Creating...",
       "submit": "Create Squad",
-      "selectGameError": "Please select a game",
       "nameRequired": "Squad name is required",
       "nameTooLong": "Squad name is too long (max 30 characters)",
       "discordLinkInvalid": "Please enter a valid URL",
@@ -258,9 +278,7 @@
       "maxPlayersTooMany": "Max 40 players",
       "searchingGames": "Searching games…",
       "noGamesFound": "No games found. Try another name.",
-      "gamesFound": "{count, plural, one {# game found} other {# games found}}",
-      "showGameList": "Show games",
-      "hideGameList": "Hide games"
+      "gamesFound": "{count, plural, one {# game found} other {# games found}}"
     }
   },
   "squadNotFound": {

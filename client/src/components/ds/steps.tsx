@@ -12,20 +12,29 @@ interface StepsProps {
   className?: string
 }
 
-/** A bar and a label per step: done steps get a check, the current one is marked for assistive technology. */
+const SEPARATOR = ' · '
+
+/**
+ * A bar and a label per step: done steps get a check, the current one is marked for assistive technology.
+ * When the row is too narrow for the longest label, "02 · DETALHES" with its check, on one line, every label breaks the same way, the
+ * number over the name, so no single label wraps alone. The row is the container, not the viewport,
+ * because the dialog's width follows the viewport only loosely.
+ */
 export function Steps({ steps, current, label, className }: StepsProps) {
   const t = useTranslations('ds.steps')
 
   return (
     <ol
       aria-label={label}
-      className={cn('m-0 grid list-none gap-1.5 p-0', className)}
+      className={cn('@container m-0 grid list-none gap-1.5 p-0', className)}
       style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
     >
       {steps.map((step, index) => {
         const number = index + 1
         const done = number < current
         const active = number === current
+        const [prefix = step, ...rest] = step.split(SEPARATOR)
+        const name = rest.join(SEPARATOR)
 
         return (
           <li
@@ -43,12 +52,16 @@ export function Steps({ steps, current, label, className }: StepsProps) {
             </span>
             <span
               className={cn(
-                'type-label inline-flex items-center gap-1.75 tracking-[0.12em]',
+                'type-label block tracking-[0.12em]',
                 active ? 'text-text' : done ? 'text-mint' : 'text-faint'
               )}
             >
-              {done && <Check aria-hidden className="size-2.75" strokeWidth={3.4} />}
-              {step}
+              <span className="inline-flex items-center gap-1.75 @max-[23.5rem]:flex">
+                {done && <Check aria-hidden className="size-2.75" strokeWidth={3.4} />}
+                {prefix}
+              </span>
+              {name && <span className="@max-[23.5rem]:hidden">{SEPARATOR}</span>}
+              {name && <span className="@max-[23.5rem]:block">{name}</span>}
               {done && <span className="sr-only">{t('done')}</span>}
             </span>
           </li>

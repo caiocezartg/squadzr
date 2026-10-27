@@ -39,4 +39,15 @@ describe('steps', () => {
     expect(screen.queryByText('Completed')).not.toBeInTheDocument()
     expect(screen.getAllByRole('listitem')[0]).toHaveAttribute('aria-current', 'step')
   })
+
+  it('breaks every label the same way in a narrow row: the number over the name', () => {
+    render(<Steps steps={steps} current={2} label="Create squad" />)
+
+    const row = screen.getByRole('list', { name: 'Create squad' })
+    expect(row).toHaveClass('@container')
+    for (const [index, name] of ['GAME', 'DETAILS', 'DISCORD'].entries()) {
+      const label = within(screen.getAllByRole('listitem')[index]!).getByText(name)
+      expect(label).toHaveClass('@max-[23.5rem]:block')
+    }
+  })
 })
