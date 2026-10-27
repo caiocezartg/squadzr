@@ -218,19 +218,6 @@
       "full": "Cheio",
       "label": "{name} — {game}, {language}, {members} de {max} jogadores"
     },
-    "filters": {
-      "searchPlaceholder": "Buscar por jogo ou nome do squad...",
-      "tagPlaceholder": "filtrar por tag...",
-      "lang": "Idioma",
-      "statusAll": "TODOS",
-      "statusHasSpace": "COM VAGA",
-      "statusAlmostFull": "QUASE CHEIO",
-      "sortNewest": "MAIS RECENTES",
-      "sortOldest": "MAIS ANTIGOS",
-      "langAll": "TODOS OS IDIOMAS",
-      "langPtBr": "PT-BR",
-      "langEn": "EN-US"
-    },
     "authModal": {
       "title": "Login necessário",
       "description": "Você pode explorar a lista de squads como convidado, mas entrar em um squad e ver detalhes completos requer login com Discord.",

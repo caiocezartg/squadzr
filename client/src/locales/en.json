@@ -218,19 +218,6 @@
       "full": "Full",
       "label": "{name} — {game}, {language}, {members} of {max} players"
     },
-    "filters": {
-      "searchPlaceholder": "Search by game or squad name...",
-      "tagPlaceholder": "filter by tag...",
-      "lang": "Lang",
-      "statusAll": "ALL",
-      "statusHasSpace": "HAS SPACE",
-      "statusAlmostFull": "ALMOST FULL",
-      "sortNewest": "NEWEST",
-      "sortOldest": "OLDEST",
-      "langAll": "ALL LANGUAGES",
-      "langPtBr": "PT-BR",
-      "langEn": "EN-US"
-    },
     "authModal": {
       "title": "Sign in required",
       "description": "You can explore squads list as a guest, but joining a squad and viewing full details requires signing in with Discord.",
