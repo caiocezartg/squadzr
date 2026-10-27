@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | ------------------------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`                                | 29     | 160   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts`                  | 29     | 294   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 80     | 732   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 81     | 747   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`                                | 4      | 98    |
 | `@squadzr/typescript-config` | —                    | —           | —                                                 | —      | —     |
 
@@ -112,7 +112,7 @@ with focus outside the search, the horizontally clipped slide, the two-line step
 the highlighted option. The chevron case and the old route-animation case are gone with their
 code.
 
-CCC-108 restyles the notifications panel and recounts `client:unit` at 78 files / 683 tests. It adds
+CCC-108 restyles the notifications panel and recounts `client:unit` at 81 files / 747 tests. It adds
 `src/components/ds/notification-item.spec.tsx` (7 tests: the name, message and game with the time,
 the unread name and dot, a read row and its grayscale cover, the placeholder without a cover, open and
 dismiss with the dismiss label naming the Squad, and the dismiss button on focus), rewrites
