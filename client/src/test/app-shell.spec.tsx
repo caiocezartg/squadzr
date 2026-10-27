@@ -94,7 +94,7 @@ describe('shell navigation', () => {
     const { user, navigation } = renderShell('/squads')
 
     await user.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }))
-    await user.click(await screen.findByRole('button', { name: /^Alpha squad/ }))
+    await user.click(await screen.findByRole('link', { name: /^Alpha squad/ }))
 
     expect(navigation.calls).toEqual([
       { method: 'push', href: `/squads/${squadReadyNotification.payload.roomCode}` },

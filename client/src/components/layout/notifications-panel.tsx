@@ -1,5 +1,6 @@
 import { Bell, CheckCheck } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { lobbyHref } from '@/lib/squad-links'
 import { NotificationItem } from '@/components/ds/notification-item'
 import type { UserNotification } from '@/types'
 
@@ -30,8 +31,11 @@ export function NotificationsPanel({
 
   return (
     <>
-      {/* The bottom sheet's close button sits in the top right corner, so the row clears it. */}
-      <div className="flex items-center justify-between gap-3 pt-4.5 pr-4.5 pb-3.5 pl-5 max-sm:pr-18">
+      {/*
+        The popover has no padding of its own (see the menu); the bottom sheet keeps its own, and its
+        close button sits in the top right corner, so the row clears it.
+      */}
+      <div className="flex items-center justify-between gap-3 pb-3.5 max-sm:pr-9 sm:pt-4.5 sm:pr-4.5 sm:pl-5">
         <span aria-hidden className="type-panel-title-sm text-text">
           {t('title')}
         </span>
@@ -55,7 +59,7 @@ export function NotificationsPanel({
           <p className="text-text-3 max-w-65 text-[13px]/normal">{t('emptyHint')}</p>
         </div>
       ) : (
-        <ul className="scrollbar-thin flex flex-col gap-0.5 px-2 pb-2 sm:max-h-96 sm:overflow-y-auto">
+        <ul className="scrollbar-thin flex flex-col gap-0.5 sm:px-2 sm:pb-2 sm:max-h-96 sm:overflow-y-auto">
           {notifications.map((notification) => (
             <NotificationItem
               key={notification.id}
@@ -64,6 +68,7 @@ export function NotificationsPanel({
               coverUrl={notification.payload.gameCoverUrl}
               createdAt={notification.createdAt}
               unread={notification.readAt === null}
+              href={lobbyHref(notification.payload.roomCode)}
               disabled={busy}
               onOpen={() => onOpen(notification)}
               onDismiss={() => onDismiss(notification)}

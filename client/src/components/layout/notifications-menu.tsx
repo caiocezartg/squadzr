@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ComponentType } from 'react'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useAppNavigation } from '@/lib/navigation'
 import { lobbyHref } from '@/lib/squad-links'
@@ -13,6 +13,8 @@ const loadPopover = () => import('./notifications-popover').then((m) => m.Notifi
 
 interface LoadedPopover {
   readonly Popover: ComponentType<NotificationsPopoverProps>
+  /** The viewer had focus on the bell the popover's bell replaces. */
+  readonly focused: boolean
 }
 
 /**
@@ -23,6 +25,7 @@ interface LoadedPopover {
  */
 export function NotificationsMenu() {
   const navigate = useAppNavigation()
+  const bellRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
   const [loaded, setLoaded] = useState<LoadedPopover | null>(null)
   const {
@@ -54,7 +57,8 @@ export function NotificationsMenu() {
 
   const load = (openOnLoad: boolean) => {
     void loadPopover().then((Popover) => {
-      setLoaded((current) => current ?? { Popover })
+      const focused = document.activeElement === bellRef.current
+      setLoaded((current) => current ?? { Popover, focused })
       if (openOnLoad) setOpen(true)
     })
   }
@@ -62,7 +66,7 @@ export function NotificationsMenu() {
   useEffect(() => whenIdle(() => load(false)), [])
 
   if (!loaded) {
-    return <BellButton unreadCount={unreadCount} onClick={() => load(true)} />
+    return <BellButton ref={bellRef} unreadCount={unreadCount} onClick={() => load(true)} />
   }
 
   return (
@@ -70,6 +74,7 @@ export function NotificationsMenu() {
       notifications={notifications}
       unreadCount={unreadCount}
       busy={busy}
+      takeFocus={loaded.focused}
       open={open}
       onOpenChange={setOpen}
       onOpen={(notification) => void handleOpen(notification)}

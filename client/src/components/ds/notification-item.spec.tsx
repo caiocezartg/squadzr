@@ -18,6 +18,7 @@ function renderItem(props: Partial<NotificationItemProps> = {}) {
         gameName="Valorant"
         createdAt={new Date().toISOString()}
         unread
+        href="/squads/ABC123"
         onOpen={onOpen}
         onDismiss={onDismiss}
         {...props}
@@ -31,7 +32,7 @@ describe('notification item', () => {
   it('shows the name, the message and the game with the time', () => {
     renderItem()
 
-    const row = screen.getByRole('button', { name: /^Ranked grind/ })
+    const row = screen.getByRole('link', { name: /^Ranked grind/ })
     expect(row).toHaveTextContent('Discord invite unlocked')
     expect(row).toHaveTextContent('Valorant · just now')
   })
@@ -60,11 +61,27 @@ describe('notification item', () => {
     const user = userEvent.setup({ delay: null })
     const { onOpen, onDismiss } = renderItem()
 
-    await user.click(screen.getByRole('button', { name: /^Ranked grind/ }))
+    await user.click(screen.getByRole('link', { name: /^Ranked grind/ }))
     await user.click(screen.getByRole('button', { name: 'Dismiss notification for Ranked grind' }))
 
     expect(onOpen).toHaveBeenCalledTimes(1)
     expect(onDismiss).toHaveBeenCalledTimes(1)
+  })
+
+  it('is a link to the Squad that opens in place on a plain click only', async () => {
+    const user = userEvent.setup({ delay: null })
+    const { onOpen } = renderItem()
+    const row = screen.getByRole('link', { name: /^Ranked grind/ })
+
+    expect(row).toHaveAttribute('href', '/squads/ABC123')
+
+    await user.keyboard('{Control>}')
+    await user.click(row)
+    await user.keyboard('{/Control}')
+    expect(onOpen).not.toHaveBeenCalled()
+
+    await user.click(row)
+    expect(onOpen).toHaveBeenCalledTimes(1)
   })
 
   it('reveals the dismiss button on focus', async () => {

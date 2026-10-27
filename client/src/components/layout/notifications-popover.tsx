@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Popover } from '@/components/ds/popover'
 import type { UserNotification } from '@/types'
@@ -10,6 +11,8 @@ export interface NotificationsPopoverProps {
   readonly notifications: readonly UserNotification[]
   readonly unreadCount: number
   readonly busy: boolean
+  /** Puts focus on the bell as it appears, for a viewer who had focus on its earlier twin. */
+  readonly takeFocus: boolean
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
   readonly onOpen: (notification: UserNotification) => void
@@ -26,6 +29,7 @@ export function NotificationsPopover({
   notifications,
   unreadCount,
   busy,
+  takeFocus,
   open,
   onOpenChange,
   onOpen,
@@ -33,6 +37,13 @@ export function NotificationsPopover({
   onMarkAllAsRead,
 }: NotificationsPopoverProps) {
   const t = useTranslations('ds.notifications')
+  // The focus is taken once, as the bell appears, and never again when this renders.
+  const pendingFocus = useRef(takeFocus)
+  const focusOnce = useCallback((bell: HTMLButtonElement | null) => {
+    if (!bell || !pendingFocus.current) return
+    pendingFocus.current = false
+    bell.focus()
+  }, [])
 
   return (
     <Popover
@@ -44,8 +55,8 @@ export function NotificationsPopover({
       onOpenChange={onOpenChange}
       title={t('title')}
       hideTitle
-      className="p-0 pb-[env(safe-area-inset-bottom)] sm:w-100"
-      trigger={<BellButton unreadCount={unreadCount} />}
+      className="sm:w-100 sm:p-0"
+      trigger={<BellButton ref={focusOnce} unreadCount={unreadCount} />}
     >
       <NotificationsPanel
         notifications={notifications}

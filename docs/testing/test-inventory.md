@@ -112,11 +112,11 @@ with focus outside the search, the horizontally clipped slide, the two-line step
 the highlighted option. The chevron case and the old route-animation case are gone with their
 code.
 
-CCC-108 restyles the notifications panel and recounts `client:unit` at 78 files / 680 tests. It adds
-`src/components/ds/notification-item.spec.tsx` (6 tests: the name, message and game with the time,
+CCC-108 restyles the notifications panel and recounts `client:unit` at 78 files / 683 tests. It adds
+`src/components/ds/notification-item.spec.tsx` (7 tests: the name, message and game with the time,
 the unread name and dot, a read row and its grayscale cover, the placeholder without a cover, open and
 dismiss with the dismiss label naming the Squad, and the dismiss button on focus), rewrites
-`notifications.spec.tsx` against the new panel (13 tests: open, the unread dots, the 9+ badge cap, the
+`notifications.spec.tsx` against the new panel (15 tests: open, the panel code loaded on idle with the Popover trigger and the focus kept, the unread dots, the 9+ badge cap, the
 empty state, the bottom sheet below 640px, mark one, mark all, dismiss, the three failures, cover and no
 cover) and adds one `sidebar-flows.spec.tsx` case (the bell's place held in the page header). The other
 shell bell cases changed only in the bell's accessible name.

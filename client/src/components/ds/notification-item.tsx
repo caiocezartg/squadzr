@@ -1,5 +1,6 @@
 'use client'
 
+import type { MouseEvent } from 'react'
 import { Gamepad2, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { DiscordIcon } from '@/components/ui/icons'
@@ -14,9 +15,11 @@ export interface NotificationItemProps {
   /** ISO time the notification happened. */
   readonly createdAt: string
   readonly unread: boolean
-  /** Both buttons wait while a change is in flight. */
+  /** The Squad's address: the row is a link to it. */
+  readonly href: string
+  /** Both controls wait while a change is in flight. */
   readonly disabled?: boolean
-  /** Opens the Squad. */
+  /** A plain click opens the Squad here; a modified click keeps the browser's own link behaviour. */
   readonly onOpen: () => void
   readonly onDismiss: () => void
 }
@@ -34,6 +37,7 @@ export function NotificationItem({
   coverUrl,
   createdAt,
   unread,
+  href,
   disabled,
   onOpen,
   onDismiss,
@@ -41,12 +45,19 @@ export function NotificationItem({
   const t = useTranslations('ds.notifications')
   const timeAgo = useTimeAgo(createdAt)
 
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    const modified = event.metaKey || event.altKey || event.ctrlKey || event.shiftKey
+    if (event.button !== 0 || modified) return
+    event.preventDefault()
+    if (!disabled) onOpen()
+  }
+
   return (
     <li className="group relative">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={onOpen}
+      <a
+        href={href}
+        aria-disabled={disabled || undefined}
+        onClick={handleClick}
         className={cn(
           'hover-fine:bg-line hover-fine:[--ground:var(--color-line)] focus-visible:outline-text flex w-full items-center gap-3.5 py-2.5 pr-11 pl-2.5 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:pr-14',
           unread
@@ -94,7 +105,7 @@ export function NotificationItem({
             className="bg-mint size-2 shrink-0 rounded-full"
           />
         )}
-      </button>
+      </a>
       <button
         type="button"
         disabled={disabled}

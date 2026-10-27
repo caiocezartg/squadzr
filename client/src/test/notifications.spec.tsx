@@ -7,10 +7,10 @@
 
 import { QueryClientProvider } from '@tanstack/react-query'
 import { usePathname } from 'next/navigation'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppShell } from '@/components/layout/app-shell'
 import { NARROW_QUERY } from '@/components/ds/use-media-query'
 import type { UserNotification } from '@/types'
@@ -67,9 +67,9 @@ async function openNotifications(user: UserEvent, unread: number): Promise<void>
   await user.click(await screen.findByRole('button', { name: `Notifications, ${unread} unread` }))
 }
 
-/** The row button of one squad; its dismiss button sits next to it in the same list item. */
+/** The row link of one squad; its dismiss button sits next to it in the same list item. */
 function squadEntry(squadName: RegExp): HTMLElement {
-  return screen.getByRole('button', { name: squadName })
+  return screen.getByRole('link', { name: squadName })
 }
 
 function dismissButton(squadName: string): HTMLElement {
@@ -176,6 +176,63 @@ describe('the bell and its panel', () => {
   })
 })
 
+describe('the panel code loaded on idle', () => {
+  beforeAll(() => {
+    // The browser is idle at once, so the panel's code lands without the one-second fallback. jsdom
+    // has no idle callback, so the spies are defined on the window and removed again.
+    Object.assign(window, {
+      requestIdleCallback: (callback: () => void) => window.setTimeout(callback, 0),
+      cancelIdleCallback: (handle: number) => window.clearTimeout(handle),
+    })
+  })
+
+  // After the last test, so the cleanup of its render can still cancel its idle callback.
+  afterAll(() => {
+    Reflect.deleteProperty(window, 'requestIdleCallback')
+    Reflect.deleteProperty(window, 'cancelIdleCallback')
+  })
+
+  /** The bell once the Popover owns it: Base UI marks its trigger with the dialog it opens. */
+  async function loadedBell(unread: number): Promise<HTMLElement> {
+    const bell = await screen.findByRole('button', { name: `Notifications, ${unread} unread` })
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: `Notifications, ${unread} unread` })
+      ).toHaveAttribute('aria-haspopup', 'dialog')
+    )
+    return bell
+  }
+
+  it('opens from the popover trigger and closes with Escape', async () => {
+    const user = renderShell()
+    await loadedBell(2)
+
+    await user.click(screen.getByRole('button', { name: 'Notifications, 2 unread' }))
+    expect(await screen.findByRole('dialog', { name: 'Notifications' })).toBeVisible()
+    expect(squadEntry(/^Alpha squad/)).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
+    )
+  })
+
+  it('keeps focus on the bell when the panel code replaces it', async () => {
+    renderShell()
+    const early = await screen.findByRole('button', { name: 'Notifications, 2 unread' })
+    act(() => early.focus())
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Notifications, 2 unread' })).toHaveAttribute(
+        'aria-haspopup',
+        'dialog'
+      )
+    )
+
+    expect(screen.getByRole('button', { name: 'Notifications, 2 unread' })).toHaveFocus()
+  })
+})
+
 describe('notification changes from the bell', () => {
   it('marks one notification read, opens its squad and refreshes the list', async () => {
     const user = renderShell()
@@ -214,7 +271,7 @@ describe('notification changes from the bell', () => {
     await user.click(dismissButton('Alpha squad'))
 
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: /^Alpha squad/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /^Alpha squad/ })).not.toBeInTheDocument()
     )
     expect(countHttpCalls('DELETE', `/api/notifications/${ALPHA_ID}`)).toBe(1)
     expect(squadEntry(/^Beta squad/)).toBeInTheDocument()
