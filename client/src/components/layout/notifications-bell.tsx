@@ -1,16 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
 import { useMediaQuery } from '@/components/ds/use-media-query'
 import { useSession } from '@/hooks/use-session'
+import { BellPlaceholder } from './notifications-bell-button'
 import { NotificationsMenu } from './notifications-menu'
 import { WIDE_QUERY } from './wide-query'
 
 interface NotificationsBellProps {
   /**
    * Where the bell sits. At wide widths the page's header holds it; below them the top bar does. Only
-   * the matching placement renders, so there is never more than one bell, and the notifications are
-   * read, polled and announced once.
+   * the matching placement renders the menu, so there is never more than one, and the notifications
+   * are read, polled and announced once.
    */
   readonly placement: 'page' | 'top-bar'
 }
@@ -20,37 +20,10 @@ export function NotificationsBell({ placement }: NotificationsBellProps) {
   const session = useSession()
   const wide = useMediaQuery(WIDE_QUERY)
 
-  if (!session?.user || wide !== (placement === 'page')) return null
+  if (!session?.user) return null
+  if (wide === (placement === 'page')) return <NotificationsMenu />
 
-  return <OpenableNotificationsMenu />
-}
-
-/** The menu with its open state: a press outside it closes the panel. */
-function OpenableNotificationsMenu() {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [open])
-
-  return (
-    <div ref={containerRef}>
-      <NotificationsMenu
-        enabled
-        isOpen={open}
-        onToggle={() => setOpen((current) => !current)}
-        onClose={() => setOpen(false)}
-      />
-    </div>
-  )
+  // The server and the first client render do not know the width, so they take it as narrow. The
+  // page header still shows the bell's footprint at wide widths until the menu takes its place.
+  return placement === 'page' ? <BellPlaceholder /> : null
 }
