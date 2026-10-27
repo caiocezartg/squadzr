@@ -1,23 +1,30 @@
 'use client'
 
-import { useState } from 'react'
-import { useTranslations } from 'next-intl'
-import { Popover } from '@/components/ds/popover'
+import { useEffect, useState, type ComponentType } from 'react'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useAppNavigation } from '@/lib/navigation'
 import { lobbyHref } from '@/lib/squad-links'
+import { whenIdle } from '@/lib/when-idle'
 import type { UserNotification } from '@/types'
 import { BellButton } from './notifications-bell-button'
-import { NotificationsPanel } from './notifications-panel'
+import type { NotificationsPopoverProps } from './notifications-popover'
+
+const loadPopover = () => import('./notifications-popover').then((m) => m.NotificationsPopover)
+
+interface LoadedPopover {
+  readonly Popover: ComponentType<NotificationsPopoverProps>
+}
 
 /**
  * The viewer's notifications: the bell and its panel, a popover below the bell from 640px and a
  * bottom sheet below. It reads, polls and announces the notifications, so only one is ever mounted.
+ * The bell and its count are in the initial JavaScript; the panel's code loads when the page is idle,
+ * and a press before it arrives opens the panel as it lands.
  */
 export function NotificationsMenu() {
-  const t = useTranslations('ds.notifications')
   const navigate = useAppNavigation()
   const [open, setOpen] = useState(false)
+  const [loaded, setLoaded] = useState<LoadedPopover | null>(null)
   const {
     notifications,
     unreadCount,
@@ -45,29 +52,29 @@ export function NotificationsMenu() {
     navigate(lobbyHref(notification.payload.roomCode))
   }
 
+  const load = (openOnLoad: boolean) => {
+    void loadPopover().then((Popover) => {
+      setLoaded((current) => current ?? { Popover })
+      if (openOnLoad) setOpen(true)
+    })
+  }
+
+  useEffect(() => whenIdle(() => load(false)), [])
+
+  if (!loaded) {
+    return <BellButton unreadCount={unreadCount} onClick={() => load(true)} />
+  }
+
   return (
-    <Popover
-      side="bottom"
-      align="end"
-      sideOffset={10}
-      bottomSheet
+    <loaded.Popover
+      notifications={notifications}
+      unreadCount={unreadCount}
+      busy={busy}
       open={open}
       onOpenChange={setOpen}
-      title={t('title')}
-      hideTitle
-      className="p-0 pb-[env(safe-area-inset-bottom)] sm:w-100"
-      trigger={<BellButton unreadCount={unreadCount} />}
-    >
-      <NotificationsPanel
-        notifications={notifications}
-        unreadCount={unreadCount}
-        busy={busy}
-        onOpen={(notification) => void handleOpen(notification)}
-        onDismiss={(notification) =>
-          void deleteNotification(notification.id).catch(() => undefined)
-        }
-        onMarkAllAsRead={() => void markAllAsRead().catch(() => undefined)}
-      />
-    </Popover>
+      onOpen={(notification) => void handleOpen(notification)}
+      onDismiss={(notification) => void deleteNotification(notification.id).catch(() => undefined)}
+      onMarkAllAsRead={() => void markAllAsRead().catch(() => undefined)}
+    />
   )
 }
