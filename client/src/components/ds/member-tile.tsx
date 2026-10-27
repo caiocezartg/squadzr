@@ -1,16 +1,25 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode, Ref } from 'react'
 import { useTranslations } from 'next-intl'
 import { useTimeAgo } from '@/hooks/use-time-ago'
 import { cn } from '@/lib/utils'
 import { Avatar, type AvatarState } from './avatar'
 
-interface OpenSlotProps {
+/**
+ * What a parent that animates the tile hands down: the tile's `li` is the element it moves, so it takes the
+ * ref and the inline style.
+ */
+interface TileHost {
+  readonly ref?: Ref<HTMLLIElement>
+  readonly style?: CSSProperties
+}
+
+interface OpenSlotProps extends TileHost {
   readonly open: true
 }
 
-interface PlayerProps {
+interface PlayerProps extends TileHost {
   readonly open?: false
   readonly playerId: string
   readonly name: string
@@ -65,7 +74,7 @@ export function MemberTile(props: MemberTileProps) {
 
   if (props.open) {
     return (
-      <Tile look={OPEN_LOOK} presence={t('presence.open')}>
+      <Tile look={OPEN_LOOK} presence={t('presence.open')} host={props}>
         <Avatar state="open" surface={OPEN_LOOK.groundColor} />
         <Name look={OPEN_LOOK}>{t('openSlot')}</Name>
       </Tile>
@@ -80,7 +89,7 @@ export function MemberTile(props: MemberTileProps) {
       : t('presence.away')
 
   return (
-    <Tile look={look} presence={presence}>
+    <Tile look={look} presence={presence} host={props}>
       <Avatar
         state={look.avatar}
         playerId={props.playerId}
@@ -98,16 +107,23 @@ export function MemberTile(props: MemberTileProps) {
 function Tile({
   look,
   presence,
+  host,
   children,
 }: {
   readonly look: TileLook
   readonly presence: string
+  readonly host: TileHost
   readonly children: ReactNode
 }) {
   return (
     <li
+      ref={host.ref}
+      style={host.style}
       title={presence}
-      className={cn('flex min-h-16 items-center gap-3.5 py-2.5 pr-3.5 pl-3 text-text', look.ground)}
+      className={cn(
+        'flex min-h-16 items-center gap-3.5 pt-4.5 pr-3.5 pb-3.5 pl-3 text-text',
+        look.ground
+      )}
     >
       {children}
       <span className="sr-only">{presence}</span>

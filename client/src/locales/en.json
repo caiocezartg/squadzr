@@ -30,6 +30,22 @@
         "open": "Waiting for a player"
       }
     },
+    "lobby": {
+      "live": "LIVE",
+      "exploreSquads": "Explore squads",
+      "copyLink": "Copy squad link",
+      "linkCopied": "Link copied",
+      "copyCode": "Copy code {code}",
+      "copied": "Copied",
+      "endSquad": "End squad",
+      "leaveSquad": "Leave squad",
+      "teamClosed": "Team closed",
+      "aboutSquad": "About the squad",
+      "coverAlt": "{game} cover",
+      "created": "Created {time}",
+      "members": "Members",
+      "playerCount": "{current}/{max} players"
+    },
     "close": "Close",
     "pagination": {
       "label": "Pagination",
@@ -271,15 +287,8 @@
   },
   "lobby": {
     "backToSquads": "Back to squads",
-    "leaveSquad": "Leave squad",
-    "squadLocked": "Squad locked",
     "cannotLeave": "Cannot leave a full squad",
-    "pleaseSignIn": "Please sign in to view this squad.",
-    "playerCount": "{current}/{max} players",
-    "players": "Players ({current}/{max})",
-    "copied": "Copied!",
-    "waitingForPlayer": "Waiting for player...",
-    "host": "Host"
+    "pleaseSignIn": "Please sign in to view this squad."
   },
   "discordCard": {
     "title": "Your squad is ready!",
