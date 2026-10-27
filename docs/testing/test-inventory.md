@@ -250,7 +250,7 @@ case, CCC-104 adds 5 more and CCC-105 adds 7 Presence tracker cases, so the merg
 file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 98 tests across
 4 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
 contract cases, CCC-95 added 2, CCC-92 added 3, CCC-104 added 8 and CCC-105 added 6: presence with an ISO
-time, with `null` and without it, and protocol version 3), and the client suite measures 77 files / 679
+time, with `null` and without it, and protocol version 3), and the client suite measures 78 files / 684
 tests (CCC-111 added 16 Lobby and copy-swap cases; CCC-106 recounted it on the merged tree, adding 2 suites and 40 tests; CCC-105 added the Lobby's offline-time case; CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
 CCC-95 added 2, CCC-92 added none, CCC-96 replaced the landing's random-pick cases with the
 popular read and added the FAQ and IGDB-credit cases: net 0, and CCC-98 added 7 cancellation and

@@ -261,6 +261,13 @@ describe('the Lobby on the App Router', () => {
     }
     onHttp('GET', '/api/rooms/:code', () => deferred<MockHttpResponse>().promise)
 
+    // The next Squad has members of its own, so a tile is in its final state only because that first
+    // snapshot is not an arrival.
+    const nextPlayers = [
+      { id: 'user-8', name: 'Dora', image: null, isHost: true },
+      { id: 'user-9', name: 'Edu', image: null, isHost: false },
+    ]
+
     const view = await renderLobbyRoute(lobbySquad.code, queryClient)
     openLatestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
@@ -270,11 +277,19 @@ describe('the Lobby on the App Router', () => {
     view.rerender(withProviders(nextPage, queryClient))
     sendFromServer({
       type: 'room_snapshot',
-      payload: lobbySnapshot({ room: { ...nextSquad, memberCount: 2, isMember: true } }),
+      payload: lobbySnapshot({
+        room: { ...nextSquad, memberCount: nextPlayers.length, isMember: true },
+        players: nextPlayers,
+        presence: nextPlayers.map((player) => ({
+          playerId: player.id,
+          online: true,
+          offlineSince: null,
+        })),
+      }),
     })
 
     // The next Squad's first snapshot is the room as it was: its tiles render in their final state.
     expect(await screen.findByText('Next squad')).toBeInTheDocument()
-    expect(screen.getByText('Ana').closest('li')?.style.opacity).toBe('1')
+    expect(screen.getByText('Edu').closest('li')?.style.opacity).toBe('1')
   })
 })
