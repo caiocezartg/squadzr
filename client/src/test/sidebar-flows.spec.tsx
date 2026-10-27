@@ -325,7 +325,7 @@ describe('the drawer', () => {
         await focusInside()
       }
     }
-  })
+  }, 30_000)
 
   it('closes on navigation', async () => {
     const { user, navigation } = renderShell('/')

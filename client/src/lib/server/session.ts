@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import { cache } from 'react'
 import { z } from 'zod'
 import { sessionResponseSchema, type SessionDto } from '@squadzr/schemas'
-import { ApiClientError, ApiContractError } from '@/lib/api-contract'
+import { ApiClientError, ApiContractError, isUnauthorized } from '@/lib/api-contract'
 import { serverApi } from './api'
 
 // `disableRefresh` leaves the renewal to the browser. Only the response to the browser's own call
@@ -95,10 +95,4 @@ function isRetryable(error: unknown): boolean {
 /** A 2xx whose body breaks the contract: the only failure that stops the page. */
 function isMalformedSuccess(error: unknown): boolean {
   return error instanceof ApiContractError && error.status < 300
-}
-
-function isUnauthorized(error: unknown): boolean {
-  return (
-    (error instanceof ApiClientError || error instanceof ApiContractError) && error.status === 401
-  )
 }
