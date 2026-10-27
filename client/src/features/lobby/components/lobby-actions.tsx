@@ -18,10 +18,10 @@ interface LobbyActionsProps {
   onLeave: () => Promise<void>
 }
 
-/** Below 704px the label goes (the row has no room for the labels before that) and the button is the icon alone (reference, Responsive). */
-const ICON_ON_NARROW = 'max-[44rem]:size-11 max-[44rem]:px-0'
+/** In a row narrower than 656px the label goes and the button is the icon alone (reference, Responsive). */
+const ICON_ON_NARROW = '@max-[41rem]:size-11 @max-[41rem]:px-0'
 /** The way back keeps its label until the row runs out of room, so the actions stay on one line. */
-const ICON_ON_TIGHT = 'max-[26rem]:size-11 max-[26rem]:px-0'
+const ICON_ON_TIGHT = '@max-[24rem]:size-11 @max-[24rem]:px-0'
 
 /**
  * The Lobby's header actions (reference, Lobby): the way back to the board, the connection, the squad
@@ -46,63 +46,65 @@ export function LobbyActions({
   const leaveLabel = isHost ? t('endSquad') : t('leaveSquad')
 
   return (
-    <div className="flex items-center justify-between gap-2">
-      <Button
-        variant="secondary"
-        href="/squads"
-        aria-label={t('exploreSquads')}
-        className={ICON_ON_TIGHT}
-        icon={<ArrowLeft />}
-      >
-        <span className="max-[26rem]:hidden">{t('exploreSquads')}</span>
-      </Button>
-      <div className="flex items-center gap-2">
-        <ConnectionStatus status={connectionStatus} />
+    <div className="@container">
+      <div className="flex items-center justify-between gap-2">
         <Button
           variant="secondary"
-          aria-label={linkCopied ? t('linkCopied') : t('copyLink')}
-          className={ICON_ON_NARROW}
-          onClick={() => void copyLink()}
+          href="/squads"
+          aria-label={t('exploreSquads')}
+          className={ICON_ON_TIGHT}
+          icon={<ArrowLeft />}
         >
-          <CopySwap
-            copied={linkCopied}
-            idle={
-              <>
-                <LinkIcon className="size-3.75 stroke-[2.6]" />
-                <span className="max-[44rem]:hidden">{t('copyLink')}</span>
-              </>
-            }
-            done={
-              <>
-                <LinkIcon className="size-3.75 stroke-[2.6]" />
-                <span className="max-[44rem]:hidden">{t('linkCopied')}</span>
-              </>
-            }
-          />
+          <span className="@max-[24rem]:hidden">{t('exploreSquads')}</span>
         </Button>
-        <NotificationsBell placement="page" />
-        {isReady ? (
+        <div className="flex items-center gap-2">
+          <ConnectionStatus status={connectionStatus} />
           <Button
             variant="secondary"
-            disabled
-            title={tLobby('cannotLeave')}
-            aria-label={t('teamClosed')}
+            aria-label={linkCopied ? t('linkCopied') : t('copyLink')}
             className={ICON_ON_NARROW}
-            icon={<Lock />}
+            onClick={() => void copyLink()}
           >
-            <span className="max-[44rem]:hidden">{t('teamClosed')}</span>
+            <CopySwap
+              copied={linkCopied}
+              idle={
+                <>
+                  <LinkIcon className="size-3.75 stroke-[2.6]" />
+                  <span className="@max-[41rem]:hidden">{t('copyLink')}</span>
+                </>
+              }
+              done={
+                <>
+                  <LinkIcon className="size-3.75 stroke-[2.6]" />
+                  <span className="@max-[41rem]:hidden">{t('linkCopied')}</span>
+                </>
+              }
+            />
           </Button>
-        ) : (
-          <Button
-            variant="danger"
-            aria-label={leaveLabel}
-            className={ICON_ON_NARROW}
-            icon={<LogOut />}
-            onClick={() => void onLeave()}
-          >
-            <span className="max-[44rem]:hidden">{leaveLabel}</span>
-          </Button>
-        )}
+          <NotificationsBell placement="page" />
+          {isReady ? (
+            <Button
+              variant="secondary"
+              disabled
+              title={tLobby('cannotLeave')}
+              aria-label={t('teamClosed')}
+              className={ICON_ON_NARROW}
+              icon={<Lock />}
+            >
+              <span className="@max-[41rem]:hidden">{t('teamClosed')}</span>
+            </Button>
+          ) : (
+            <Button
+              variant="danger"
+              aria-label={leaveLabel}
+              className={ICON_ON_NARROW}
+              icon={<LogOut />}
+              onClick={() => void onLeave()}
+            >
+              <span className="@max-[41rem]:hidden">{leaveLabel}</span>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -79,7 +79,7 @@ export function MembersPanel({
   return (
     <section
       aria-labelledby="lobby-members-heading"
-      className="bg-panel flex min-w-0 flex-1 flex-col gap-4.5 px-4 pt-5.5 pb-4.5 sm:px-5.5"
+      className="bg-panel @container flex min-w-0 flex-1 flex-col gap-4.5 px-4 pt-5.5 pb-4.5 sm:px-5.5"
     >
       <h2 id="lobby-members-heading" className="sr-only">
         {t('members')}
@@ -115,7 +115,7 @@ export function MembersPanel({
         </div>
       </div>
 
-      <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-1.5 @xl:grid-cols-2">
         {visibleMembers.map((player) => {
           const memberPresence = presence[player.id]
           const tile = {
