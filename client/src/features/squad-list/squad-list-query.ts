@@ -1,10 +1,8 @@
 import type { PublicSquad } from '@/types'
+import { hasEveryTag } from './squad-tags'
 import type { ResolvedSquadsSearch } from './squads-search'
 
 const SQUAD_PAGE_SIZE = 6
-
-/** Past this many pages the page links collapse into first, last and the current neighbours. */
-const MAX_LISTED_PAGES = 7
 
 export type SquadListQuery = ResolvedSquadsSearch
 
@@ -16,10 +14,6 @@ export interface SquadListResult {
   /** The requested page, clamped into the pages that exist. */
   currentPage: number
   totalPages: number
-  hasPreviousPage: boolean
-  hasNextPage: boolean
-  /** The page numbers to link to, in order. */
-  pageRange: number[]
 }
 
 function matchesSearch(squad: PublicSquad, search: string): boolean {
@@ -34,18 +28,13 @@ function matchesStatus(squad: PublicSquad, filter: SquadListQuery['filter']): bo
   return true
 }
 
-function matchesTag(squad: PublicSquad, tag: string): boolean {
-  const term = tag.trim().toLowerCase().replace(/^#/, '')
-  return squad.tags.some((squadTag) => squadTag.toLowerCase().includes(term))
-}
-
 function filterSquads(squads: readonly PublicSquad[], query: SquadListQuery) {
   return squads.filter(
     (squad) =>
       (!query.search.trim() || matchesSearch(squad, query.search)) &&
       matchesStatus(squad, query.filter) &&
       (query.language === 'all' || squad.language === query.language) &&
-      (!query.tag.trim() || matchesTag(squad, query.tag))
+      hasEveryTag(squad, query.tag)
   )
 }
 
@@ -56,20 +45,9 @@ function sortSquads(squads: PublicSquad[], sort: SquadListQuery['sort']): Public
   )
 }
 
-/** All pages up to seven; otherwise the first, the last and the current page with its neighbours. */
-function listPages(currentPage: number, totalPages: number): number[] {
-  if (totalPages <= MAX_LISTED_PAGES) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1)
-  }
-  const pages = new Set([1, totalPages, currentPage])
-  if (currentPage > 1) pages.add(currentPage - 1)
-  if (currentPage < totalPages) pages.add(currentPage + 1)
-  return [...pages].sort((a, b) => a - b)
-}
-
 /**
  * The Squad list: filters the squads by search term (the Squad's name or its own game's name),
- * status, language and tag, sorts them by creation date (newest first unless asked otherwise) and
+ * status, language and tags (a Squad needs every selected tag), sorts them by creation date (newest first unless asked otherwise) and
  * cuts the page the query asks for. Pure on purpose: the same inputs give the same list on the
  * server render and in the browser, and `squads` is never mutated. A page past the last one resolves
  * to the last.
@@ -89,8 +67,5 @@ export function querySquadList(
     pageSquads: matching.slice(start, start + pageSize),
     currentPage,
     totalPages,
-    hasPreviousPage: currentPage > 1,
-    hasNextPage: currentPage < totalPages,
-    pageRange: listPages(currentPage, totalPages),
   }
 }

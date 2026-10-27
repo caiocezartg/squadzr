@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | ------------------------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`                                | 29     | 160   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts`                  | 29     | 294   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 77     | 668   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 78     | 700   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`                                | 4      | 98    |
 | `@squadzr/typescript-config` | —                    | —           | —                                                 | —      | —     |
 
@@ -96,6 +96,8 @@ the notification link, the title, and the account button and the visitor sign-in
 `app-layout.spec.tsx`), `session.spec.tsx`, `notifications.spec.tsx`,
 `use-sign-out.spec.tsx` and `language-toggle.spec.tsx` for the sidebar and the top bar. The harness
 gains a `shell` option, and the capability-boundaries spec accepts a capability's `server` entry.
+
+CCC-110 rebuilds the Squad Board with the filters panel and tag chips and recounts `client:unit` at 78 files / 700 tests. It adds `squad-tags.spec.ts` (9 tests: tag normalization, the every-tag match and the tag-option ranking), adds 5 tests to `squads-search.spec.ts` (a legacy single tag, several tags, reading and writing one `tag` per value, the URL round trip), replaces the substring-tag cases of `squad-list-query.spec.ts` with exact and every-tag cases and drops its two page-list cases (the ds `Pagination` lists every page), net 0, and rewrites the filters block of `squad-board.spec.tsx` for the panel (search, availability, language, sort, several tags, a typed tag, the "Show N squads" count, the button's count and inversion, chip removal, "Clear", "Clear all", legacy and several-tag URLs, the bottom sheet below 640px, the signed-in create action of the empty state, the panel opening with its controls while the list loads or after a failed read, and the typed tag text emptied by "Clear all", the page change scrolling the list into view, smoothly or at once under reduced motion, the grid laying two cards in a row only by its own width, and the avatar rail showing whole circles and folding the rest into +N on a narrow card). The create-flow specs open the dialog from the shell's "Create squad", since the board header no longer holds a button.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
@@ -218,10 +220,10 @@ against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-
 
 | Command                                                             | Test files | Tests |
 | ------------------------------------------------------------------- | ---------- | ----- |
-| `bun run test` (root, all projects; sum of the three unit projects) | 110        | 926   |
-| `bunx vitest run` (direct root composition)                         | 110        | 926   |
+| `bun run test` (root, all projects; sum of the three unit projects) | 111        | 958   |
+| `bunx vitest run` (direct root composition)                         | 111        | 958   |
 | `bunx turbo test --filter=server`                                   | 29         | 160   |
-| `bunx turbo test --filter=client`                                   | 77         | 668   |
+| `bunx turbo test --filter=client`                                   | 78         | 700   |
 | `bunx turbo test --filter=@squadzr/schemas`                         | 4          | 98    |
 
 The direct root composition matches the Turbo run, and the focused runs match the per-workspace

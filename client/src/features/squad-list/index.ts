@@ -10,7 +10,17 @@
 export { SquadCard, type SquadCardProps } from './squad-card'
 export { SquadGrid, type SquadGridProps } from './squad-grid'
 export { SquadFilters } from './squad-filters'
-export { squadsSearchQuery, squadsSearchSchema, type SquadsSearch } from './squads-search'
+export {
+  squadsSearchQuery,
+  squadsSearchSchema,
+  type SquadsSearch,
+  type SquadStatusFilter,
+} from './squads-search'
 export { querySquadList, type SquadListQuery, type SquadListResult } from './squad-list-query'
 export { useAppSquadSearch } from './use-app-squad-search'
-export { useSquadFilters, type SquadSearchAccess } from './use-squad-filters'
+export {
+  useSquadFilters,
+  type SquadSearchAccess,
+  type UseSquadFiltersReturn,
+} from './use-squad-filters'
+export { hasEveryTag, normalizeTag, rankTagOptions } from './squad-tags'

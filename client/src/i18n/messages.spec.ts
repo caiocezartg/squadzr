@@ -33,14 +33,14 @@ describe('message files', () => {
 
 describe('ICU messages', () => {
   it('chooses the plural form by count in each locale', () => {
-    expect(t('squads.page.subtitle', { count: 1 })).toBe('1 squad available')
-    expect(t('squads.page.subtitle', { count: 3 })).toBe('3 squads available')
-    expect(tPtBR('squads.page.subtitle', { count: 1 })).toBe('1 squad disponível')
-    expect(tPtBR('squads.page.subtitle', { count: 2 })).toBe('2 squads disponíveis')
+    expect(t('ds.board.openCount', { count: 1 })).toBe('1 open squad')
+    expect(t('ds.board.openCount', { count: 3 })).toBe('3 open squads')
+    expect(tPtBR('ds.board.openCount', { count: 1 })).toBe('1 squad aberto')
+    expect(tPtBR('ds.board.openCount', { count: 2 })).toBe('2 squads abertos')
   })
 
   it('prints a large count without grouping separators, as the raw value did', () => {
-    expect(t('squads.page.subtitle', { count: 1000 })).toBe('1000 squads available')
+    expect(t('ds.board.openCount', { count: 1000 })).toBe('1000 open squads')
   })
 
   it('fills single-brace placeholders', () => {

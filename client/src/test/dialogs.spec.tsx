@@ -27,10 +27,10 @@ beforeEach(() => {
 
 describe('eager dialogs', () => {
   it('opens the create dialog with its form at once', async () => {
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await screen.findByText('Ranked grind')
 
-    await user.click(screen.getByText('Create new squad'))
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
     expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
     expect(screen.getByLabelText('Squad Name')).toBeInTheDocument()

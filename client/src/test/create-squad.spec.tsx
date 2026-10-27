@@ -123,7 +123,7 @@ function mirrorEscapeOnDocument(): void {
 async function openCreateModal(
   user: Awaited<ReturnType<typeof renderSquadsFlow>['user']>
 ): Promise<void> {
-  await user.click(await screen.findByText('Create new squad'))
+  await user.click(await screen.findByRole('button', { name: 'Create squad' }))
   await screen.findByText('Create a Squad', {}, { timeout: 5000 })
 }
 
@@ -143,20 +143,24 @@ async function pickGame(
 
 describe('create squad — entry point', () => {
   it('shows the create button only for signed-in users', async () => {
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
   })
 
-  it('hides the create button for guests', async () => {
-    renderSquadsFlow('/squads', { user: null })
+  it('asks a guest to sign in instead of opening the create dialog', async () => {
+    const { user } = renderSquadsFlow('/squads', { user: null, shell: true })
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
-    expect(screen.queryByText('Create new squad')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    expect(await screen.findByText('Sign in required')).toBeInTheDocument()
+    expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument()
   })
 })
 
 describe('create squad — client validation', () => {
   it('blocks submission and shows field errors for an empty form', async () => {
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     await user.click(screen.getByRole('button', { name: 'Create Squad' }))
@@ -170,7 +174,7 @@ describe('create squad — client validation', () => {
 
 describe('create squad — game search', () => {
   it('lists the games that match what the player typed', async () => {
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     const input = screen.getByLabelText('Game')
@@ -227,7 +231,7 @@ describe('create squad — game search', () => {
       return httpOk(boardGames)
     })
 
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
     const input = screen.getByLabelText('Game')
     await user.click(input)
@@ -274,7 +278,7 @@ describe('create squad — game search', () => {
       return httpOk(boardGames)
     })
 
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
     const input = screen.getByLabelText('Game')
     await user.click(input)
@@ -315,7 +319,7 @@ describe('create squad — game search', () => {
       return httpOk(boardGames)
     })
 
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
     const input = screen.getByLabelText('Game')
     await user.click(input)
@@ -348,7 +352,7 @@ describe('create squad — game search', () => {
       return httpOk(boardGames)
     })
 
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
     const input = screen.getByLabelText('Game')
     await user.click(input)
@@ -372,7 +376,7 @@ describe('create squad — game search', () => {
 
   it('submits the gameId of the chosen result', async () => {
     registerCreateRoutes()
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
@@ -399,7 +403,7 @@ describe('create squad — game search', () => {
 
 describe('create squad — game picker', () => {
   it('closes the game list before the dialog on Escape, keeping the draft', async () => {
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     const name = screen.getByLabelText('Squad Name')
@@ -422,7 +426,7 @@ describe('create squad — game picker', () => {
   })
 
   it('keeps the dialog when the document listener hears the first Escape', async () => {
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     const name = screen.getByLabelText('Squad Name')
@@ -445,7 +449,7 @@ describe('create squad — game picker', () => {
   })
 
   it('toggles the list from the chevron button', async () => {
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     await user.click(screen.getByLabelText('Game'))
@@ -467,7 +471,7 @@ describe('create squad — game picker', () => {
   })
 
   it('announces the number of games the search found', async () => {
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     const status = screen.getByRole('status')
@@ -483,7 +487,7 @@ describe('create squad — game picker', () => {
   })
 
   it('marks the chosen game as selected when the list reopens', async () => {
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
     await pickGame(user, 'league', 'League of Legends (1-5 players)')
 
@@ -503,7 +507,7 @@ describe('create squad — game picker', () => {
 
 describe('create squad — reopening', () => {
   it('starts from an empty form after the dialog closes', async () => {
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     await user.type(screen.getByLabelText('Squad Name'), 'Draft squad')
@@ -511,7 +515,7 @@ describe('create squad — reopening', () => {
 
     await waitFor(() => expect(screen.queryByText('Create a Squad')).not.toBeInTheDocument())
 
-    await user.click(screen.getByText('Create new squad'))
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
     expect(await screen.findByText('Create a Squad')).toBeInTheDocument()
     expect(screen.getByLabelText('Squad Name')).toHaveValue('')
   })
@@ -520,7 +524,7 @@ describe('create squad — reopening', () => {
 describe('create squad — success flow', () => {
   it('posts the form payload and opens the created lobby', async () => {
     registerCreateRoutes()
-    const { navigation, user } = renderSquadsFlow('/squads')
+    const { navigation, user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
@@ -561,7 +565,7 @@ describe('create squad — returning to the board', () => {
     registerCreateRoutes()
     const serverSquads = { rooms: [...boardSquads.rooms] }
     onHttp('GET', '/api/rooms', () => httpOk({ rooms: serverSquads.rooms }))
-    const { navigation, user } = renderSquadsFlow('/squads')
+    const { navigation, user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
@@ -596,7 +600,7 @@ describe('create squad — from my squads', () => {
     registerCreateRoutes()
     // Registered after the lobby route so the exact segment wins over `:code`.
     onHttp('GET', '/api/rooms/my', () => httpOk(mySquads))
-    const { navigation, user } = renderSquadsFlow('/squads')
+    const { navigation, user } = renderSquadsFlow('/squads', { shell: true })
 
     // The board is loaded and fresh when the user leaves for My Squads.
     await screen.findByText('Ranked grind')
@@ -638,7 +642,7 @@ describe('create squad — server error', () => {
         error: 'ROOM_CREATE_LIMIT_REACHED',
       })
     )
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')
@@ -661,7 +665,7 @@ describe('create squad — server error', () => {
         error: 'INVALID_GAME',
       })
     )
-    const { user } = renderSquadsFlow('/squads')
+    const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
 
     await user.type(screen.getByLabelText('Squad Name'), 'Created squad')

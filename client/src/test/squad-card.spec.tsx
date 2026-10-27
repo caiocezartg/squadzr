@@ -326,6 +326,63 @@ describe('squad card — who joined', () => {
     expect(screen.getByText('/10')).toBeInTheDocument()
   })
 
+  describe('on a narrow card', () => {
+    /** jsdom has no layout: the rail gets `railWidth` and each circle 28px. */
+    function layOutRail(railWidth: number) {
+      Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+        configurable: true,
+        get(this: HTMLElement) {
+          return this.hasAttribute('data-rail-circle') ? 28 : 0
+        },
+      })
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+        configurable: true,
+        get(this: HTMLElement) {
+          return this.querySelector('[data-rail-circle]') && this.classList.contains('flex-1')
+            ? railWidth
+            : 0
+        },
+      })
+    }
+
+    afterEach(() => {
+      Reflect.deleteProperty(HTMLElement.prototype, 'offsetWidth')
+      Reflect.deleteProperty(HTMLElement.prototype, 'clientWidth')
+    })
+
+    it('shows fewer whole circles and folds the rest into +N, keeping the count', () => {
+      layOutRail(110)
+      render(
+        <SquadCard squad={{ ...openSquad, memberCount: 3, memberPreview: previewMembers(3) }} />
+      )
+
+      expect(screen.getByRole('button').querySelectorAll('.ring-card')).toHaveLength(2)
+      expect(screen.getByText('+3')).toBeInTheDocument()
+      expect(screen.getByText('3')).toBeInTheDocument()
+      expect(screen.getByText('/5')).toBeInTheDocument()
+    })
+
+    it('adds the circles that do not fit to the slots past the rail', () => {
+      layOutRail(150)
+      render(
+        <SquadCard
+          squad={{ ...openSquad, maxPlayers: 10, memberCount: 8, memberPreview: previewMembers(5) }}
+        />
+      )
+
+      expect(screen.getByRole('button').querySelectorAll('.ring-card')).toHaveLength(4)
+      expect(screen.getByText('+6')).toBeInTheDocument()
+    })
+
+    it('shows every circle and no +N when the rail has the room', () => {
+      layOutRail(200)
+      render(<SquadCard squad={openSquad} />)
+
+      expect(screen.getByRole('button').querySelectorAll('.ring-card')).toHaveLength(5)
+      expect(screen.queryByText(/^\+\d/)).not.toBeInTheDocument()
+    })
+  })
+
   it('shows no +N when every slot has a circle', () => {
     render(<SquadCard squad={openSquad} />)
 

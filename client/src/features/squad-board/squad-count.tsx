@@ -6,12 +6,18 @@ interface SquadCountProps {
   readonly baseline: number
 }
 
-/** The squad count under the board's title. It reads the list the board reads, so the two agree. */
+/** The open-squad count under the board's title, with the live dot. It reads the unfiltered list. */
 export function SquadCount({ baseline }: SquadCountProps) {
-  const t = useTranslations()
+  const t = useTranslations('ds.board')
   const squads = useSquadBoardSquads(baseline)
 
   return (
-    <p className="mt-1 text-sm text-muted">{t('squads.page.subtitle', { count: squads.length })}</p>
+    <p className="font-ds-mono text-text-3 inline-flex items-center gap-2.25 text-xs font-bold tracking-[0.06em] uppercase">
+      <span
+        aria-hidden="true"
+        className="bg-mint size-1.75 rounded-full motion-safe:animate-[pulse_1.6s_ease-in-out_infinite]"
+      />
+      {t('openCount', { count: squads.length })}
+    </p>
   )
 }

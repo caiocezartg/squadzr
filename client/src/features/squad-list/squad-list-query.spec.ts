@@ -108,12 +108,25 @@ describe('querySquadList — filters', () => {
     ])
   })
 
-  it('matches the tag by substring, ignoring case, spaces and a leading #', () => {
-    expect(ids(querySquadList(all, query({ tag: ' #RANK ' })).matching)).toEqual(['ranked'])
+  it('matches a tag exactly, not by part of it', () => {
+    expect(ids(querySquadList(all, query({ tag: ['ranked'] })).matching)).toEqual(['ranked'])
+    expect(querySquadList(all, query({ tag: ['rank'] })).matching).toHaveLength(0)
   })
 
-  it('ignores a blank tag', () => {
-    expect(querySquadList(all, query({ tag: ' ' })).matching).toHaveLength(4)
+  it('keeps only squads that have every selected tag', () => {
+    expect(ids(querySquadList(all, query({ tag: ['ranked', 'chill'] })).matching)).toEqual([
+      'ranked',
+    ])
+    expect(querySquadList(all, query({ tag: ['ranked', 'mic'] })).matching).toHaveLength(0)
+  })
+
+  it('compares a squad tag without regard to case or a leading #', () => {
+    const tagged = squad({ id: 'tagged', tags: ['#Mic'] })
+    expect(ids(querySquadList([tagged], query({ tag: ['mic'] })).matching)).toEqual(['tagged'])
+  })
+
+  it('keeps every squad when no tag is selected', () => {
+    expect(querySquadList(all, query({ tag: [] })).matching).toHaveLength(4)
   })
 
   it('combines every filter', () => {
@@ -158,19 +171,18 @@ describe('querySquadList — pagination', () => {
   it('shows six squads per page', () => {
     const result = querySquadList(squads(7), query())
     expect(result.pageSquads).toHaveLength(6)
-    expect(result).toMatchObject({ currentPage: 1, totalPages: 2, hasNextPage: true })
-    expect(result.hasPreviousPage).toBe(false)
+    expect(result).toMatchObject({ currentPage: 1, totalPages: 2 })
   })
 
   it('keeps exactly six squads on a single page', () => {
     const result = querySquadList(squads(6), query())
-    expect(result).toMatchObject({ currentPage: 1, totalPages: 1, hasNextPage: false })
+    expect(result).toMatchObject({ currentPage: 1, totalPages: 1 })
   })
 
   it('puts the remainder on the last page', () => {
     const result = querySquadList(squads(7), query({ page: 2 }))
     expect(ids(result.pageSquads)).toEqual(['s1'])
-    expect(result).toMatchObject({ currentPage: 2, hasPreviousPage: true, hasNextPage: false })
+    expect(result.currentPage).toBe(2)
   })
 
   it('cuts the page from the sorted list, not from the given order', () => {
@@ -187,23 +199,11 @@ describe('querySquadList — pagination', () => {
   it('has one empty page when nothing matches', () => {
     const result = querySquadList(squads(3), query({ search: 'nothing' }))
     expect(result).toMatchObject({ currentPage: 1, totalPages: 1, pageSquads: [], matching: [] })
-    expect(result.pageRange).toEqual([1])
   })
 
   it('paginates the filtered squads', () => {
     const result = querySquadList(squads(14), query({ search: 'squad s1' }))
     expect(result.matching).toHaveLength(6)
     expect(result.totalPages).toBe(1)
-  })
-
-  it('lists every page up to seven', () => {
-    expect(querySquadList(squads(42), query({ page: 4 })).pageRange).toEqual([1, 2, 3, 4, 5, 6, 7])
-  })
-
-  it('collapses the page list past seven pages', () => {
-    const pages = (page: number) => querySquadList(squads(60), query({ page })).pageRange
-    expect(pages(1)).toEqual([1, 2, 10])
-    expect(pages(5)).toEqual([1, 4, 5, 6, 10])
-    expect(pages(10)).toEqual([1, 9, 10])
   })
 })

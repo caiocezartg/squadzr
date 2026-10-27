@@ -1,6 +1,11 @@
 import { useCallback, useMemo } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { squadsSearchQuery, squadsSearchSchema, type SquadsSearch } from './squads-search'
+import {
+  squadsSearchFromParams,
+  squadsSearchQuery,
+  squadsSearchSchema,
+  type SquadsSearch,
+} from './squads-search'
 import type { SquadSearchAccess } from './use-squad-filters'
 
 /**
@@ -14,7 +19,7 @@ export function useAppSquadSearch(): SquadSearchAccess {
   const pathname = usePathname()
   const params = useSearchParams()
 
-  const search = useMemo(() => squadsSearchSchema.parse(Object.fromEntries(params)), [params])
+  const search = useMemo(() => squadsSearchSchema.parse(squadsSearchFromParams(params)), [params])
   const replace = useCallback(
     (next: SquadsSearch) =>
       window.history.replaceState(null, '', `${pathname}${squadsSearchQuery(next)}`),
