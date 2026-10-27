@@ -50,7 +50,7 @@ export function LobbyCover({ squad }: LobbyCoverProps) {
               className="absolute inset-0 size-full object-cover"
             />
           )}
-          <div aria-hidden="true" className="bg-bg/70 absolute inset-0 lg:hidden" />
+          <div aria-hidden="true" className="bg-bg/70 absolute inset-0" />
           <div
             aria-hidden="true"
             className="from-bg/55 absolute inset-0 bg-linear-to-b to-transparent to-25%"

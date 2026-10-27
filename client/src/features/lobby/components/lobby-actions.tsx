@@ -18,8 +18,8 @@ interface LobbyActionsProps {
   onLeave: () => Promise<void>
 }
 
-/** Below 640px the label goes and the button is the icon alone (reference, Responsive). */
-const ICON_ON_NARROW = 'max-sm:size-11 max-sm:px-0'
+/** Below 704px the label goes (the row has no room for the labels before that) and the button is the icon alone (reference, Responsive). */
+const ICON_ON_NARROW = 'max-[44rem]:size-11 max-[44rem]:px-0'
 /** The way back keeps its label until the row runs out of room, so the actions stay on one line. */
 const ICON_ON_TIGHT = 'max-[26rem]:size-11 max-[26rem]:px-0'
 
@@ -69,13 +69,13 @@ export function LobbyActions({
             idle={
               <>
                 <LinkIcon className="size-3.75 stroke-[2.6]" />
-                <span className="max-sm:hidden">{t('copyLink')}</span>
+                <span className="max-[44rem]:hidden">{t('copyLink')}</span>
               </>
             }
             done={
               <>
                 <LinkIcon className="size-3.75 stroke-[2.6]" />
-                <span className="max-sm:hidden">{t('linkCopied')}</span>
+                <span className="max-[44rem]:hidden">{t('linkCopied')}</span>
               </>
             }
           />
@@ -90,7 +90,7 @@ export function LobbyActions({
             className={ICON_ON_NARROW}
             icon={<Lock />}
           >
-            <span className="max-sm:hidden">{t('teamClosed')}</span>
+            <span className="max-[44rem]:hidden">{t('teamClosed')}</span>
           </Button>
         ) : (
           <Button
@@ -100,7 +100,7 @@ export function LobbyActions({
             icon={<LogOut />}
             onClick={() => void onLeave()}
           >
-            <span className="max-sm:hidden">{leaveLabel}</span>
+            <span className="max-[44rem]:hidden">{leaveLabel}</span>
           </Button>
         )}
       </div>
