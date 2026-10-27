@@ -19,8 +19,9 @@ export function useDiscardFailedBoardReads(): () => void {
 }
 
 /**
- * The list's update count when the board mounted. The view takes it once and passes it to each part of
- * the board that reads the list with suspense, so the count survives a part that suspends on the list and mounts again when the list lands.
+ * The list's update count when the board mounted. The view takes it once and passes it to each part
+ * of the board that reads the list with suspense, so the count survives a part that suspends on the
+ * list and mounts again when the list lands.
  */
 export function useSquadBoardBaseline(): number {
   const queryClient = useQueryClient()
