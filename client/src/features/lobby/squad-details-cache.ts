@@ -5,7 +5,8 @@ import { squadQueryKey } from './squad-details'
 export interface SquadDetailsCommands {
   /**
    * The viewer's Membership in a Squad changed: read its details again, for the Lobby on screen and for one
-   * the cache only remembers. A Squad whose details were never read stays unread.
+   * the cache only remembers. A Squad whose details were never read stays unread, and a read that fails
+   * drops the details instead, so they are read again. It never rejects.
    */
   refreshSquadDetails: (squadCode: string) => Promise<void>
 }
@@ -17,10 +18,16 @@ export interface SquadDetailsCommands {
 export function useSquadDetailsCommands(): SquadDetailsCommands {
   const queryClient = useQueryClient()
   const refreshSquadDetails = useCallback(
-    (squadCode: string) =>
-      queryClient
-        .refetchQueries({ queryKey: squadQueryKey(squadCode), exact: true, type: 'all' })
-        .then(() => undefined),
+    async (squadCode: string) => {
+      const filters = { queryKey: squadQueryKey(squadCode), exact: true } as const
+      try {
+        await queryClient.refetchQueries({ ...filters, type: 'all' }, { throwOnError: true })
+      } catch {
+        // A read that failed leaves the details as they were, which are now wrong. Dropping them makes
+        // the Lobby on screen read again, and any other visit read cold.
+        queryClient.removeQueries(filters)
+      }
+    },
     [queryClient]
   )
 

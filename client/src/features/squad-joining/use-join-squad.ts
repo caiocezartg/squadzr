@@ -19,7 +19,8 @@ interface UseJoinSquadOptions {
 /**
  * The join request of a signed-in viewer: the mutation validates the shared response contract and typed
  * application errors become toasts. Before `onJoined` runs, the board, My Squads and the Squad's own
- * details (a Lobby read as a non-member) are read again, so each of them already tells the truth.
+ * details (a Lobby read as a non-member) are read again, so each of them already tells the truth. A read
+ * that fails does not undo the join.
  */
 export function useJoinSquad({ onJoined, onFailed }: UseJoinSquadOptions = {}) {
   const t = useTranslations()
@@ -31,7 +32,9 @@ export function useJoinSquad({ onJoined, onFailed }: UseJoinSquadOptions = {}) {
     mutationFn: (squadCode: string) =>
       api.post(`/api/rooms/${encodeURIComponent(squadCode)}/join`, {}, joinRoomResponseSchema),
     onSuccess: async (_, squadCode) => {
-      await Promise.all([refreshSquads(), refreshMySquads(), refreshSquadDetails(squadCode)])
+      // The POST alone decides whether the viewer joined: a list that cannot be read afterwards is not a failed
+      // join, so it never reaches `onError` and `onJoined` always runs.
+      await Promise.allSettled([refreshSquads(), refreshMySquads(), refreshSquadDetails(squadCode)])
       onJoined?.(squadCode)
     },
     onError: (err) => {

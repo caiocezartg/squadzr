@@ -11,6 +11,7 @@ import { guestPlayer, hostPlayer, lobbySquad, lobbySnapshot } from './fixtures'
 import { renderSquadsFlow } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
+import { toastStore } from './stubs'
 import { latestWebSocket } from './ws-mock'
 import type { RoomResponse } from '@/types'
 
@@ -175,5 +176,55 @@ describe('the Lobby for a signed-in non-member', () => {
     await waitFor(() => expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1))
     expect(await screen.findByRole('button', { name: 'Join squad' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Leave squad' })).not.toBeInTheDocument()
+  })
+
+  it('still joins when the lists that follow the join cannot be read', async () => {
+    const routes = registerSquadRoutes()
+    onHttp('GET', '/api/rooms', () => httpError(500, { error: 'INTERNAL', message: 'Unavailable' }))
+    onHttp('GET', '/api/rooms/my', () =>
+      httpError(500, { error: 'INTERNAL', message: 'Unavailable' })
+    )
+    const { user } = renderSquadsFlow('/squads/LOBBY1', { user: outsider, shell: true })
+    await screen.findByRole('heading', { name: lobbySquad.name })
+
+    await user.click(screen.getByRole('button', { name: 'Join squad' }))
+
+    // The join happened, and only the join decides: no "could not join" toast, and the member Lobby opens.
+    expect(await screen.findByRole('button', { name: 'Leave squad' })).toBeInTheDocument()
+    expect(routes.joined()).toBe(true)
+    expect(toastStore.errorCalls).toEqual([])
+  })
+
+  it('reads the Squad again when the read that follows the join fails', async () => {
+    let detailReads = 0
+    let joined = false
+    onHttp('POST', '/api/rooms/:code/join', () => {
+      joined = true
+      return httpOk({
+        message: 'Joined',
+        roomMember: {
+          id: 'aaaaaaaa-0000-4000-8000-0000000000ff',
+          roomId: lobbySquad.id,
+          userId: outsider.id,
+          joinedAt: new Date().toISOString(),
+        },
+      })
+    })
+    onHttp('GET', '/api/rooms/:code', () => {
+      if (!joined) return httpOk({ room: publicSquad })
+      detailReads += 1
+      // The first read after the join fails; the Lobby reads again and gets the member view.
+      return detailReads === 1
+        ? httpError(500, { error: 'INTERNAL', message: 'Unavailable' })
+        : httpOk(memberView)
+    })
+    const { user } = renderSquadsFlow('/squads/LOBBY1', { user: outsider })
+    await screen.findByRole('heading', { name: lobbySquad.name })
+
+    await user.click(screen.getByRole('button', { name: 'Join squad' }))
+
+    expect(await screen.findByRole('button', { name: 'Leave squad' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Join squad' })).not.toBeInTheDocument()
+    expect(toastStore.errorCalls).toEqual([])
   })
 })
