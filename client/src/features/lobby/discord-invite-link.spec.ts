@@ -24,6 +24,8 @@ describe('parseDiscordInvite', () => {
     'https://not-discord.example/invite',
     'javascript:alert(1)',
     'discord.gg/abc123',
+    'https://discord.gg/',
+    'https://discord.com/invite/',
     '',
   ])('refuses %j', (link) => {
     expect(parseDiscordInvite(link)).toBeNull()

@@ -11,12 +11,16 @@ export interface DiscordInviteLink {
 }
 
 /**
- * The invite when the link is a valid Discord invite URL, and `null` otherwise. Only a valid invite ever
+ * The invite when the link is a valid Discord invite URL with a code after its host, and `null` otherwise. Only a valid invite ever
  * renders as a link or reaches the clipboard, so a Squad carrying anything else shows no invite at all.
  */
 export function parseDiscordInvite(link: string): DiscordInviteLink | null {
   const prefix = INVITE_PREFIXES.find((candidate) => link.startsWith(candidate))
   if (!prefix) return null
 
-  return { href: link, host: prefix.slice('https://'.length), code: link.slice(prefix.length) }
+  // An address with no invite code after the host opens no invite, so it is no invite at all.
+  const code = link.slice(prefix.length)
+  if (code === '') return null
+
+  return { href: link, host: prefix.slice('https://'.length), code }
 }
