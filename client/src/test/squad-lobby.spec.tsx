@@ -19,6 +19,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderSquadsFlow } from './harness'
+import { expectLockedInvite } from './locked-invite'
 import { httpError, httpOk, onHttp } from './http-router'
 import { mockMediaQuery } from './media-query'
 import { settleNavigation } from './navigation'
@@ -246,7 +247,7 @@ describe('squad lobby — readiness from the snapshot', () => {
 
     // Forming: the invite is locked and its link is nowhere on the page.
     expect(screen.getByText('Discord invite')).toBeInTheDocument()
-    expect(screen.getByText('Unlocked when the squad completes')).toBeInTheDocument()
+    expectLockedInvite()
     expect(screen.queryByRole('heading', { name: "Let's go to Discord" })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
     expect(document.body).not.toHaveTextContent('discord.gg/lobby')
@@ -270,9 +271,8 @@ describe('squad lobby — readiness from the snapshot', () => {
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
 
-    const bar = screen.getByRole('region', { name: 'Discord invite' })
-
-    expect(within(bar).getByText('Unlocked when the squad completes')).toBeInTheDocument()
+    // The bar is a region named by its heading, with its lock, its wait and its masked link.
+    expectLockedInvite()
   })
 
   it('builds the server card of the Ready panel from the snapshot: name, cover, who is in the room, players', async () => {
@@ -364,7 +364,7 @@ describe('squad lobby — readiness from the snapshot', () => {
     openLatestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     await screen.findByText('Ana')
-    expect(screen.getByText('Unlocked when the squad completes')).toBeInTheDocument()
+    expectLockedInvite()
 
     sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
 

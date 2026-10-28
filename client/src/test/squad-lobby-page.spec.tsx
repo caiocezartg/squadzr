@@ -21,6 +21,7 @@ import {
   readyLobbySnapshot,
 } from './fixtures'
 import { createTestQueryClient } from './harness'
+import { expectLockedInvite } from './locked-invite'
 import { squadQueryKey } from '@/features/lobby/squad-details'
 import { httpError, httpOk, onHttp } from './http-router'
 import type { MockHttpResponse } from './http-router'
@@ -105,7 +106,7 @@ describe('the Lobby on the App Router', () => {
     expect(screen.getByText('Caio')).toBeInTheDocument()
     expect(screen.getAllByText('Open slot')).toHaveLength(2)
     expect(screen.getByRole('button', { name: 'Join squad' })).toBeEnabled()
-    expect(screen.getByText('Unlocked when the squad completes')).toBeInTheDocument()
+    expectLockedInvite()
 
     // The read tells the page the viewer is outside the Squad, so the page never joins the squad channel.
     openLatestWebSocket()

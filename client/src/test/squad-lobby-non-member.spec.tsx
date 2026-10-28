@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { mockMediaQuery } from './media-query'
 import { guestPlayer, hostPlayer, lobbySquad, lobbySnapshot, readyLobbySnapshot } from './fixtures'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
+import { expectLockedInvite } from './locked-invite'
 import { squadQueryKey } from '@/features/lobby/squad-details'
 import { settleNavigation } from './navigation'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
@@ -88,7 +89,7 @@ describe('the Lobby for a signed-in non-member', () => {
     expect(screen.getByText('Caio')).toBeInTheDocument()
     expect(screen.getAllByText('Open slot')).toHaveLength(2)
     expect(screen.getByText('Discord invite')).toBeInTheDocument()
-    expect(screen.getByText('Unlocked when the squad completes')).toBeInTheDocument()
+    expectLockedInvite()
 
     expect(screen.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
     expect(screen.getByRole('button', { name: 'Join squad' })).toBeEnabled()
