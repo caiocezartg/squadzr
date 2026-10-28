@@ -27,8 +27,8 @@ export interface NotificationItemProps {
 /**
  * A "Squad ready" notification as a row of the notifications panel (reference, Components): the
  * game cover with a Discord badge, the Squad name, the message, and the game with the relative
- * time. Unread shows a mint edge with a faint mint tint, a bold name and a hidden "unread" text; a read cover is 60% grayscale. It is a
- * list item, so the parent is a `ul` or `ol`. The dismiss button is a solid chip with a border, so it reads on the tinted unread row too, and shows on hover and on focus, and
+ * time. Unread shows a mint edge, a bold name with a small mint dot and a hidden "unread" text; a read cover is 60% grayscale. It is a
+ * list item, so the parent is a `ul` or `ol`. The dismiss button shows on hover and on focus, and
  * always on a touch screen, which has no hover.
  */
 export function NotificationItem({
@@ -61,7 +61,7 @@ export function NotificationItem({
         className={cn(
           'hover-fine:bg-line hover-fine:[--ground:var(--color-line)] focus-visible:outline-text flex w-full items-center gap-3.5 py-2.5 pr-14 pl-2.5 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2',
           unread
-            ? '[--ground:color-mix(in_oklab,var(--color-mint)_8%,var(--color-raised))] bg-(--ground) shadow-[inset_2px_0_0_var(--color-mint)]'
+            ? 'bg-raised-2 [--ground:var(--color-raised-2)] shadow-[inset_2px_0_0_var(--color-mint)]'
             : 'bg-raised [--ground:var(--color-raised)]'
         )}
       >
@@ -83,13 +83,16 @@ export function NotificationItem({
           </span>
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.75">
-          <span
-            className={cn(
-              'truncate text-sm',
-              unread ? 'text-text font-bold' : 'text-text-3 font-semibold'
-            )}
-          >
-            {squadName}
+          <span className="flex min-w-0 items-center gap-2">
+            <span
+              className={cn(
+                'truncate text-sm',
+                unread ? 'text-text font-bold' : 'text-text-3 font-semibold'
+              )}
+            >
+              {squadName}
+            </span>
+            {unread && <span aria-hidden className="bg-mint size-1.5 shrink-0 rounded-full" />}
           </span>
           <span className={cn('text-[12.5px]', unread ? 'text-text-2' : 'text-ds-muted')}>
             {t('message')}
@@ -105,7 +108,7 @@ export function NotificationItem({
         disabled={disabled}
         onClick={onDismiss}
         aria-label={t('dismiss', { squad: squadName })}
-        className="bg-bg border-text-3 border text-text hover-fine:bg-card hover-fine:border-text focus-visible:outline-text absolute top-1/2 right-2 flex size-11 -translate-y-1/2 items-center justify-center opacity-0 transition-[opacity,color] duration-150 group-hover-fine:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:opacity-100"
+        className="bg-track text-text-2 hover-fine:text-text focus-visible:outline-text absolute top-1/2 right-2 flex size-11 -translate-y-1/2 items-center justify-center opacity-0 transition-[opacity,color] duration-150 group-hover-fine:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:opacity-100"
       >
         <X aria-hidden className="size-3" strokeWidth={2.8} />
       </button>
