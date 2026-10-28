@@ -7,6 +7,7 @@ import { getUserFriendlyError } from '@/lib/error-messages'
 import { useAppNavigation } from '@/lib/navigation'
 import { notifyError } from '@/lib/notify'
 import type { PublicSquad } from '@/types'
+import { useSquadDetailsCommands } from './squad-details-cache'
 
 interface UseSquadMembershipOptions {
   squadCode: string
@@ -33,6 +34,7 @@ export function useSquadMembership({
   const navigateApp = useAppNavigation()
   const t = useTranslations()
   const { refreshMySquads } = useMySquadsCommands()
+  const { refreshSquadDetails } = useSquadDetailsCommands()
 
   const leaveSquad = useCallback(async () => {
     try {
@@ -42,12 +44,29 @@ export function useSquadMembership({
       if (isHost && squad) {
         board.removeSquad(squad.id)
       }
-      await Promise.all([board.refreshSquads(), refreshMySquads()])
+      // A member's details are read again, so going back to the Squad within the cache's freshness shows the
+      // public view and not a member Lobby the server would refuse. A host's leave deletes the Squad: there
+      // is nothing left to correct, and reading it again would only show "not found" until the board opens.
+      await Promise.all([
+        board.refreshSquads(),
+        refreshMySquads(),
+        isHost ? Promise.resolve() : refreshSquadDetails(squadCode),
+      ])
       navigateApp('/squads')
     } catch (err) {
       notifyError(getUserFriendlyError(err, t, 'leave'))
     }
-  }, [squad, userId, squadCode, notifySquadLeave, board, refreshMySquads, navigateApp, t])
+  }, [
+    squad,
+    userId,
+    squadCode,
+    notifySquadLeave,
+    board,
+    refreshMySquads,
+    refreshSquadDetails,
+    navigateApp,
+    t,
+  ])
 
   return { leaveSquad }
 }

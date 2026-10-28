@@ -385,6 +385,37 @@ describe('squad lobby — leave flow', () => {
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
   })
 
+  it('opens the public view, not the member Lobby, when the viewer goes back to a Squad they left', async () => {
+    let left = false
+    const { discordLink: _discordLink, ...publicFields } = lobbySquad
+    onHttp('GET', '/api/rooms/:code', () =>
+      left
+        ? httpOk({ room: { ...publicFields, memberCount: 1, isMember: false } })
+        : httpOk(lobbySquadResponse)
+    )
+    onHttp('POST', '/api/rooms/:code/leave', () => {
+      left = true
+      return httpOk({ ok: true })
+    })
+    const { navigation, user } = renderSquadsFlow('/squads/LOBBY1', {
+      user: { id: 'user-2', name: 'Ana', email: 'ana@squadzr.test', image: null },
+    })
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    await user.click(screen.getByRole('button', { name: 'Leave squad' }))
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads'))
+
+    // Back within the minute the details stay fresh: they must already say the viewer left.
+    navigation.router.push('/squads/LOBBY1')
+    await settleNavigation()
+
+    expect(await screen.findByRole('button', { name: 'Join squad' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Leave squad' })).not.toBeInTheDocument()
+    expect(screen.queryByText('You are not a member of this squad.')).not.toBeInTheDocument()
+    openLatestWebSocket()
+    expect(latestWebSocket().sentFrames()).toEqual([])
+  })
+
   it('host leave takes the squad off the board', async () => {
     // The host leaving closes the squad: model the server state change so the
     // board refetch no longer returns it.
