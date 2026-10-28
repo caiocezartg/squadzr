@@ -178,6 +178,8 @@ describe('the Lobby for a signed-in non-member', () => {
     await waitFor(() => expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1))
     expect(await screen.findByRole('button', { name: 'Join squad' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Leave squad' })).not.toBeInTheDocument()
+    // The viewer is told why, as on the board.
+    await waitFor(() => expect(toastStore.errorCalls).toEqual(['This squad is already full.']))
   })
 
   it('still joins when the lists that follow the join cannot be read', async () => {
