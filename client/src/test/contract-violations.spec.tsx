@@ -136,13 +136,27 @@ describe('lobby', () => {
     })
 
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
-    expect(screen.getByText('0/3 players')).toBeInTheDocument()
-    expect(screen.getAllByText('Open slot')).toHaveLength(3)
+    expect(screen.getByText('1/3 players')).toBeInTheDocument()
+    expect(screen.getAllByText('Open slot')).toHaveLength(2)
 
-    // Readiness comes only from a member snapshot, which a non-member never
-    // receives, so nothing can unlock the invite or lock the leave button.
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Leave squad' })).toBeEnabled()
+    // The viewer is outside the Squad: no snapshot can unlock the invite and nothing can be left. The
+    // way in is the join action.
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Leave squad' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Join squad' })).toBeEnabled()
+    expect(document.body).not.toHaveTextContent('discord.gg/lobby')
+  })
+
+  it('refuses a non-member response that carries the invite, and shows nothing of it', async () => {
+    // The public projection never holds the invite: a response that does is not the public projection.
+    onHttp('GET', '/api/rooms/:code', () => httpOk({ room: lobbySquad }))
+    renderSquadsFlow('/squads/LOBBY1', {
+      user: { id: 'user-7', name: 'Outsider', email: 'outsider@squadzr.test', image: null },
+    })
+
+    expect(await screen.findByText('Squad not found')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Join squad' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('discord.gg')
   })
 
   it('ignores a squad snapshot and a presence event that break the contract', async () => {

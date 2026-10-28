@@ -44,7 +44,20 @@
       "coverAlt": "Capa de {game}",
       "created": "Criado {time}",
       "members": "Membros",
-      "playerCount": "{current}/{max} jogadores"
+      "playerCount": "{current}/{max} jogadores",
+      "joinSquad": "Entrar no squad"
+    },
+    "invite": {
+      "lockedTitle": "Convite do Discord",
+      "lockedBody": "Liberado quando o squad completar",
+      "badge": "SQUAD FECHADO",
+      "title": "Bora pro Discord",
+      "serverInvite": "CONVITE DO SERVIDOR",
+      "inRoomNow": "{count} na sala agora",
+      "players": "{count, plural, one {# jogador} other {# jogadores}}",
+      "open": "Abrir no Discord",
+      "copyLink": "Copiar link",
+      "copied": "Copiado"
     },
     "close": "Fechar",
     "pagination": {
@@ -292,13 +305,6 @@
     "backToSquads": "Voltar aos squads",
     "cannotLeave": "Não é possível sair de um squad cheio",
     "pleaseSignIn": "Por favor, entre com sua conta para ver este squad."
-  },
-  "discordCard": {
-    "title": "Seu time está pronto!",
-    "description": "Entre no servidor do Discord para começar a jogar juntos.",
-    "copied": "Copiado!",
-    "copyLink": "Copiar link",
-    "joinDiscord": "Entrar no Discord"
   },
   "notFound": {
     "title": "Página não encontrada",

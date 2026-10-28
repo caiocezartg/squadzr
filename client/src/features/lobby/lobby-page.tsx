@@ -7,16 +7,20 @@ import { AlertBox } from '@/components/ui/alert-box'
 import { MotionProvider } from '@/components/ui/motion-provider'
 import { useSession } from '@/hooks/use-session'
 import { translateErrorCode } from '@/lib/error-messages'
-import { DiscordLinkCard } from './components/discord-link-card'
+import { useJoinSquad } from '@/features/squad-joining/join'
+import { LockedInvite, ReadyInvite } from './components/discord-invite'
 import { LobbyBackLink } from './components/lobby-back-link'
 import { LobbyActions } from './components/lobby-actions'
 import { LobbyCover } from './components/lobby-cover'
 import { MembersPanel } from './components/members-panel'
+import { NonMemberLobby } from './components/non-member-lobby'
 import { SquadErrorBoundary } from './components/squad-error-boundary'
 import { SquadNotFound } from './components/squad-not-found'
 import { LobbySkeleton } from './skeleton'
+import { parseDiscordInvite } from './discord-invite-link'
 import { discardFailedSquadRead } from './squad-details'
-import { useLobbyChannel, useLobbyView } from './use-lobby'
+import { useLobbyChannel, useLobbyView, type LobbyView } from './use-lobby'
+import { useReadyEntrance } from './use-ready-entrance'
 import type { SquadChannel } from './use-squad-channel'
 
 export interface LobbyPageProps {
@@ -76,11 +80,16 @@ interface LobbyContentProps {
   channel: SquadChannel
 }
 
-/** The Lobby once its Squad is read: the sign-in gate, the not-found state, or the Squad itself. */
+/**
+ * The Lobby once its Squad is read: the sign-in gate, the not-found state, the public view of a Squad the
+ * viewer is not in, or the Squad itself.
+ */
 function LobbyContent({ squadCode, channel }: LobbyContentProps) {
   const t = useTranslations()
   const session = useSession()
   const lobby = useLobbyView(squadCode, channel)
+  const { join, joining } = useJoinSquad()
+  const readyEntrance = useReadyEntrance(lobby.hasSnapshot, lobby.isReady)
 
   if (!session?.user) {
     return <SignInPrompt />
@@ -88,6 +97,19 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
 
   if (lobby.squadMissing) {
     return <SquadNotFound code={squadCode} />
+  }
+
+  // A viewer outside the Squad sees its public projection, whatever the socket says: a join becomes the
+  // member view once the Squad's details are read again.
+  if (!lobby.isMember && lobby.squad) {
+    return (
+      <NonMemberLobby
+        squad={lobby.squad}
+        viewerId={session.user.id}
+        joining={joining}
+        onJoin={() => join(squadCode)}
+      />
+    )
   }
 
   // Revoked membership: only the error state remains, never the last snapshot.
@@ -134,9 +156,35 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
         />
       </div>
 
-      {lobby.isReady && lobby.discordLink && (
-        <DiscordLinkCard discordLink={lobby.discordLink} isReady={lobby.isReady} />
-      )}
+      <MemberInvite lobby={lobby} entering={readyEntrance} />
     </div>
+  )
+}
+
+interface MemberInviteProps {
+  lobby: LobbyView
+  entering: boolean
+}
+
+/**
+ * The member's invite: the locked bar while the Squad forms, and the "Bora pro Discord" panel once a
+ * snapshot says it is Ready. The panel renders only for a valid Discord invite, and shows nothing for any
+ * other link.
+ */
+function MemberInvite({ lobby, entering }: MemberInviteProps) {
+  if (!lobby.isReady) return <LockedInvite />
+
+  const invite = lobby.discordLink ? parseDiscordInvite(lobby.discordLink) : null
+  if (!invite || !lobby.squad) return null
+
+  return (
+    <ReadyInvite
+      invite={invite}
+      squadName={lobby.squad.name}
+      coverUrl={lobby.game?.coverUrl ?? null}
+      online={Object.values(lobby.presence).filter((member) => member.online).length}
+      members={lobby.players.length}
+      entering={entering}
+    />
   )
 }

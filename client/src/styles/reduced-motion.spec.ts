@@ -81,6 +81,29 @@ describe('reduced motion styles', () => {
     expect(declarationsOf(block, selector)).toContain('animation: none')
   })
 
+  describe('the invite panel', () => {
+    const source = readFileSync(
+      path.resolve(__dirname, '../features/lobby/components/discord-invite.tsx'),
+      'utf8'
+    )
+
+    it('has a fade of its own, with no movement, for the viewer who prefers reduced motion', () => {
+      const fade = /@keyframes invite-fade\s*\{([^{}]*\{[^{}]*\})\s*\}/.exec(css)?.[1] ?? ''
+
+      expect(fade).toContain('opacity: 0')
+      for (const movement of ['transform', 'translate', 'scale']) {
+        expect(fade).not.toContain(movement)
+      }
+      expect(source).toContain('motion-reduce:animate-invite-fade')
+    })
+
+    it('keeps its movement and its sheen behind motion-safe, so neither runs under reduced motion', () => {
+      expect(source).toContain('motion-safe:animate-invite-enter')
+      expect(source).toContain('motion-safe:animate-invite-sheen')
+      expect(source).not.toMatch(/(?<!motion-safe:)animate-invite-(enter|sheen)/)
+    })
+  })
+
   it('does not turn the finite animations into single plays of the loops', () => {
     expect(block).not.toContain('animation-iteration-count')
   })

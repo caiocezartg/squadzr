@@ -28,6 +28,7 @@ import { EnglishIntlProvider } from './intl'
 import { createHarnessNavigation } from './navigation'
 import { fakeSession, signInAsFakeUser, signOutFakeUser } from './stubs'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
+import { latestWebSocket } from './ws-mock'
 
 // The server gives each request its own query client, which React's cache scopes to one request. The
 // suite renders as a server does, so the page's read and the browser's cache are separate clients.
@@ -87,7 +88,7 @@ describe('the Lobby on the App Router', () => {
     expect(screen.queryByText('Squad not found')).not.toBeInTheDocument()
   })
 
-  it('shows a signed-in non-member the public projection, then the membership error', async () => {
+  it('shows a signed-in non-member the public view, with no live channel to join', async () => {
     signInAsFakeUser({
       id: 'user-7',
       name: 'Outsider',
@@ -100,17 +101,16 @@ describe('the Lobby on the App Router', () => {
 
     // The server's read is in the first render: the name and the size come before any snapshot.
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
-    expect(screen.getByText('0/3 players')).toBeInTheDocument()
-    expect(screen.getAllByText('Open slot')).toHaveLength(3)
+    expect(screen.getByText('1/3 players')).toBeInTheDocument()
+    expect(screen.getByText('Caio')).toBeInTheDocument()
+    expect(screen.getAllByText('Open slot')).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'Join squad' })).toBeEnabled()
+    expect(screen.getByText('Unlocked when the squad completes')).toBeInTheDocument()
 
+    // The read tells the page the viewer is outside the Squad, so the page never joins the squad channel.
     openLatestWebSocket()
-    sendFromServer({
-      type: 'error',
-      payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
-    })
-
-    expect(await screen.findByText('You are not a member of this squad.')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(latestWebSocket().sentFrames()).toEqual([])
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
   })
 
   it('shows a member the roster from the snapshot, with placeholders until it arrives', async () => {
@@ -170,13 +170,13 @@ describe('the Lobby on the App Router', () => {
 
     await renderLobbyRoute(lobbySquad.code)
     await screen.findByText(lobbySquad.name)
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
 
     openLatestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
 
-    expect(await screen.findByText('Your squad is ready!')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Join Discord' })).toHaveAttribute(
+    expect(await screen.findByRole('heading', { name: "Let's go to Discord" })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open in Discord' })).toHaveAttribute(
       'href',
       'https://discord.gg/lobby'
     )

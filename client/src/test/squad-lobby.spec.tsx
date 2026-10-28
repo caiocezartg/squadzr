@@ -244,18 +244,102 @@ describe('squad lobby — readiness from the snapshot', () => {
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     await screen.findByText('Ana')
 
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    // Forming: the invite is locked and its link is nowhere on the page.
+    expect(screen.getByText('Discord invite')).toBeInTheDocument()
+    expect(screen.getByText('Unlocked when the squad completes')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: "Let's go to Discord" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('discord.gg/lobby')
     expect(screen.getByRole('button', { name: 'End squad' })).toBeEnabled()
 
     sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
 
-    expect(await screen.findByText('Your squad is ready!')).toBeInTheDocument()
-    const joinLink = screen.getByRole('link', { name: 'Join Discord' })
-    expect(joinLink).toHaveAttribute('href', 'https://discord.gg/lobby')
+    expect(await screen.findByRole('heading', { name: "Let's go to Discord" })).toBeInTheDocument()
+    expect(screen.getByText('SQUAD CLOSED')).toBeInTheDocument()
+    expect(screen.queryByText('Unlocked when the squad completes')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open in Discord' })).toHaveAttribute(
+      'href',
+      'https://discord.gg/lobby'
+    )
 
     const leaveButton = screen.getByRole('button', { name: 'Team closed' })
     expect(leaveButton).toBeDisabled()
+  })
+
+  it('builds the server card of the Ready panel from the snapshot: name, cover, who is in the room, players', async () => {
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: readyLobbySnapshot({
+        presence: [
+          { playerId: hostPlayer.id, online: true, offlineSince: null },
+          { playerId: guestPlayer.id, online: false, offlineSince: null },
+        ],
+      }),
+    })
+
+    const panel = (await screen.findByRole('heading', { name: "Let's go to Discord" })).closest(
+      'section'
+    )
+    if (!panel) throw new Error('The Ready panel is not a section')
+    const inPanel = within(panel)
+    expect(inPanel.getByText('SERVER INVITE')).toBeInTheDocument()
+    expect(inPanel.getByText('Squad ready check')).toBeInTheDocument()
+    expect(inPanel.getByText('1 in the room now')).toBeInTheDocument()
+    expect(inPanel.getByText('2 players')).toBeInTheDocument()
+    expect(panel.querySelector('img')).toHaveAttribute('src', lobbySquad.game.coverUrl)
+    expect(inPanel.getByText('discord.gg/')).toBeInTheDocument()
+  })
+
+  it('opens the invite in a new tab without handing the opener over', async () => {
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    const link = await screen.findByRole('link', { name: 'Open in Discord' })
+
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link.getAttribute('rel')).toContain('noopener')
+  })
+
+  it('copies the invite and says "Copied" until the confirmation runs out', async () => {
+    const { user } = renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    await user.click(await screen.findByRole('button', { name: 'Copy link' }))
+
+    expect(await navigator.clipboard.readText()).toBe('https://discord.gg/lobby')
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
+    await waitFor(
+      () => expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument(),
+      { timeout: 3_000 }
+    )
+  })
+
+  it('unlocks the invite for a viewer who prefers reduced motion, watching the Squad complete', async () => {
+    mockMediaQuery('(prefers-reduced-motion: reduce)', true)
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    await screen.findByText('Ana')
+    expect(screen.getByText('Unlocked when the squad completes')).toBeInTheDocument()
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    // The panel is there, whole and usable, whether or not it moves in.
+    const panel = (await screen.findByRole('heading', { name: "Let's go to Discord" })).closest(
+      'section'
+    )
+    expect(panel).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Open in Discord' })).toBeVisible()
+    expect(screen.queryByText('Unlocked when the squad completes')).not.toBeInTheDocument()
   })
 
   it('never reveals the invite for an invalid Discord link', async () => {
@@ -271,8 +355,10 @@ describe('squad lobby — readiness from the snapshot', () => {
     })
 
     expect(await screen.findByRole('button', { name: 'Team closed' })).toBeInTheDocument()
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: "Let's go to Discord" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Copy link' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('not-discord.example')
   })
 })
 
@@ -443,15 +529,11 @@ describe('squad lobby — failure and access gates', () => {
 })
 
 describe('squad lobby — Ready Squad access gates', () => {
-  // A Ready Squad as the server answers a visitor or non-member: the public
-  // projection, with no roster, no invite and no readiness.
-  const { discordLink: _discordLink, ...publicLobbySquad } = lobbySquad
-  const publicReadySquadResponse = {
-    room: { ...publicLobbySquad, memberCount: lobbySquad.maxPlayers, isMember: false },
-  }
+  // The server answers a visitor or a non-member for a Ready Squad as it does for a missing one.
+  const notFoundBody = { message: 'Squad not found', error: 'ROOM_NOT_FOUND' }
 
-  it('never shows the roster or invite of a Ready Squad to a visitor', async () => {
-    onHttp('GET', '/api/rooms/:code', () => httpOk(publicReadySquadResponse))
+  it('never shows a Ready Squad to a visitor', async () => {
+    onHttp('GET', '/api/rooms/:code', () => httpError(404, notFoundBody))
     renderSquadsFlow('/squads/LOBBY1', { user: null })
 
     expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
@@ -461,27 +543,23 @@ describe('squad lobby — Ready Squad access gates', () => {
     expect(latestWebSocket().sentFrames()).toEqual([])
 
     expect(screen.queryByText('Caio')).not.toBeInTheDocument()
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: "Let's go to Discord" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('discord.gg/lobby')
   })
 
-  it('never shows the roster or invite of a Ready Squad to a non-member', async () => {
-    onHttp('GET', '/api/rooms/:code', () => httpOk(publicReadySquadResponse))
+  it('never shows a Ready Squad to a non-member', async () => {
+    onHttp('GET', '/api/rooms/:code', () => httpError(404, notFoundBody))
     renderSquadsFlow('/squads/LOBBY1', {
       user: { id: 'user-7', name: 'Outsider', email: 'outsider@squadzr.test', image: null },
     })
-    expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
 
-    openLatestWebSocket()
-    sendFromServer({
-      type: 'error',
-      payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
-    })
+    expect(await screen.findByText('Squad not found')).toBeInTheDocument()
 
-    expect(await screen.findByText('You are not a member of this squad.')).toBeInTheDocument()
     expect(screen.queryByText('Caio')).not.toBeInTheDocument()
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: "Let's go to Discord" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('discord.gg/lobby')
   })
 })
 
@@ -531,8 +609,8 @@ describe('squad lobby — full reload of a full squad', () => {
     })
 
     expect(await screen.findByText('3/3 players')).toBeInTheDocument()
-    expect(screen.getByText('Your squad is ready!')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Join Discord' })).toHaveAttribute(
+    expect(screen.getByRole('heading', { name: "Let's go to Discord" })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open in Discord' })).toHaveAttribute(
       'href',
       'https://discord.gg/lobby'
     )

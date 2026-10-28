@@ -28,8 +28,11 @@ interface PlayerProps extends TileHost {
   readonly host?: boolean
   /** The viewer's own row reads "you". */
   readonly you?: boolean
-  /** In the room now; otherwise out of it. */
-  readonly online: boolean
+  /**
+   * In the room now; otherwise out of it. Left out, the tile shows no Presence at all: the view of a viewer
+   * who is not in the Squad, who is never told who is in the room.
+   */
+  readonly online?: boolean
   /** ISO time the player left the room. Without it an away player reads "Out of the room". */
   readonly offlineSince?: string | null
 }
@@ -56,6 +59,12 @@ const AWAY_LOOK: TileLook = {
   name: 'text-text-3',
   avatar: 'away',
 }
+const UNKNOWN_LOOK: TileLook = {
+  ground: 'bg-[#15161a]',
+  groundColor: '#15161a',
+  name: 'text-text',
+  avatar: 'none',
+}
 const OPEN_LOOK: TileLook = {
   ground: 'bg-[#0c0d10] shadow-[inset_0_0_0_1px_#1a1b20]',
   groundColor: '#0c0d10',
@@ -81,12 +90,15 @@ export function MemberTile(props: MemberTileProps) {
     )
   }
 
-  const look = props.online ? ONLINE_LOOK : AWAY_LOOK
-  const presence = props.online
-    ? t('presence.online')
-    : timeAgo
-      ? t('presence.awaySince', { time: timeAgo })
-      : t('presence.away')
+  const look = presenceLook(props.online)
+  const presence =
+    props.online === undefined
+      ? undefined
+      : props.online
+        ? t('presence.online')
+        : timeAgo
+          ? t('presence.awaySince', { time: timeAgo })
+          : t('presence.away')
 
   return (
     <Tile look={look} presence={presence} host={props}>
@@ -104,6 +116,11 @@ export function MemberTile(props: MemberTileProps) {
   )
 }
 
+function presenceLook(online: boolean | undefined): TileLook {
+  if (online === undefined) return UNKNOWN_LOOK
+  return online ? ONLINE_LOOK : AWAY_LOOK
+}
+
 function Tile({
   look,
   presence,
@@ -111,7 +128,8 @@ function Tile({
   children,
 }: {
   readonly look: TileLook
-  readonly presence: string
+  /** What the row says of the player's Presence; none when the viewer may not know it. */
+  readonly presence?: string
   readonly host: TileHost
   readonly children: ReactNode
 }) {
@@ -126,7 +144,7 @@ function Tile({
       )}
     >
       {children}
-      <span className="sr-only">{presence}</span>
+      {presence && <span className="sr-only">{presence}</span>}
     </li>
   )
 }

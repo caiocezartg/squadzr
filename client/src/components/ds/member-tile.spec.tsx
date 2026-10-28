@@ -50,6 +50,14 @@ describe('MemberTile', () => {
     expect(row).toHaveAttribute('title', 'Out of the room')
   })
 
+  it('says nothing of the Presence of a player whose Presence the viewer may not know', () => {
+    const row = renderTile({ playerId: 'p1', name: 'caiocezar' })
+
+    expect(within(row).getByText('caiocezar')).toBeInTheDocument()
+    expect(row).not.toHaveAttribute('title')
+    expect(row).not.toHaveTextContent(/In the room now|Out of the room/)
+  })
+
   it('reads an open slot as "Open slot", waiting for a player', () => {
     const row = renderTile({ open: true })
 

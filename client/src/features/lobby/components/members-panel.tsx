@@ -35,9 +35,13 @@ const ARRIVAL_FADE = { duration: 0.2, ease: 'easeOut' } as const
 
 interface MembersPanelProps {
   squadCode: string
+  /** The members the panel draws: the roster, or a non-member's preview of it. */
   players: readonly Player[]
+  /** How many members the Squad has. Defaults to the players drawn; a preview draws fewer than it counts. */
+  memberCount?: number
   maxPlayers: number
-  presence: PresenceState
+  /** Presence by member id. `null` shows none: a viewer outside the Squad is never told who is in the room. */
+  presence: PresenceState | null
   viewerId: string
   isReady: boolean
 }
@@ -50,6 +54,7 @@ interface MembersPanelProps {
 export function MembersPanel({
   squadCode,
   players,
+  memberCount = players.length,
   maxPlayers,
   presence,
   viewerId,
@@ -61,15 +66,13 @@ export function MembersPanel({
   const { live, arrivals } = useRosterArrivals(players)
   const [requestedPage, setPage] = useState(1)
 
-  const slots = Math.max(maxPlayers, players.length)
-  const pageCount = Math.ceil(slots / TILES_PER_PAGE)
+  // The tiles are the members drawn, then the open slots.
+  const tileCount = players.length + Math.max(0, maxPlayers - memberCount)
+  const pageCount = Math.max(1, Math.ceil(tileCount / TILES_PER_PAGE))
   const page = Math.min(requestedPage, pageCount)
   const first = (page - 1) * TILES_PER_PAGE
   const visibleMembers = players.slice(first, first + TILES_PER_PAGE)
-  const openSlots = Math.max(
-    0,
-    Math.min(first + TILES_PER_PAGE, slots) - first - visibleMembers.length
-  )
+  const openSlots = Math.min(first + TILES_PER_PAGE, tileCount) - first - visibleMembers.length
 
   const copyCode = async () => {
     await navigator.clipboard.writeText(squadCode)
@@ -85,7 +88,7 @@ export function MembersPanel({
         {t('members')}
       </h2>
       <div className="flex items-end justify-between gap-3">
-        <RosterCounter current={players.length} max={maxPlayers} live={live} ready={isReady} />
+        <RosterCounter current={memberCount} max={maxPlayers} live={live} ready={isReady} />
         <div className="flex min-w-0 flex-1 flex-col items-end gap-2.5 pb-0.5">
           <Button
             variant="secondary"
@@ -111,20 +114,20 @@ export function MembersPanel({
               }
             />
           </Button>
-          <SlotMeter filled={players.length} total={maxPlayers} />
+          <SlotMeter filled={memberCount} total={maxPlayers} />
         </div>
       </div>
 
       <ul className="grid grid-cols-1 gap-1.5 @xl:grid-cols-2">
         {visibleMembers.map((player) => {
-          const memberPresence = presence[player.id]
+          const memberPresence = presence?.[player.id]
           const tile = {
             playerId: player.id,
             name: player.name,
             image: player.image,
             host: player.isHost,
             you: player.id === viewerId,
-            online: memberPresence?.online ?? false,
+            online: presence ? (memberPresence?.online ?? false) : undefined,
             offlineSince: memberPresence?.offlineSince ?? null,
           }
 
