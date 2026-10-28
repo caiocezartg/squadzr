@@ -37,17 +37,17 @@ describe('notification item', () => {
     expect(row).toHaveTextContent('Valorant · just now')
   })
 
-  it('marks an unread row with a bold name and an accessible dot', () => {
+  it('marks an unread row with a bold name and a hidden unread text', () => {
     renderItem()
 
-    expect(screen.getByRole('img', { name: 'Unread' })).toBeInTheDocument()
+    expect(screen.getByText('Unread')).toHaveClass('sr-only')
     expect(screen.getByText('Ranked grind')).toHaveClass('font-bold')
   })
 
-  it('has no dot on a read row and greys its cover', () => {
+  it('has no unread text on a read row and greys its cover', () => {
     renderItem({ unread: false, coverUrl: 'https://cdn.squadzr.test/c.jpg' })
 
-    expect(screen.queryByRole('img', { name: 'Unread' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Unread')).not.toBeInTheDocument()
     expect(document.querySelector('img')).toHaveClass('grayscale-60')
   })
 

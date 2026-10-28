@@ -27,7 +27,7 @@ export interface NotificationItemProps {
 /**
  * A "Squad ready" notification as a row of the notifications panel (reference, Components): the
  * game cover with a Discord badge, the Squad name, the message, and the game with the relative
- * time. Unread shows a mint edge, a bold name and a dot; a read cover is 60% grayscale. It is a
+ * time. Unread shows a mint edge with a faint mint tint, a bold name and a hidden "unread" text; a read cover is 60% grayscale. It is a
  * list item, so the parent is a `ul` or `ol`. The dismiss button shows on hover and on focus, and
  * always on a touch screen, which has no hover.
  */
@@ -61,7 +61,7 @@ export function NotificationItem({
         className={cn(
           'hover-fine:bg-line hover-fine:[--ground:var(--color-line)] focus-visible:outline-text flex w-full items-center gap-3.5 py-2.5 pr-14 pl-2.5 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2',
           unread
-            ? 'bg-raised-2 [--ground:var(--color-raised-2)] shadow-[inset_2px_0_0_var(--color-mint)]'
+            ? '[--ground:color-mix(in_oklab,var(--color-mint)_8%,var(--color-raised))] bg-(--ground) shadow-[inset_2px_0_0_var(--color-mint)]'
             : 'bg-raised [--ground:var(--color-raised)]'
         )}
       >
@@ -98,13 +98,7 @@ export function NotificationItem({
             {gameName} · {timeAgo}
           </span>
         </span>
-        {unread && (
-          <span
-            role="img"
-            aria-label={t('unread')}
-            className="bg-mint size-2 shrink-0 rounded-full"
-          />
-        )}
+        {unread && <span className="sr-only">{t('unread')}</span>}
       </a>
       <button
         type="button"

@@ -116,12 +116,12 @@ describe('the bell and its panel', () => {
 
     const panel = await screen.findByRole('dialog', { name: 'Notifications' })
     expect(within(panel).getAllByText('Discord invite unlocked')).toHaveLength(2)
-    expect(within(panel).getAllByRole('img', { name: 'Unread' })).toHaveLength(2)
+    expect(within(panel).getAllByText('Unread')).toHaveLength(2)
     expect(squadEntry(/^Alpha squad/)).toBeInTheDocument()
     expect(squadEntry(/^Beta squad/)).toBeInTheDocument()
   })
 
-  it('shows the unread dot on unread rows only', async () => {
+  it('marks unread rows only', async () => {
     notifications = [
       squadNotification(ALPHA_ID, 'Alpha squad', 'ALPHA1', null),
       squadNotification(BETA_ID, 'Beta squad', 'BETA22', '2026-01-01T00:00:00.000Z'),
@@ -129,8 +129,8 @@ describe('the bell and its panel', () => {
     const user = renderShell()
     await openNotifications(user, 1)
 
-    expect(await screen.findAllByRole('img', { name: 'Unread' })).toHaveLength(1)
-    expect(within(squadEntry(/^Alpha squad/)).getByRole('img', { name: 'Unread' })).toBeVisible()
+    expect(await screen.findAllByText('Unread')).toHaveLength(1)
+    expect(within(squadEntry(/^Alpha squad/)).getByText('Unread')).toBeVisible()
   })
 
   it('caps the badge at 9+ while the name keeps the real count', async () => {
