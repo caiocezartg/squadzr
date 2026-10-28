@@ -98,12 +98,12 @@
 
   /*
     The invite panel's Ready moment (reference, Per element): it enters over 500ms, and the sheen sweeps
-    across it once, after the panel has settled. The entrance and the sheen are used behind
+    across it once, from the moment the 500ms entrance ends. The entrance and the sheen are used behind
     `motion-safe:`; under reduced motion the panel fades in alone (`motion-reduce:`).
   */
   --animate-invite-enter: invite-enter 500ms var(--ease-out) both;
   --animate-invite-fade: invite-fade 300ms var(--ease-out) both;
-  --animate-invite-sheen: invite-sheen 1100ms var(--ease-in-out) 450ms both;
+  --animate-invite-sheen: invite-sheen 1100ms var(--ease-in-out) 500ms both;
 
   @keyframes halo {
     0% {
@@ -555,5 +555,4 @@
       opacity: 0;
     }
   }
-
 }

@@ -97,6 +97,15 @@ describe('reduced motion styles', () => {
       expect(source).toContain('motion-reduce:animate-invite-fade')
     })
 
+    it('starts the sheen once the entrance has ended', () => {
+      const milliseconds = (value: string | undefined) => Number.parseFloat(value ?? 'NaN')
+      const entrance = /--animate-invite-enter:\s*invite-enter\s+(\d+)ms/.exec(css)
+      const sheen =
+        /--animate-invite-sheen:\s*invite-sheen\s+\d+ms\s+\S+(?:\(.*?\))?\s+(\d+)ms/.exec(css)
+
+      expect(milliseconds(sheen?.[1])).toBeGreaterThanOrEqual(milliseconds(entrance?.[1]))
+    })
+
     it('keeps its movement and its sheen behind motion-safe, so neither runs under reduced motion', () => {
       expect(source).toContain('motion-safe:animate-invite-enter')
       expect(source).toContain('motion-safe:animate-invite-sheen')
