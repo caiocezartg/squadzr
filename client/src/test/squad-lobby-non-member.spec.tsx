@@ -8,7 +8,9 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { guestPlayer, hostPlayer, lobbySquad, lobbySnapshot } from './fixtures'
-import { renderSquadsFlow } from './harness'
+import { createTestQueryClient, renderSquadsFlow } from './harness'
+import { squadQueryKey } from '@/features/lobby/squad-details'
+import { settleNavigation } from './navigation'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { toastStore } from './stubs'
@@ -226,5 +228,42 @@ describe('the Lobby for a signed-in non-member', () => {
     expect(await screen.findByRole('button', { name: 'Leave squad' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Join squad' })).not.toBeInTheDocument()
     expect(toastStore.errorCalls).toEqual([])
+  })
+
+  it('leaves the Squad channel of the member Lobby it comes from, on a warm switch to a non-member Lobby', async () => {
+    const other = {
+      ...publicSquad,
+      id: 'aaaaaaaa-0000-4000-8000-000000000008',
+      code: 'OTHER1',
+      name: 'Other squad',
+    }
+    onHttp('GET', '/api/rooms/:code', (req) =>
+      req.params.code === 'OTHER1' ? httpOk({ room: other }) : httpOk(memberView)
+    )
+    // The other Lobby was read as a non-member before: the cache already knows the viewer is outside it.
+    const queryClient = createTestQueryClient()
+    queryClient.setQueryData(squadQueryKey('OTHER1'), { room: other })
+    const { navigation } = renderSquadsFlow('/squads/LOBBY1', { user: outsider, queryClient })
+    await screen.findByRole('heading', { name: lobbySquad.name })
+    openLatestWebSocket()
+    const socket = latestWebSocket()
+    await waitFor(() =>
+      expect(socket.sentFrames()).toContainEqual({
+        type: 'join_room',
+        payload: { roomCode: 'LOBBY1' },
+      })
+    )
+
+    navigation.router.push('/squads/OTHER1')
+    await settleNavigation()
+
+    expect(await screen.findByRole('button', { name: 'Join squad' })).toBeInTheDocument()
+    // The socket releases the room it was in, and joins none: its members no longer see this viewer there.
+    await waitFor(() =>
+      expect(socket.sentFrames()).toEqual([
+        { type: 'join_room', payload: { roomCode: 'LOBBY1' } },
+        { type: 'leave_room', payload: { roomCode: 'LOBBY1' } },
+      ])
+    )
   })
 })

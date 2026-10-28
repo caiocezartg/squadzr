@@ -78,11 +78,12 @@ export function useSquadChannel({
 
     const previousCode = joinedCodeRef.current
     joinedCodeRef.current = enabled ? squadCode : null
-    if (!enabled) return
-
-    if (previousCode && previousCode !== squadCode) {
+    // The socket releases the room it was in when the page moves to another Squad, and when it stops joining
+    // at all (the viewer is outside the Squad it moved to): the room's members must not keep seeing this tab.
+    if (previousCode && (!enabled || previousCode !== squadCode)) {
       send({ type: 'leave_room', payload: { roomCode: previousCode } })
     }
+    if (!enabled) return
 
     // The transport replays this subscription after every reconnect and the fresh snapshot replaces all
     // live state.
