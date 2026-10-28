@@ -314,7 +314,7 @@ describe('squad lobby — readiness from the snapshot', () => {
     const watched = (await screen.findByRole('heading', { name: "Let's go to Discord" })).closest(
       'section'
     )
-    expect(watched).toHaveAttribute('data-entering')
+    expect(watched).toHaveClass('motion-safe:animate-invite-enter')
     unmount()
 
     // A cold open of the Squad that is already Ready is the room as it was: the panel is simply there.
@@ -326,7 +326,8 @@ describe('squad lobby — readiness from the snapshot', () => {
     const cold = (await screen.findByRole('heading', { name: "Let's go to Discord" })).closest(
       'section'
     )
-    expect(cold).not.toHaveAttribute('data-entering')
+    expect(cold).not.toHaveClass('motion-safe:animate-invite-enter')
+    expect(cold).not.toHaveClass('motion-reduce:animate-invite-fade')
   })
 
   it('opens the invite in a new tab without handing the opener over', async () => {

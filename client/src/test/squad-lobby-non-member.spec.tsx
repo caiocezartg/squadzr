@@ -19,6 +19,10 @@ import { toastStore } from './stubs'
 import { latestWebSocket } from './ws-mock'
 import type { RoomResponse } from '@/types'
 
+/** The classes the Ready panel carries while it enters: the movement, and the fade for reduced motion. */
+const ENTRANCE_CLASS = 'motion-safe:animate-invite-enter'
+const REDUCED_ENTRANCE_CLASS = 'motion-reduce:animate-invite-fade'
+
 const outsider = { id: 'user-7', name: 'Outsider', email: 'outsider@squadzr.test', image: null }
 
 /** The Squad as the server answers a viewer outside it: the public projection, with its member preview. */
@@ -333,7 +337,8 @@ describe('the Lobby for a signed-in non-member', () => {
     it('gives the joiner the Ready entrance, though their first snapshot is already Ready', async () => {
       const panel = await joinIntoReadySquad()
 
-      expect(panel).toHaveAttribute('data-entering')
+      expect(panel).toHaveClass(ENTRANCE_CLASS)
+      expect(panel).toHaveClass(REDUCED_ENTRANCE_CLASS)
     })
 
     it('still unlocks the invite, fully visible, for a joiner who prefers reduced motion', async () => {
@@ -341,8 +346,10 @@ describe('the Lobby for a signed-in non-member', () => {
 
       const panel = await joinIntoReadySquad()
 
-      // The entrance is the fade alone under reduced motion (see the reduced-motion styles).
-      expect(panel).toHaveAttribute('data-entering')
+      // The panel carries the entrance, and the viewer's preference picks its form in the styles: the
+      // movement is behind `motion-safe`, and this fade alone is what `motion-reduce` runs.
+      expect(panel).toHaveClass(ENTRANCE_CLASS)
+      expect(panel).toHaveClass(REDUCED_ENTRANCE_CLASS)
       expect(panel).toBeVisible()
       expect(screen.getByRole('link', { name: 'Open in Discord' })).toBeVisible()
     })
