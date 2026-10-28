@@ -266,6 +266,15 @@ describe('squad lobby — readiness from the snapshot', () => {
     expect(leaveButton).toBeDisabled()
   })
 
+  it('names the locked invite bar as a region, like the Ready panel', async () => {
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+
+    const bar = screen.getByRole('region', { name: 'Discord invite' })
+
+    expect(within(bar).getByText('Unlocked when the squad completes')).toBeInTheDocument()
+  })
+
   it('builds the server card of the Ready panel from the snapshot: name, cover, who is in the room, players', async () => {
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')

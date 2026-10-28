@@ -23,12 +23,17 @@ export function LockedInvite() {
   const t = useTranslations('ds.invite')
 
   return (
-    <section className="bg-panel flex flex-wrap items-center gap-4 px-4.5 py-4.5 sm:px-5.5">
+    <section
+      aria-labelledby="lobby-invite-locked-heading"
+      className="bg-panel flex flex-wrap items-center gap-4 px-4.5 py-4.5 sm:px-5.5"
+    >
       <span className="bg-raised text-discord-soft flex size-11.5 shrink-0 items-center justify-center">
         <Lock aria-hidden="true" className="size-5 stroke-[2.4]" />
       </span>
       <div className="flex min-w-0 flex-[1_1_17.5rem] flex-col gap-1">
-        <h2 className="text-[15px] font-extrabold">{t('lockedTitle')}</h2>
+        <h2 id="lobby-invite-locked-heading" className="text-[15px] font-extrabold">
+          {t('lockedTitle')}
+        </h2>
         <p className="text-text-3 text-[13px] leading-normal">{t('lockedBody')}</p>
       </div>
       <span
