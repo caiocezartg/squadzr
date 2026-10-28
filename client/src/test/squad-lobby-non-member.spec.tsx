@@ -266,4 +266,36 @@ describe('the Lobby for a signed-in non-member', () => {
       ])
     )
   })
+
+  it('starts each non-member Lobby afresh on a warm switch: no replayed entrance and no carried copy state', async () => {
+    const second = {
+      ...publicSquad,
+      id: 'aaaaaaaa-0000-4000-8000-000000000009',
+      code: 'SECND2',
+      name: 'Second squad',
+      memberPreview: [{ id: 'user-8', name: 'Rita', image: null }],
+      hostId: 'user-8',
+    }
+    onHttp('GET', '/api/rooms/:code', (req) =>
+      req.params.code === 'SECND2' ? httpOk({ room: second }) : httpOk({ room: publicSquad })
+    )
+    const queryClient = createTestQueryClient()
+    queryClient.setQueryData(squadQueryKey('LOBBY1'), { room: publicSquad })
+    queryClient.setQueryData(squadQueryKey('SECND2'), { room: second })
+    const { navigation, user } = renderSquadsFlow('/squads/LOBBY1', { user: outsider, queryClient })
+    await screen.findByRole('heading', { name: lobbySquad.name })
+    await user.click(screen.getByRole('button', { name: 'Copy code LOBBY1' }))
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
+
+    navigation.router.push('/squads/SECND2')
+    await settleNavigation()
+
+    const tile = (await screen.findByText('Rita')).closest('li')
+    if (!tile) throw new Error('Rita has no member tile')
+    // The members of a warm Lobby are the room as it was: they are not arriving.
+    expect(tile.style.opacity).not.toBe('0')
+    expect(tile.style.transform).not.toMatch(/scale\(0\./)
+    // The copy confirmation belongs to the code it confirmed.
+    expect(screen.getByRole('button', { name: 'Copy code SECND2' })).toBeInTheDocument()
+  })
 })

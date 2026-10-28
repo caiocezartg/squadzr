@@ -46,6 +46,7 @@ export function NonMemberLobby({ squad, viewerId, joining, onJoin }: NonMemberLo
       <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
         <LobbyCover squad={squad} />
         <MembersPanel
+          key={squad.code}
           squadCode={squad.code}
           players={players}
           memberCount={squad.memberCount ?? players.length}
