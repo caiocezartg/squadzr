@@ -28,7 +28,7 @@ export interface NotificationItemProps {
  * A "Squad ready" notification as a row of the notifications panel (reference, Components): the
  * game cover with a Discord badge, the Squad name, the message, and the game with the relative
  * time. Unread shows a mint edge with a faint mint tint, a bold name and a hidden "unread" text; a read cover is 60% grayscale. It is a
- * list item, so the parent is a `ul` or `ol`. The dismiss button shows on hover and on focus, and
+ * list item, so the parent is a `ul` or `ol`. The dismiss button is a solid chip with a border, so it reads on the tinted unread row too, and shows on hover and on focus, and
  * always on a touch screen, which has no hover.
  */
 export function NotificationItem({
@@ -105,7 +105,7 @@ export function NotificationItem({
         disabled={disabled}
         onClick={onDismiss}
         aria-label={t('dismiss', { squad: squadName })}
-        className="bg-track text-text-2 hover-fine:text-text focus-visible:outline-text absolute top-1/2 right-2 flex size-11 -translate-y-1/2 items-center justify-center opacity-0 transition-[opacity,color] duration-150 group-hover-fine:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:opacity-100"
+        className="bg-bg border-text-3 border text-text hover-fine:bg-card hover-fine:border-text focus-visible:outline-text absolute top-1/2 right-2 flex size-11 -translate-y-1/2 items-center justify-center opacity-0 transition-[opacity,color] duration-150 group-hover-fine:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:opacity-100"
       >
         <X aria-hidden className="size-3" strokeWidth={2.8} />
       </button>

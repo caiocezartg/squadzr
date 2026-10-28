@@ -23,7 +23,7 @@ export function BellButton({ unreadCount, className, ...props }: BellButtonProps
       type="button"
       aria-label={unreadCount > 0 ? t('bellUnread', { count: unreadCount }) : t('bell')}
       className={cn(
-        'press bg-card text-text-2 hover-fine:bg-raised focus-visible:outline-text data-popup-open:bg-text data-popup-open:text-bg relative flex size-11 shrink-0 items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2',
+        'press bg-card text-text-2 hover-fine:not-data-popup-open:bg-raised focus-visible:outline-text data-popup-open:bg-text data-popup-open:text-bg relative flex size-11 shrink-0 items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2',
         className
       )}
       {...props}

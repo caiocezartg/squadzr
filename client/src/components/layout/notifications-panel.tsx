@@ -35,7 +35,7 @@ export function NotificationsPanel({
         The popover has no padding of its own (see the menu); the bottom sheet keeps its own, and its
         close button sits in the top right corner, so the row clears it.
       */}
-      <div className="flex min-h-11 items-center justify-between gap-2 pb-3.5 max-sm:-mt-2 max-sm:pr-11 sm:pt-4.5 sm:pr-4.5 sm:pl-5">
+      <div className="flex shrink-0 items-center justify-between gap-2 pb-3.5 max-sm:-mt-2 max-sm:pr-11 sm:pt-4.5 sm:pr-4.5 sm:pl-5">
         <span aria-hidden className="type-panel-title-sm text-text">
           {t('title')}
         </span>
