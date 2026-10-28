@@ -303,6 +303,32 @@ describe('squad lobby — readiness from the snapshot', () => {
     expect(inPanel.getByText('discord.gg/')).toBeInTheDocument()
   })
 
+  it('enters the panel for a viewer who watched the Squad complete, and not for one who opens it Ready', async () => {
+    const { unmount } = renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    await screen.findByText('Ana')
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    const watched = (await screen.findByRole('heading', { name: "Let's go to Discord" })).closest(
+      'section'
+    )
+    expect(watched).toHaveAttribute('data-entering')
+    unmount()
+
+    // A cold open of the Squad that is already Ready is the room as it was: the panel is simply there.
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    const cold = (await screen.findByRole('heading', { name: "Let's go to Discord" })).closest(
+      'section'
+    )
+    expect(cold).not.toHaveAttribute('data-entering')
+  })
+
   it('opens the invite in a new tab without handing the opener over', async () => {
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')

@@ -89,7 +89,12 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
   const session = useSession()
   const lobby = useLobbyView(squadCode, channel)
   const { join, joining } = useJoinSquad()
-  const readyEntrance = useReadyEntrance(lobby.hasSnapshot, lobby.isReady)
+  const readyEntrance = useReadyEntrance({
+    squadCode,
+    hasSnapshot: lobby.hasSnapshot,
+    isReady: lobby.isReady,
+    isOutside: !lobby.isMember && lobby.squad !== null,
+  })
 
   if (!session?.user) {
     return <SignInPrompt />

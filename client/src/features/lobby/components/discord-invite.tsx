@@ -83,6 +83,7 @@ export function ReadyInvite({
   return (
     <section
       aria-labelledby="lobby-invite-heading"
+      data-entering={entering ? '' : undefined}
       className={cn(
         'bg-ds-discord relative overflow-hidden text-white',
         entering && 'motion-safe:animate-invite-enter motion-reduce:animate-invite-fade'

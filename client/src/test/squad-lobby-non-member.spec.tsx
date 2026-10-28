@@ -7,7 +7,8 @@
 
 import { screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { guestPlayer, hostPlayer, lobbySquad, lobbySnapshot } from './fixtures'
+import { mockMediaQuery } from './media-query'
+import { guestPlayer, hostPlayer, lobbySquad, lobbySnapshot, readyLobbySnapshot } from './fixtures'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
 import { squadQueryKey } from '@/features/lobby/squad-details'
 import { settleNavigation } from './navigation'
@@ -299,5 +300,50 @@ describe('the Lobby for a signed-in non-member', () => {
     expect(tile.style.transform).not.toMatch(/scale\(0\./)
     // The copy confirmation belongs to the code it confirmed.
     expect(screen.getByRole('button', { name: 'Copy code SECND2' })).toBeInTheDocument()
+  })
+
+  describe('when the join closes the last slot', () => {
+    const roster = [hostPlayer, { ...guestPlayer, id: outsider.id, name: outsider.name }]
+
+    /** Joins from the non-member view, and answers with the Ready snapshot the join produced. */
+    async function joinIntoReadySquad() {
+      registerSquadRoutes()
+      const { user } = renderSquadsFlow('/squads/LOBBY1', { user: outsider })
+      await screen.findByRole('heading', { name: lobbySquad.name })
+      openLatestWebSocket()
+      await user.click(screen.getByRole('button', { name: 'Join squad' }))
+      await waitFor(() =>
+        expect(latestWebSocket().sentFrames()).toContainEqual({
+          type: 'join_room',
+          payload: { roomCode: 'LOBBY1' },
+        })
+      )
+      sendFromServer({
+        type: 'room_snapshot',
+        payload: readyLobbySnapshot({
+          room: { ...lobbySquad, memberCount: roster.length, isMember: true },
+          players: roster,
+        }),
+      })
+      const heading = await screen.findByRole('heading', { name: "Let's go to Discord" })
+      return heading.closest('section')
+    }
+
+    it('gives the joiner the Ready entrance, though their first snapshot is already Ready', async () => {
+      const panel = await joinIntoReadySquad()
+
+      expect(panel).toHaveAttribute('data-entering')
+    })
+
+    it('still unlocks the invite, fully visible, for a joiner who prefers reduced motion', async () => {
+      mockMediaQuery('(prefers-reduced-motion: reduce)', true)
+
+      const panel = await joinIntoReadySquad()
+
+      // The entrance is the fade alone under reduced motion (see the reduced-motion styles).
+      expect(panel).toHaveAttribute('data-entering')
+      expect(panel).toBeVisible()
+      expect(screen.getByRole('link', { name: 'Open in Discord' })).toBeVisible()
+    })
   })
 })
