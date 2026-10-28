@@ -556,6 +556,10 @@ describe('squad lobby — Ready Squad access gates', () => {
 
     expect(await screen.findByText('Squad not found')).toBeInTheDocument()
 
+    // The read said the Squad is not the viewer's to see, so the page never joins its squad channel.
+    openLatestWebSocket()
+    expect(latestWebSocket().sentFrames()).toEqual([])
+
     expect(screen.queryByText('Caio')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: "Let's go to Discord" })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()

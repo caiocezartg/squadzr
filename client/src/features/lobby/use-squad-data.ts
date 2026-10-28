@@ -44,6 +44,8 @@ export function useSquadAccess(squadCode: string): SquadAccess {
     readDetails
   )
 
-  if (!details) return 'unknown'
-  return isRoomLobbyResponse(details) ? 'member' : 'non-member'
+  // A read that resolved to `null` (a missing Squad, or a Ready one the server hides from a non-member) is
+  // known too: nothing in it is the viewer's to join live.
+  if (details === undefined) return 'unknown'
+  return details !== null && isRoomLobbyResponse(details) ? 'member' : 'non-member'
 }
