@@ -28,6 +28,10 @@ _Avoid_: Open Room, waiting room, active room
 A Squad that has reached its required capacity and no longer accepts membership changes.
 _Avoid_: Ready Room, completed room, waiting room
 
+**Discord Preview**:
+The public data Discord holds for the invite of a Ready Squad: its server's name, icon, backdrop and member counts. Only a member of a Ready Squad may read it. The server reads it from Discord and keeps each answer, a negative one included, for ten minutes; when Discord has nothing to show (an invalid or expired invite, Discord down or rate limiting) the preview is absent and the Squad's own data stands in.
+_Avoid_: Server info, invite metadata, Discord card
+
 **Game**:
 A multiplayer title in the Game Catalog that a Squad can be formed for. Its squad size and featured placement follow the Catalog Import's curated rules, not the raw source data.
 _Avoid_: Title, product, game entry

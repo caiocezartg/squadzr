@@ -52,11 +52,14 @@
       "lockedBody": "Unlocked when the squad completes",
       "title": "Let's go to Discord",
       "serverInvite": "SERVER INVITE",
-      "inRoomNow": "{count} in the room now",
-      "players": "{count, plural, one {# player} other {# players}}",
       "open": "Open in Discord",
       "copyLink": "Copy link",
-      "copied": "Copied"
+      "copied": "Copied",
+      "slotsLeft": "{count, plural, one {# slot left} other {# slots left}}",
+      "statOnline": "online",
+      "statMembers": "{count, plural, one {member} other {members}}",
+      "statInRoom": "in the room now",
+      "statPlayers": "{count, plural, one {player} other {players}}"
     },
     "close": "Close",
     "pagination": {

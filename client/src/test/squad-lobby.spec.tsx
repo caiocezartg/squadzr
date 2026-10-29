@@ -57,8 +57,16 @@ function registerLobbyRoutes(): void {
     }
     return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
   })
+  onHttp('GET', '/api/rooms/:code/discord-preview', () => httpOk({ preview: null }))
   onHttp('POST', '/api/rooms/:code/join', () => httpOk({ ok: true }))
   onHttp('POST', '/api/rooms/:code/leave', () => httpOk({ ok: true }))
+}
+
+/** The number of a count in the Ready panel's server card, by what it counts. */
+function statValue(panel: HTMLElement, label: string): HTMLElement {
+  const value = within(panel).getByText(label).closest('dt')?.nextElementSibling
+  if (!(value instanceof HTMLElement)) throw new Error(`${label} has no value`)
+  return value
 }
 
 /** The tile of a member, by the name it shows. */
@@ -275,7 +283,7 @@ describe('squad lobby — readiness from the snapshot', () => {
     expectLockedInvite()
   })
 
-  it('builds the server card of the Ready panel from the snapshot: name, cover, who is in the room, players', async () => {
+  it('builds the server card of the Ready panel from the Squad when Discord has no preview: name, cover, who is in the room, players', async () => {
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
@@ -296,9 +304,11 @@ describe('squad lobby — readiness from the snapshot', () => {
     if (!panel) throw new Error('The Ready panel is not a section')
     const inPanel = within(panel)
     expect(inPanel.getByText('SERVER INVITE')).toBeInTheDocument()
-    expect(inPanel.getByText('Squad ready check')).toBeInTheDocument()
-    expect(inPanel.getByText('1 in the room now')).toBeInTheDocument()
-    expect(inPanel.getByText('2 players')).toBeInTheDocument()
+    // The card holds a skeleton until the preview read settles, and then falls back to the Squad.
+    expect(await inPanel.findByText('Squad ready check')).toBeInTheDocument()
+    expect(inPanel.getByText('in the room now')).toBeInTheDocument()
+    expect(statValue(panel, 'in the room now')).toHaveTextContent('1')
+    expect(statValue(panel, 'players')).toHaveTextContent('2')
     expect(panel.querySelector('img')).toHaveAttribute('src', lobbySquad.game.coverUrl)
     expect(inPanel.getByText('discord.gg/')).toBeInTheDocument()
   })

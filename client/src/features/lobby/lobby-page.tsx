@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
+import { parseDiscordInvite } from '@squadzr/schemas'
 import { AlertBox } from '@/components/ui/alert-box'
 import { MotionProvider } from '@/components/ui/motion-provider'
 import { useSession } from '@/hooks/use-session'
@@ -17,8 +18,8 @@ import { NonMemberLobby } from './components/non-member-lobby'
 import { SquadErrorBoundary } from './components/squad-error-boundary'
 import { SquadNotFound } from './components/squad-not-found'
 import { LobbySkeleton } from './skeleton'
-import { parseDiscordInvite } from './discord-invite-link'
 import { discardFailedSquadRead } from './squad-details'
+import { useDiscordPreview } from './use-discord-preview'
 import { useLobbyChannel, useLobbyView, type LobbyView } from './use-lobby'
 import { useReadyEntrance } from './use-ready-entrance'
 import type { SquadChannel } from './use-squad-channel'
@@ -150,36 +151,41 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
         <LobbyCover squad={lobby.squad} />
-        <MembersPanel
-          key={squadCode}
-          squadCode={squadCode}
-          players={lobby.players}
-          maxPlayers={lobby.maxPlayers}
-          presence={lobby.presence}
-          viewerId={session.user.id}
-          isReady={lobby.isReady}
-        />
+        <div className="flex min-w-0 flex-1 flex-col gap-5">
+          <MembersPanel
+            key={squadCode}
+            squadCode={squadCode}
+            players={lobby.players}
+            maxPlayers={lobby.maxPlayers}
+            presence={lobby.presence}
+            viewerId={session.user.id}
+            isReady={lobby.isReady}
+          />
+          <MemberInvite squadCode={squadCode} lobby={lobby} entering={readyEntrance} />
+        </div>
       </div>
-
-      <MemberInvite lobby={lobby} entering={readyEntrance} />
     </div>
   )
 }
 
 interface MemberInviteProps {
+  squadCode: string
   lobby: LobbyView
   entering: boolean
 }
 
 /**
- * The member's invite: the locked bar while the Squad forms, and the "Bora pro Discord" panel once a
- * snapshot says it is Ready. The panel renders only for a valid Discord invite, and shows nothing for any
- * other link.
+ * The member's invite, under the members panel: the locked panel while the Squad forms, and the "Bora pro
+ * Discord" panel once a snapshot says it is Ready. The panel renders only for a valid Discord invite, and
+ * shows nothing for any other link. The Discord server behind the invite is read only for that panel.
  */
-function MemberInvite({ lobby, entering }: MemberInviteProps) {
-  if (!lobby.isReady) return <LockedInvite />
+function MemberInvite({ squadCode, lobby, entering }: MemberInviteProps) {
+  const invite = lobby.isReady && lobby.discordLink ? parseDiscordInvite(lobby.discordLink) : null
+  const discord = useDiscordPreview(squadCode, invite !== null && lobby.squad !== null)
 
-  const invite = lobby.discordLink ? parseDiscordInvite(lobby.discordLink) : null
+  if (!lobby.isReady) {
+    return <LockedInvite filled={lobby.players.length} total={lobby.maxPlayers} />
+  }
   if (!invite || !lobby.squad) return null
 
   return (
@@ -189,6 +195,8 @@ function MemberInvite({ lobby, entering }: MemberInviteProps) {
       coverUrl={lobby.game?.coverUrl ?? null}
       online={Object.values(lobby.presence).filter((member) => member.online).length}
       members={lobby.players.length}
+      preview={discord.preview}
+      previewPending={discord.pending}
       entering={entering}
     />
   )

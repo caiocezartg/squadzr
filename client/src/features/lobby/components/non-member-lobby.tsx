@@ -31,6 +31,7 @@ function previewPlayers(squad: PublicSquad): Player[] {
 export function NonMemberLobby({ squad, viewerId, joining, onJoin }: NonMemberLobbyProps) {
   const t = useTranslations('ds.lobby')
   const players = previewPlayers(squad)
+  const memberCount = squad.memberCount ?? players.length
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6.5 pb-12 sm:px-6 lg:px-10">
@@ -45,19 +46,20 @@ export function NonMemberLobby({ squad, viewerId, joining, onJoin }: NonMemberLo
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
         <LobbyCover squad={squad} />
-        <MembersPanel
-          key={squad.code}
-          squadCode={squad.code}
-          players={players}
-          memberCount={squad.memberCount ?? players.length}
-          maxPlayers={squad.maxPlayers}
-          presence={null}
-          viewerId={viewerId}
-          isReady={false}
-        />
+        <div className="flex min-w-0 flex-1 flex-col gap-5">
+          <MembersPanel
+            key={squad.code}
+            squadCode={squad.code}
+            players={players}
+            memberCount={memberCount}
+            maxPlayers={squad.maxPlayers}
+            presence={null}
+            viewerId={viewerId}
+            isReady={false}
+          />
+          <LockedInvite filled={memberCount} total={squad.maxPlayers} />
+        </div>
       </div>
-
-      <LockedInvite />
     </div>
   )
 }
