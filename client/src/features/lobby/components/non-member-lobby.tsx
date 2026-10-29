@@ -45,19 +45,20 @@ export function NonMemberLobby({ squad, viewerId, joining, onJoin }: NonMemberLo
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
         <LobbyCover squad={squad} />
-        <MembersPanel
-          key={squad.code}
-          squadCode={squad.code}
-          players={players}
-          memberCount={squad.memberCount ?? players.length}
-          maxPlayers={squad.maxPlayers}
-          presence={null}
-          viewerId={viewerId}
-          isReady={false}
-        />
+        <div className="flex min-w-0 flex-1 flex-col gap-5">
+          <MembersPanel
+            key={squad.code}
+            squadCode={squad.code}
+            players={players}
+            memberCount={squad.memberCount ?? players.length}
+            maxPlayers={squad.maxPlayers}
+            presence={null}
+            viewerId={viewerId}
+            isReady={false}
+          />
+          <LockedInvite />
+        </div>
       </div>
-
-      <LockedInvite />
     </div>
   )
 }
