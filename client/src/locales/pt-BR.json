@@ -50,7 +50,6 @@
     "invite": {
       "lockedTitle": "Convite do Discord",
       "lockedBody": "Liberado quando o squad completar",
-      "badge": "SQUAD FECHADO",
       "title": "Bora pro Discord",
       "serverInvite": "CONVITE DO SERVIDOR",
       "inRoomNow": "{count} na sala agora",

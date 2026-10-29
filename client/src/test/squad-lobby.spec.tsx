@@ -256,7 +256,7 @@ describe('squad lobby — readiness from the snapshot', () => {
     sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
 
     expect(await screen.findByRole('heading', { name: "Let's go to Discord" })).toBeInTheDocument()
-    expect(screen.getByText('SQUAD CLOSED')).toBeInTheDocument()
+    expect(screen.queryByText('SQUAD CLOSED')).not.toBeInTheDocument()
     expect(screen.queryByText('Unlocked when the squad completes')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open in Discord' })).toHaveAttribute(
       'href',

@@ -100,18 +100,12 @@ export function ReadyInvite({
       />
 
       <div className="relative flex flex-col gap-5.5 p-4.5 sm:p-7 lg:pr-48">
-        <div className="flex flex-col gap-3">
-          <span className="font-ds-mono inline-flex items-center gap-2 self-start bg-bg/25 px-2.5 py-1.5 text-[11.5px] font-bold tracking-[0.14em]">
-            <Check aria-hidden="true" className="size-3 stroke-3" />
-            {t('badge')}
-          </span>
-          <h2
-            id="lobby-invite-heading"
-            className="font-display text-[44px] leading-none font-black wrap-anywhere uppercase sm:text-[72px]"
-          >
-            {t('title')}
-          </h2>
-        </div>
+        <h2
+          id="lobby-invite-heading"
+          className="font-display text-[44px] leading-none font-black wrap-anywhere uppercase sm:text-[72px]"
+        >
+          {t('title')}
+        </h2>
 
         <div className="bg-bg/30 flex flex-col shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)]">
           <div className="flex flex-wrap items-center gap-x-4.5 gap-y-4 p-4.5">
@@ -146,7 +140,7 @@ export function ReadyInvite({
             </Button>
           </div>
 
-          <div className="flex items-center gap-3 bg-bg/26 py-2 pr-2 pl-4.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+          <div className="flex items-center gap-3 bg-bg/26 py-2 pr-4.5 pl-4.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
             <LinkIcon aria-hidden="true" className="size-4 shrink-0 stroke-[2.4] text-white/70" />
             <span className="font-ds-mono min-w-0 flex-1 truncate text-[15px] font-bold">
               <span className="text-white/60">{invite.host}</span>

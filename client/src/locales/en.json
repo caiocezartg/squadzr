@@ -50,7 +50,6 @@
     "invite": {
       "lockedTitle": "Discord invite",
       "lockedBody": "Unlocked when the squad completes",
-      "badge": "SQUAD CLOSED",
       "title": "Let's go to Discord",
       "serverInvite": "SERVER INVITE",
       "inRoomNow": "{count} in the room now",
