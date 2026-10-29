@@ -6,7 +6,7 @@
  */
 
 import { screen, waitFor, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockMediaQuery } from './media-query'
 import { guestPlayer, hostPlayer, lobbySquad, lobbySnapshot, readyLobbySnapshot } from './fixtures'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
@@ -97,6 +97,24 @@ describe('the Lobby for a signed-in non-member', () => {
 
     expect(screen.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
     expect(screen.getByRole('button', { name: 'Join squad' })).toBeEnabled()
+  })
+
+  it('sends nothing, and warns of nothing, when its read resolves before the socket connects', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    try {
+      renderSquadsFlow('/squads/LOBBY1', { user: outsider })
+      // The read lands while the socket is still connecting: there is no room to leave, so no frame is tried.
+      await screen.findByRole('heading', { name: lobbySquad.name })
+
+      expect(warn).not.toHaveBeenCalledWith(
+        'WebSocket is not connected. Message not sent:',
+        expect.anything()
+      )
+      openLatestWebSocket()
+      expect(latestWebSocket().sentFrames()).toEqual([])
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   it('shows no Presence, no live channel and no member actions', async () => {
