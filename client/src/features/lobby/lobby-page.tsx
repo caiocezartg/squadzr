@@ -150,19 +150,18 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
         <LobbyCover squad={lobby.squad} />
-        <div className="flex min-w-0 flex-1 flex-col gap-5">
-          <MembersPanel
-            key={squadCode}
-            squadCode={squadCode}
-            players={lobby.players}
-            maxPlayers={lobby.maxPlayers}
-            presence={lobby.presence}
-            viewerId={session.user.id}
-            isReady={lobby.isReady}
-          />
-          <MemberInvite lobby={lobby} entering={readyEntrance} />
-        </div>
+        <MembersPanel
+          key={squadCode}
+          squadCode={squadCode}
+          players={lobby.players}
+          maxPlayers={lobby.maxPlayers}
+          presence={lobby.presence}
+          viewerId={session.user.id}
+          isReady={lobby.isReady}
+        />
       </div>
+
+      <MemberInvite lobby={lobby} entering={readyEntrance} />
     </div>
   )
 }
@@ -173,9 +172,9 @@ interface MemberInviteProps {
 }
 
 /**
- * The member's invite, under the members panel: the locked card while the Squad forms, and the "Bora pro
- * Discord" panel once a snapshot says it is Ready. The panel renders only for a valid Discord invite, and
- * shows nothing for any other link.
+ * The member's invite: the locked bar while the Squad forms, and the "Bora pro Discord" panel once a
+ * snapshot says it is Ready. The panel renders only for a valid Discord invite, and shows nothing for any
+ * other link.
  */
 function MemberInvite({ lobby, entering }: MemberInviteProps) {
   if (!lobby.isReady) return <LockedInvite />
