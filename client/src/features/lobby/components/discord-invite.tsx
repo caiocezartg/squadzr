@@ -96,26 +96,24 @@ export function ReadyInvite({
       )}
       <DiscordIcon
         aria-hidden="true"
-        className="absolute -right-7.5 -bottom-14 size-67.5 text-white opacity-16"
+        className="absolute -right-6 -bottom-10 size-36 text-white opacity-16"
       />
 
-      <div className="relative flex flex-col gap-5.5 p-4.5 sm:p-7 lg:pr-48">
+      <div className="relative flex flex-col gap-3 p-3.5 lg:flex-row lg:items-center lg:gap-8 xl:pr-24">
         <h2
           id="lobby-invite-heading"
-          className="font-display text-[44px] leading-none font-black wrap-anywhere uppercase sm:text-[72px]"
+          className="font-display text-[30px] leading-none font-black uppercase lg:w-52 lg:text-[40px]"
         >
           {t('title')}
         </h2>
 
-        <div className="bg-bg/30 flex flex-col shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)]">
-          <div className="flex flex-wrap items-center gap-x-4.5 gap-y-4 p-4.5">
+        <div className="bg-bg/30 flex min-w-0 flex-1 flex-col">
+          <div className="flex items-center gap-3 px-2.5 py-2">
             <ServerIcon coverUrl={coverUrl} />
-            <div className="flex min-w-0 flex-[1_1_15rem] flex-col gap-1.5">
-              <span className="font-ds-mono text-[11px] font-bold tracking-[0.14em] text-white/75">
-                {t('serverInvite')}
-              </span>
-              <span className="truncate text-xl leading-tight font-extrabold">{squadName}</span>
-              <span className="flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] font-semibold text-white/85">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="type-label text-white/75">{t('serverInvite')}</span>
+              <span className="truncate text-[17px]/5 font-extrabold">{squadName}</span>
+              <span className="flex flex-wrap gap-x-4 text-[12.5px] font-semibold text-white/85">
                 <span className="inline-flex items-center gap-1.75">
                   <span aria-hidden="true" className="bg-mint size-2 rounded-full" />
                   {t('inRoomNow', { count: online })}
@@ -126,43 +124,51 @@ export function ReadyInvite({
                 </span>
               </span>
             </div>
-            <Button
-              variant="light"
-              size="lg"
-              href={invite.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              icon={<ExternalLink />}
-              iconPosition="end"
-              className="max-sm:w-full"
-            >
-              {t('open')}
-            </Button>
           </div>
 
-          <div className="flex items-center gap-3 bg-bg/26 py-2 pr-4.5 pl-4.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
-            <LinkIcon aria-hidden="true" className="size-4 shrink-0 stroke-[2.4] text-white/70" />
-            <span className="font-ds-mono min-w-0 flex-1 truncate text-[15px] font-bold">
-              <span className="text-white/60">{invite.host}</span>
-              {invite.code}
+          <div className="bg-bg/26 flex flex-wrap items-center gap-x-3 gap-y-2 px-2.5 py-1.5 border-t border-white/10">
+            <span className="flex min-w-0 flex-[1_1_9rem] items-center gap-2.5">
+              <LinkIcon aria-hidden="true" className="size-4 shrink-0 stroke-[2.4] text-white/70" />
+              <span className="font-ds-mono min-w-0 flex-1 truncate text-[14px] font-bold">
+                <span className="text-white/60">{invite.host}</span>
+                {invite.code}
+              </span>
             </span>
-            <Button variant="glass" aria-label={copyLabel} onClick={() => void copyInvite()}>
-              <CopySwap
-                copied={copied}
-                idle={
-                  <>
-                    {t('copyLink')}
-                    <Copy className="size-3.75" />
-                  </>
-                }
-                done={
-                  <>
-                    {t('copied')}
-                    <Check className="size-3.75" />
-                  </>
-                }
-              />
-            </Button>
+            <div className="flex flex-wrap gap-2 max-sm:w-full">
+              <Button
+                variant="glass"
+                aria-label={copyLabel}
+                className="max-sm:grow max-sm:px-2.5"
+                onClick={() => void copyInvite()}
+              >
+                <CopySwap
+                  copied={copied}
+                  idle={
+                    <>
+                      {t('copyLink')}
+                      <Copy className="size-3.75" />
+                    </>
+                  }
+                  done={
+                    <>
+                      {t('copied')}
+                      <Check className="size-3.75" />
+                    </>
+                  }
+                />
+              </Button>
+              <Button
+                variant="light"
+                href={invite.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                icon={<ExternalLink />}
+                iconPosition="end"
+                className="max-sm:grow max-sm:px-2.5"
+              >
+                {t('open')}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -173,14 +179,14 @@ export function ReadyInvite({
 /** The game's cover as the server's icon, with the Discord badge on its corner. */
 function ServerIcon({ coverUrl }: { readonly coverUrl: string | null }) {
   return (
-    <span className="relative size-16 shrink-0">
+    <span className="relative size-11 shrink-0">
       {coverUrl ? (
-        <img src={coverUrl} alt="" className="block size-16 rounded-2xl object-cover" />
+        <img src={coverUrl} alt="" className="block size-11 rounded-xl object-cover" />
       ) : (
-        <span className="bg-raised-2 block size-16 rounded-2xl" />
+        <span className="bg-raised-2 block size-11 rounded-xl" />
       )}
-      <span className="bg-ds-discord absolute -right-1.25 -bottom-1.25 flex size-6 items-center justify-center rounded-full text-white shadow-[0_0_0_3px_#3941a5]">
-        <DiscordIcon aria-hidden="true" className="size-3.25" />
+      <span className="bg-ds-discord absolute -right-1 -bottom-1 flex size-5 items-center justify-center rounded-full text-white shadow-[0_0_0_2px_#3941a5]">
+        <DiscordIcon aria-hidden="true" className="size-2.75" />
       </span>
     </span>
   )
