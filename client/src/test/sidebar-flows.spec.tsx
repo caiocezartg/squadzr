@@ -382,20 +382,20 @@ describe('the bell', () => {
     onHttp('GET', '/api/notifications', () => httpOk({ notifications: [squadReadyNotification] }))
   })
 
-  /** Every bell on screen: its only text is the unread count. */
+  /** Every bell on screen: its accessible name carries the unread count. */
   function bells(): HTMLElement[] {
-    return screen.queryAllByRole('button', { name: '1' })
+    return screen.queryAllByRole('button', { name: 'Notifications, 1 unread' })
   }
 
   it('is only in the top bar below 1024px', async () => {
     mockMediaQuery(WIDE_QUERY, false)
     renderShell('/squads')
 
-    await screen.findByRole('button', { name: '1' })
+    await screen.findByRole('button', { name: 'Notifications, 1 unread' })
 
     expect(bells()).toHaveLength(1)
     expect(
-      within(screen.getByRole('banner')).getByRole('button', { name: '1' })
+      within(screen.getByRole('banner')).getByRole('button', { name: 'Notifications, 1 unread' })
     ).toBeInTheDocument()
   })
 
@@ -403,7 +403,7 @@ describe('the bell', () => {
     mockMediaQuery(WIDE_QUERY, true)
     renderShell('/squads')
 
-    const bell = await screen.findByRole('button', { name: '1' })
+    const bell = await screen.findByRole('button', { name: 'Notifications, 1 unread' })
 
     expect(bells()).toHaveLength(1)
     expect(screen.getByRole('banner')).not.toContainElement(bell)
@@ -419,8 +419,23 @@ describe('the bell', () => {
     expect(navigation).toBeDefined()
     act(() => navigation.history.push(`/squads/${lobbySquad.code}`))
 
-    await screen.findByRole('button', { name: '1' })
+    await screen.findByRole('button', { name: 'Notifications, 1 unread' })
 
+    expect(bells()).toHaveLength(1)
+  })
+
+  it("holds the bell's place in the page header before the width is known", async () => {
+    // The server render and the first client render take the width as narrow; at 1024px and up the
+    // header still shows the bell's square, so the live bell does not pop in.
+    mockMediaQuery(WIDE_QUERY, false)
+    renderShell('/squads')
+
+    const main = await screen.findByRole('main')
+    const placeholder = main.querySelector('[aria-hidden="true"].lg\\:flex')
+
+    expect(placeholder).not.toBeNull()
+    expect(placeholder?.tagName).toBe('SPAN')
+    await screen.findByRole('button', { name: 'Notifications, 1 unread' })
     expect(bells()).toHaveLength(1)
   })
 
@@ -434,7 +449,7 @@ describe('the bell', () => {
   it('moves from the top bar to the page when the viewport grows', async () => {
     const wide = mockMediaQuery(WIDE_QUERY, false)
     renderShell('/squads')
-    await screen.findByRole('button', { name: '1' })
+    await screen.findByRole('button', { name: 'Notifications, 1 unread' })
 
     act(() => wide.set(true))
 

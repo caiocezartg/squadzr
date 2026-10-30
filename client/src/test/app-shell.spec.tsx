@@ -93,8 +93,8 @@ describe('shell navigation', () => {
     notifications = [squadNotification(ALPHA_ID, 'Alpha squad', null)]
     const { user, navigation } = renderShell('/squads')
 
-    await user.click(await screen.findByRole('button', { name: '1' }))
-    await user.click(screen.getByRole('button', { name: /Alpha squad/ }))
+    await user.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }))
+    await user.click(await screen.findByRole('link', { name: /^Alpha squad/ }))
 
     expect(navigation.calls).toEqual([
       { method: 'push', href: `/squads/${squadReadyNotification.payload.roomCode}` },
@@ -114,8 +114,8 @@ describe('shell document title', () => {
 
     await waitFor(() => expect(document.title).toBe('(2) Squads · Squadzr'))
 
-    await user.click(await screen.findByRole('button', { name: '2' }))
-    await user.click(screen.getByRole('button', { name: 'Mark all read' }))
+    await user.click(await screen.findByRole('button', { name: 'Notifications, 2 unread' }))
+    await user.click(await screen.findByRole('button', { name: 'Mark all as read' }))
     await waitFor(() => expect(document.title).toBe('Squads · Squadzr'))
   })
 })

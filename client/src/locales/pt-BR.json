@@ -131,6 +131,17 @@
       "signIn": "Entrar com Discord",
       "account": "Menu da conta",
       "createSignIn": "Você pode explorar os squads como visitante, mas criar um squad exige entrar com o Discord."
+    },
+    "notifications": {
+      "bell": "Notificações",
+      "bellUnread": "Notificações, {count} {count, plural, one {não lida} other {não lidas}}",
+      "title": "Notificações",
+      "markAllRead": "Marcar todas como lidas",
+      "message": "Convite do Discord liberado",
+      "unread": "Não lida",
+      "dismiss": "Dispensar notificação de {squad}",
+      "emptyTitle": "Tudo em dia",
+      "emptyHint": "Quando um squad seu completar, o convite chega aqui."
     }
   },
   "footer": {
@@ -305,16 +316,6 @@
     "description": "Parece que você saiu do mapa. A página que você procura não existe ou foi movida.",
     "backToHome": "Voltar ao Início",
     "exploreSquads": "Explorar Squads"
-  },
-  "notifications": {
-    "title": "Notificações",
-    "bellLabel": "Notificações",
-    "markAllRead": "Marcar todas como lidas",
-    "empty": "Nenhuma notificação ainda",
-    "emptySubtitle": "Você será notificado quando seu time estiver pronto",
-    "squadReady": "Seu time está pronto — convite do Discord disponível",
-    "dismiss": "Dispensar",
-    "showing": "{count, plural, one {Mostrando última {count} notificação} other {Mostrando últimas {count} notificações}}"
   },
   "realtime": {
     "updating": "Uma nova versão está disponível. Recarregando…",
