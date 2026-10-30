@@ -729,6 +729,16 @@ describe('create squad — details step', () => {
     expect(screen.getByText('12/30')).toBeInTheDocument()
   })
 
+  it('counts the name the way the contract trims it', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    await user.type(screen.getByLabelText('Squad name'), '  Night ranked  ')
+
+    expect(screen.getByText('12/30')).toBeInTheDocument()
+  })
+
   it('refuses a name past 30 characters with the existing message', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
@@ -935,12 +945,14 @@ describe('create squad — discord step', () => {
     await user.clear(input)
     await user.type(input, 'https://discord.gg/abc123')
     expect(screen.getByText('VALID')).toBeInTheDocument()
+    expect(screen.getByText('Valid Discord invite')).toHaveAttribute('role', 'status')
     expect(screen.queryByText('Please enter a valid URL')).not.toBeInTheDocument()
     expect(screen.queryByText(notInvite)).not.toBeInTheDocument()
     expect(input).toBeValid()
 
     await user.clear(input)
     expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+    expect(screen.queryByText('Valid Discord invite')).not.toBeInTheDocument()
     expect(screen.queryByText('Please enter a valid URL')).not.toBeInTheDocument()
   })
 

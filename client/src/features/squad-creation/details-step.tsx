@@ -56,7 +56,7 @@ export function DetailsStep({ selectedGame, onChangeGame }: DetailsStepProps) {
   return (
     <>
       <div className="flex items-center gap-3 bg-[#0c0d10] p-2">
-        <GameCover game={selectedGame} />
+        <GameCover game={selectedGame} compact />
         <span className="font-ds-mono min-w-0 flex-1 truncate text-xs font-bold tracking-widest uppercase">
           {selectedGame.name}
         </span>
@@ -72,10 +72,10 @@ export function DetailsStep({ selectedGame, onChangeGame }: DetailsStepProps) {
           <span
             className={cn(
               'font-ds-mono text-[11px] tabular-nums',
-              name.length > NAME_MAX_LENGTH ? 'text-ds-danger' : 'text-ds-muted'
+              name.trim().length > NAME_MAX_LENGTH ? 'text-ds-danger' : 'text-ds-muted'
             )}
           >
-            {name.length}/{NAME_MAX_LENGTH}
+            {name.trim().length}/{NAME_MAX_LENGTH}
           </span>
         }
         errorId={ids.nameError}

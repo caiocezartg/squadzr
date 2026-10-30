@@ -41,8 +41,8 @@ const CARD_CLASSES =
 /**
  * The Redesign v2 Squad card (reference, Components, SquadCard). It is a link to the Lobby for a
  * member, a button that joins for an open Squad, and a disabled card for a full Squad the viewer
- * has not joined; a preview is none of these. The medium size is the default; the large one takes over at wide widths, where
- * the board lays two cards in a row.
+ * has not joined; a preview is none of these. The medium size is the default; the large one takes
+ * over at wide widths, where the board lays two cards in a row.
  */
 export function SquadCard({ squad, onJoin, isLoading, preview = false }: SquadCardProps) {
   const t = useTranslations()

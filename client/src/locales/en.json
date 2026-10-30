@@ -142,6 +142,7 @@
       "discordLabel": "Discord invite link",
       "discordPlaceholder": "https://discord.gg/your-invite",
       "discordValid": "VALID",
+      "discordValidAnnouncement": "Valid Discord invite",
       "discordHint": "Only members see it once the squad completes. Use an invite that doesn't expire.",
       "preview": "Preview",
       "previewNameFallback": "Squad name",

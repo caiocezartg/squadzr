@@ -39,9 +39,9 @@ export interface CreateSquadDialogProps {
 /**
  * The create-Squad wizard: three steps in the shared dialog (game, details, Discord invite). The
  * form values are inferred from the shared contract and live across steps, through "Back" and
- * "Change game" too; "Continue" validates the step it leaves, and the last step creates the Squad. The creation mutation, its typed errors, the
- * board refresh and the navigation to the new lobby stay internal. Callers mount the dialog while
- * it is open.
+ * "Change game" too; "Continue" validates the step it leaves, and the last step creates the
+ * Squad. The creation mutation, its typed errors, the board refresh and the navigation to the new
+ * lobby stay internal. Callers mount the dialog while it is open.
  */
 export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps) {
   const t = useTranslations('ds.createSquad')

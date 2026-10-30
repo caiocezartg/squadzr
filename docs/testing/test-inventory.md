@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 32     | 195   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 30     | 304   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 86     | 812   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 86     | 813   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 127   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -130,16 +130,16 @@ Removing the bundle budget deletes `scripts/bundle-report.spec.mjs` (2 tests) an
 from the `client:unit` include, so `client:unit` measures 78 files / 718 tests (732 → 718). On the CCC-108 tree merged with this change, `client:unit` measures 79 files / 733 tests; on the CCC-112 tree merged with both, 82 files / 772 tests.
 
 CCC-114 finishes the create wizard (details, Discord invite and a card preview) and recounts
-`client:unit` at 86 files / 812 tests (772 → 812, on the CCC-112 tree). It adds four suites, all
+`client:unit` at 86 files / 813 tests (772 → 813, on the CCC-112 tree). It adds four suites, all
 beside the modules they cover: `add-tag.spec.ts` (4 tests: the tag as the contract writes it, a
 blank or repeated tag ignored, the 15-character edge, the fifth and sixth tag),
 `discord-link.spec.ts` (7: the two invite hosts, no URL, a URL that is no invite),
 `preview-squad.spec.ts` (3: the form's values, the viewer as only member with a masked code, the name
 fallback) and `create-squad-form.spec.ts` (3: the limits read from the contract, the stepper's start).
-`create-squad.spec.tsx` grows from 32 to 52 tests: the chosen game with "Change game", the `n/30`
-counter and the too-long name, the stepper's start, announcement and 2–40 bounds, the language control,
-the tag suggestions, chips, Enter, comma, Backspace and both limits, the live Discord validation, the
-hint, the preview content, every value kept through Back, Continue and "Change game", the stepper
+`create-squad.spec.tsx` grows from 32 to 53 tests: the chosen game with "Change game", the `n/30`
+counter on the trimmed name and the too-long name, the stepper's start, announcement and 2–40 bounds, the language control,
+the tag suggestions, chips, Enter, comma, Backspace and both limits, the live Discord validation and its
+announcement, the hint, the preview content, every value kept through Back, Continue and "Change game", the stepper
 starting over for a different game, Back never validating, per-step validation, and the posted
 `maxPlayers` and language. `squad-card.spec.tsx` gains 3 tests for the non-interactive preview, and
 `messages.spec.ts` swaps the 40-player message test for the stepper's labels in both languages. The

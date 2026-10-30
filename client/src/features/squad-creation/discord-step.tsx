@@ -72,6 +72,9 @@ export function DiscordStep({ game }: { game: Game }) {
             )}
           </span>
         </FormField>
+        <p role="status" className="sr-only">
+          {valid ? t('ds.createSquad.discordValidAnnouncement') : ''}
+        </p>
         <p className="text-text-3 flex gap-2 text-[12.5px] leading-normal">
           <Lock aria-hidden className="text-ds-muted mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} />
           {t('ds.createSquad.discordHint')}

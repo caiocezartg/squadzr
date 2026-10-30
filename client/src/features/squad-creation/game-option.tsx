@@ -21,14 +21,18 @@ function initialsOf(name: string): string {
 }
 
 /** The cover, or the game's initials when the image does not load. */
-export function GameCover({ game }: { game: Game }) {
+export function GameCover({ game, compact = false }: { game: Game; compact?: boolean }) {
   const [failed, setFailed] = useState(false)
+  const size = compact ? 'h-10 w-7.5' : 'h-11 w-8.25'
 
   if (failed) {
     return (
       <span
         data-testid="game-initials"
-        className="bg-track text-text-3 font-ds-mono flex h-11 w-8.25 shrink-0 items-center justify-center text-[11px] font-extrabold"
+        className={cn(
+          'bg-track text-text-3 font-ds-mono flex shrink-0 items-center justify-center text-[11px] font-extrabold',
+          size
+        )}
       >
         {initialsOf(game.name)}
       </span>
@@ -40,7 +44,7 @@ export function GameCover({ game }: { game: Game }) {
       src={game.coverThumbUrl}
       alt=""
       onError={() => setFailed(true)}
-      className="block h-11 w-8.25 shrink-0 object-cover"
+      className={cn('block shrink-0 object-cover', size)}
     />
   )
 }

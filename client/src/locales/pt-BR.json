@@ -142,6 +142,7 @@
       "discordLabel": "Link de convite do Discord",
       "discordPlaceholder": "https://discord.gg/seu-convite",
       "discordValid": "VÁLIDO",
+      "discordValidAnnouncement": "Convite do Discord válido",
       "discordHint": "Só aparece pros membros quando o squad completar. Use um convite sem expiração.",
       "preview": "Prévia",
       "previewNameFallback": "Nome do squad",

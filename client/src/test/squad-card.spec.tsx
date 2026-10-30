@@ -272,14 +272,13 @@ describe('squad card — preview', () => {
     expect(onJoin).not.toHaveBeenCalled()
   })
 
-  it('does not react to hover or focus like the interactive states', () => {
+  it('is not an action the viewer can focus or press', () => {
     render(<SquadCard squad={openSquad} preview />)
 
     const card = screen.getByRole('group')
-    expect(card).not.toHaveClass('group')
-    expect(card.className).not.toContain('hover-fine:bg-raised')
-    expect(card.className).not.toContain('focus-visible')
     expect(card).not.toHaveAttribute('tabindex')
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('shows its one member as a member, never as a full Squad', () => {
