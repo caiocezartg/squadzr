@@ -792,19 +792,19 @@ describe('squad lobby — the member Lobby', () => {
     expect(tileOf('Ana')).toHaveTextContent('Out of the room · 7m ago')
   })
 
-  it('pages the members eight to a page, the open slots after the last member', async () => {
-    const { user } = await renderLobbyWithSnapshot(bigSquadSnapshot(9))
+  it('pages the members six to a page, the open slots after the last member', async () => {
+    const { user } = await renderLobbyWithSnapshot(bigSquadSnapshot(7))
 
-    expect(screen.getAllByRole('listitem')).toHaveLength(8)
-    expect(screen.getByText('Member 7')).toBeInTheDocument()
-    expect(screen.queryByText('Member 8')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('listitem')).toHaveLength(6)
+    expect(screen.getByText('Member 5')).toBeInTheDocument()
+    expect(screen.queryByText('Member 6')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: 'Page 2' }))
 
     const tiles = screen.getAllByRole('listitem')
-    expect(tiles).toHaveLength(2)
-    expect(tiles[0]).toHaveTextContent('Member 8')
+    expect(tiles).toHaveLength(4)
+    expect(tiles[0]).toHaveTextContent('Member 6')
     expect(tiles[1]).toHaveTextContent('Open slot')
   })
 
@@ -828,17 +828,17 @@ describe('squad lobby — the member Lobby', () => {
   })
 
   it('does not replay an entrance when the viewer pages away and back', async () => {
-    const { user } = await renderLobbyWithSnapshot(bigSquadSnapshot(7))
+    const { user } = await renderLobbyWithSnapshot(bigSquadSnapshot(5))
 
-    sendFromServer({ type: 'room_snapshot', payload: bigSquadSnapshot(8) })
-    await screen.findByText('Member 7')
-    await waitFor(() => expect(tileOf('Member 7').style.opacity).toBe('1'))
+    sendFromServer({ type: 'room_snapshot', payload: bigSquadSnapshot(6) })
+    await screen.findByText('Member 5')
+    await waitFor(() => expect(tileOf('Member 5').style.opacity).toBe('1'))
 
     await user.click(screen.getByRole('button', { name: 'Page 2' }))
     await user.click(screen.getByRole('button', { name: 'Page 1' }))
 
     // Back on page 1 the tile is already in its final state: it does not start from opacity 0 again.
-    expect(tileOf('Member 7').style.opacity).toBe('1')
+    expect(tileOf('Member 5').style.opacity).toBe('1')
   })
 
   it('enters a new member with the fade alone under reduced motion, ending in the final state', async () => {

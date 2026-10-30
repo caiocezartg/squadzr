@@ -20,7 +20,7 @@ const MASKED_LINK = 'discord.gg/••••••••'
 /** The link row, whose two actions sit beside it from this width of the panel and under it below. */
 const FOOTER_CLASSES =
   'flex flex-col gap-2.5 border-t px-3.5 py-3 @2xl:flex-row @2xl:items-center @2xl:gap-3'
-const ACTIONS_CLASSES = 'grid grid-cols-2 gap-2 @2xl:flex @2xl:shrink-0'
+const ACTIONS_CLASSES = 'grid grid-cols-1 gap-2 min-[425px]:grid-cols-2 @2xl:flex @2xl:shrink-0'
 const ACTION_CLASSES = 'max-sm:px-2.5 @2xl:px-4'
 
 /** The server card's stats row, which the locked panel's slots row matches in height. */

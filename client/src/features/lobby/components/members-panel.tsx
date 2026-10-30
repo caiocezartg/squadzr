@@ -17,7 +17,7 @@ import { useRosterArrivals } from '../use-roster-arrivals'
 import { RosterCounter } from './roster-counter'
 
 /** Member tiles per page of the members panel (reference, Lobby). */
-const TILES_PER_PAGE = 8
+const TILES_PER_PAGE = 6
 
 /** A member who joins while the viewer watches: from `opacity 0; scale(0.9)` with a spring. */
 const ArrivingMemberTile = m.create(MemberTile)
@@ -48,7 +48,7 @@ interface MembersPanelProps {
 
 /**
  * The members panel (reference, Lobby): the counter, the copyable code, the blocks meter and the member
- * tiles, eight to a page. The order is the server's: the host first, then by join time. Open slots follow
+ * tiles, six to a page. The order is the server's: the host first, then by join time. Open slots follow
  * the members.
  */
 export function MembersPanel({
