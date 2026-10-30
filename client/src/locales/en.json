@@ -44,7 +44,22 @@
       "coverAlt": "{game} cover",
       "created": "Created {time}",
       "members": "Members",
-      "playerCount": "{current}/{max} players"
+      "playerCount": "{current}/{max} players",
+      "joinSquad": "Join squad"
+    },
+    "invite": {
+      "lockedTitle": "Discord invite",
+      "lockedBody": "Unlocked when the squad completes",
+      "title": "Let's go to Discord",
+      "serverInvite": "SERVER INVITE",
+      "open": "Open in Discord",
+      "copyLink": "Copy link",
+      "copied": "Copied",
+      "slotsLeft": "{count, plural, one {# slot left} other {# slots left}}",
+      "statOnline": "online",
+      "statMembers": "{count, plural, one {member} other {members}}",
+      "statInRoom": "in the room now",
+      "statPlayers": "{count, plural, one {player} other {players}}"
     },
     "close": "Close",
     "pagination": {
@@ -303,13 +318,6 @@
     "backToSquads": "Back to squads",
     "cannotLeave": "Cannot leave a full squad",
     "pleaseSignIn": "Please sign in to view this squad."
-  },
-  "discordCard": {
-    "title": "Your squad is ready!",
-    "description": "Join the Discord server to start playing together.",
-    "copied": "Copied!",
-    "copyLink": "Copy link",
-    "joinDiscord": "Join Discord"
   },
   "notFound": {
     "title": "Page not found",

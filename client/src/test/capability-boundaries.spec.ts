@@ -39,8 +39,9 @@ const TEST_FILE_PATTERN = /\.(spec|test)\.[^.]+$/
 // `skeleton` is the light entry point the loading states render, so the page is
 // never pulled into a loading chunk. `page` is the page's own entry point; the
 // barrel exports only commands, so the page is never reached through it. `server` is the entry of a
-// layout that reads a capability's data without rendering its client view (the shell's squad count).
-const PUBLIC_ENTRY_POINTS = new Set(['', 'index', 'skeleton', 'page', 'server'])
+// layout that reads a capability's data without rendering its client view (the shell's squad count). `join` is
+// the joining capability's light entry: the join request without its sign-in prompt, for the Lobby's bundle.
+const PUBLIC_ENTRY_POINTS = new Set(['', 'index', 'skeleton', 'page', 'server', 'join'])
 
 function toPosix(path: string): string {
   return path.split(sep).join('/')

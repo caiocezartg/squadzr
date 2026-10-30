@@ -6,6 +6,7 @@ import { createGameController } from '@interface/factories/game.factory'
 import {
   createRoomInputSchema,
   createRoomResponseSchema,
+  discordPreviewResponseSchema,
   errorResponseSchema as errorResponse,
   gameIdParamSchema,
   gameResponseSchema,
@@ -23,7 +24,12 @@ import {
 
 export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
-  const roomController = createRoomController(fastify.db, fastify.broadcaster, fastify.clock)
+  const roomController = createRoomController(
+    fastify.db,
+    fastify.broadcaster,
+    fastify.clock,
+    fastify.discordPreviews
+  )
   const gameController = createGameController(fastify.db, fastify.clock)
 
   // Games
@@ -112,6 +118,25 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       },
     },
     handler: roomController.getByCode.bind(roomController),
+  })
+
+  app.get('/api/rooms/:code/discord-preview', {
+    schema: {
+      tags: ['Rooms'],
+      summary: 'Get the Discord server behind a Ready Room',
+      description:
+        'Returns the name, icon, backdrop and member counts of the Discord server the Ready Room invites to, read from Discord by the server and cached for ten minutes. The preview is null whenever Discord has nothing to show (invalid or expired invite, Discord down or rate limiting), so the caller falls back to the data of the Room itself. Only members of a Ready Room may ask. Requires authentication.',
+      security: [{ session: [] }],
+      params: roomCodeParamSchema,
+      response: {
+        200: discordPreviewResponseSchema,
+        401: errorResponse,
+        404: errorResponse,
+        422: errorResponse,
+      },
+    },
+    preHandler: requireAuth,
+    handler: roomController.getDiscordPreview.bind(roomController),
   })
 
   app.post('/api/rooms', {

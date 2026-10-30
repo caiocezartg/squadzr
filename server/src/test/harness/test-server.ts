@@ -2,8 +2,14 @@ import type { FastifyInstance, FastifyServerOptions } from 'fastify'
 import { inject } from 'vitest'
 import { buildApp } from '@/app'
 import type { Clock } from '@domain/services/clock.interface'
+import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
 import { parseEnv, type Env } from '@config/env'
 import { createIsolatedDatabase } from './postgres'
+
+/** Discord's answer for every invite unless a test says otherwise: tests never reach the network. */
+const UNKNOWN_INVITES: DiscordInvitePreviewProvider = {
+  fetch: () => Promise.resolve({ kind: 'invalid' }),
+}
 
 /** Better Auth secret of every test server; session cookies in tests are signed with it. */
 export const TEST_AUTH_SECRET = 'integration-test-secret-with-32-plus-chars'
@@ -18,6 +24,8 @@ export interface TestServer {
 export interface BuildTestServerOptions {
   /** Injects a deterministic clock; defaults to the production system clock. */
   clock?: Clock
+  /** Replaces Discord's invite endpoint, which no test reaches. Defaults to an invite Discord does not know. */
+  discordPreviews?: DiscordInvitePreviewProvider
   /**
    * Replaces the production logger for tests that read request logs. Omitted, the
    * server logs through `defaultLogger(env)`, which stays quiet at the test level.
@@ -51,7 +59,12 @@ export async function buildTestServer(
 
   let app: FastifyInstance | undefined
   try {
-    app = await buildApp({ env, logger: options.logger, clock: options.clock })
+    app = await buildApp({
+      env,
+      logger: options.logger,
+      clock: options.clock,
+      discordPreviews: options.discordPreviews ?? UNKNOWN_INVITES,
+    })
     await app.ready()
   } catch (error) {
     await app?.close()

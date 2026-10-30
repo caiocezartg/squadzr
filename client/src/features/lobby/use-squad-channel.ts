@@ -65,9 +65,14 @@ export function useSquadChannel({
   // left sees a mismatch below.
   const activeCodeRef = useRef(squadCode)
 
+  // Whether the socket is open now. The join effect reads it without depending on it, so a connection change
+  // never resets the channel.
+  const statusRef = useRef(status)
+
   useLayoutEffect(() => {
     activeCodeRef.current = squadCode
-  }, [squadCode])
+    statusRef.current = status
+  }, [squadCode, status])
 
   useEffect(() => {
     // A different Squad code must never show the previous Squad's live state.
@@ -78,11 +83,14 @@ export function useSquadChannel({
 
     const previousCode = joinedCodeRef.current
     joinedCodeRef.current = enabled ? squadCode : null
-    if (!enabled) return
-
-    if (previousCode && previousCode !== squadCode) {
+    // The socket releases the room it was in when the page moves to another Squad, and when it stops joining
+    // at all (the viewer is outside the Squad it moved to): the room's members must not keep seeing this tab.
+    // A socket that is not open has joined nothing (its join is only replayed on open, and the subscription
+    // ends here), so there is no room to leave and no frame to try.
+    if (previousCode && (!enabled || previousCode !== squadCode) && statusRef.current === 'open') {
       send({ type: 'leave_room', payload: { roomCode: previousCode } })
     }
+    if (!enabled) return
 
     // The transport replays this subscription after every reconnect and the fresh snapshot replaces all
     // live state.

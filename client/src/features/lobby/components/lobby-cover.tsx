@@ -38,10 +38,10 @@ export function LobbyCover({ squad }: LobbyCoverProps) {
   return (
     <section
       aria-label={t('ds.lobby.aboutSquad')}
-      className="relative flex flex-col lg:w-72 lg:shrink-0 xl:w-95"
+      className="relative flex flex-col lg:w-72 lg:shrink-0 xl:w-auto xl:min-w-0 xl:flex-1"
     >
       <CornerMarks />
-      <div className="bg-raised-2 relative flex aspect-video flex-1 flex-col justify-between gap-6 p-4 sm:p-5.5 lg:aspect-3/4">
+      <div className="bg-raised-2 relative flex aspect-video flex-1 flex-col justify-between gap-6 p-4 sm:p-5.5 lg:aspect-3/4 xl:aspect-auto">
         <div className="absolute inset-0 overflow-hidden">
           {game?.coverUrl && (
             <img

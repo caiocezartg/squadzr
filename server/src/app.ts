@@ -11,6 +11,7 @@ import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod
 import { WS_MAX_PAYLOAD_BYTES } from '@squadzr/schemas/ws'
 import type { Env } from '@config/env'
 import type { Clock } from '@domain/services/clock.interface'
+import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
 import { SystemClock } from '@infrastructure/services/system-clock'
 import errorHandlerPlugin from '@infrastructure/plugins/error-handler.plugin'
 import databasePlugin from '@infrastructure/plugins/database.plugin'
@@ -19,6 +20,7 @@ import swaggerPlugin from '@infrastructure/plugins/swagger.plugin'
 import wsPlugin from '@infrastructure/websocket/ws.plugin'
 import roomCleanupPlugin from '@infrastructure/plugins/room-cleanup.plugin'
 import { registerRoutes } from '@interface/routes'
+import { createDiscordInvitePreviews } from '@interface/factories/discord-preview.factory'
 import { createRealtime } from '@interface/factories/realtime.factory'
 import { createRoomCleanupUseCase } from '@interface/factories/room-cleanup.factory'
 
@@ -26,6 +28,8 @@ declare module 'fastify' {
   interface FastifyInstance {
     /** Injected lifecycle clock: every expiration/limit decision reads it. */
     clock: Clock
+    /** The cached source of the Discord server behind a Ready Squad's invite. */
+    discordPreviews: DiscordInvitePreviewProvider
   }
 }
 
@@ -35,6 +39,8 @@ export interface BuildAppOptions {
   logger?: FastifyServerOptions['logger']
   /** Overrides the system clock; tests inject a fixed clock for exact instants. */
   clock?: Clock
+  /** Replaces Discord's public invite endpoint; tests inject a stub so none of them reaches the network. */
+  discordPreviews?: DiscordInvitePreviewProvider
 }
 
 /**
@@ -91,13 +97,19 @@ export function defaultLogger(env: Env): FastifyLoggerOptions {
  * Every instance owns its database pool, WebSocket server and timers, and
  * releases all of them on `app.close()`.
  */
-export async function buildApp({ env, logger, clock }: BuildAppOptions): Promise<FastifyInstance> {
+export async function buildApp({
+  env,
+  logger,
+  clock,
+  discordPreviews,
+}: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
     trustProxy: true,
     logger: logger ?? defaultLogger(env),
   })
 
   fastify.decorate('clock', clock ?? new SystemClock())
+  fastify.decorate('discordPreviews', discordPreviews ?? createDiscordInvitePreviews(fastify.clock))
 
   // Route schemas validate and serialize all HTTP input and output: set them before any route.
   fastify.setValidatorCompiler(validatorCompiler)

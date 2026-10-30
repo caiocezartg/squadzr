@@ -6,6 +6,7 @@ export {
   RoomFullError,
   RoomReadyError,
   NotRoomMemberError,
+  RoomNotReadyError,
   RoomCreateLimitReachedError,
   RoomJoinLimitReachedError,
 } from './business-rule.error'

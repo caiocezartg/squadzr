@@ -48,3 +48,12 @@ export class RoomJoinLimitReachedError extends AppError {
     super(`You can only be in ${limit} active rooms at a time`)
   }
 }
+
+export class RoomNotReadyError extends AppError {
+  readonly statusCode = 422
+  readonly code = 'ROOM_NOT_READY'
+
+  constructor(roomId: string) {
+    super(`Room "${roomId}" is not ready yet`)
+  }
+}
