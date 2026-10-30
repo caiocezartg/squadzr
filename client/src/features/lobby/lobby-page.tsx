@@ -133,7 +133,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
   }
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-6.5 pb-12 sm:px-6 lg:px-10">
+    <div className="mx-auto flex w-full max-w-304 flex-col gap-5 px-4 pt-6.5 pb-12 sm:px-6 lg:px-10">
       <LobbyActions
         squadCode={squadCode}
         connectionStatus={lobby.connectionStatus}
