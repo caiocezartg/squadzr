@@ -146,6 +146,17 @@
       "signIn": "Sign in with Discord",
       "account": "Account menu",
       "createSignIn": "You can explore squads as a guest, but creating a squad requires signing in with Discord."
+    },
+    "notifications": {
+      "bell": "Notifications",
+      "bellUnread": "Notifications, {count} unread",
+      "title": "Notifications",
+      "markAllRead": "Mark all as read",
+      "message": "Discord invite unlocked",
+      "unread": "Unread",
+      "dismiss": "Dismiss notification for {squad}",
+      "emptyTitle": "All caught up",
+      "emptyHint": "When one of your Squads fills up, the invite lands here."
     }
   },
   "footer": {
@@ -313,16 +324,6 @@
     "description": "Looks like you've wandered off the map. The page you're looking for doesn't exist or has been moved.",
     "backToHome": "Back to Home",
     "exploreSquads": "Explore Squads"
-  },
-  "notifications": {
-    "title": "Notifications",
-    "bellLabel": "Notifications",
-    "markAllRead": "Mark all read",
-    "empty": "No notifications yet",
-    "emptySubtitle": "You'll be notified when your squad is ready",
-    "squadReady": "Your squad is ready — Discord invite available",
-    "dismiss": "Dismiss",
-    "showing": "{count, plural, one {Showing last {count} notification} other {Showing last {count} notifications}}"
   },
   "realtime": {
     "updating": "A new version is available. Reloading…",

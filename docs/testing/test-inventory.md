@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 32     | 195   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 30     | 304   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 81     | 757   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 82     | 772   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 127   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -116,9 +116,18 @@ with focus outside the search, the horizontally clipped slide, the two-line step
 the highlighted option. The chevron case and the old route-animation case are gone with their
 code.
 
+CCC-108 restyles the notifications panel and recounts `client:unit` at 81 files / 747 tests. It adds
+`src/components/ds/notification-item.spec.tsx` (7 tests: the name, message and game with the time,
+the unread name and hidden text, a read row and its grayscale cover, the placeholder without a cover, open and
+dismiss with the dismiss label naming the Squad, and the dismiss button on focus), rewrites
+`notifications.spec.tsx` against the new panel (15 tests: open, the panel code loaded on idle with the Popover trigger and the focus kept, the unread marks, the 9+ badge cap, the
+empty state, the bottom sheet below 640px, mark one, mark all, dismiss, the three failures, cover and no
+cover) and adds one `sidebar-flows.spec.tsx` case (the bell's place held in the page header). The other
+shell bell cases changed only in the bell's accessible name.
+
 Removing the bundle budget deletes `scripts/bundle-report.spec.mjs` (2 tests) and
 `scripts/bundle-limits.spec.mjs` (12 tests) with the scripts they covered, and drops `scripts/**`
-from the `client:unit` include, so `client:unit` measures 78 files / 718 tests (732 → 718). On the CCC-112 tree merged with this change, `client:unit` measures 81 files / 757 tests.
+from the `client:unit` include, so `client:unit` measures 78 files / 718 tests (732 → 718). On the CCC-108 tree merged with this change, `client:unit` measures 79 files / 733 tests; on the CCC-112 tree merged with both, 82 files / 772 tests.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
