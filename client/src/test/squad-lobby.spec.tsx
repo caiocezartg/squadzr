@@ -775,6 +775,8 @@ describe('squad lobby — the member Lobby', () => {
     expect(tiles[1]).toHaveTextContent('Ana')
     expect(within(tileOf('Ana')).queryByText('you')).not.toBeInTheDocument()
     expect(tiles[2]).toHaveTextContent('Open slot')
+    // Blank cells, hidden from assistive tech, keep the page as tall as a full one of six.
+    expect(tiles[0]?.parentElement?.querySelectorAll('li[aria-hidden="true"]')).toHaveLength(3)
   })
 
   it('reads online and away members in words, with the time away when it is known', async () => {

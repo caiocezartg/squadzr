@@ -73,6 +73,8 @@ export function MembersPanel({
   const first = (page - 1) * TILES_PER_PAGE
   const visibleMembers = players.slice(first, first + TILES_PER_PAGE)
   const openSlots = Math.min(first + TILES_PER_PAGE, tileCount) - first - visibleMembers.length
+  // Blank cells that keep every page as tall as a full one in the two-column grid, so a small Squad's panel matches a big one's.
+  const blankCells = TILES_PER_PAGE - visibleMembers.length - openSlots
 
   const copyCode = async () => {
     await navigator.clipboard.writeText(squadCode)
@@ -118,7 +120,7 @@ export function MembersPanel({
         </div>
       </div>
 
-      <ul className="grid grid-cols-1 gap-1.5 @xl:grid-cols-2">
+      <ul className="grid auto-rows-fr grid-cols-1 gap-1.5 @xl:grid-cols-2">
         {visibleMembers.map((player) => {
           const memberPresence = presence?.[player.id]
           const tile = {
@@ -146,6 +148,9 @@ export function MembersPanel({
         })}
         {Array.from({ length: openSlots }, (_, index) => (
           <MemberTile key={`open-${first + visibleMembers.length + index}`} open />
+        ))}
+        {Array.from({ length: blankCells }, (_, index) => (
+          <li key={`blank-${index}`} aria-hidden="true" className="hidden @xl:block" />
         ))}
       </ul>
 
