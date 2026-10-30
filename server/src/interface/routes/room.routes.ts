@@ -144,13 +144,14 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       tags: ['Rooms'],
       summary: 'Create a room',
       description:
-        'Creates a new room and adds the authenticated user as host. Requires authentication.',
+        'Creates a new room and adds the authenticated user as host. The server asks Discord whether the invite exists and refuses one it does not know with 422 INVALID_DISCORD_INVITE; a Discord that cannot be reached lets the room through. Requires authentication.',
       security: [{ session: [] }],
       body: createRoomInputSchema,
       response: {
         201: createRoomResponseSchema,
         400: errorResponse,
         401: errorResponse,
+        422: errorResponse,
       },
     },
     preHandler: requireAuth,

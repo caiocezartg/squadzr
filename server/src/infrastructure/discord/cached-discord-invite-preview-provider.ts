@@ -6,13 +6,16 @@ import type { Clock } from '@domain/services/clock.interface'
 
 /** How long an answer, a negative one included, keeps Discord from being asked again. */
 const DEFAULT_TTL_MS = 10 * 60_000
-/** A Discord that was slow or down is asked again sooner: the outage is not the invite's fault. */
-const DEFAULT_UNREACHABLE_TTL_MS = 60_000
+/**
+ * A Discord that was slow or down is asked again sooner, since the outage is not the invite's fault, and so
+ * is an invite Discord does not know: its creator may be about to make it.
+ */
+const DEFAULT_SHORT_TTL_MS = 60_000
 const DEFAULT_MAX_ENTRIES = 500
 
 export interface CachedDiscordInvitePreviewOptions {
   readonly ttlMs?: number
-  readonly unreachableTtlMs?: number
+  readonly shortTtlMs?: number
   readonly maxEntries?: number
 }
 
@@ -23,14 +26,15 @@ interface Entry {
 }
 
 /**
- * Remembers what Discord said about each invite code for ten minutes, an invalid, expired or rate-limited
- * answer included, so a popular Lobby never makes Discord hear from it more than once per window. It
- * lives in memory, per process, and holds at most `maxEntries` codes.
+ * Remembers what Discord said about each invite code for ten minutes, a rate-limited answer included, and
+ * for a minute when the invite is unknown or Discord was unreachable, so a popular Lobby never makes Discord
+ * hear from it more than once per window. It lives in memory, per process, and holds at most `maxEntries`
+ * codes.
  */
 export class CachedDiscordInvitePreviewProvider implements DiscordInvitePreviewProvider {
   private readonly entries = new Map<string, Entry>()
   private readonly ttlMs: number
-  private readonly unreachableTtlMs: number
+  private readonly shortTtlMs: number
   private readonly maxEntries: number
 
   constructor(
@@ -39,7 +43,7 @@ export class CachedDiscordInvitePreviewProvider implements DiscordInvitePreviewP
     options: CachedDiscordInvitePreviewOptions = {}
   ) {
     this.ttlMs = options.ttlMs ?? DEFAULT_TTL_MS
-    this.unreachableTtlMs = options.unreachableTtlMs ?? DEFAULT_UNREACHABLE_TTL_MS
+    this.shortTtlMs = options.shortTtlMs ?? DEFAULT_SHORT_TTL_MS
     this.maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES
   }
 
@@ -59,7 +63,9 @@ export class CachedDiscordInvitePreviewProvider implements DiscordInvitePreviewP
   }
 
   private ttlFor(outcome: DiscordInvitePreviewOutcome): number {
-    return outcome.kind === 'unreachable' ? this.unreachableTtlMs : this.ttlMs
+    return outcome.kind === 'unreachable' || outcome.kind === 'invalid'
+      ? this.shortTtlMs
+      : this.ttlMs
   }
 
   /** Drops expired answers first and then the oldest, so the map cannot grow with every code seen. */

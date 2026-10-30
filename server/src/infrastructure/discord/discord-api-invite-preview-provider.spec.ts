@@ -4,7 +4,7 @@ import {
   type FetchLike,
 } from './discord-api-invite-preview-provider'
 
-/** The shape of a live answer (valorant, with_counts=true), reduced to the fields in use. */
+/** The shape of a live answer (valorant, with_counts and with_expiration), reduced to the fields in use. */
 const VALORANT = {
   code: 'valorant',
   expires_at: null,
@@ -31,13 +31,15 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
 describe('DiscordApiInvitePreviewProvider', () => {
-  it('asks the public invite endpoint for the counts, with no credentials', async () => {
+  it('asks the public invite endpoint for the counts and the expiration, with no credentials', async () => {
     const { provider, fetchImpl } = providerAnswering(json(VALORANT))
 
     await provider.fetch('valorant')
 
     const [url, init] = fetchImpl.mock.calls[0] ?? []
-    expect(url).toBe('https://discord.com/api/v10/invites/valorant?with_counts=true')
+    expect(url).toBe(
+      'https://discord.com/api/v10/invites/valorant?with_counts=true&with_expiration=true'
+    )
     expect(new Headers(init?.headers).has('authorization')).toBe(false)
   })
 
@@ -54,6 +56,7 @@ describe('DiscordApiInvitePreviewProvider', () => {
           'https://cdn.discordapp.com/banners/679875946597056683/a_30b871864f463af9a2fe800b1c31b971.png?size=480',
         memberCount: 2_946_792,
         onlineCount: 362_025,
+        expiresAt: null,
       },
     })
   })
@@ -72,7 +75,19 @@ describe('DiscordApiInvitePreviewProvider', () => {
         backdropUrl: 'https://cdn.discordapp.com/splashes/1/def456.png?size=480',
         memberCount: null,
         onlineCount: null,
+        expiresAt: null,
       },
+    })
+  })
+
+  it('carries the moment an expiring invite stops working', async () => {
+    const { provider } = providerAnswering(
+      json({ ...VALORANT, expires_at: '2026-11-01T12:00:00.000000+00:00' })
+    )
+
+    await expect(provider.fetch('valorant')).resolves.toMatchObject({
+      kind: 'found',
+      preview: { expiresAt: '2026-11-01T12:00:00.000000+00:00' },
     })
   })
 

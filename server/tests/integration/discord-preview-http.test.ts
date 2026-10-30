@@ -11,13 +11,15 @@ import { buildTestServer, type TestServer } from '@test/harness/test-server'
 // The Discord preview endpoint through Fastify injection against a real PostgreSQL 16 database. Discord
 // itself is replaced by a stub: no test reaches the network.
 
-const PREVIEW = {
+const SERVER = {
   name: 'VALORANT',
   iconUrl: 'https://cdn.discordapp.com/icons/1/abc.png?size=128',
   backdropUrl: null,
   memberCount: 2_946_792,
   onlineCount: 362_025,
 }
+// What the provider reads also carries when the invite expires, which the Lobby never shows.
+const PREVIEW = { ...SERVER, expiresAt: '2026-11-01T12:00:00.000000+00:00' }
 
 let server: TestServer
 let discord: { fetch: ReturnType<typeof vi.fn<DiscordInvitePreviewProvider['fetch']>> }
@@ -39,6 +41,8 @@ afterEach(async () => {
 
 /** A Squad of two with its invite, Ready once the second member joins. */
 async function createSquad(options: { ready: boolean }) {
+  // Creating the Squad checks its invite too: it exists, whatever a test then has Discord answer.
+  discord.fetch.mockResolvedValueOnce({ kind: 'found', preview: PREVIEW })
   const room = await createRoom(server, host, {
     gameId,
     maxPlayers: 2,
@@ -47,6 +51,7 @@ async function createSquad(options: { ready: boolean }) {
   const [guest] = await signInMany(server, 1)
   if (!guest) throw new Error('No guest')
   if (options.ready) await joinAll(server, room.code, [guest])
+  discord.fetch.mockClear()
   return { room, guest }
 }
 
@@ -58,7 +63,7 @@ describe('GET /api/rooms/:code/discord-preview', () => {
     const response = await get(server, `/api/rooms/${room.code}/discord-preview`, host)
 
     expect(response.statusCode, response.body).toBe(200)
-    expect(discordPreviewResponseSchema.parse(response.json())).toEqual({ preview: PREVIEW })
+    expect(discordPreviewResponseSchema.parse(response.json())).toEqual({ preview: SERVER })
     expect(discord.fetch).toHaveBeenCalledWith('valorant')
   })
 

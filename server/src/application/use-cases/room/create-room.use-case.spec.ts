@@ -1,7 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CreateRoomUseCase } from './create-room.use-case'
+import type {
+  DiscordInvitePreviewOutcome,
+  DiscordInvitePreviewProvider,
+} from '@domain/services/discord-invite-preview-provider.interface'
 import {
   GameNotAvailableError,
+  InvalidDiscordInviteError,
   InvalidGameError,
   RoomCreateLimitReachedError,
   UserNotFoundError,
@@ -21,6 +26,9 @@ describe('CreateRoomUseCase', () => {
   let mockRoomRepository: ReturnType<typeof createMockRoomRepository>
   let mockGameRepository: ReturnType<typeof createMockGameRepository>
   let mockUserRepository: ReturnType<typeof createMockUserRepository>
+  let mockDiscordPreviews: {
+    fetch: ReturnType<typeof vi.fn<DiscordInvitePreviewProvider['fetch']>>
+  }
 
   beforeEach(() => {
     mockRoomRepository = createMockRoomRepository()
@@ -29,7 +37,25 @@ describe('CreateRoomUseCase', () => {
     mockUserRepository.findById.mockImplementation((id) =>
       Promise.resolve(createMockUser({ id, name: 'Host', avatarUrl: null }))
     )
-    useCase = new CreateRoomUseCase(mockRoomRepository, mockGameRepository, mockUserRepository)
+    mockDiscordPreviews = {
+      fetch: vi.fn<DiscordInvitePreviewProvider['fetch']>().mockResolvedValue({
+        kind: 'found',
+        preview: {
+          name: 'Test Server',
+          iconUrl: null,
+          backdropUrl: null,
+          memberCount: 10,
+          onlineCount: 5,
+          expiresAt: null,
+        },
+      }),
+    }
+    useCase = new CreateRoomUseCase(
+      mockRoomRepository,
+      mockGameRepository,
+      mockUserRepository,
+      mockDiscordPreviews
+    )
   })
 
   describe('execute', () => {
@@ -278,6 +304,76 @@ describe('CreateRoomUseCase', () => {
       ).rejects.toThrow(RoomCreateLimitReachedError)
 
       expect(mockRoomRepository.create).toHaveBeenCalledOnce()
+    })
+
+    describe('Discord invite check', () => {
+      const input = {
+        name: 'My Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        discordLink: 'https://discord.com/invite/premier-qui?event=1',
+      }
+
+      beforeEach(() => {
+        mockGameRepository.findById.mockResolvedValue(createMockGame({ id: 'game-123' }))
+        mockRoomRepository.create.mockResolvedValue({
+          status: 'created',
+          room: createMockRoom({ gameId: 'game-123' }),
+          hostMember: createMockRoomMember(),
+        })
+      })
+
+      it('asks Discord about the code of the invite before creating the Squad', async () => {
+        await useCase.execute(input)
+
+        expect(mockDiscordPreviews.fetch).toHaveBeenCalledTimes(1)
+        expect(mockDiscordPreviews.fetch).toHaveBeenCalledWith('premier-qui')
+        expect(mockRoomRepository.create).toHaveBeenCalledOnce()
+      })
+
+      it('throws InvalidDiscordInviteError without creating the Squad for an invite Discord does not know', async () => {
+        mockDiscordPreviews.fetch.mockResolvedValue({ kind: 'invalid' })
+
+        await expect(useCase.execute(input)).rejects.toThrow(InvalidDiscordInviteError)
+        expect(mockRoomRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('does not ask Discord when the game is refused first', async () => {
+        mockGameRepository.findById.mockResolvedValue(null)
+
+        await expect(useCase.execute(input)).rejects.toThrow(InvalidGameError)
+        expect(mockDiscordPreviews.fetch).not.toHaveBeenCalled()
+      })
+
+      it.each<DiscordInvitePreviewOutcome>([
+        { kind: 'rate_limited' },
+        { kind: 'unreachable' },
+        {
+          kind: 'found',
+          preview: {
+            name: 'Expiring',
+            iconUrl: null,
+            backdropUrl: null,
+            memberCount: null,
+            onlineCount: null,
+            expiresAt: '2026-11-01T12:00:00+00:00',
+          },
+        },
+      ])('creates the Squad when Discord answers $kind', async (outcome) => {
+        mockDiscordPreviews.fetch.mockResolvedValue(outcome)
+
+        const result = await useCase.execute(input)
+
+        expect(result.room).toBeDefined()
+        expect(mockRoomRepository.create).toHaveBeenCalledOnce()
+      })
+
+      it('refuses a link with no invite code without asking Discord', async () => {
+        await expect(
+          useCase.execute({ ...input, discordLink: 'https://discord.gg/' })
+        ).rejects.toThrow(InvalidDiscordInviteError)
+        expect(mockDiscordPreviews.fetch).not.toHaveBeenCalled()
+      })
     })
 
     it('should allow room creation when user hosts 2 valid rooms (below limit)', async () => {

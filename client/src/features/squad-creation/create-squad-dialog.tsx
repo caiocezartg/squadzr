@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { FormProvider, useForm } from 'react-hook-form'
+import { FormProvider, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Dialog } from '@/components/ds/dialog'
 import { Steps } from '@/components/ds/steps'
+import { ApiClientError } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { notifyError } from '@/lib/notify'
 import type { Game, Squad } from '@/types'
@@ -25,6 +26,7 @@ import { CreateSquadFooter } from './footer'
 import { GameStep } from './game-step'
 import { StepPanel, type StepDirection } from './step-panel'
 import { useCreateSquad } from './use-create-squad'
+import { useDiscordInviteCheck } from './use-discord-invite-check'
 
 export interface CreateSquadDialogProps {
   /** Dismisses the dialog; the caller unmounts it, so the next open starts from an empty form. */
@@ -58,6 +60,9 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
     },
   })
   const createSquad = useCreateSquad({ onClose, onCreated })
+  const invite = useDiscordInviteCheck(
+    useWatch({ control: form.control, name: 'discordLink' }) ?? ''
+  )
 
   const [stepIndex, setStepIndex] = useState(0)
   const [direction, setDirection] = useState<StepDirection | null>(null)
@@ -82,10 +87,21 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
   }
 
   const create = form.handleSubmit(async (data) => {
+    // Discord already said it does not know the invite: the field shows it, and nothing is sent.
+    if (invite.status === 'invalid') {
+      form.setFocus('discordLink')
+      return
+    }
+
     try {
       await createSquad.mutateAsync(data)
     } catch (err) {
       notifyError(getUserFriendlyError(err, tAll))
+      // The server asked Discord itself and refused the invite: the dialog stays open on the field.
+      if (err instanceof ApiClientError && err.code === 'INVALID_DISCORD_INVITE') {
+        form.setError('discordLink', { type: 'server' })
+        form.setFocus('discordLink')
+      }
     }
   })
 
@@ -142,7 +158,9 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
             {step === 'details' && selectedGame && (
               <DetailsStep selectedGame={selectedGame} onChangeGame={() => goTo(0)} />
             )}
-            {step === 'discord' && selectedGame && <DiscordStep game={selectedGame} />}
+            {step === 'discord' && selectedGame && (
+              <DiscordStep game={selectedGame} invite={invite} />
+            )}
           </StepPanel>
           <CreateSquadFooter
             first={first}

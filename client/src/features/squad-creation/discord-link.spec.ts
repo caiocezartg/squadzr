@@ -13,10 +13,13 @@ describe('checkDiscordLink', () => {
     expect(checkDiscordLink(link)).toEqual({ valid: false, errorKey: 'discordLinkInvalid' })
   })
 
-  it.each(['https://example.com/abc', 'http://discord.gg/abc'])(
-    'calls the URL %s no Discord invite',
-    (link) => {
-      expect(checkDiscordLink(link)).toEqual({ valid: false, errorKey: 'discordLinkNotValid' })
-    }
-  )
+  it.each([
+    'https://example.com/abc',
+    'http://discord.gg/abc',
+    'https://discord.gg/',
+    'https://discord.gg/??',
+    'https://discord.com/invite/',
+  ])('calls the URL %s no Discord invite', (link) => {
+    expect(checkDiscordLink(link)).toEqual({ valid: false, errorKey: 'discordLinkNotValid' })
+  })
 })

@@ -22,6 +22,7 @@ const PREVIEW: DiscordServerPreview = {
   backdropUrl: null,
   memberCount: 2_946_792,
   onlineCount: 362_025,
+  expiresAt: null,
 }
 
 describe('GetDiscordPreviewUseCase', () => {

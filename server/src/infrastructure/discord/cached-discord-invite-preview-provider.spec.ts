@@ -15,6 +15,7 @@ const FOUND: DiscordInvitePreviewOutcome = {
     backdropUrl: null,
     memberCount: 1,
     onlineCount: 1,
+    expiresAt: null,
   },
 }
 
@@ -54,31 +55,31 @@ describe('CachedDiscordInvitePreviewProvider', () => {
     expect(inner.fetch).toHaveBeenCalledTimes(2)
   })
 
-  it.each<DiscordInvitePreviewOutcome>([{ kind: 'invalid' }, { kind: 'rate_limited' }])(
-    'remembers a negative answer ($kind) for ten minutes too',
+  it('remembers a rate-limited answer for ten minutes too', async () => {
+    inner.fetch.mockResolvedValue({ kind: 'rate_limited' })
+
+    await cached.fetch('busy')
+    advance(5 * MINUTE)
+    await expect(cached.fetch('busy')).resolves.toEqual({ kind: 'rate_limited' })
+
+    expect(inner.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it.each<DiscordInvitePreviewOutcome>([{ kind: 'unreachable' }, { kind: 'invalid' }])(
+    'asks again after a minute when the answer was $kind',
     async (outcome) => {
-      inner.fetch.mockResolvedValue(outcome)
+      inner.fetch.mockResolvedValueOnce(outcome)
 
-      await cached.fetch('gone')
-      advance(5 * MINUTE)
-      await expect(cached.fetch('gone')).resolves.toEqual(outcome)
-
+      await expect(cached.fetch('valorant')).resolves.toEqual(outcome)
+      advance(59_000)
+      await cached.fetch('valorant')
       expect(inner.fetch).toHaveBeenCalledTimes(1)
+
+      advance(1_000)
+      await expect(cached.fetch('valorant')).resolves.toEqual(FOUND)
+      expect(inner.fetch).toHaveBeenCalledTimes(2)
     }
   )
-
-  it('asks again after a minute when Discord was unreachable', async () => {
-    inner.fetch.mockResolvedValueOnce({ kind: 'unreachable' })
-
-    await cached.fetch('valorant')
-    advance(59_000)
-    await cached.fetch('valorant')
-    expect(inner.fetch).toHaveBeenCalledTimes(1)
-
-    advance(1_000)
-    await expect(cached.fetch('valorant')).resolves.toEqual(FOUND)
-    expect(inner.fetch).toHaveBeenCalledTimes(2)
-  })
 
   it('shares one request between callers that arrive while it is in flight', async () => {
     let resolve!: (outcome: DiscordInvitePreviewOutcome) => void

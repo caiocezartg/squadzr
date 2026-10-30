@@ -31,6 +31,23 @@ import type { CreateRoomResponse, MyRoomsResponse } from '@/types'
 
 const createSquadResponse: CreateRoomResponse = { room: createdSquad }
 
+const INVALID_INVITE_MESSAGE =
+  "That Discord invite doesn't exist anymore. Check the link or create a new invite."
+const EXPIRES_WARNING =
+  'This invite expires. Create one that never expires so your squad keeps the link.'
+const UNKNOWN_MESSAGE = "We couldn't reach Discord to check this invite right now."
+
+/** What the API says about an invite Discord knows and that never expires. */
+const validInvite = {
+  status: 'valid',
+  server: {
+    name: 'Valorant Hub',
+    iconUrl: null,
+    memberCount: 2_946_792,
+  },
+  expires: false,
+}
+
 /** A response the test releases once it decides the request should settle. */
 function deferredResponse(): {
   response: Promise<MockHttpResponse>
@@ -72,6 +89,8 @@ function watchGameListText(): { texts: string[]; stop: () => void } {
 
 function registerBoardRoutes(): void {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  // The invite check of the Discord step: Discord knows every invite unless a test says otherwise.
+  onHttp('GET', '/api/discord/invites/:code', () => httpOk(validInvite))
   onHttp('GET', '/api/games', (request) => {
     const search = request.query.get('search')?.toLowerCase() ?? ''
     return httpOk({
@@ -171,9 +190,19 @@ function playerStepper(): HTMLElement {
   return screen.getByRole('group', { name: 'Players' })
 }
 
-/** The count the stepper shows, read from its live region. */
+/** The field the player types the count into. */
+function playerInput(): HTMLInputElement {
+  return within(playerStepper()).getByRole('spinbutton', { name: 'Players' })
+}
+
+/** The count the stepper shows, read from its field. */
 function playerCount(): number {
-  return Number(playerStepper().querySelector('[aria-live="polite"]')?.textContent)
+  return Number(playerInput().value)
+}
+
+/** What the stepper's live region announces. */
+function playerAnnouncement(): string {
+  return playerStepper().querySelector('[aria-live="polite"]')?.textContent ?? ''
 }
 
 function chooseLanguage(name: 'PT-BR' | 'EN-US') {
@@ -769,6 +798,129 @@ describe('create squad — details step', () => {
     expect(playerCount()).toBe(5)
   })
 
+  it('exposes the count as a numeric spinbutton named by its label and bounds', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    const input = playerInput()
+    expect(input).toHaveAttribute('type', 'text')
+    expect(input).toHaveAttribute('inputmode', 'numeric')
+    expect(input).toHaveAttribute('aria-valuemin', '2')
+    expect(input).toHaveAttribute('aria-valuemax', '40')
+    expect(input).toHaveAttribute('aria-valuenow', '5')
+    expect(input).not.toHaveAttribute('aria-live')
+  })
+
+  it('paints no ground on the buttons, so a hover cannot cover the control border', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    for (const name of ['One fewer player', 'One more player']) {
+      const button = screen.getByRole('button', { name })
+      expect(button.className).not.toMatch(/(^|\s|:)bg-/)
+      expect(button).toHaveClass('hover-fine:text-mint')
+    }
+  })
+
+  it('announces a button change politely through a live region apart from the field', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    expect(playerAnnouncement()).toBe('5')
+    await user.click(screen.getByRole('button', { name: 'One fewer player' }))
+
+    expect(playerAnnouncement()).toBe('4')
+    expect(playerStepper().querySelector('[aria-live="polite"]')).toHaveClass('sr-only')
+  })
+
+  it('takes a typed count, digits only and two at most, and writes it on blur', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    const input = playerInput()
+
+    await user.clear(input)
+    await user.type(input, 'a1b2c3')
+    expect(input).toHaveValue('12')
+    expect(input).toHaveAttribute('aria-valuenow', '5')
+
+    await user.tab()
+    expect(input).toHaveValue('12')
+    expect(input).toHaveAttribute('aria-valuenow', '12')
+    expect(playerAnnouncement()).toBe('12')
+  })
+
+  it.each([
+    ['1', 2],
+    ['0', 2],
+    ['99', 40],
+  ])('clamps the typed count %s to %i when it is written', async (typed, clamped) => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    const input = playerInput()
+
+    await user.clear(input)
+    await user.type(input, typed)
+    await user.tab()
+
+    expect(input).toHaveValue(String(clamped))
+    expect(input).toHaveAttribute('aria-valuenow', String(clamped))
+  })
+
+  it('restores the last valid count when the field is left empty', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    await user.click(screen.getByRole('button', { name: 'One fewer player' }))
+    const input = playerInput()
+
+    await user.clear(input)
+    expect(input).toHaveValue('')
+    await user.tab()
+
+    expect(input).toHaveValue('4')
+    expect(input).toHaveAttribute('aria-valuenow', '4')
+  })
+
+  it('steps by one with the arrow keys and stops at the bounds', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    await user.click(playerInput())
+
+    await user.keyboard('{ArrowDown}{ArrowDown}')
+    expect(playerCount()).toBe(3)
+    await user.keyboard('{ArrowUp}')
+    expect(playerCount()).toBe(4)
+
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}')
+    expect(playerCount()).toBe(2)
+
+    await user.clear(playerInput())
+    await user.type(playerInput(), '40{Enter}')
+    await user.keyboard('{ArrowUp}')
+    expect(playerCount()).toBe(40)
+  })
+
+  it('writes the typed count on Enter without submitting the form or leaving the step', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    const input = playerInput()
+
+    await user.clear(input)
+    await user.type(input, '99{Enter}')
+
+    expect(input).toHaveValue('40')
+    expect(input).toHaveAttribute('aria-valuenow', '40')
+    expect(screen.getByRole('heading', { name: 'Squad details' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Discord invite link')).not.toBeInTheDocument()
+  })
+
   it('stops the stepper at 2 and at 40', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
@@ -888,23 +1040,74 @@ describe('create squad — tags', () => {
     expect(screen.queryByRole('button', { name: 'Remove #fun' })).not.toBeInTheDocument()
   })
 
-  it('refuses a tag past 15 characters with the existing message and keeps the text', async () => {
+  it('stops taking characters once the tag has 12, and adds it', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
     await toDetailsStep(user)
     const input = screen.getByLabelText(/^Tags/)
 
-    await user.type(input, 'sixteen-chars-tag{Enter}')
+    await user.type(input, 'twelve-chars-and-more')
 
-    expect(await screen.findByText('Tag too long')).toBeInTheDocument()
-    expect(input).toHaveValue('sixteen-chars-tag')
+    expect(input).toHaveValue('twelve-chars')
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('button', { name: 'Remove #twelve-chars' })).toBeInTheDocument()
+  })
+
+  it('does not count the leading hash toward the 12 characters', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    const input = screen.getByLabelText(/^Tags/)
+
+    await user.type(input, '#twelve-chars-and-more')
+
+    expect(input).toHaveValue('#twelve-chars')
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('button', { name: 'Remove #twelve-chars' })).toBeInTheDocument()
+  })
+
+  it('refuses a pasted tag past 12 characters by cutting it at 12', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    const input = screen.getByLabelText(/^Tags/)
+
+    await user.click(input)
+    await user.paste('thirteen-chars')
+
+    expect(input).toHaveValue('thirteen-cha')
+  })
+
+  it('commits the tag typed so far when the player types a space', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    const input = screen.getByLabelText(/^Tags/)
+
+    await user.type(input, 'flex duo ')
+
+    expect(screen.getByRole('button', { name: 'Remove #flex' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove #duo' })).toBeInTheDocument()
+    expect(input).toHaveValue('')
+    expect(screen.getByRole('heading', { name: 'Squad details' })).toBeInTheDocument()
+  })
+
+  it('refuses pasted text of several words instead of splitting it', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    const input = screen.getByLabelText(/^Tags/)
+
+    await user.click(input)
+    await user.paste('two words')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    expect(
+      await screen.findByText('Tags are one word: letters, numbers and hyphens.')
+    ).toBeInTheDocument()
+    expect(input).toHaveValue('two words')
     expect(input).toBeInvalid()
-
-    await user.clear(input)
-    await user.type(input, 'fifteen-chars-t{Enter}')
-
-    expect(screen.queryByText('Tag too long')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Remove #fifteen-chars-t' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Remove #/ })).not.toBeInTheDocument()
   })
 })
 
@@ -944,16 +1147,168 @@ describe('create squad — discord step', () => {
 
     await user.clear(input)
     await user.type(input, 'https://discord.gg/abc123')
-    expect(screen.getByText('VALID')).toBeInTheDocument()
-    expect(screen.getByText('Valid Discord invite')).toHaveAttribute('role', 'status')
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+    expect(screen.getByText('Valid Discord invite: Valorant Hub')).toHaveAttribute('role', 'status')
     expect(screen.queryByText('Please enter a valid URL')).not.toBeInTheDocument()
     expect(screen.queryByText(notInvite)).not.toBeInTheDocument()
     expect(input).toBeValid()
 
     await user.clear(input)
     expect(screen.queryByText('VALID')).not.toBeInTheDocument()
-    expect(screen.queryByText('Valid Discord invite')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Valid Discord invite/)).not.toBeInTheDocument()
     expect(screen.queryByText('Please enter a valid URL')).not.toBeInTheDocument()
+  })
+
+  it.each(['https://discord.gg/', 'https://discord.gg/??', 'https://discord.com/invite/'])(
+    'refuses %s, a link with no invite code, by the contract without asking Discord',
+    async (link) => {
+      const { user } = renderSquadsFlow('/squads', { shell: true })
+      await openCreateModal(user)
+      await toDiscordStep(user)
+
+      await user.type(screen.getByLabelText('Discord invite link'), link)
+
+      expect(
+        screen.getByText('Must be a valid Discord invite (discord.gg or discord.com/invite)')
+      ).toBeInTheDocument()
+      expect(screen.getByLabelText('Discord invite link')).toBeInvalid()
+      expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+      expect(screen.queryByText('CHECKING')).not.toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Create squad' }))
+      expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
+      expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(0)
+    }
+  )
+
+  it('shows a checking mark while Discord is asked, then the valid mark with the server behind the invite', async () => {
+    const { response, respond } = deferredResponse()
+    onHttp('GET', '/api/discord/invites/:code', () => response)
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDiscordStep(user)
+
+    await user.type(screen.getByLabelText('Discord invite link'), 'https://discord.gg/valorant')
+
+    expect(screen.getByText('CHECKING')).toBeInTheDocument()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+    expect(screen.queryByText('Valorant Hub')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toBeValid()
+
+    await waitFor(() => expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(1))
+    respond(httpOk(validInvite))
+
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+    expect(screen.queryByText('CHECKING')).not.toBeInTheDocument()
+    expect(screen.getByText('Valorant Hub')).toBeInTheDocument()
+    expect(screen.getByText('2,946,792 members')).toBeInTheDocument()
+    expect(screen.getByText('Valid Discord invite: Valorant Hub')).toHaveAttribute('role', 'status')
+    expect(screen.queryByText(EXPIRES_WARNING)).not.toBeInTheDocument()
+    expect(getHttpLog().find((request) => request.path.startsWith('/api/discord'))?.path).toBe(
+      '/api/discord/invites/valorant'
+    )
+  })
+
+  it('asks Discord once the player stops typing, not for every character', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDiscordStep(user)
+
+    await user.type(screen.getByLabelText('Discord invite link'), 'https://discord.gg/valorant')
+    await screen.findByText('VALID')
+
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(1)
+  })
+
+  it('warns that an expiring invite expires and still lets the squad be created', async () => {
+    onHttp('GET', '/api/discord/invites/:code', () => httpOk({ ...validInvite, expires: true }))
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+    expect(screen.getByText(EXPIRES_WARNING)).toBeInTheDocument()
+    expect(screen.getByText('Valorant Hub')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(1))
+  })
+
+  it('refuses an invite Discord does not know, with the error, and sends nothing on submit', async () => {
+    onHttp('GET', '/api/discord/invites/:code', () => httpOk({ status: 'invalid' }))
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    const input = screen.getByLabelText('Discord invite link')
+
+    expect(await screen.findByText(INVALID_INVITE_MESSAGE)).toBeInTheDocument()
+    expect(input).toBeInvalid()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+    expect(screen.queryByText('CHECKING')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
+    expect(screen.getByText(INVALID_INVITE_MESSAGE)).toBeInTheDocument()
+    expect(input).toHaveFocus()
+  })
+
+  it('clears the refusal when the player changes the link to one Discord knows', async () => {
+    onHttp('GET', '/api/discord/invites/:code', (request) =>
+      httpOk(request.params['code'] === 'gone' ? { status: 'invalid' } : validInvite)
+    )
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDiscordStep(user)
+    const input = screen.getByLabelText('Discord invite link')
+
+    await user.type(input, 'https://discord.gg/gone')
+    expect(await screen.findByText(INVALID_INVITE_MESSAGE)).toBeInTheDocument()
+
+    await user.clear(input)
+    await user.type(input, 'https://discord.gg/alive')
+
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+    expect(screen.queryByText(INVALID_INVITE_MESSAGE)).not.toBeInTheDocument()
+  })
+
+  it('keeps the valid mark with a muted line when Discord cannot be asked, and lets the squad be created', async () => {
+    onHttp('GET', '/api/discord/invites/:code', () => httpOk({ status: 'unknown' }))
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+    expect(screen.getByText(UNKNOWN_MESSAGE)).toBeInTheDocument()
+    expect(screen.queryByText('Valorant Hub')).not.toBeInTheDocument()
+    expect(screen.getByText('Valid Discord invite')).toHaveAttribute('role', 'status')
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(1))
+  })
+
+  it('reads a failed check as unknown instead of an error', async () => {
+    onHttp('GET', '/api/discord/invites/:code', () =>
+      httpError(500, { message: 'boom', error: 'INTERNAL_ERROR' })
+    )
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+    expect(screen.getByText(UNKNOWN_MESSAGE)).toBeInTheDocument()
+  })
+
+  it('lets the squad be created while Discord is still being asked', async () => {
+    const { response } = deferredResponse()
+    onHttp('GET', '/api/discord/invites/:code', () => response)
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    expect(screen.getByText('CHECKING')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(1))
   })
 
   it('previews the card from the form, with the viewer as the only member and a masked code', async () => {
@@ -1250,6 +1605,28 @@ describe('create squad — server error', () => {
       expect(toastStore.errorCalls[0]).toBe('You have reached the maximum number of active squads.')
     )
     expect(screen.getByLabelText('Discord invite link')).toBeInTheDocument()
+    expect(countHttpCalls('POST', '/api/rooms')).toBe(1)
+  })
+
+  it('keeps the dialog open on the invite, with the field in error, when the server refuses the invite', async () => {
+    onHttp('POST', '/api/rooms', () =>
+      httpError(422, {
+        message: 'The Discord invite does not exist or has expired',
+        error: 'INVALID_DISCORD_INVITE',
+      })
+    )
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    await screen.findByText('VALID')
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    await waitFor(() => expect(toastStore.errorCalls[0]).toBe(INVALID_INVITE_MESSAGE))
+    expect(screen.getByRole('heading', { name: 'Discord invite' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toBeInvalid()
+    expect(screen.getByText(INVALID_INVITE_MESSAGE)).toBeInTheDocument()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
     expect(countHttpCalls('POST', '/api/rooms')).toBe(1)
   })
 

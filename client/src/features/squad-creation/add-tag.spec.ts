@@ -12,9 +12,22 @@ describe('addTag', () => {
     expect(addTag(['ranked'], 'Ranked')).toEqual({ kind: 'ignored' })
   })
 
-  it('accepts a tag of 15 characters and rejects one of 16', () => {
-    expect(addTag([], 'a'.repeat(15))).toEqual({ kind: 'added', tags: ['a'.repeat(15)] })
-    expect(addTag([], 'a'.repeat(16))).toEqual({ kind: 'rejected', message: 'Tag too long' })
+  it('accepts a tag of 12 characters and rejects one of 13', () => {
+    expect(addTag([], 'a'.repeat(12))).toEqual({ kind: 'added', tags: ['a'.repeat(12)] })
+    expect(addTag([], 'a'.repeat(13))).toEqual({ kind: 'rejected', message: 'Tag too long' })
+  })
+
+  it('does not count the leading hash toward the 12 characters', () => {
+    expect(addTag([], `#${'a'.repeat(12)}`)).toEqual({ kind: 'added', tags: ['a'.repeat(12)] })
+  })
+
+  it('accepts one word of letters with accents, digits and hyphens', () => {
+    expect(addTag([], 'Clã-BR2')).toEqual({ kind: 'added', tags: ['clã-br2'] })
+  })
+
+  it('rejects text of more than one word instead of splitting it', () => {
+    expect(addTag([], 'two words')).toEqual({ kind: 'rejected', message: 'Tag must be one word' })
+    expect(addTag([], 'ranked!')).toEqual({ kind: 'rejected', message: 'Tag must be one word' })
   })
 
   it('accepts the fifth tag and rejects the sixth', () => {

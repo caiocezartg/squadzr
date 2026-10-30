@@ -134,7 +134,14 @@ describe('POST /api/rooms', () => {
     ],
     ['maxPlayers below 2', { maxPlayers: 1 }, /^body\/maxPlayers /],
     ['maxPlayers above 40', { maxPlayers: 41 }, /^body\/maxPlayers /],
+    [
+      'an invite link with no code',
+      { discordLink: 'https://discord.gg/' },
+      'body/discordLink Discord link must be a valid Discord invite URL',
+    ],
     ['more than 5 tags', { tags: ['a', 'b', 'c', 'd', 'e', 'f'] }, 'body/tags Max 5 tags'],
+    ['a tag longer than 12 characters', { tags: ['a'.repeat(13)] }, 'body/tags/0 Tag too long'],
+    ['a tag of two words', { tags: ['two words'] }, 'body/tags/0 Tag must be one word'],
     ['an unsupported language', { language: 'es' as 'en' }, /^body\/language /],
   ])('rejects %s with 400 VALIDATION_ERROR', async (_label, override, message) => {
     const response = await postRoom(server, host, { gameId, ...override })
@@ -145,6 +152,51 @@ describe('POST /api/rooms', () => {
     if (typeof message === 'string') expect(body.message).toBe(message)
     else expect(body.message).toMatch(message)
   })
+
+  it('keeps a tag of 12 characters and strips the hash that does not count toward the limit', async () => {
+    const room = await createRoom(server, host, { gameId, tags: ['#Ranked', '#' + 'a'.repeat(12)] })
+
+    expect(room.tags).toEqual(['ranked', 'a'.repeat(12)])
+  })
+
+  it('rejects an invite Discord does not know with 422 INVALID_DISCORD_INVITE and persists nothing', async () => {
+    const strict = await buildTestServer(
+      {},
+      { discordPreviews: { fetch: () => Promise.resolve({ kind: 'invalid' }) } }
+    )
+    try {
+      const owner = await signIn(strict, 'Owner')
+      const strictGame = await insertGame(strict)
+
+      const response = await postRoom(strict, owner, { gameId: strictGame.id })
+
+      expect(response.statusCode).toBe(422)
+      expect(response.json()).toMatchObject({ error: 'INVALID_DISCORD_INVITE' })
+      expect((await get(strict, '/api/rooms/my', owner)).json()).toEqual({ hosted: [], joined: [] })
+    } finally {
+      await strict.close()
+    }
+  })
+
+  it.each(['rate_limited', 'unreachable'] as const)(
+    'creates the Squad when Discord cannot be asked (%s)',
+    async (kind) => {
+      const lenient = await buildTestServer(
+        {},
+        { discordPreviews: { fetch: () => Promise.resolve({ kind }) } }
+      )
+      try {
+        const owner = await signIn(lenient, 'Owner')
+        const lenientGame = await insertGame(lenient)
+
+        const response = await postRoom(lenient, owner, { gameId: lenientGame.id })
+
+        expect(response.statusCode).toBe(201)
+      } finally {
+        await lenient.close()
+      }
+    }
+  )
 
   it('accepts the Squad size bounds of 2 and 40', async () => {
     const smallest = await createRoom(server, host, { gameId, maxPlayers: 2 })

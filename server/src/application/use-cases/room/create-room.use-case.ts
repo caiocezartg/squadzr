@@ -3,8 +3,11 @@ import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
+import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
+import { discordInviteCode } from '@squadzr/schemas'
 import {
   GameNotAvailableError,
+  InvalidDiscordInviteError,
   InvalidGameError,
   RoomCreateLimitReachedError,
   UserNotFoundError,
@@ -27,7 +30,8 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
   constructor(
     private readonly roomRepository: IRoomRepository,
     private readonly gameRepository: IGameRepository,
-    private readonly userRepository: IUserRepository
+    private readonly userRepository: IUserRepository,
+    private readonly discordPreviews: DiscordInvitePreviewProvider
   ) {}
 
   async execute(input: CreateRoomInput): Promise<CreateRoomOutput> {
@@ -41,6 +45,8 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
     if (!game.listed) {
       throw new GameNotAvailableError(input.gameId)
     }
+
+    await this.assertDiscordInviteExists(input.discordLink)
 
     // A new Squad has only its host, so the host's entry is the whole preview.
     // Read before creating: a missing host fails here, before any Squad exists.
@@ -78,5 +84,18 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       },
       hostMember: outcome.hostMember,
     }
+  }
+
+  /**
+   * Refuses an invite Discord says it does not know. Discord being slow, down or rate limiting says nothing
+   * about the invite, so those let the Squad through: an outage must not stop anyone from creating one. An
+   * invite that expires is allowed too: the create form warns about it.
+   */
+  private async assertDiscordInviteExists(discordLink: string): Promise<void> {
+    const inviteCode = discordInviteCode(discordLink)
+    if (!inviteCode) throw new InvalidDiscordInviteError()
+
+    const outcome = await this.discordPreviews.fetch(inviteCode)
+    if (outcome.kind === 'invalid') throw new InvalidDiscordInviteError()
   }
 }

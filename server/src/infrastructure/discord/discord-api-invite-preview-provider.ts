@@ -36,7 +36,7 @@ export class DiscordApiInvitePreviewProvider implements DiscordInvitePreviewProv
   async fetch(inviteCode: string): Promise<DiscordInvitePreviewOutcome> {
     try {
       const response = await this.fetchImpl(
-        `${INVITES_URL}/${encodeURIComponent(inviteCode)}?with_counts=true`,
+        `${INVITES_URL}/${encodeURIComponent(inviteCode)}?with_counts=true&with_expiration=true`,
         { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(this.timeoutMs) }
       )
 
@@ -69,6 +69,7 @@ function toOutcome(
       backdropUrl: backdropUrl(guild),
       memberCount: parsed.data.approximate_member_count ?? null,
       onlineCount: parsed.data.approximate_presence_count ?? null,
+      expiresAt: parsed.data.expires_at ?? null,
     },
   }
 }

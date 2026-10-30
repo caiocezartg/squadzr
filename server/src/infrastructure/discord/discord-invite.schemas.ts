@@ -4,7 +4,7 @@ import { z } from 'zod'
 const snowflake = z.string().regex(/^\d{1,32}$/)
 const imageHash = z.string().regex(/^(a_)?[0-9a-f]{1,64}$/)
 
-/** The parts of Discord's `GET /invites/{code}?with_counts=true` answer the Lobby reads. */
+/** The parts of Discord's `GET /invites/{code}?with_counts=true&with_expiration=true` answer this app reads. */
 export const discordInviteResponseSchema = z.object({
   guild: z
     .object({
@@ -17,6 +17,7 @@ export const discordInviteResponseSchema = z.object({
     .optional(),
   approximate_member_count: z.number().int().nonnegative().optional(),
   approximate_presence_count: z.number().int().nonnegative().optional(),
+  expires_at: z.string().nullish(),
 })
 
 export type DiscordInviteResponse = z.infer<typeof discordInviteResponseSchema>

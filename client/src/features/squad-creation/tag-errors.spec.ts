@@ -1,5 +1,5 @@
 /**
- * The tag errors the form shows. The shared tag schema words its two limits in English, and the form
+ * The tag errors the form shows. The shared tag schema words its three rules in English, and the form
  * translates them. The first test reads the schema's own messages, so the table cannot drift from it.
  */
 
@@ -28,11 +28,19 @@ describe('translateTagError', () => {
   })
 
   it('translates the limit on a tag length, as the shared schema words it', () => {
-    const message = firstTagIssue(['x'.repeat(16)])
+    const message = firstTagIssue(['x'.repeat(13)])
 
     expect(message).toBe('Tag too long')
-    expect(translateTagError(message, tPtBR)).toBe('Tag muito longa')
-    expect(translateTagError(message, t)).toBe('Tag too long')
+    expect(translateTagError(message, tPtBR)).toBe('A tag pode ter no máximo 12 caracteres.')
+    expect(translateTagError(message, t)).toBe('Tags are at most 12 characters.')
+  })
+
+  it('translates the one-word rule, as the shared schema words it', () => {
+    const message = firstTagIssue(['two words'])
+
+    expect(message).toBe('Tag must be one word')
+    expect(translateTagError(message, tPtBR)).toBe('Tag é uma palavra só: letras, números e hífen.')
+    expect(translateTagError(message, t)).toBe('Tags are one word: letters, numbers and hyphens.')
   })
 
   it('shows a message the table does not name as the schema wrote it', () => {

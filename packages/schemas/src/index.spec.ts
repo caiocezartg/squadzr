@@ -26,6 +26,57 @@ describe('createRoomInputSchema', () => {
     expect(result.tags).toEqual(['cs2', 'valorant'])
   })
 
+  const tagsInput = (tags: string[]) => ({
+    name: 'FIFA night',
+    gameId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+    tags,
+    discordLink: 'https://discord.gg/squadzr',
+  })
+
+  it('does not count the leading hashes toward the tag limit', () => {
+    const result = createRoomInputSchema.parse(tagsInput(['##Ranked', 'a'.repeat(12)]))
+
+    expect(result.tags).toEqual(['ranked', 'a'.repeat(12)])
+  })
+
+  it('keeps letters with accents, digits and hyphens in a tag', () => {
+    const result = createRoomInputSchema.parse(tagsInput(['Clã-BR', 'cs2', 'só-hoje']))
+
+    expect(result.tags).toEqual(['clã-br', 'cs2', 'só-hoje'])
+  })
+
+  it('rejects a tag longer than 12 characters', () => {
+    const result = createRoomInputSchema.safeParse(tagsInput(['a'.repeat(13)]))
+
+    expect(result.error?.issues.map((issue) => issue.message)).toEqual(['Tag too long'])
+  })
+
+  it.each(['two words', 'ranked!', 'a_b', 'a.b', '#', ''])(
+    'rejects the tag %j as not one word',
+    (tag) => {
+      const result = createRoomInputSchema.safeParse(tagsInput([tag]))
+
+      expect(result.error?.issues.map((issue) => issue.message)).toEqual(['Tag must be one word'])
+    }
+  )
+
+  it('rejects more than 5 tags', () => {
+    const result = createRoomInputSchema.safeParse(tagsInput(['a', 'b', 'c', 'd', 'e', 'f']))
+
+    expect(result.error?.issues.map((issue) => issue.message)).toEqual(['Max 5 tags'])
+  })
+
+  it.each(['https://discord.gg/', 'https://discord.gg/??', 'https://discord.com/invite/'])(
+    'rejects the invite link %j that carries no invite code',
+    (discordLink) => {
+      const result = createRoomInputSchema.safeParse({ ...tagsInput([]), discordLink })
+
+      expect(result.error?.issues.map((issue) => issue.message)).toEqual([
+        'Discord link must be a valid Discord invite URL',
+      ])
+    }
+  )
+
   it('rejects an empty room name', () => {
     expect(() =>
       createRoomInputSchema.parse({

@@ -7,6 +7,15 @@ import { addTag } from './add-tag'
 import { CONTROL_CLASSES, CONTROL_ERROR_CLASSES } from './form-field'
 import { translateTagError } from './tag-errors'
 
+/** The longest a tag may be without its leading `#`, as the contract states it. */
+const TAG_MAX_LENGTH = 12
+
+/** The draft as far as the field takes it: its leading `#`s do not count toward the length. */
+function limitDraft(text: string): string {
+  const [, prefix = '', body = ''] = /^(\s*#*)([\s\S]*)$/.exec(text) ?? []
+  return prefix + body.slice(0, TAG_MAX_LENGTH)
+}
+
 /** The tags the form offers as one-tap chips, in this order. */
 export const TAG_SUGGESTIONS = [
   'ranked',
@@ -29,9 +38,10 @@ export interface TagsFieldProps {
 }
 
 /**
- * The tags of the create-Squad form: removable chips with an input and "Add" (Enter and comma add
- * too, Backspace on an empty input removes the last), and the suggestions not yet added. The contract
- * decides what a list may hold; a tag it refuses is not added and its message shows under the field.
+ * The tags of the create-Squad form: removable chips with an input and "Add" (Enter, comma and space
+ * add too, Backspace on an empty input removes the last), and the suggestions not yet added.
+ * The input stops taking characters at the length of a tag. The contract decides what a list may hold;
+ * a tag it refuses (pasted text with spaces, say) is not added and its message shows under the field.
  */
 export function TagsField({ inputId, value: tags, onChange, formError }: TagsFieldProps) {
   const t = useTranslations()
@@ -62,7 +72,7 @@ export function TagsField({ inputId, value: tags, onChange, formError }: TagsFie
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' || event.key === ',') {
+    if (event.key === 'Enter' || event.key === ',' || event.key === ' ') {
       event.preventDefault()
       commit(draft)
     } else if (event.key === 'Backspace' && draft === '' && tags.length > 0) {
@@ -89,7 +99,7 @@ export function TagsField({ inputId, value: tags, onChange, formError }: TagsFie
             type="text"
             value={draft}
             onChange={(event) => {
-              setDraft(event.target.value)
+              setDraft(limitDraft(event.target.value))
               setRejection(null)
             }}
             onKeyDown={handleKeyDown}
