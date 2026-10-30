@@ -150,6 +150,41 @@ async function continueStep(
   await user.click(screen.getByRole('button', { name: 'Continue' }))
 }
 
+type FlowUser = Awaited<ReturnType<typeof renderSquadsFlow>['user']>
+
+/** Picks League of Legends and continues to the details step. */
+async function toDetailsStep(user: FlowUser): Promise<void> {
+  await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+  await continueStep(user)
+  await screen.findByLabelText('Squad name')
+}
+
+/** Walks to the Discord step with a valid name. */
+async function toDiscordStep(user: FlowUser, squadName = 'Created squad'): Promise<void> {
+  await toDetailsStep(user)
+  await user.type(screen.getByLabelText('Squad name'), squadName)
+  await continueStep(user)
+  await screen.findByLabelText('Discord invite link')
+}
+
+function playerStepper(): HTMLElement {
+  return screen.getByRole('group', { name: 'Players' })
+}
+
+/** The count the stepper shows, read from its live region. */
+function playerCount(): number {
+  return Number(playerStepper().querySelector('[aria-live="polite"]')?.textContent)
+}
+
+function chooseLanguage(name: 'PT-BR' | 'EN-US') {
+  const group = screen.getByRole('group', { name: 'Squad language' })
+  return within(group).getByRole('button', { name })
+}
+
+function squadPreviewCard(): HTMLElement {
+  return screen.getByRole('group', { name: /players$/ })
+}
+
 /** Walks the three steps with valid values, stopping on the Discord step before it is submitted. */
 async function fillWizard(
   user: Awaited<ReturnType<typeof renderSquadsFlow>['user']>,
@@ -157,9 +192,9 @@ async function fillWizard(
 ): Promise<void> {
   await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
   await continueStep(user)
-  await user.type(await screen.findByLabelText('Squad Name'), squadName)
+  await user.type(await screen.findByLabelText('Squad name'), squadName)
   await continueStep(user)
-  await user.type(await screen.findByLabelText('Discord Invite Link'), 'https://discord.gg/created')
+  await user.type(await screen.findByLabelText('Discord invite link'), 'https://discord.gg/created')
 }
 
 describe('create squad — entry point', () => {
@@ -206,10 +241,10 @@ describe('create squad — client validation', () => {
     await openCreateModal(user)
     await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
     await continueStep(user)
-    await user.type(await screen.findByLabelText('Squad Name'), 'Created squad')
+    await user.type(await screen.findByLabelText('Squad name'), 'Created squad')
     await continueStep(user)
 
-    await user.click(await screen.findByRole('button', { name: 'Create Squad' }))
+    await user.click(await screen.findByRole('button', { name: 'Create squad' }))
 
     expect(await screen.findByText('Please enter a valid URL')).toBeInTheDocument()
     expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
@@ -430,14 +465,14 @@ describe('create squad — game search', () => {
       )
     )
     await continueStep(user)
-    await user.type(await screen.findByLabelText('Squad Name'), 'Created squad')
+    await user.type(await screen.findByLabelText('Squad name'), 'Created squad')
     await continueStep(user)
     await user.type(
-      await screen.findByLabelText('Discord Invite Link'),
+      await screen.findByLabelText('Discord invite link'),
       'https://discord.gg/created'
     )
 
-    await user.click(screen.getByRole('button', { name: 'Create Squad' }))
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
     await waitFor(() => {
       const post = getHttpLog().find((request) => request.method === 'POST')
@@ -634,7 +669,7 @@ describe('create squad — step flow', () => {
     await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
     await continueStep(user)
 
-    const name = await screen.findByLabelText('Squad Name')
+    const name = await screen.findByLabelText('Squad name')
     expect(screen.getByRole('heading', { name: 'Squad details' })).toBeInTheDocument()
     expect(screen.getByRole('listitem', { current: 'step' })).toHaveTextContent('02 · DETAILS')
     await user.type(name, 'Draft squad')
@@ -644,7 +679,7 @@ describe('create squad — step flow', () => {
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
 
     await continueStep(user)
-    expect(await screen.findByLabelText('Squad Name')).toHaveValue('Draft squad')
+    expect(await screen.findByLabelText('Squad name')).toHaveValue('Draft squad')
   })
 
   it('closes the dialog with Escape on step 2 after a keyboard Continue', async () => {
@@ -655,7 +690,7 @@ describe('create squad — step flow', () => {
     // A new term, then Enter with no active option: the form continues from the open search.
     await user.type(screen.getByLabelText(GAME_LABEL), 'x')
     await user.keyboard('{Enter}')
-    await screen.findByLabelText('Squad Name')
+    await screen.findByLabelText('Squad name')
 
     await user.keyboard('{Escape}')
 
@@ -669,6 +704,368 @@ describe('create squad — step flow', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
     await waitFor(() => expect(screen.queryByText('Choose the game')).not.toBeInTheDocument())
+  })
+})
+
+describe('create squad — details step', () => {
+  it('shows the chosen game with a button to change it', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    expect(screen.getByText('League of Legends')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Change game' })).toBeInTheDocument()
+    expect(screen.getByRole('listitem', { current: 'step' })).toHaveTextContent('02 · DETAILS')
+  })
+
+  it('counts the name out of 30', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    expect(screen.getByText('0/30')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Squad name'), 'Night ranked')
+
+    expect(screen.getByText('12/30')).toBeInTheDocument()
+  })
+
+  it('refuses a name past 30 characters with the existing message', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    await user.type(screen.getByLabelText('Squad name'), 'x'.repeat(31))
+    expect(screen.getByText('31/30')).toBeInTheDocument()
+    await continueStep(user)
+
+    expect(
+      await screen.findByText('Squad name is too long (max 30 characters)')
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Squad name')).toBeInvalid()
+    expect(screen.getByRole('heading', { name: 'Squad details' })).toBeInTheDocument()
+  })
+
+  it('starts the player stepper from the game maximum and announces each change', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    expect(playerCount()).toBe(5)
+
+    await user.click(screen.getByRole('button', { name: 'One fewer player' }))
+    expect(playerCount()).toBe(4)
+
+    await user.click(screen.getByRole('button', { name: 'One more player' }))
+    expect(playerCount()).toBe(5)
+  })
+
+  it('stops the stepper at 2 and at 40', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    const fewer = screen.getByRole('button', { name: 'One fewer player' })
+    const more = screen.getByRole('button', { name: 'One more player' })
+
+    for (let step = 0; step < 6; step += 1) fireEvent.click(fewer)
+    expect(playerCount()).toBe(2)
+    expect(fewer).toHaveAttribute('aria-disabled', 'true')
+    expect(more).toHaveAttribute('aria-disabled', 'false')
+
+    for (let step = 0; step < 45; step += 1) fireEvent.click(more)
+    expect(playerCount()).toBe(40)
+    expect(more).toHaveAttribute('aria-disabled', 'true')
+    expect(fewer).toHaveAttribute('aria-disabled', 'false')
+  })
+
+  it('chooses the squad language on the segmented control', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    expect(chooseLanguage('PT-BR')).toHaveAttribute('aria-pressed', 'true')
+    await user.click(chooseLanguage('EN-US'))
+
+    expect(chooseLanguage('EN-US')).toHaveAttribute('aria-pressed', 'true')
+    expect(chooseLanguage('PT-BR')).toHaveAttribute('aria-pressed', 'false')
+  })
+})
+
+describe('create squad — tags', () => {
+  const SUGGESTIONS = [
+    '+ #ranked',
+    '+ #casual',
+    '+ #chill',
+    '+ #competitive',
+    '+ #mic',
+    '+ #fun',
+    '+ #tryhard',
+    '+ #premier',
+  ]
+
+  function suggestionLabels(): string[] {
+    return within(screen.getByRole('group', { name: 'Suggested tags' }))
+      .getAllByRole('button')
+      .map((button) => button.textContent ?? '')
+  }
+
+  it('offers the fixed suggestions in order', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    expect(suggestionLabels()).toEqual(SUGGESTIONS)
+  })
+
+  it('adds a suggestion as a removable chip and drops it from the suggestions', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    await user.click(screen.getByRole('button', { name: '+ #chill' }))
+
+    expect(screen.getByRole('button', { name: 'Remove #chill' })).toBeInTheDocument()
+    expect(suggestionLabels()).toEqual(SUGGESTIONS.filter((label) => label !== '+ #chill'))
+
+    await user.click(screen.getByRole('button', { name: 'Remove #chill' }))
+
+    expect(screen.queryByRole('button', { name: 'Remove #chill' })).not.toBeInTheDocument()
+    expect(suggestionLabels()).toEqual(SUGGESTIONS)
+  })
+
+  it('adds the typed tag with Add, Enter or a comma, without submitting the form', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    const input = screen.getByLabelText(/^Tags/)
+
+    await user.type(input, '#Flex')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await user.type(input, 'duo{Enter}')
+    await user.type(input, 'late,')
+
+    expect(screen.getByRole('button', { name: 'Remove #flex' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove #duo' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove #late' })).toBeInTheDocument()
+    expect(input).toHaveValue('')
+    expect(screen.getByRole('heading', { name: 'Squad details' })).toBeInTheDocument()
+  })
+
+  it('removes the last tag with Backspace on an empty input', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    await user.click(screen.getByRole('button', { name: '+ #fun' }))
+    await user.click(screen.getByRole('button', { name: '+ #mic' }))
+
+    await user.click(screen.getByLabelText(/^Tags/))
+    await user.keyboard('{Backspace}')
+
+    expect(screen.queryByRole('button', { name: 'Remove #mic' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove #fun' })).toBeInTheDocument()
+  })
+
+  it('refuses a sixth tag with the existing message', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    for (const tag of ['ranked', 'casual', 'chill', 'competitive', 'mic']) {
+      await user.click(screen.getByRole('button', { name: `+ #${tag}` }))
+    }
+
+    await user.click(screen.getByRole('button', { name: '+ #fun' }))
+
+    expect(await screen.findByText('Max 5 tags')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Remove #fun' })).not.toBeInTheDocument()
+  })
+
+  it('refuses a tag past 15 characters with the existing message and keeps the text', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    const input = screen.getByLabelText(/^Tags/)
+
+    await user.type(input, 'sixteen-chars-tag{Enter}')
+
+    expect(await screen.findByText('Tag too long')).toBeInTheDocument()
+    expect(input).toHaveValue('sixteen-chars-tag')
+    expect(input).toBeInvalid()
+
+    await user.clear(input)
+    await user.type(input, 'fifteen-chars-t{Enter}')
+
+    expect(screen.queryByText('Tag too long')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove #fifteen-chars-t' })).toBeInTheDocument()
+  })
+})
+
+describe('create squad — discord step', () => {
+  it('has the invite field with the hint about who sees it, and no mark or error while empty', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDiscordStep(user)
+
+    expect(screen.getByRole('heading', { name: 'Discord invite' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toHaveValue('')
+    expect(
+      screen.getByText(
+        "Only members see it once the squad completes. Use an invite that doesn't expire."
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+    expect(screen.queryByText('Please enter a valid URL')).not.toBeInTheDocument()
+  })
+
+  it('validates the link as the player types, by the contract', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDiscordStep(user)
+    const input = screen.getByLabelText('Discord invite link')
+    const notInvite = 'Must be a valid Discord invite (discord.gg or discord.com/invite)'
+
+    await user.type(input, 'not a link')
+    expect(screen.getByText('Please enter a valid URL')).toBeInTheDocument()
+    expect(input).toBeInvalid()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+
+    await user.clear(input)
+    await user.type(input, 'https://example.com/abc')
+    expect(screen.getByText(notInvite)).toBeInTheDocument()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+
+    await user.clear(input)
+    await user.type(input, 'https://discord.gg/abc123')
+    expect(screen.getByText('VALID')).toBeInTheDocument()
+    expect(screen.queryByText('Please enter a valid URL')).not.toBeInTheDocument()
+    expect(screen.queryByText(notInvite)).not.toBeInTheDocument()
+    expect(input).toBeValid()
+
+    await user.clear(input)
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+    expect(screen.queryByText('Please enter a valid URL')).not.toBeInTheDocument()
+  })
+
+  it('previews the card from the form, with the viewer as the only member and a masked code', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    await user.type(screen.getByLabelText('Squad name'), 'Night ranked')
+    await user.click(screen.getByRole('button', { name: 'One fewer player' }))
+    await user.click(chooseLanguage('EN-US'))
+    await user.click(screen.getByRole('button', { name: '+ #ranked' }))
+    await user.click(screen.getByRole('button', { name: '+ #chill' }))
+    await continueStep(user)
+    await screen.findByLabelText('Discord invite link')
+
+    expect(screen.getByText('Preview')).toBeInTheDocument()
+    const card = squadPreviewCard()
+    expect(card).toHaveAccessibleName('Night ranked — League of Legends, EN-US, 1 of 4 players')
+    expect(within(card).getByText('Night ranked')).toBeInTheDocument()
+    expect(within(card).getByText('EN-US')).toBeInTheDocument()
+    expect(within(card).getByText('#ranked')).toBeInTheDocument()
+    expect(within(card).getByText('#chill')).toBeInTheDocument()
+    expect(within(card).getByText('#••••••')).toBeInTheDocument()
+    expect(within(card).getByRole('img', { name: 'League of Legends' })).toBeInTheDocument()
+    expect(within(card).getByRole('img', { name: 'Caio' })).toBeInTheDocument()
+    expect(within(card).getByText('/4')).toBeInTheDocument()
+    expect(within(card).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(card).queryByRole('link')).not.toBeInTheDocument()
+  })
+})
+
+describe('create squad — values across steps', () => {
+  it('keeps every value through Back, Continue and Change game', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    await user.type(screen.getByLabelText('Squad name'), 'Night ranked')
+    await user.click(screen.getByRole('button', { name: 'One fewer player' }))
+    await user.click(chooseLanguage('EN-US'))
+    await user.click(screen.getByRole('button', { name: '+ #ranked' }))
+    await continueStep(user)
+    await user.type(await screen.findByLabelText('Discord invite link'), 'https://discord.gg/abc')
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByLabelText('Squad name')).toHaveValue('Night ranked')
+    expect(playerCount()).toBe(4)
+    expect(chooseLanguage('EN-US')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Remove #ranked' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Change game' }))
+    expect(await screen.findByLabelText(GAME_LABEL)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+
+    await continueStep(user)
+    expect(await screen.findByLabelText('Squad name')).toHaveValue('Night ranked')
+    expect(playerCount()).toBe(4)
+    expect(chooseLanguage('EN-US')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Remove #ranked' })).toBeInTheDocument()
+
+    await continueStep(user)
+    expect(await screen.findByLabelText('Discord invite link')).toHaveValue(
+      'https://discord.gg/abc'
+    )
+  })
+
+  it('starts the stepper over from a different game and keeps the rest', async () => {
+    const bigGame = { ...gameCs2, maxPlayers: 8 }
+    onHttp('GET', '/api/games', (request) => {
+      const search = request.query.get('search')?.toLowerCase() ?? ''
+      return httpOk({
+        games: [gameLol, bigGame].filter((game) => game.name.toLowerCase().includes(search)),
+      })
+    })
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    await user.type(screen.getByLabelText('Squad name'), 'Night ranked')
+    await user.click(screen.getByRole('button', { name: 'One fewer player' }))
+    expect(playerCount()).toBe(4)
+
+    await user.click(screen.getByRole('button', { name: 'Change game' }))
+    await pickGame(user, 'counter', 'Counter-Strike 2, Shooter · 1–8 players')
+    await continueStep(user)
+
+    expect(await screen.findByLabelText('Squad name')).toHaveValue('Night ranked')
+    expect(screen.getByText('Counter-Strike 2')).toBeInTheDocument()
+    expect(playerCount()).toBe(8)
+  })
+
+  it('never validates on Back', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByLabelText(GAME_LABEL)).toBeInTheDocument()
+    await continueStep(user)
+    await screen.findByLabelText('Squad name')
+    expect(screen.queryByText('Squad name is required')).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Squad name'), 'Created squad')
+    await continueStep(user)
+    await screen.findByLabelText('Discord invite link')
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+
+    expect(await screen.findByLabelText('Squad name')).toHaveValue('Created squad')
+    expect(screen.queryByText('Please enter a valid URL')).not.toBeInTheDocument()
+  })
+
+  it('validates the details before Continue and the invite before the request', async () => {
+    registerCreateRoutes()
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    await continueStep(user)
+    expect(await screen.findByText('Squad name is required')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Discord invite link')).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Squad name'), 'Created squad')
+    await continueStep(user)
+    await user.click(await screen.findByRole('button', { name: 'Create squad' }))
+
+    expect(await screen.findByText('Please enter a valid URL')).toBeInTheDocument()
+    expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
   })
 })
 
@@ -710,22 +1107,19 @@ describe('create squad — success flow', () => {
     await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
     await continueStep(user)
 
-    await user.type(await screen.findByLabelText('Squad Name'), 'Created squad')
-    expect(
-      screen.getByText('Leave empty to use 5 players (League of Legends default).')
-    ).toBeInTheDocument()
-    const tagInput = screen.getByPlaceholderText('Type a tag...')
+    await user.type(await screen.findByLabelText('Squad name'), 'Created squad')
+    const tagInput = screen.getByLabelText(/^Tags/)
     await user.type(tagInput, 'ranked,')
     await user.type(tagInput, 'flex')
     await user.keyboard('{Enter}')
     await continueStep(user)
 
     await user.type(
-      await screen.findByLabelText('Discord Invite Link'),
+      await screen.findByLabelText('Discord invite link'),
       'https://discord.gg/created'
     )
 
-    await user.click(screen.getByRole('button', { name: 'Create Squad' }))
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
     await waitFor(() => {
       const post = getHttpLog().find((req) => req.method === 'POST' && req.path === '/api/rooms')
@@ -733,6 +1127,7 @@ describe('create squad — success flow', () => {
       expect(post?.body).toMatchObject({
         name: 'Created squad',
         gameId: gameLol.id,
+        maxPlayers: 5,
         discordLink: 'https://discord.gg/created',
         tags: ['ranked', 'flex'],
         language: 'pt-br',
@@ -743,6 +1138,29 @@ describe('create squad — success flow', () => {
       expect(navigation.history.location.pathname).toBe(`/squads/${createdSquad.code}`)
     )
     expect(screen.getByText('Created squad')).toBeInTheDocument()
+  })
+
+  it('posts the stepper count and the chosen language', async () => {
+    registerCreateRoutes()
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+    await user.type(screen.getByLabelText('Squad name'), 'Created squad')
+    await user.click(screen.getByRole('button', { name: 'One fewer player' }))
+    await user.click(screen.getByRole('button', { name: 'One fewer player' }))
+    await user.click(chooseLanguage('EN-US'))
+    await continueStep(user)
+    await user.type(
+      await screen.findByLabelText('Discord invite link'),
+      'https://discord.gg/created'
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    await waitFor(() => {
+      const post = getHttpLog().find((req) => req.method === 'POST' && req.path === '/api/rooms')
+      expect(post?.body).toMatchObject({ maxPlayers: 3, language: 'en' })
+    })
   })
 })
 
@@ -760,7 +1178,7 @@ describe('create squad — returning to the board', () => {
     serverSquads.rooms = [...serverSquads.rooms, createdSquad]
     const fetchesBeforeCreate = countHttpCalls('GET', '/api/rooms')
 
-    await user.click(screen.getByRole('button', { name: 'Create Squad' }))
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
     await waitFor(() =>
       expect(navigation.history.location.pathname).toBe(`/squads/${createdSquad.code}`)
     )
@@ -792,7 +1210,7 @@ describe('create squad — sidebar my squads', () => {
     await user.click(sidebar.getByRole('button', { name: 'Create squad' }))
     await screen.findByText('Choose the game', {}, { timeout: 5000 })
     await fillWizard(user)
-    await user.click(screen.getByRole('button', { name: 'Create Squad' }))
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
     await waitFor(
       () => expect(sidebar.getByRole('link', { name: /Created squad/ })).toBeInTheDocument(),
@@ -814,12 +1232,12 @@ describe('create squad — server error', () => {
 
     await fillWizard(user)
 
-    await user.click(screen.getByRole('button', { name: 'Create Squad' }))
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
     await waitFor(() =>
       expect(toastStore.errorCalls[0]).toBe('You have reached the maximum number of active squads.')
     )
-    expect(screen.getByLabelText('Discord Invite Link')).toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toBeInTheDocument()
     expect(countHttpCalls('POST', '/api/rooms')).toBe(1)
   })
 
@@ -835,13 +1253,13 @@ describe('create squad — server error', () => {
 
     await fillWizard(user)
 
-    await user.click(screen.getByRole('button', { name: 'Create Squad' }))
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
     await waitFor(() =>
       expect(toastStore.errorCalls[0]).toBe(
         'This game is no longer available. Please choose another game.'
       )
     )
-    expect(screen.getByLabelText('Discord Invite Link')).toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toBeInTheDocument()
   })
 })

@@ -21,7 +21,7 @@ function initialsOf(name: string): string {
 }
 
 /** The cover, or the game's initials when the image does not load. */
-function GameCover({ game }: { game: Game }) {
+export function GameCover({ game }: { game: Game }) {
   const [failed, setFailed] = useState(false)
 
   if (failed) {

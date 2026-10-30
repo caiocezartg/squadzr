@@ -252,6 +252,45 @@ describe('squad card — full, non-member', () => {
   })
 })
 
+describe('squad card — preview', () => {
+  it('is a plain group, not a link or a button, with no join call to action', () => {
+    const onJoin = vi.fn()
+    render(<SquadCard squad={{ ...openSquad, code: '••••••' }} onJoin={onJoin} preview />)
+
+    const card = screen.getByRole('group', {
+      name: 'Ranked grind — League of Legends, EN-US, 1 of 5 players',
+    })
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(within(card).queryByText('Enter')).not.toBeInTheDocument()
+    expect(within(card).queryByText('Joined')).not.toBeInTheDocument()
+    expect(within(card).getByText('#••••••')).toBeInTheDocument()
+    expect(within(card).getByText('Ranked grind')).toBeInTheDocument()
+
+    fireEvent.click(card)
+
+    expect(onJoin).not.toHaveBeenCalled()
+  })
+
+  it('does not react to hover or focus like the interactive states', () => {
+    render(<SquadCard squad={openSquad} preview />)
+
+    const card = screen.getByRole('group')
+    expect(card).not.toHaveClass('group')
+    expect(card.className).not.toContain('hover-fine:bg-raised')
+    expect(card.className).not.toContain('focus-visible')
+    expect(card).not.toHaveAttribute('tabindex')
+  })
+
+  it('shows its one member as a member, never as a full Squad', () => {
+    render(<SquadCard squad={{ ...openSquad, maxPlayers: 2, memberCount: 1 }} preview />)
+
+    const card = screen.getByRole('group')
+    expect(within(card).queryByText('Full')).not.toBeInTheDocument()
+    expect(within(card).getByText('/2')).toBeInTheDocument()
+  })
+})
+
 describe('squad card — who joined', () => {
   it('draws the members of the preview in order, then the vacant circles', () => {
     render(

@@ -363,12 +363,6 @@
   @apply btn bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20;
 }
 
-@utility input-field {
-  @apply w-full rounded-lg border border-border-light bg-surface px-4 py-2.5 text-sm text-offwhite
-      placeholder:text-muted/60 transition-colors duration-200
-      focus:outline-hidden focus:border-accent/50 focus:ring-1 focus:ring-accent/20;
-}
-
 @utility card {
   @apply rounded-xl border border-border bg-surface overflow-hidden;
 }
@@ -388,14 +382,6 @@
 
 @utility badge-muted {
   @apply badge bg-surface-light text-muted border border-border;
-}
-
-@utility input-field-error {
-  @apply input-field border-danger/50 focus:border-danger/70 focus:ring-danger/20;
-}
-
-@utility field-error {
-  @apply text-xs text-danger;
 }
 
 @utility section-label {

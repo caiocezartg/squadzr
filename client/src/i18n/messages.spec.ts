@@ -45,13 +45,15 @@ describe('ICU messages', () => {
 
   it('fills single-brace placeholders', () => {
     expect(t('popularGames.playerRange', { min: 5, max: 10 })).toBe('5-10 players')
-    expect(tPtBR('squads.createModal.removeTag', { tag: 'ranked' })).toBe('Remover tag ranked')
+    expect(tPtBR('ds.tag.remove', { label: '#ranked' })).toBe('Remover #ranked')
     expect(tPtBR('timeAgo.minutesAgo', { count: 5 })).toBe('há 5min')
   })
 
-  it('states the 40-player Squad limit in both languages', () => {
-    expect(t('squads.createModal.maxPlayersTooMany')).toBe('Max 40 players')
-    expect(tPtBR('squads.createModal.maxPlayersTooMany')).toBe('Máximo de 40 jogadores')
+  it('labels the player stepper of the create wizard in both languages', () => {
+    expect(t('ds.createSquad.playersFewer')).toBe('One fewer player')
+    expect(t('ds.createSquad.playersMore')).toBe('One more player')
+    expect(tPtBR('ds.createSquad.playersFewer')).toBe('Menos um jogador')
+    expect(tPtBR('ds.createSquad.playersMore')).toBe('Mais um jogador')
   })
 
   it('announces the game search results in both languages', () => {

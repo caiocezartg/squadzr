@@ -18,29 +18,37 @@ export interface SquadCardProps {
   onJoin?: (squadCode: string) => void
   /** The join request is in flight, so the card ignores further clicks. */
   isLoading?: boolean
+  /**
+   * Draws the card as others will see it while the Squad is being created: a plain group with no
+   * link, no join call to action and no hover, because there is nothing to open or join yet.
+   */
+  preview?: boolean
 }
 
 /** Tags a card names before the rest collapse into `+N`. */
 const VISIBLE_TAGS = 2
 
+const CARD_LAYOUT =
+  'relative grid w-full min-h-44 grid-cols-[118px_minmax(0,1fr)] overflow-hidden bg-card ' +
+  'text-left text-text no-underline lg:min-h-53.5 lg:grid-cols-[160px_minmax(0,1fr)]'
+
+/** What the three interactive states add: the `group` the hover effects hang on, and the focus ring. */
 const CARD_CLASSES =
-  'group relative grid w-full min-h-44 grid-cols-[118px_minmax(0,1fr)] overflow-hidden bg-card ' +
-  'text-left text-text no-underline transition-colors duration-200 ' +
-  'lg:min-h-53.5 lg:grid-cols-[160px_minmax(0,1fr)] ' +
-  'hover-fine:bg-raised ' +
+  CARD_LAYOUT +
+  ' group transition-colors duration-200 hover-fine:bg-raised ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint'
 
 /**
  * The Redesign v2 Squad card (reference, Components, SquadCard). It is a link to the Lobby for a
  * member, a button that joins for an open Squad, and a disabled card for a full Squad the viewer
- * has not joined. The medium size is the default; the large one takes over at wide widths, where
+ * has not joined; a preview is none of these. The medium size is the default; the large one takes over at wide widths, where
  * the board lays two cards in a row.
  */
-export function SquadCard({ squad, onJoin, isLoading }: SquadCardProps) {
+export function SquadCard({ squad, onJoin, isLoading, preview = false }: SquadCardProps) {
   const t = useTranslations()
   const members = squad.memberCount ?? 1
   const isMember = squad.isMember === true
-  const isFull = members >= squad.maxPlayers && !isMember
+  const isFull = members >= squad.maxPlayers && !isMember && !preview
   const language = t(languageBadgeKey(squad.language))
   const label = t('squads.card.label', {
     name: squad.name,
@@ -51,6 +59,14 @@ export function SquadCard({ squad, onJoin, isLoading }: SquadCardProps) {
   })
 
   const body = <SquadCardBody squad={squad} members={members} language={language} isFull={isFull} />
+
+  if (preview) {
+    return (
+      <div role="group" aria-label={label} className={CARD_LAYOUT}>
+        {body}
+      </div>
+    )
+  }
 
   if (isMember) {
     return (

@@ -13,6 +13,7 @@ import type { Game, Squad } from '@/types'
 import {
   DETAIL_FIELDS,
   STEPS,
+  defaultPlayers,
   type Step,
   formSchema,
   type FormInput,
@@ -37,8 +38,8 @@ export interface CreateSquadDialogProps {
 
 /**
  * The create-Squad wizard: three steps in the shared dialog (game, details, Discord invite). The
- * form values are inferred from the shared contract and live across steps; "Continue" validates the
- * step it leaves, and the last step creates the Squad. The creation mutation, its typed errors, the
+ * form values are inferred from the shared contract and live across steps, through "Back" and
+ * "Change game" too; "Continue" validates the step it leaves, and the last step creates the Squad. The creation mutation, its typed errors, the
  * board refresh and the navigation to the new lobby stay internal. Callers mount the dialog while
  * it is open.
  */
@@ -72,7 +73,10 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
     setStepIndex(index)
   }
 
+  // A different game starts the player stepper from its own maximum; choosing the same game again
+  // keeps the count the player set.
   const selectGame = (game: Game) => {
+    if (selectedGame?.id !== game.id) form.setValue('maxPlayers', defaultPlayers(game))
     setSelectedGame(game)
     form.setValue('gameId', game.id, { shouldValidate: form.formState.isSubmitted })
   }
@@ -135,8 +139,10 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
                 onEscapeOwnerChange={setSearchOwnsEscape}
               />
             )}
-            {step === 'details' && <DetailsStep selectedGame={selectedGame} />}
-            {step === 'discord' && <DiscordStep />}
+            {step === 'details' && selectedGame && (
+              <DetailsStep selectedGame={selectedGame} onChangeGame={() => goTo(0)} />
+            )}
+            {step === 'discord' && selectedGame && <DiscordStep game={selectedGame} />}
           </StepPanel>
           <CreateSquadFooter
             first={first}
