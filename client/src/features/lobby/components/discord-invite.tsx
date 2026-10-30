@@ -23,6 +23,9 @@ const FOOTER_CLASSES =
 const ACTIONS_CLASSES = 'grid grid-cols-2 gap-2 @2xl:flex @2xl:shrink-0'
 const ACTION_CLASSES = 'max-sm:px-2.5 @2xl:px-4'
 
+/** The server card's stats row, which the locked panel's slots row matches in height. */
+const STATS_CLASSES = 'flex min-h-12 flex-wrap items-center gap-x-4 gap-y-1 border-t px-3.5 py-2.5'
+
 /** The two actions of the locked panel, dimmed until the Squad completes. */
 const DIMMED_ACTIONS = [
   ['copyLink', Copy],
@@ -61,7 +64,7 @@ export function LockedInvite({ filled, total }: LockedInviteProps) {
             </span>
             <p className="text-text-3 text-[14px] leading-snug font-semibold">{t('lockedBody')}</p>
           </div>
-          <div className="border-line flex h-16.5 items-center justify-between gap-4 border-t px-3.5">
+          <div className="border-line flex min-h-12 items-center justify-between gap-4 border-t px-3.5">
             <SlotMeter filled={filled} total={total} tone="discord" />
             <span className="type-label text-text-3 shrink-0 text-right">
               {t('slotsLeft', { count: Math.max(0, total - filled) })}
@@ -197,23 +200,24 @@ export function ReadyInvite({
             </div>
           </div>
 
-          <dl className="flex gap-3 border-t border-white/10 px-3.5 py-2.5">
+          <dl className={cn(STATS_CLASSES, 'border-white/10')}>
             {previewPending ? (
-              <div className="flex-1">
-                <Skeleton className="h-11 w-full" />
-              </div>
+              <Skeleton className="h-5.5 w-2/3" />
             ) : (
               stats.map((stat) => (
-                <div key={stat.label} className="flex min-w-0 flex-1 flex-col-reverse gap-0.5">
-                  <dt className="flex items-center gap-1.75 text-[12px] font-semibold text-white/80">
+                <div key={stat.label} className="flex items-baseline gap-1.5">
+                  <dt className="order-2 text-[12.5px] font-semibold text-white/65">
+                    {stat.label}
+                  </dt>
+                  <dd className="font-display order-1 text-[18px] leading-none font-extrabold tabular-nums">
                     <span
                       aria-hidden="true"
-                      className={cn('size-2 shrink-0 rounded-full', stat.dot)}
+                      className={cn(
+                        'mr-1.5 inline-block size-2 rounded-full align-middle',
+                        stat.dot
+                      )}
                     />
-                    <span className="truncate">{stat.label}</span>
-                  </dt>
-                  <dd className="font-display text-[22px] leading-6 font-extrabold tabular-nums">
-                    {format.number(stat.value)}
+                    {format.number(stat.value, { notation: 'compact', maximumFractionDigits: 1 })}
                   </dd>
                 </div>
               ))

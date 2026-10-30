@@ -64,8 +64,8 @@ describe('squad lobby — Discord server preview', () => {
 
     expect(await within(panel).findByText('Premier Qui')).toBeInTheDocument()
     expect(within(panel).queryByText('Squad ready check')).not.toBeInTheDocument()
-    expect(statValue(panel, 'online')).toHaveTextContent('362,025')
-    expect(statValue(panel, 'members')).toHaveTextContent('2,946,792')
+    expect(statValue(panel, 'online')).toHaveTextContent('362K')
+    expect(statValue(panel, 'members')).toHaveTextContent('2.9M')
     expect(statValue(panel, 'in the room now')).toHaveTextContent('2')
     expect(within(panel).queryByText('players')).not.toBeInTheDocument()
     expect(panelImages(panel)).toEqual([
@@ -120,7 +120,7 @@ describe('squad lobby — Discord server preview', () => {
     const { panel } = await openReadyLobby({ queryClient })
 
     expect(within(panel).getByText('Premier Qui')).toBeInTheDocument()
-    expect(statValue(panel, 'online')).toHaveTextContent('362,025')
+    expect(statValue(panel, 'online')).toHaveTextContent('362K')
   })
 
   it.each<[string, () => MockHttpResponse]>([

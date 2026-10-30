@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
 import type { Player, PublicSquad } from '@/types'
 import { ExploreSquadsButton } from './explore-squads-button'
+import { LobbyColumns } from './lobby-columns'
 import { LobbyCover } from './lobby-cover'
 import { LockedInvite } from './discord-invite'
 import { MembersPanel } from './members-panel'
@@ -44,22 +45,19 @@ export function NonMemberLobby({ squad, viewerId, joining, onJoin }: NonMemberLo
         </div>
       </div>
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
-        <LobbyCover squad={squad} />
-        <div className="flex min-w-0 flex-1 flex-col gap-5">
-          <MembersPanel
-            key={squad.code}
-            squadCode={squad.code}
-            players={players}
-            memberCount={memberCount}
-            maxPlayers={squad.maxPlayers}
-            presence={null}
-            viewerId={viewerId}
-            isReady={false}
-          />
-          <LockedInvite filled={memberCount} total={squad.maxPlayers} />
-        </div>
-      </div>
+      <LobbyColumns cover={<LobbyCover squad={squad} />}>
+        <MembersPanel
+          key={squad.code}
+          squadCode={squad.code}
+          players={players}
+          memberCount={memberCount}
+          maxPlayers={squad.maxPlayers}
+          presence={null}
+          viewerId={viewerId}
+          isReady={false}
+        />
+        <LockedInvite filled={memberCount} total={squad.maxPlayers} />
+      </LobbyColumns>
     </div>
   )
 }

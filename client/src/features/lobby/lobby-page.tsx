@@ -12,6 +12,7 @@ import { useJoinSquad } from '@/features/squad-joining/join'
 import { LockedInvite, ReadyInvite } from './components/discord-invite'
 import { LobbyBackLink } from './components/lobby-back-link'
 import { LobbyActions } from './components/lobby-actions'
+import { LobbyColumns } from './components/lobby-columns'
 import { LobbyCover } from './components/lobby-cover'
 import { MembersPanel } from './components/members-panel'
 import { NonMemberLobby } from './components/non-member-lobby'
@@ -149,21 +150,18 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
         />
       )}
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
-        <LobbyCover squad={lobby.squad} />
-        <div className="flex min-w-0 flex-1 flex-col gap-5">
-          <MembersPanel
-            key={squadCode}
-            squadCode={squadCode}
-            players={lobby.players}
-            maxPlayers={lobby.maxPlayers}
-            presence={lobby.presence}
-            viewerId={session.user.id}
-            isReady={lobby.isReady}
-          />
-          <MemberInvite squadCode={squadCode} lobby={lobby} entering={readyEntrance} />
-        </div>
-      </div>
+      <LobbyColumns cover={<LobbyCover squad={lobby.squad} />}>
+        <MembersPanel
+          key={squadCode}
+          squadCode={squadCode}
+          players={lobby.players}
+          maxPlayers={lobby.maxPlayers}
+          presence={lobby.presence}
+          viewerId={session.user.id}
+          isReady={lobby.isReady}
+        />
+        <MemberInvite squadCode={squadCode} lobby={lobby} entering={readyEntrance} />
+      </LobbyColumns>
     </div>
   )
 }
