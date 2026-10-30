@@ -21,13 +21,13 @@ inventory (see the equivalence proof below).
 
 ## Projects
 
-| Workspace                    | Vitest project       | Environment | Include pattern                                   | Suites | Tests |
-| ---------------------------- | -------------------- | ----------- | ------------------------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`                                | 29     | 160   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts`                  | 29     | 294   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`, `scripts/**/*.spec.mjs` | 81     | 747   |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`                                | 4      | 98    |
-| `@squadzr/typescript-config` | —                    | —           | —                                                 | —      | —     |
+| Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
+| ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 29     | 160   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 29     | 294   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 79     | 733   |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 4      | 98    |
+| `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-25 on the
 merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104 and CCC-105. CCC-104 puts `memberPreview` on every Squad and orders the roster: it adds `tests/integration/member-preview.test.ts` (+1 file / +9 tests: the preview on the list, the single read for non-members and members, My Squads, `POST /api/rooms` with `room_created`, and `room_snapshot`, with its content, the limit of five and the order), the contract cases in `schemas:unit` (+8), the use-case, projection and ordering cases in `server:unit` (+5), and updates the client fixtures without adding client tests. CCC-90 adds the
@@ -121,6 +121,10 @@ empty state, the bottom sheet below 640px, mark one, mark all, dismiss, the thre
 cover) and adds one `sidebar-flows.spec.tsx` case (the bell's place held in the page header). The other
 shell bell cases changed only in the bell's accessible name.
 
+Removing the bundle budget deletes `scripts/bundle-report.spec.mjs` (2 tests) and
+`scripts/bundle-limits.spec.mjs` (12 tests) with the scripts they covered, and drops `scripts/**`
+from the `client:unit` include, so `client:unit` measures 78 files / 718 tests (732 → 718). On the CCC-108 tree merged with this change, `client:unit` measures 79 files / 733 tests.
+
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
 
@@ -151,9 +155,7 @@ mock/in-memory dependencies:
   specs together with their use cases. The CCC-28 baseline of 39 tests across 10 specs is historical; see
   the equivalence proof below. CCC-90 adds the IGDB adapter and Catalog Import environment suites.
 - `client:unit` — runs in jsdom; the environment is proven by an assertion on `document`, which
-  fails under a Node environment. `scripts/bundle-report.spec.mjs` checks the bundle report of the
-  Next build (`client/scripts/bundle-report.mjs`) against a fixture of manifests; it stays in this
-  project because the shared setup file needs jsdom globals.
+  fails under a Node environment.
 - `schemas:unit` — runtime contract tests for the shared Zod schemas.
 
 Integration projects follow the same naming convention:

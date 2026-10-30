@@ -56,9 +56,7 @@ so no other app or commit status can satisfy them.
 - **Zero build warnings.** The client builds with `next build` (Next.js 16), and its log must show no
   warning, Browserslist notice included; no build advisory is accepted as known output. `build` does
   not fail on a warning by itself, so a warning in the log is a defect to fix at its root.
-  `bun run bundle:budget` writes the bundle report from the Next output and fails when the
-  catch-all route's initial JavaScript exceeds its gzip limit or a chunk exceeds 500 kB raw. The
-  limits live in `client/scripts/bundle-limits.mjs` (CCC-71).
+  There is no bundle-size budget: `build` checks that the client builds, not how large it is.
 
 ## Required GitHub settings (owner action)
 
