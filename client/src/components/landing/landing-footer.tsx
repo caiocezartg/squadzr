@@ -27,11 +27,12 @@ function FooterColumn({
  * The landing's own footer (the shell's stays off `/`): the logo and tagline, the product and help
  * links, the large outlined wordmark, and the IGDB credit. It has no motion, so it renders in the
  * server HTML. The year comes from the shared clock, which starts at the server's request time, so
- * the server and the first client render agree.
+ * the server and the first client render agree; it is read in UTC so both sides name the same year
+ * whatever their time zones.
  */
 export function LandingFooter() {
   const t = useTranslations('landing.footer')
-  const year = useClock().getFullYear()
+  const year = useClock().getUTCFullYear()
 
   return (
     <footer className="bg-menu px-4 pt-24 pb-10 sm:px-6 sm:pt-34">
