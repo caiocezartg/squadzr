@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { isoDateTimeSchema } from './date'
-import { DISCORD_INVITE_PREFIXES } from './discord'
+import { discordInviteCode } from './discord'
 import { gameSummarySchema } from './game'
 
 export const roomLanguageSchema = z.enum(['en', 'pt-br'])
@@ -78,7 +78,7 @@ export const createRoomInputSchema = z.object({
   maxPlayers: z.number().int().min(2).max(40).optional(),
   discordLink: z
     .url({ error: 'Invalid Discord link' })
-    .refine((url) => DISCORD_INVITE_PREFIXES.some((prefix) => url.startsWith(prefix)), {
+    .refine((url) => discordInviteCode(url) !== null, {
       message: 'Discord link must be a valid Discord invite URL',
     }),
   tags: z
@@ -86,8 +86,13 @@ export const createRoomInputSchema = z.object({
       z
         .string()
         .trim()
-        .max(15, 'Tag too long')
         .transform((t) => t.replace(/^#+/, '').toLowerCase())
+        .pipe(
+          z
+            .string()
+            .max(12, 'Tag too long')
+            .regex(/^[\p{L}\p{N}-]*[\p{L}\p{N}][\p{L}\p{N}-]*$/u, 'Tag must be one word')
+        )
     )
     .max(5, 'Max 5 tags')
     .default([]),

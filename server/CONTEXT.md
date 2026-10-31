@@ -29,7 +29,7 @@ A Squad that has reached its required capacity and no longer accepts membership 
 _Avoid_: Ready Room, completed room, waiting room
 
 **Discord Preview**:
-The public data Discord holds for the invite of a Ready Squad: its server's name, icon, backdrop and member counts. Only a member of a Ready Squad may read it. The server reads it from Discord and keeps each answer, a negative one included, for ten minutes; when Discord has nothing to show (an invalid or expired invite, Discord down or rate limiting) the preview is absent and the Squad's own data stands in.
+The public data Discord holds for the invite of a Ready Squad: its server's name, icon, backdrop and member counts. Only a member of a Ready Squad may read it. The server reads it from Discord and keeps each answer for ten minutes, except an invite Discord does not know or a Discord that could not be reached, which it keeps for one minute so a mistyped or just-created invite is asked about again soon; when Discord has nothing to show (an invalid or expired invite, Discord down or rate limiting) the preview is absent and the Squad's own data stands in. The same provider also verifies an invite before its Squad exists: creating a Squad asks Discord about the invite and refuses one Discord does not know with 422 `INVALID_DISCORD_INVITE`, while a Discord that cannot be reached, or an invite that expires, lets the Squad through. `GET /api/discord/invites/:code` (authenticated) gives the create form the same check while the host types: `valid` with the server and whether the invite expires, `invalid`, or `unknown` when Discord could not be asked. There is no rate limit on it yet; the cache is the only protection for Discord.
 _Avoid_: Server info, invite metadata, Discord card
 
 **Game**:

@@ -6,10 +6,13 @@ export {
 } from './error'
 export {
   DISCORD_INVITE_PREFIXES,
+  discordInviteCheckResponseSchema,
   discordInviteCode,
+  discordInviteCodeParamSchema,
   discordPreviewResponseSchema,
   discordServerPreviewSchema,
   parseDiscordInvite,
+  type DiscordInviteCheckResponse,
   type DiscordInviteLink,
   type DiscordPreviewResponse,
   type DiscordServerPreviewDto,

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  discordInviteCheckResponseSchema,
   discordInviteCode,
+  discordInviteCodeParamSchema,
   discordPreviewResponseSchema,
   discordServerPreviewSchema,
   parseDiscordInvite,
@@ -87,5 +89,47 @@ describe('discordPreviewResponseSchema', () => {
     { memberCount: undefined },
   ])('refuses a preview with %j', (patch) => {
     expect(discordServerPreviewSchema.safeParse({ ...preview, ...patch }).success).toBe(false)
+  })
+})
+
+describe('discordInviteCodeParamSchema', () => {
+  it.each(['abc123', 'premier-qui', 'A'])('accepts the code %j', (code) => {
+    expect(discordInviteCodeParamSchema.parse({ code })).toEqual({ code })
+  })
+
+  it.each(['', 'ab cd', 'ab/cd', '..', 'ab%2Fcd', 'a'.repeat(65)])(
+    'refuses the code %j',
+    (code) => {
+      expect(discordInviteCodeParamSchema.safeParse({ code }).success).toBe(false)
+    }
+  )
+})
+
+describe('discordInviteCheckResponseSchema', () => {
+  const server = {
+    name: 'VALORANT',
+    iconUrl: 'https://cdn.discordapp.com/icons/1/abc.png?size=128',
+    memberCount: 2_946_792,
+  }
+
+  it.each([
+    { status: 'valid', server, expires: false },
+    { status: 'valid', server: { ...server, iconUrl: null, memberCount: null }, expires: true },
+    { status: 'invalid' },
+    { status: 'unknown' },
+  ])('accepts %j', (response) => {
+    expect(discordInviteCheckResponseSchema.parse(response)).toEqual(response)
+  })
+
+  it.each([
+    {},
+    { status: 'expired' },
+    { status: 'valid', server },
+    { status: 'valid', expires: false },
+    { status: 'valid', server: { ...server, name: 1 }, expires: false },
+    { status: 'valid', server: { ...server, iconUrl: 'not a url' }, expires: false },
+    { status: 'valid', server: { ...server, memberCount: -1 }, expires: false },
+  ])('refuses %j', (response) => {
+    expect(discordInviteCheckResponseSchema.safeParse(response).success).toBe(false)
   })
 })

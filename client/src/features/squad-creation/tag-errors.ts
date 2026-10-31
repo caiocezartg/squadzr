@@ -1,10 +1,11 @@
 /**
- * The shared tag schema words its two limits in English (packages/schemas). The form shows the
- * translation of each limit it knows, and any other message as the schema wrote it.
+ * The shared tag schema words its three rules in English (packages/schemas). The form shows the
+ * translation of each rule it knows, and any other message as the schema wrote it.
  */
 const TAG_ERROR_KEYS = {
   'Max 5 tags': 'squads.createModal.tagsMax',
   'Tag too long': 'squads.createModal.tagTooLong',
+  'Tag must be one word': 'squads.createModal.tagOneWord',
 } as const
 
 type TagErrorMessage = keyof typeof TAG_ERROR_KEYS

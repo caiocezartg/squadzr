@@ -1,18 +1,20 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { FormProvider, useForm } from 'react-hook-form'
+import { FormProvider, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Dialog } from '@/components/ds/dialog'
 import { Steps } from '@/components/ds/steps'
+import { ApiClientError } from '@/lib/api'
 import { getUserFriendlyError } from '@/lib/error-messages'
 import { notifyError } from '@/lib/notify'
 import type { Game, Squad } from '@/types'
 import {
   DETAIL_FIELDS,
   STEPS,
+  defaultPlayers,
   type Step,
   formSchema,
   type FormInput,
@@ -24,6 +26,7 @@ import { CreateSquadFooter } from './footer'
 import { GameStep } from './game-step'
 import { StepPanel, type StepDirection } from './step-panel'
 import { useCreateSquad } from './use-create-squad'
+import { useDiscordInviteCheck } from './use-discord-invite-check'
 
 export interface CreateSquadDialogProps {
   /** Dismisses the dialog; the caller unmounts it, so the next open starts from an empty form. */
@@ -37,10 +40,10 @@ export interface CreateSquadDialogProps {
 
 /**
  * The create-Squad wizard: three steps in the shared dialog (game, details, Discord invite). The
- * form values are inferred from the shared contract and live across steps; "Continue" validates the
- * step it leaves, and the last step creates the Squad. The creation mutation, its typed errors, the
- * board refresh and the navigation to the new lobby stay internal. Callers mount the dialog while
- * it is open.
+ * form values are inferred from the shared contract and live across steps, through "Back" and
+ * "Change game" too; "Continue" validates the step it leaves, and the last step creates the
+ * Squad. The creation mutation, its typed errors, the board refresh and the navigation to the new
+ * lobby stay internal. Callers mount the dialog while it is open.
  */
 export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps) {
   const t = useTranslations('ds.createSquad')
@@ -57,6 +60,9 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
     },
   })
   const createSquad = useCreateSquad({ onClose, onCreated })
+  const invite = useDiscordInviteCheck(
+    useWatch({ control: form.control, name: 'discordLink' }) ?? ''
+  )
 
   const [stepIndex, setStepIndex] = useState(0)
   const [direction, setDirection] = useState<StepDirection | null>(null)
@@ -72,16 +78,30 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
     setStepIndex(index)
   }
 
+  // A different game starts the player stepper from its own maximum; choosing the same game again
+  // keeps the count the player set.
   const selectGame = (game: Game) => {
+    if (selectedGame?.id !== game.id) form.setValue('maxPlayers', defaultPlayers(game))
     setSelectedGame(game)
     form.setValue('gameId', game.id, { shouldValidate: form.formState.isSubmitted })
   }
 
   const create = form.handleSubmit(async (data) => {
+    // Discord already said it does not know the invite: the field shows it, and nothing is sent.
+    if (invite.status === 'invalid') {
+      form.setFocus('discordLink')
+      return
+    }
+
     try {
       await createSquad.mutateAsync(data)
     } catch (err) {
       notifyError(getUserFriendlyError(err, tAll))
+      // The server asked Discord itself and refused the invite: the dialog stays open on the field.
+      if (err instanceof ApiClientError && err.code === 'INVALID_DISCORD_INVITE') {
+        form.setError('discordLink', { type: 'server' })
+        form.setFocus('discordLink')
+      }
     }
   })
 
@@ -135,8 +155,12 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
                 onEscapeOwnerChange={setSearchOwnsEscape}
               />
             )}
-            {step === 'details' && <DetailsStep selectedGame={selectedGame} />}
-            {step === 'discord' && <DiscordStep />}
+            {step === 'details' && selectedGame && (
+              <DetailsStep selectedGame={selectedGame} onChangeGame={() => goTo(0)} />
+            )}
+            {step === 'discord' && selectedGame && (
+              <DiscordStep game={selectedGame} invite={invite} />
+            )}
           </StepPanel>
           <CreateSquadFooter
             first={first}

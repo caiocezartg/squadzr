@@ -14,7 +14,12 @@ import {
   type RealtimeSession,
 } from '@test/harness/realtime'
 import { createRoom, insertGame, joinAll, roomAction } from '@test/harness/rooms'
-import { buildTestServer, createTestEnv, type TestServer } from '@test/harness/test-server'
+import {
+  KNOWN_INVITES,
+  buildTestServer,
+  createTestEnv,
+  type TestServer,
+} from '@test/harness/test-server'
 
 const LATENCY_BOUND_MS = 500
 let database: TestServer
@@ -63,6 +68,7 @@ async function setup() {
   const app = await buildApp({
     env: createTestEnv({ DATABASE_URL: database.databaseUrl }),
     logger: capture.logger,
+    discordPreviews: KNOWN_INVITES,
     clock,
   })
   await app.ready()

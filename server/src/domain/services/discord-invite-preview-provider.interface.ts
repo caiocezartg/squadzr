@@ -1,4 +1,4 @@
-/** The Discord server behind an invite, as far as the Lobby shows it. */
+/** The Discord server behind an invite, as far as the Lobby and the create form show it. */
 export interface DiscordServerPreview {
   readonly name: string
   readonly iconUrl: string | null
@@ -6,6 +6,8 @@ export interface DiscordServerPreview {
   readonly backdropUrl: string | null
   readonly memberCount: number | null
   readonly onlineCount: number | null
+  /** When the invite stops working, as Discord states it, or `null` for an invite that never expires. */
+  readonly expiresAt: string | null
 }
 
 /**

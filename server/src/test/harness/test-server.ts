@@ -6,9 +6,23 @@ import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invi
 import { parseEnv, type Env } from '@config/env'
 import { createIsolatedDatabase } from './postgres'
 
-/** Discord's answer for every invite unless a test says otherwise: tests never reach the network. */
-const UNKNOWN_INVITES: DiscordInvitePreviewProvider = {
-  fetch: () => Promise.resolve({ kind: 'invalid' }),
+/**
+ * Discord's answer for every invite unless a test says otherwise: tests never reach the network. Every
+ * invite exists, so the suites that create Squads are not stopped by the create-time check.
+ */
+export const KNOWN_INVITES: DiscordInvitePreviewProvider = {
+  fetch: () =>
+    Promise.resolve({
+      kind: 'found',
+      preview: {
+        name: 'Squadzr Test Server',
+        iconUrl: null,
+        backdropUrl: null,
+        memberCount: 42,
+        onlineCount: 7,
+        expiresAt: null,
+      },
+    }),
 }
 
 /** Better Auth secret of every test server; session cookies in tests are signed with it. */
@@ -24,7 +38,7 @@ export interface TestServer {
 export interface BuildTestServerOptions {
   /** Injects a deterministic clock; defaults to the production system clock. */
   clock?: Clock
-  /** Replaces Discord's invite endpoint, which no test reaches. Defaults to an invite Discord does not know. */
+  /** Replaces Discord's invite endpoint, which no test reaches. Defaults to a server that knows every invite. */
   discordPreviews?: DiscordInvitePreviewProvider
   /**
    * Replaces the production logger for tests that read request logs. Omitted, the
@@ -63,7 +77,7 @@ export async function buildTestServer(
       env,
       logger: options.logger,
       clock: options.clock,
-      discordPreviews: options.discordPreviews ?? UNKNOWN_INVITES,
+      discordPreviews: options.discordPreviews ?? KNOWN_INVITES,
     })
     await app.ready()
   } catch (error) {

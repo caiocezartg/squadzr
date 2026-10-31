@@ -23,10 +23,10 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 32     | 195   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 30     | 304   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 82     | 772   |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 127   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 33     | 208   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 31     | 320   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 86     | 845   |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-25 on the
@@ -128,6 +128,57 @@ shell bell cases changed only in the bell's accessible name.
 Removing the bundle budget deletes `scripts/bundle-report.spec.mjs` (2 tests) and
 `scripts/bundle-limits.spec.mjs` (12 tests) with the scripts they covered, and drops `scripts/**`
 from the `client:unit` include, so `client:unit` measures 78 files / 718 tests (732 → 718). On the CCC-108 tree merged with this change, `client:unit` measures 79 files / 733 tests; on the CCC-112 tree merged with both, 82 files / 772 tests.
+
+CCC-114 finishes the create wizard (details, Discord invite and a card preview) and recounts
+`client:unit` at 86 files / 813 tests (772 → 813, on the CCC-112 tree). It adds four suites, all
+beside the modules they cover: `add-tag.spec.ts` (4 tests: the tag as the contract writes it, a
+blank or repeated tag ignored, the 15-character edge, the fifth and sixth tag),
+`discord-link.spec.ts` (7: the two invite hosts, no URL, a URL that is no invite),
+`preview-squad.spec.ts` (3: the form's values, the viewer as only member with a masked code, the name
+fallback) and `create-squad-form.spec.ts` (3: the limits read from the contract, the stepper's start).
+`create-squad.spec.tsx` grows from 32 to 53 tests: the chosen game with "Change game", the `n/30`
+counter on the trimmed name and the too-long name, the stepper's start, announcement and 2–40 bounds, the language control,
+the tag suggestions, chips, Enter, comma, Backspace and both limits, the live Discord validation and its
+announcement, the hint, the preview content, every value kept through Back, Continue and "Change game", the stepper
+starting over for a different game, Back never validating, per-step validation, and the posted
+`maxPlayers` and language. `squad-card.spec.tsx` gains 3 tests for the non-interactive preview, and
+`messages.spec.ts` swaps the 40-player message test for the stepper's labels in both languages. The
+unused `squads.createModal` copy and the `input-field` utilities of the old form are deleted.
+
+CCC-114 round 2 verifies the Discord invite, tightens the tag rule and makes the player count typeable.
+`schemas:unit` gains 33 tests (127 → 160): `discord.spec.ts` covers the invite-code param schema and the
+invite-check response (`valid` with or without an icon and a member count, `invalid`, `unknown`, and the
+shapes refused), and `index.spec.ts` covers the tag rule (the hashes not counting toward 12 characters,
+letters with accents, digits and hyphens, a 13th character, text that is not one word, the sixth tag) and the
+links with no invite code (`https://discord.gg/`, `https://discord.gg/??`). `server:unit` gains one suite,
+`check-discord-invite.use-case.spec.ts` (5: a valid invite that never expires, one that expires, an invalid
+one, and Discord rate limiting or unreachable as `unknown`), 7 cases in `create-room.use-case.spec.ts` (the
+code asked of Discord before creating, an unknown invite refused with `InvalidDiscordInviteError` and nothing
+created, Discord not asked when the game is refused first, a found, expiring, rate-limited or unreachable
+answer creating the Squad, and a link with no code refused) and 1 in the provider spec (the expiration); the
+cache spec now pins one minute for an `invalid` answer as well as for an unreachable Discord (same count),
+so `server:unit` measures 33 files / 208 tests. `server:integration` gains `discord-invite-http.test.ts`
+(9: the server behind an invite that never expires, one that expires, `invalid`, `unknown` for a
+rate-limited or unreachable Discord, 401 without asking Discord, and 400 for three bad codes) and 7 cases
+in `rooms-http.test.ts` (an invite link with no code, a 13-character tag and a two-word tag as 400, a
+12-character tag with a hash that does not count, `INVALID_DISCORD_INVITE` as 422 with nothing created, and
+a rate-limited or unreachable Discord letting the Squad through). Its test server now answers `found` for
+every invite, so the suites that create Squads keep working, and the three suites that build the app
+themselves pass it too. `client:unit` gains 33 tests (813 → 846), no new suite: 26 in
+`create-squad.spec.tsx` (53 → 79: the stepper as a numeric spinbutton with its bounds, the live region apart
+from the field, a typed count written on blur, the clamping of 1, 0 and 99, an empty field restoring the
+count, the arrow keys, Enter not submitting, and the buttons painting no ground; the tag stopping at 12
+characters, the hash not counting, a paste cut at 12, a space committing the draft and pasted words refused
+with the one-word message; and the Discord step checking, showing the server behind the invite, warning
+about an expiring invite, refusing an unknown one without a POST, clearing the refusal on a new link,
+staying valid when Discord is unknown or the check fails, letting the Squad be created while it checks, the
+server's 422 keeping the dialog open on the field, and links with no invite code refused by the contract),
+3 in `add-tag.spec.ts` (4 → 7), 1 in `tag-errors.spec.ts` (3 → 4) and 3 in `discord-link.spec.ts` (7 → 10).
+
+The CCC-114 review nits drop the stepper case that read class names (`create-squad.spec.tsx` 79 → 78,
+`client:unit` 846 → 845; the borderless hover stays a visual check) and add tags made only of hyphens to
+the one-word rejections in `@squadzr/schemas` (160 → 162). The checking case now also asserts the
+checking announcement.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.

@@ -42,7 +42,7 @@ export function CreateSquadFooter({
           icon={creating ? <Loader2 aria-hidden className="animate-spin" /> : <Check aria-hidden />}
           iconPosition="end"
         >
-          {creating ? t('squads.createModal.creating') : t('squads.createModal.submit')}
+          {creating ? t('ds.createSquad.creating') : t('ds.createSquad.submit')}
         </Button>
       ) : (
         <Button

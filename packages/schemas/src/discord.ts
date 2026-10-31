@@ -32,6 +32,12 @@ export function parseDiscordInvite(link: string): DiscordInviteLink | null {
 // What Discord accepts as an invite code: letters, digits and hyphens.
 const INVITE_CODE = /^[A-Za-z0-9-]{1,64}$/
 
+// The invite code on its own, as a request path carries it. One rule for the endpoint that checks an
+// invite and for the contract that reads it out of a link.
+export const discordInviteCodeParamSchema = z.object({
+  code: z.string().regex(INVITE_CODE),
+})
+
 // The code to ask Discord about, or `null` when the link is no invite or its code is not safe to put in
 // a request path. A query string or a trailing path after the code is dropped.
 export function discordInviteCode(link: string): string | null {
@@ -62,3 +68,22 @@ export const discordPreviewResponseSchema = z.object({
 })
 
 export type DiscordPreviewResponse = z.infer<typeof discordPreviewResponseSchema>
+
+// Discord's own answer about an invite a Squad creator typed: `valid` carries the server behind it and
+// whether the invite ever expires, `invalid` means Discord does not know it, and `unknown` means Discord
+// could not be asked (slow, down or rate limiting), which is no verdict on the invite.
+export const discordInviteCheckResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('valid'),
+    server: z.object({
+      name: z.string(),
+      iconUrl: z.url().nullable(),
+      memberCount: z.number().int().nonnegative().nullable(),
+    }),
+    expires: z.boolean(),
+  }),
+  z.object({ status: z.literal('invalid') }),
+  z.object({ status: z.literal('unknown') }),
+])
+
+export type DiscordInviteCheckResponse = z.infer<typeof discordInviteCheckResponseSchema>
