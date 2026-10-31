@@ -204,6 +204,21 @@ shortened window has passed), so `server:integration` measures 31 files / 324 te
 `create-squad.spec.tsx` gains 1 test (78 → 79: a rate-limited check reads as unknown, with no new message),
 which the `client:unit` total above counts.
 
+CCC-115 round 3 rebuilds the hero as a pre-match stage with a game switcher and recounts `client:unit` at
+87 files / 888 tests (877 → 888). `hero-demo-card.spec.tsx` leaves with the card and
+`hero-demo.spec.tsx` replaces it (10 → 18 tests, with fake timers and a controlled
+`IntersectionObserver`: the start at 2/5, no play until half the stage is on screen, a slot at 600ms and
+then every 900ms with the board card following, the viewer locked in last and the invite swapped at 5/5,
+the final state held with no loop, the timers cleared on unmount, the reduced-motion final state that
+never rewinds or observes, the `hydrateRoot` case that never shows 2/5, the result described once and
+inert, the five slots with the viewer's linking to the board, and the switcher: three tabs with one in the
+tab order, a pick that swaps the squad and replays from 2/5, a replay of the same game, a restart that
+never runs two stories at once, the arrows, Home and End, and the swap in its final state under reduced
+motion). `landing.spec.tsx` goes from 12 to 11 tests (the badge cases become one "no badge" case, and the
+final-state case pins the stage list, the viewer's link and the selected tab). `landing-navigation.spec.tsx`
+goes from 20 to 24 tests: the numbered links, the scroll-spy (marking the section in view, never the board
+route) and the sticky header's ground once the page scrolls.
+
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
 

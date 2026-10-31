@@ -24,12 +24,12 @@ export default async function LandingPage() {
   // The landing renders per request. Waiting for the request first keeps Next from rendering it at build
   // time, when the games API is not running.
   await connection()
-  const { totalGames, games } = await loadPopularGames()
+  const { games } = await loadPopularGames()
 
   return (
     <MotionProvider>
       <LandingNav />
-      <HeroSection gameCount={totalGames} />
+      <HeroSection />
       <PopularGames games={games} />
       <HowItWorks />
       <FAQSection />

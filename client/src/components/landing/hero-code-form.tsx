@@ -30,7 +30,11 @@ export function HeroCodeForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex max-w-110 flex-col gap-2">
+    <form
+      onSubmit={handleSubmit}
+      noValidate
+      className="flex max-w-full flex-col gap-2 sm:max-w-110"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor={inputId} className="text-text-3 text-[13px]">
           {t('codeLabel')}

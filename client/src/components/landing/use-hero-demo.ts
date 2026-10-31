@@ -1,54 +1,66 @@
 'use client'
 
-import { useLayoutEffect, useState, type RefObject } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { prefersReducedMotion, useReducedMotion } from '@/hooks/use-reduced-motion'
+import { DEMO_FOUNDERS, DEMO_TOTAL } from './hero-demo-data'
 
-/** The squad the demo fills up, and how many members it starts with (reference, Motion: Hero). */
-export const DEMO_TOTAL = 5
-const DEMO_START_FILLED = 2
-
-/** Once the card is visible, the first member joins after this long, then one every step. */
+/** Once the stage is visible, the first slot locks in after this long, then one every step. */
 const DEMO_START_DELAY_MS = 600
 const DEMO_STEP_MS = 900
-/** A joined member's toast stays this long before it leaves. */
-const DEMO_TOAST_MS = 1600
+/** How much of the stage must be on screen before the story starts, so the viewer sees it from its start. */
+const DEMO_VISIBLE_SHARE = 0.5
 
 export interface HeroDemoState {
-  /** Members in the squad. */
+  /** Slots locked in: the members of the squad. */
   readonly filled: number
-  /** The counts the visible toasts announce, in the order they came in. */
-  readonly toasts: readonly number[]
-  /** The script is driving the card, so members that join enter with their animation. */
+  /** The script is driving the demo, so slots that lock in from now on enter with their motion. */
   readonly scripted: boolean
-  /** The card was just rewound: its transitions are off for that one change. */
+  /** The demo was just rewound: its transitions are off for that one change. */
   readonly instant: boolean
 }
 
-/** What the server HTML shows, what hydration renders, and what reduced motion keeps: the squad full. */
-const FINAL_STATE: HeroDemoState = {
-  filled: DEMO_TOTAL,
-  toasts: [],
-  scripted: false,
-  instant: false,
+export interface HeroDemo extends HeroDemoState {
+  /** Plays the story again from its start, as the viewer asked for it; reduced motion keeps it full. */
+  readonly replay: () => void
 }
 
-const REWOUND_STATE: HeroDemoState = {
-  filled: DEMO_START_FILLED,
-  toasts: [],
-  scripted: true,
-  instant: true,
-}
+/** What the server HTML shows, what hydration renders, and what reduced motion keeps: the squad full. */
+const FINAL_STATE: HeroDemoState = { filled: DEMO_TOTAL, scripted: false, instant: false }
+
+const REWOUND_STATE: HeroDemoState = { filled: DEMO_FOUNDERS, scripted: true, instant: true }
 
 /**
- * The hero demo's one-shot script. The first render, on the server and in hydration, is the final
- * state, so both agree and nothing flashes in an empty one. Once mounted, and only when motion is
- * allowed, the card rewinds to its start before it paints, waits until `target` is visible, and
- * plays once: a member every step, each with a toast that leaves on its own. It never loops and never
- * replays. Under reduced motion it never rewinds.
+ * The hero demo's script. The first render, on the server and in hydration, is the final state, so both
+ * agree and nothing flashes in an empty one. Once mounted, and only when motion is allowed, the demo
+ * rewinds to its start before it paints, waits until `target` (the slot stage) is visible, and plays
+ * once: a slot locks in every step. It never loops on its own; `replay` plays it again when the viewer
+ * asks. Under reduced motion it never rewinds.
  */
-export function useHeroDemo(target: RefObject<Element | null>): HeroDemoState {
+export function useHeroDemo(target: RefObject<Element | null>): HeroDemo {
   const reducedMotion = useReducedMotion()
   const [state, setState] = useState<HeroDemoState>(FINAL_STATE)
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>())
+  const observer = useRef<IntersectionObserver | null>(null)
+
+  const cancel = useCallback(() => {
+    observer.current?.disconnect()
+    for (const timer of timers.current) clearTimeout(timer)
+    timers.current.clear()
+  }, [])
+
+  const play = useCallback(() => {
+    for (let step = 0; step < DEMO_TOTAL - DEMO_FOUNDERS; step++) {
+      const filled = DEMO_FOUNDERS + step + 1
+      const timer = setTimeout(
+        () => {
+          timers.current.delete(timer)
+          setState({ filled, scripted: true, instant: false })
+        },
+        DEMO_START_DELAY_MS + step * DEMO_STEP_MS
+      )
+      timers.current.add(timer)
+    }
+  }, [])
 
   useLayoutEffect(() => {
     const element = target.current
@@ -60,53 +72,33 @@ export function useHeroDemo(target: RefObject<Element | null>): HeroDemoState {
 
     setState(REWOUND_STATE)
 
-    const timers = new Set<ReturnType<typeof setTimeout>>()
-    const later = (run: () => void, delay: number) => {
-      const timer = setTimeout(() => {
-        timers.delete(timer)
-        run()
-      }, delay)
-      timers.add(timer)
-    }
-
-    const play = () => {
-      for (let step = 0; step < DEMO_TOTAL - DEMO_START_FILLED; step++) {
-        const filled = DEMO_START_FILLED + step + 1
-        later(
-          () => {
-            setState((current) => ({
-              filled,
-              toasts: [...current.toasts, filled],
-              scripted: true,
-              instant: false,
-            }))
-          },
-          DEMO_START_DELAY_MS + step * DEMO_STEP_MS
+    const visibility = new IntersectionObserver(
+      (entries) => {
+        const seen = entries.some(
+          (entry) => entry.isIntersecting && entry.intersectionRatio >= DEMO_VISIBLE_SHARE
         )
-        later(
-          () => {
-            setState((current) => ({
-              ...current,
-              toasts: current.toasts.filter((count) => count !== filled),
-            }))
-          },
-          DEMO_START_DELAY_MS + step * DEMO_STEP_MS + DEMO_TOAST_MS
-        )
-      }
+        if (!seen) return
+        visibility.disconnect()
+        play()
+      },
+      { threshold: DEMO_VISIBLE_SHARE }
+    )
+    visibility.observe(element)
+    observer.current = visibility
+
+    return cancel
+  }, [reducedMotion, target, play, cancel])
+
+  const replay = useCallback(() => {
+    cancel()
+    if (prefersReducedMotion()) {
+      setState(FINAL_STATE)
+      return
     }
+    // The viewer is looking at the stage: the control that asks for the replay sits on it.
+    setState(REWOUND_STATE)
+    play()
+  }, [cancel, play])
 
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return
-      observer.disconnect()
-      play()
-    })
-    observer.observe(element)
-
-    return () => {
-      observer.disconnect()
-      for (const timer of timers) clearTimeout(timer)
-    }
-  }, [reducedMotion, target])
-
-  return state
+  return { ...state, replay }
 }

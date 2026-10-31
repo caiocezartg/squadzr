@@ -52,12 +52,14 @@ afterEach(() => {
 })
 
 describe('landing server HTML', () => {
-  it('renders the headline and the copy, which never name a number of games', async () => {
+  it('renders the headline and the one sentence that says what the product is for', async () => {
     await showServerHtml()
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Missing: you.')
-    const copy = screen.getByText(/Create or join squads for LoL, CS2, Valorant and more/)
-    expect(copy.textContent).toContain('the Discord invite reaches the whole team.')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Build your squad. Play tonight.'
+    )
+    const copy = screen.getByText(/Find players to fill your team in LoL, CS2, Valorant and more/)
+    expect(copy.textContent).toContain('the Discord invite reaches everyone.')
     expect(copy.textContent).not.toMatch(/\d+\s+(more\s+)?games/i)
   })
 
@@ -69,18 +71,11 @@ describe('landing server HTML', () => {
     expect(headingOpenTag).not.toContain('opacity')
   })
 
-  it('renders the games badge with the catalog total', async () => {
-    await showServerHtml()
-
-    // The badge counts every Listed Game (42), not just the two returned in the page.
-    expect(screen.getByText('42 GAMES · SQUADS OPEN NOW')).toBeInTheDocument()
-  })
-
-  it('leaves the games badge out when the catalog has no games', async () => {
-    onHttp('GET', '/api/games/popular', () => httpOk({ totalGames: 0, games: [] }))
+  it('has no games badge, however many games the catalog has', async () => {
     await showServerHtml()
 
     expect(screen.queryByText(/SQUADS OPEN NOW/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/42 GAMES/)).not.toBeInTheDocument()
   })
 
   it('renders the popular games and the FAQ', async () => {
@@ -99,10 +94,7 @@ describe('landing server HTML', () => {
     await showServerHtml()
     const nav = screen.getByRole('navigation', { name: 'Main' })
 
-    expect(within(nav).getByRole('link', { name: 'Explore squads' })).toHaveAttribute(
-      'href',
-      '/squads'
-    )
+    expect(within(nav).getByRole('link', { name: 'Squads' })).toHaveAttribute('href', '/squads')
     expect(within(nav).getByRole('link', { name: 'Games' })).toHaveAttribute('href', '#jogos')
     expect(within(nav).getByRole('link', { name: 'How it works' })).toHaveAttribute(
       'href',
@@ -150,21 +142,31 @@ describe('landing server HTML', () => {
     )
   })
 
-  it('renders the hero demo in its final state: the squad full and its invite unlocked', async () => {
+  it('renders the hero demo in its final state: five slots locked, the board card full and the invite unlocked', async () => {
     await showServerHtml()
-    const demo = screen.getByRole('img', { name: /fills up to 5 of 5 players/ })
-    const counter = within(demo).getByText(
-      (_, element) => element?.tagName === 'P' && element.textContent === '5/5'
-    )
+    const stage = screen.getByRole('list', { name: 'The slots of Premier quinta à noite' })
+    const slots = within(stage).getAllByRole('listitem')
+    const result = screen.getByRole('img', { name: /Valorant squad lock in one by one/ })
 
-    expect(counter).toBeInTheDocument()
-    expect(within(demo).getByText('Squad complete — invite unlocked')).toBeInTheDocument()
-    expect(demo.querySelector('[data-unlocked]')).not.toBeNull()
-    expect(demo.querySelector('[data-complete]')).not.toBeNull()
-    expect(document.querySelector('[data-visible]')).toBeNull()
-    for (const initials of ['CC', 'MF', 'BR', 'KZ', 'LU']) {
-      expect(within(demo).getByText(initials)).toBeInTheDocument()
-    }
+    expect(slots).toHaveLength(5)
+    expect(slots.every((slot) => slot.hasAttribute('data-locked'))).toBe(true)
+    expect(slots[4]).toHaveAttribute('data-you')
+    expect(slots[4]).toHaveTextContent('You')
+    expect(slots[0]).toHaveTextContent('caio_cz')
+    expect(within(stage).getByRole('link', { name: /Your slot/ })).toHaveAttribute(
+      'href',
+      '/squads'
+    )
+    expect(screen.getByRole('tab', { name: 'Valorant' })).toHaveAttribute('aria-selected', 'true')
+    expect(
+      within(result).getByRole('group', { name: /Premier quinta à noite.*5 of 5 players/ })
+    ).toBeInTheDocument()
+    expect(within(result).getByRole('heading', { name: "Let's go to Discord" })).toBeInTheDocument()
+    expect(within(result).getByText('premier-qui')).toBeInTheDocument()
+    expect(
+      within(result).queryByRole('heading', { name: 'Discord invite' })
+    ).not.toBeInTheDocument()
+    expect(result.querySelector('[inert]')).not.toBeNull()
   })
 
   it('credits IGDB in the footer, next to the product and help links', async () => {

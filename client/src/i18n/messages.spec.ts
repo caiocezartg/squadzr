@@ -68,9 +68,7 @@ describe('ICU messages', () => {
   })
 
   it('keeps the text around rich tags', () => {
-    expect(t.rich('landing.hero.subtitle', { bold: (chunks) => chunks })).toBe(
-      'Create or join squads for LoL, CS2, Valorant and more. When the last slot fills, the Discord invite reaches the whole team.'
-    )
+    expect(t.rich('cta.title', { accent: (chunks) => chunks })).toBe('Ready to find your squad?')
     expect(tPtBR.rich('cta.title', { accent: (chunks) => `[${chunks}]` })).toBe(
       'Pronto para encontrar seu [squad]?'
     )

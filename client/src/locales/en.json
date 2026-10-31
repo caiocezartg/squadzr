@@ -189,7 +189,7 @@
   "landing": {
     "nav": {
       "label": "Main",
-      "explore": "Explore squads",
+      "explore": "Squads",
       "games": "Games",
       "howItWorks": "How it works",
       "faq": "FAQ",
@@ -197,27 +197,30 @@
       "signIn": "Sign in with Discord"
     },
     "hero": {
-      "badge": "{count} GAMES · SQUADS OPEN NOW",
-      "titleLine1": "Missing:",
-      "titleAccent": "you.",
-      "subtitle": "Create or join squads for LoL, CS2, Valorant and more. When the last slot fills, <bold>the Discord invite reaches the whole team.</bold>",
+      "titleLine1": "Build your squad.",
+      "titleLine2": "Play tonight.",
+      "subtitle": "Find players to fill your team in LoL, CS2, Valorant and more. When the last slot closes, the Discord invite reaches everyone.",
       "exploreSquads": "Explore squads",
       "createSquad": "Create squad",
       "codeLabel": "Have a code?",
       "codePlaceholder": "ABC123",
       "codeSubmit": "Join",
-      "trustDiscord": "DISCORD LOGIN",
-      "trustPlayers": "2 TO 40 PLAYERS",
-      "trustFree": "100% FREE"
+      "trustDiscord": "Discord login",
+      "trustPlayers": "2 to 40 players",
+      "trustFree": "Free"
     },
     "demo": {
-      "label": "Illustration: a Valorant squad called {name} fills up to 5 of 5 players and unlocks its Discord invite.",
-      "toastJoined": "{name} joined",
-      "toastNow": "{count}/5 · just now",
-      "toastOneLeft": "{count}/5 · 1 left",
-      "toastFull": "{count}/5 · squad full",
-      "inviteTitle": "Squad complete — invite unlocked",
-      "inviteOpen": "Open Discord"
+      "label": "Illustration: the five slots of a {game} squad lock in one by one, and the last one is you. The squad closes at 5 of 5 and its Discord invite unlocks.",
+      "gamesLabel": "Game",
+      "stageLabel": "The slots of {name}",
+      "you": "You",
+      "slotReady": "READY",
+      "slotSearching": "SEARCHING…",
+      "slotYours": "YOUR SLOT",
+      "youSlotHint": "TAKE THE SLOT",
+      "youSlotAction": "Your slot: explore squads and take the last spot",
+      "onBoard": "On the board",
+      "inLobby": "In the lobby"
     },
     "footer": {
       "tagline": "Find your gaming team. Real-time squads for LoL, CS2, Valorant and more.",

@@ -189,7 +189,7 @@
   "landing": {
     "nav": {
       "label": "Principal",
-      "explore": "Explorar squads",
+      "explore": "Squads",
       "games": "Jogos",
       "howItWorks": "Como funciona",
       "faq": "FAQ",
@@ -197,27 +197,30 @@
       "signIn": "Entrar com Discord"
     },
     "hero": {
-      "badge": "{count} JOGOS · SQUADS ABERTOS AGORA",
-      "titleLine1": "Falta só",
-      "titleAccent": "você.",
-      "subtitle": "Crie ou entre em squads de LoL, CS2, Valorant e muito mais. Quando a última vaga fecha, <bold>o convite do Discord chega pro time inteiro.</bold>",
+      "titleLine1": "Monte seu squad.",
+      "titleLine2": "Jogue hoje.",
+      "subtitle": "Ache jogadores pra completar seu time em LoL, CS2, Valorant e outros. Quando a última vaga fecha, o convite do Discord chega pra todo mundo.",
       "exploreSquads": "Explorar squads",
       "createSquad": "Criar squad",
       "codeLabel": "Tem um código?",
       "codePlaceholder": "ABC123",
       "codeSubmit": "Entrar",
-      "trustDiscord": "LOGIN COM DISCORD",
-      "trustPlayers": "2 A 40 JOGADORES",
-      "trustFree": "100% GRATUITO"
+      "trustDiscord": "Login com Discord",
+      "trustPlayers": "2 a 40 jogadores",
+      "trustFree": "Grátis"
     },
     "demo": {
-      "label": "Ilustração: um squad de Valorant chamado {name} chega a 5 de 5 jogadores e libera o convite do Discord.",
-      "toastJoined": "{name} entrou",
-      "toastNow": "{count}/5 · agora",
-      "toastOneLeft": "{count}/5 · falta 1",
-      "toastFull": "{count}/5 · squad fechado",
-      "inviteTitle": "Squad completo — convite liberado",
-      "inviteOpen": "Abrir Discord"
+      "label": "Ilustração: as cinco vagas de um squad de {game} travam uma a uma, e a última é você. O squad fecha em 5 de 5 e o convite do Discord é liberado.",
+      "gamesLabel": "Jogo",
+      "stageLabel": "As vagas de {name}",
+      "you": "Você",
+      "slotReady": "PRONTO",
+      "slotSearching": "BUSCANDO…",
+      "slotYours": "SUA VAGA",
+      "youSlotHint": "PEGAR A VAGA",
+      "youSlotAction": "Sua vaga: explore os squads e pegue a última vaga",
+      "onBoard": "No board",
+      "inLobby": "No lobby"
     },
     "footer": {
       "tagline": "Encontre seu time gamer. Squads em tempo real pra LoL, CS2, Valorant e muito mais.",
