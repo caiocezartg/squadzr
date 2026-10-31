@@ -51,7 +51,7 @@ describe('createRoomInputSchema', () => {
     expect(result.error?.issues.map((issue) => issue.message)).toEqual(['Tag too long'])
   })
 
-  it.each(['two words', 'ranked!', 'a_b', 'a.b', '#', ''])(
+  it.each(['two words', 'ranked!', 'a_b', 'a.b', '#', '', '-', '---'])(
     'rejects the tag %j as not one word',
     (tag) => {
       const result = createRoomInputSchema.safeParse(tagsInput([tag]))

@@ -91,7 +91,7 @@ export const createRoomInputSchema = z.object({
           z
             .string()
             .max(12, 'Tag too long')
-            .regex(/^[\p{L}\p{N}-]+$/u, 'Tag must be one word')
+            .regex(/^[\p{L}\p{N}-]*[\p{L}\p{N}][\p{L}\p{N}-]*$/u, 'Tag must be one word')
         )
     )
     .max(5, 'Max 5 tags')

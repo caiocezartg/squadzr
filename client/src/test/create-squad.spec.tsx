@@ -812,18 +812,6 @@ describe('create squad — details step', () => {
     expect(input).not.toHaveAttribute('aria-live')
   })
 
-  it('paints no ground on the buttons, so a hover cannot cover the control border', async () => {
-    const { user } = renderSquadsFlow('/squads', { shell: true })
-    await openCreateModal(user)
-    await toDetailsStep(user)
-
-    for (const name of ['One fewer player', 'One more player']) {
-      const button = screen.getByRole('button', { name })
-      expect(button.className).not.toMatch(/(^|\s|:)bg-/)
-      expect(button).toHaveClass('hover-fine:text-mint')
-    }
-  })
-
   it('announces a button change politely through a live region apart from the field', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
@@ -1190,6 +1178,7 @@ describe('create squad — discord step', () => {
     await user.type(screen.getByLabelText('Discord invite link'), 'https://discord.gg/valorant')
 
     expect(screen.getByText('CHECKING')).toBeInTheDocument()
+    expect(screen.getByText('Checking the Discord invite')).toHaveAttribute('role', 'status')
     expect(screen.queryByText('VALID')).not.toBeInTheDocument()
     expect(screen.queryByText('Valorant Hub')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Discord invite link')).toBeValid()

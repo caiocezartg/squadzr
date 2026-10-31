@@ -57,7 +57,9 @@ export function DiscordStep({ game, invite }: DiscordStepProps) {
     ? t('ds.createSquad.discordServerAnnouncement', { name: server.name })
     : valid
       ? t('ds.createSquad.discordValidAnnouncement')
-      : ''
+      : checking
+        ? t('ds.createSquad.discordCheckingAnnouncement')
+        : ''
 
   return (
     <>

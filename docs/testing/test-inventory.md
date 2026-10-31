@@ -25,8 +25,8 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 33     | 208   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 31     | 320   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 86     | 846   |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 160   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 86     | 845   |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-25 on the
@@ -174,6 +174,11 @@ about an expiring invite, refusing an unknown one without a POST, clearing the r
 staying valid when Discord is unknown or the check fails, letting the Squad be created while it checks, the
 server's 422 keeping the dialog open on the field, and links with no invite code refused by the contract),
 3 in `add-tag.spec.ts` (4 → 7), 1 in `tag-errors.spec.ts` (3 → 4) and 3 in `discord-link.spec.ts` (7 → 10).
+
+The CCC-114 review nits drop the stepper case that read class names (`create-squad.spec.tsx` 79 → 78,
+`client:unit` 846 → 845; the borderless hover stays a visual check) and add tags made only of hyphens to
+the one-word rejections in `@squadzr/schemas` (160 → 162). The checking case now also asserts the
+checking announcement.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
