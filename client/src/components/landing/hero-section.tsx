@@ -57,8 +57,8 @@ export function HeroSection({ gameCount }: { readonly gameCount: number }) {
         className="from-bg pointer-events-none absolute inset-x-0 bottom-0 h-60 bg-linear-to-t to-transparent"
       />
 
-      <div className="relative mx-auto flex max-w-310 flex-col items-stretch gap-12 lg:flex-row lg:items-center lg:gap-16">
-        <div className="flex min-w-0 flex-col gap-7 lg:flex-1 lg:basis-115">
+      <div className="relative mx-auto flex max-w-310 flex-col items-stretch gap-12 lg:flex-row lg:items-center lg:gap-10 xl:gap-16">
+        <div className="flex min-w-0 flex-col gap-7 lg:w-[min(41.5vw,660px)] lg:flex-none">
           <GamesBadge count={gameCount} />
           <h1 className="type-display tracking-[-0.005em] wrap-break-word">
             {t('titleLine1')} <br />
@@ -81,7 +81,7 @@ export function HeroSection({ gameCount }: { readonly gameCount: number }) {
           <TrustLine />
         </div>
 
-        <div className="min-w-0 lg:flex-1 lg:basis-130">
+        <div className="min-w-0 lg:flex-1">
           <HeroDemoCard />
         </div>
       </div>

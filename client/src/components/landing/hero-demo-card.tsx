@@ -69,7 +69,7 @@ export function HeroDemoCard() {
       >
         <div
           ref={cardRef}
-          className="bg-card relative grid shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:grid-cols-[160px_minmax(0,1fr)] xl:grid-cols-[196px_minmax(0,1fr)]"
+          className="bg-card relative grid shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:grid-cols-[160px_minmax(0,1fr)] lg:grid-cols-[140px_minmax(0,1fr)] xl:grid-cols-[196px_minmax(0,1fr)]"
         >
           <span
             aria-hidden="true"
@@ -87,7 +87,7 @@ export function HeroDemoCard() {
               className="absolute inset-0 size-full object-cover object-top"
             />
           </div>
-          <div className="flex min-w-0 flex-col gap-3.5 px-4 py-5 sm:px-6 sm:py-5.5 lg:px-4 xl:px-6">
+          <div className="flex min-w-0 flex-col gap-3.5 px-4 py-5 sm:px-6 sm:py-5.5 lg:px-4 xl:px-5">
             <div className="flex items-center justify-between gap-2.5">
               <span className="font-ds-mono text-text text-xs font-bold tracking-[0.14em]">
                 {DEMO_SQUAD.game}
@@ -106,7 +106,7 @@ export function HeroDemoCard() {
               </span>
             </div>
             <div className="grow" />
-            <div className="bg-raised flex flex-col gap-3 px-3 py-3.5 sm:px-4 lg:px-3 xl:px-4">
+            <div className="bg-raised flex flex-col gap-3 px-3 py-3.5 sm:px-4 lg:px-3">
               <div className="flex items-center gap-4">
                 <div className="min-w-0 flex-1">
                   <SlotMeter variant="line" filled={demo.filled} total={DEMO_TOTAL} />
@@ -120,7 +120,7 @@ export function HeroDemoCard() {
         <HeroDemoInvite unlocked={complete} />
       </div>
 
-      <HeroDemoToasts current={demo.toast} />
+      <HeroDemoToasts visible={demo.toasts} />
     </div>
   )
 }

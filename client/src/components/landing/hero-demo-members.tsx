@@ -37,7 +37,7 @@ interface HeroDemoMembersProps {
  */
 export function HeroDemoMembers({ filled, scripted }: HeroDemoMembersProps) {
   return (
-    <div className="flex flex-wrap gap-2 sm:gap-2.5 lg:gap-2 xl:gap-2.5">
+    <div className="flex flex-wrap gap-2 sm:gap-2.5 lg:gap-1.5 xl:gap-2">
       {DEMO_MEMBERS.map((member, index) => {
         if (index < FOUNDING_MEMBERS) {
           return (

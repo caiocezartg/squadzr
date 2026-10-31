@@ -60,9 +60,23 @@ function count(): string {
   return counter.textContent ?? ''
 }
 
+/** The toasts on show, in the order they stand in the stack. */
+function visibleToasts(): string[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-visible]'), (toast) =>
+    (toast.textContent ?? '').replace(/s+/g, ' ')
+  )
+}
+
+/** The newest toast on show, or `null` when none shows. */
 function visibleToast(): string | null {
-  const toast = document.querySelector<HTMLElement>('[data-visible]')
-  return toast?.textContent ?? null
+  return visibleToasts().at(-1) ?? null
+}
+
+/** The row each visible toast stands in: no two share one. */
+function visibleRows(): (string | undefined)[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-visible]'), (toast) =>
+    toast.className.split(' ').find((name) => /^top-\d+$/.test(name))
+  )
 }
 
 const inviteUnlocked = () => document.querySelector('[data-unlocked]') !== null
@@ -127,6 +141,25 @@ describe('HeroDemoCard', () => {
       expect(visibleToast()).toContain('luhzinha joined')
       expect(inviteUnlocked()).toBe(true)
       expect(ringLit()).toBe(true)
+    })
+
+    it('gives each toast its own place in the stack, so one that is leaving is never covered', () => {
+      render(<HeroDemoCard />)
+      enterViewport()
+
+      advance(600 + 900)
+      expect(visibleToasts()).toHaveLength(2)
+      expect(visibleToasts()[0]).toContain('Brunão joined')
+      expect(visibleToasts()[1]).toContain('kz_dex joined')
+
+      expect(new Set(visibleRows()).size).toBe(2)
+
+      // The third comes in while the second is still there; the first has left by then.
+      advance(900)
+      expect(visibleToasts()).toHaveLength(2)
+      expect(visibleToasts()[0]).toContain('kz_dex joined')
+      expect(visibleToasts()[1]).toContain('luhzinha joined')
+      expect(new Set(visibleRows()).size).toBe(2)
     })
 
     it('takes each toast away 1.6s after it came in', () => {

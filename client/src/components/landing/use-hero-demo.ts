@@ -16,8 +16,8 @@ const DEMO_TOAST_MS = 1600
 export interface HeroDemoState {
   /** Members in the squad. */
   readonly filled: number
-  /** The count the visible toast announces, or `null` when no toast shows. */
-  readonly toast: number | null
+  /** The counts the visible toasts announce, in the order they came in. */
+  readonly toasts: readonly number[]
   /** The script is driving the card, so members that join enter with their animation. */
   readonly scripted: boolean
   /** The card was just rewound: its transitions are off for that one change. */
@@ -27,14 +27,14 @@ export interface HeroDemoState {
 /** What the server HTML shows, what hydration renders, and what reduced motion keeps: the squad full. */
 const FINAL_STATE: HeroDemoState = {
   filled: DEMO_TOTAL,
-  toast: null,
+  toasts: [],
   scripted: false,
   instant: false,
 }
 
 const REWOUND_STATE: HeroDemoState = {
   filled: DEMO_START_FILLED,
-  toast: null,
+  toasts: [],
   scripted: true,
   instant: true,
 }
@@ -73,15 +73,21 @@ export function useHeroDemo(target: RefObject<Element | null>): HeroDemoState {
         const filled = DEMO_START_FILLED + step + 1
         later(
           () => {
-            setState({ filled, toast: filled, scripted: true, instant: false })
+            setState((current) => ({
+              filled,
+              toasts: [...current.toasts, filled],
+              scripted: true,
+              instant: false,
+            }))
           },
           DEMO_START_DELAY_MS + step * DEMO_STEP_MS
         )
         later(
           () => {
-            setState((current) =>
-              current.toast === filled ? { ...current, toast: null } : current
-            )
+            setState((current) => ({
+              ...current,
+              toasts: current.toasts.filter((count) => count !== filled),
+            }))
           },
           DEMO_START_DELAY_MS + step * DEMO_STEP_MS + DEMO_TOAST_MS
         )

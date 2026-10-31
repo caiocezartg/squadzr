@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 33     | 208   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 31     | 324   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 876   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 877   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -180,10 +180,10 @@ The CCC-114 review nits drop the stepper case that read class names (`create-squ
 the one-word rejections in `@squadzr/schemas` (160 → 162). The checking case now also asserts the
 checking announcement.
 
-CCC-115 rebuilds the landing's navigation, hero and footer and recounts `client:unit` at 87 files / 875
-tests (845 → 875). It adds `hero-demo-card.spec.tsx` beside the card (9 tests, with fake timers and a
+CCC-115 rebuilds the landing's navigation, hero and footer and recounts `client:unit` at 87 files / 877
+tests (845 → 877). It adds `hero-demo-card.spec.tsx` beside the card (10 tests, with fake timers and a
 controlled `IntersectionObserver`: the start at 2/5 with the invite locked, no play before the card is
-visible, a member at 600ms and then every 900ms with its toast, each toast leaving after 1.6s, the final
+visible, a member at 600ms and then every 900ms with its toast, each toast in its own row of the stack and leaving after 1.6s, the final
 state held with no loop or replay, the timers cleared on unmount, the reduced-motion final state that never
 rewinds or observes, and the one description of the card for assistive technology). `landing.spec.tsx`
 goes from 9 to 12 tests: the old showcase and ripple cases leave with the components, and the server HTML
@@ -202,7 +202,7 @@ answering 429 with the error shape and a `Retry-After`, each user counted on the
 request answering 401 however many it sends without spending any quota, and a user asking again once a
 shortened window has passed), so `server:integration` measures 31 files / 324 tests (320 → 324).
 `create-squad.spec.tsx` gains 1 test (78 → 79: a rate-limited check reads as unknown, with no new message),
-so `client:unit` measures 87 files / 876 tests (875 → 876).
+which the `client:unit` total above counts.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
