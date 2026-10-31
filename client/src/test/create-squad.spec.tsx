@@ -1287,6 +1287,22 @@ describe('create squad — discord step', () => {
     expect(screen.getByText(UNKNOWN_MESSAGE)).toBeInTheDocument()
   })
 
+  it('reads a rate-limited check as unknown, with no new message, and lets the squad be created', async () => {
+    onHttp('GET', '/api/discord/invites/:code', () =>
+      httpError(429, { message: 'Too many requests. Try again shortly.', error: 'RATE_LIMITED' })
+    )
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+    expect(screen.getByText(UNKNOWN_MESSAGE)).toBeInTheDocument()
+    expect(screen.queryByText(/too many requests/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(1))
+  })
+
   it('lets the squad be created while Discord is still being asked', async () => {
     const { response } = deferredResponse()
     onHttp('GET', '/api/discord/invites/:code', () => response)

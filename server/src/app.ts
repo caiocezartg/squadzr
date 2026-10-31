@@ -6,12 +6,14 @@ import Fastify, {
 } from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
+import rateLimit from '@fastify/rate-limit'
 import websocket from '@fastify/websocket'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
 import { WS_MAX_PAYLOAD_BYTES } from '@squadzr/schemas/ws'
 import type { Env } from '@config/env'
 import type { Clock } from '@domain/services/clock.interface'
 import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
+import { RateLimitedError } from '@application/errors'
 import { SystemClock } from '@infrastructure/services/system-clock'
 import errorHandlerPlugin from '@infrastructure/plugins/error-handler.plugin'
 import databasePlugin from '@infrastructure/plugins/database.plugin'
@@ -19,6 +21,7 @@ import authPlugin from '@infrastructure/plugins/auth.plugin'
 import swaggerPlugin from '@infrastructure/plugins/swagger.plugin'
 import wsPlugin from '@infrastructure/websocket/ws.plugin'
 import roomCleanupPlugin from '@infrastructure/plugins/room-cleanup.plugin'
+import type { DiscordInviteRateLimit } from '@interface/routes/discord.routes'
 import { registerRoutes } from '@interface/routes'
 import { createDiscordInvitePreviews } from '@interface/factories/discord-preview.factory'
 import { createRealtime } from '@interface/factories/realtime.factory'
@@ -41,6 +44,8 @@ export interface BuildAppOptions {
   clock?: Clock
   /** Replaces Discord's public invite endpoint; tests inject a stub so none of them reaches the network. */
   discordPreviews?: DiscordInvitePreviewProvider
+  /** Replaces the limit on the Discord invite check; tests shrink its window so none of them waits a minute. */
+  discordInviteRateLimit?: DiscordInviteRateLimit
 }
 
 /**
@@ -102,6 +107,7 @@ export async function buildApp({
   logger,
   clock,
   discordPreviews,
+  discordInviteRateLimit,
 }: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
     trustProxy: true,
@@ -126,6 +132,15 @@ export async function buildApp({
     contentSecurityPolicy: env.NODE_ENV === 'production',
   })
 
+  // Opt-in per route (`config.rateLimit`). It runs in `preHandler`, after a route's authentication, so a
+  // limited route can key on the signed-in user and an anonymous request never spends anyone's quota.
+  // The error handler shapes the 429 like every other error.
+  await fastify.register(rateLimit, {
+    global: false,
+    hook: 'preHandler',
+    errorResponseBuilder: () => new RateLimitedError(),
+  })
+
   await fastify.register(websocket, {
     options: {
       maxPayload: WS_MAX_PAYLOAD_BYTES,
@@ -141,7 +156,7 @@ export async function buildApp({
   await fastify.register(roomCleanupPlugin, {
     deleteExpiredRoomsUseCase: createRoomCleanupUseCase(fastify.db, fastify.clock),
   })
-  await registerRoutes(fastify)
+  await registerRoutes(fastify, { discord: { rateLimit: discordInviteRateLimit } })
 
   return fastify
 }

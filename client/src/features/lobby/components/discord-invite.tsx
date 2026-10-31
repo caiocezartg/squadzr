@@ -65,7 +65,9 @@ export function LockedInvite({ filled, total }: LockedInviteProps) {
             <p className="text-text-3 text-[14px] leading-snug font-semibold">{t('lockedBody')}</p>
           </div>
           <div className="border-line flex min-h-12 items-center justify-between gap-4 border-t px-3.5">
-            <SlotMeter filled={filled} total={total} tone="discord" />
+            <div className="min-w-0">
+              <SlotMeter filled={filled} total={total} tone="discord" />
+            </div>
             <span className="type-label text-text-3 shrink-0 text-right">
               {t('slotsLeft', { count: Math.max(0, total - filled) })}
             </span>

@@ -68,9 +68,7 @@ describe('ICU messages', () => {
   })
 
   it('keeps the text around rich tags', () => {
-    expect(t.rich('hero.subtitle', { bold: (chunks) => chunks })).toBe(
-      'Create or join squads, fill your squad, and get a Discord invite the second your team is ready.'
-    )
+    expect(t.rich('cta.title', { accent: (chunks) => chunks })).toBe('Ready to find your squad?')
     expect(tPtBR.rich('cta.title', { accent: (chunks) => `[${chunks}]` })).toBe(
       'Pronto para encontrar seu [squad]?'
     )
@@ -98,8 +96,8 @@ describe('ICU messages', () => {
   })
 
   it('credits IGDB in both languages', () => {
-    expect(t('footer.gameDataByIgdb')).toBe('game data by IGDB')
-    expect(tPtBR('footer.gameDataByIgdb')).toBe('dados de jogos por IGDB')
+    expect(t('landing.footer.gameDataByIgdb')).toBe('game data by IGDB')
+    expect(tPtBR('landing.footer.gameDataByIgdb')).toBe('dados de jogos por IGDB')
   })
 
   it('keeps apostrophes in plain text', () => {

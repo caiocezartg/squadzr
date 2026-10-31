@@ -105,6 +105,20 @@
   --animate-invite-fade: invite-fade 300ms var(--ease-out) both;
   --animate-invite-sheen: invite-sheen 1100ms var(--ease-in-out) 500ms both;
 
+  /*
+    The landing. A hero slot that is still searching scans (a band of light falls through it) and its
+    ring turns; the viewer's own slot breathes. When a slot locks in, a sweep of light crosses it once
+    and its status lands like a stamp. The squad's counter rolls each new number in. The nav menu opens
+    below 640px. Loops are used behind `motion-safe:` only.
+  */
+  --animate-slot-scan: slot-scan 2.4s linear infinite;
+  --animate-slot-ring: slot-ring 8s linear infinite;
+  --animate-slot-breathe: slot-wait 1.6s ease-in-out infinite;
+  --animate-slot-sweep: slot-sweep 700ms var(--ease-out) both;
+  --animate-slot-stamp: slot-stamp 320ms var(--ease-out) both;
+  --animate-count-in: count-in var(--dur-ui) var(--ease-out) both;
+  --animate-menu-in: menu-in var(--dur-ui) var(--ease-out) both;
+
   @keyframes halo {
     0% {
       opacity: 0.45;
@@ -146,6 +160,60 @@
     }
     to {
       transform: translateX(420%) skewX(-18deg);
+    }
+  }
+  @keyframes slot-wait {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @keyframes slot-scan {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(300%);
+    }
+  }
+  @keyframes slot-ring {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+  @keyframes slot-sweep {
+    from {
+      opacity: 1;
+      transform: translateX(-160%) skewX(-16deg);
+    }
+    to {
+      opacity: 0.4;
+      transform: translateX(260%) skewX(-16deg);
+    }
+  }
+  @keyframes slot-stamp {
+    from {
+      opacity: 0;
+      transform: scale(1.5) rotate(-4deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes count-in {
+    from {
+      opacity: 0;
+      transform: translateY(40%);
+    }
+  }
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
     }
   }
   @keyframes fade-in {
@@ -420,18 +488,6 @@
   }
 }
 
-@keyframes cell-ripple {
-  0% {
-    opacity: 0;
-  }
-  40% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
 /*
   In-view reveal (src/components/ui/reveal.tsx): fade and rise 16px once, 400ms --ease-out, with
   children 50ms apart when staggered. The animation fills backwards only, so once it ends the
@@ -537,6 +593,12 @@
   }
 
   @keyframes slide-up {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes menu-in {
     from {
       opacity: 0;
     }

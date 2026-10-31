@@ -1,90 +1,78 @@
 'use client'
 
-import * as m from 'motion/react-m'
-import { Search } from 'lucide-react'
-import { useLocale, useTranslations } from 'next-intl'
-import { AppLink } from '@/components/layout/app-link'
-import { DiscordIcon } from '@/components/ui/icons'
-import { useSession } from '@/hooks/use-session'
-import { signInWithDiscord } from '@/lib/auth-client'
-import { BackgroundRipple } from './background-ripple'
-import { HeroGameBadge } from './hero-game-badge'
-import { HeroSquadShowcase } from './hero-squad-showcase'
+import { useRef } from 'react'
+import { useTranslations } from 'next-intl'
+import { ArrowRight, Plus } from 'lucide-react'
+import { Button } from '@/components/ds/button'
+import { HeroBackdrop } from './hero-backdrop'
+import { HeroCodeForm } from './hero-code-form'
+import { HeroDemo } from './hero-demo'
+import { useDemoGames } from './use-demo-games'
+import { useHeroPointer } from './use-hero-pointer'
 
-/**
- * The hero. Its badge, headline, copy and calls to action start visible, so the server HTML shows them
- * before any script runs. Only decoration animates: the underline under the accent word, and the
- * floating squad cards.
- */
-export function HeroSection({ gameCount }: { readonly gameCount: number }) {
-  const t = useTranslations()
-  const lang = useLocale()
-  const session = useSession()
-
-  const handleSignIn = () => {
-    signInWithDiscord('/squads')
-  }
+/** Quiet product facts: small and muted, with a dot between them. */
+function TrustLine() {
+  const t = useTranslations('landing.hero')
+  const items = [t('trustDiscord'), t('trustPlayers'), t('trustFree')]
 
   return (
-    <section className="relative overflow-hidden">
-      <BackgroundRipple />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_50%,rgba(0,255,162,0.06),transparent_55%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_80%,rgba(88,101,242,0.04),transparent_50%)] pointer-events-none" />
+    <ul className="text-ds-muted flex flex-wrap justify-center gap-x-3 gap-y-1 text-[13px] font-semibold">
+      {items.map((item, index) => (
+        <li key={item} className="flex gap-3">
+          {index > 0 && <span aria-hidden="true">·</span>}
+          {item}
+        </li>
+      ))}
+    </ul>
+  )
+}
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:pt-28 sm:pb-24">
-        <div className="max-w-full flex flex-col items-center">
-          <HeroGameBadge count={gameCount} />
+/**
+ * The hero, a pre-match screen: what the product is for, in a headline and one sentence, the ways in,
+ * and the slot stage that shows it working, lit by the game's art. The headline, copy and actions arrive
+ * ready, so the server HTML shows them before any script runs and nothing in them animates in. Only the
+ * demo plays. The backdrop and the slots answer the pointer.
+ */
+export function HeroSection() {
+  const t = useTranslations('landing.hero')
+  const section = useRef<HTMLElement>(null)
+  const demo = useDemoGames()
+  useHeroPointer(section)
 
-          <h1 className="font-heading text-5xl font-extrabold leading-[0.95] tracking-tight sm:leading-none sm:text-6xl lg:text-7xl xl:text-8xl">
-            {t('hero.titleLine1')}
-            <br />
-            {t('hero.titleLine2')}&nbsp;
-            <span className="relative text-accent">
-              {t('hero.titleAccent')}
-              <m.span
-                className="absolute bottom-0 left-0 h-0.75 bg-accent/60 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: '100%' }}
-                transition={{ duration: 0.6, delay: 0.7, ease: 'easeOut' }}
-              />
+  return (
+    <section
+      ref={section}
+      id="topo"
+      className="relative isolate px-4 pt-6 pb-14 sm:px-6 sm:pt-10 lg:pb-20"
+    >
+      <HeroBackdrop game={demo.game} games={demo.games} />
+      <div className="mx-auto flex max-w-310 flex-col items-center gap-10 text-center sm:gap-14">
+        <div className="flex w-full flex-col items-center gap-5">
+          <h1 className="font-display text-[clamp(52px,8vw,128px)] leading-[0.92] font-black text-balance uppercase drop-shadow-[0_4px_32px_rgba(0,0,0,0.6)]">
+            <span className="block">{t('titleLine1')}</span>{' '}
+            <span className="text-mint block drop-shadow-[0_0_28px_rgba(0,255,162,0.35)]">
+              {t('titleLine2')}
             </span>
           </h1>
-
-          <p
-            className={`mt-6 text-base/relaxed text-muted sm:text-lg/7 ${lang === 'pt-BR' ? 'max-w-lg' : 'max-w-md'} text-center`}
-          >
-            {t.rich('hero.subtitle', {
-              bold: (chunks) => <strong className="text-offwhite">{chunks}</strong>,
-            })}
+          <p className="text-text-2 max-w-prose text-base/relaxed sm:text-lg/relaxed">
+            {t('subtitle')}
           </p>
-
-          {/* CTAs */}
-          <div className="mt-8 flex flex-col sm:flex-row items-start gap-3">
-            <AppLink
-              href="/squads"
-              className="btn-accent gap-2 text-base px-7 py-3 w-full md:w-auto"
-            >
-              <Search className="size-5" strokeWidth={2.5} />
-              {t('hero.exploreSquads')}
-            </AppLink>
-            {!session?.user && (
-              <button
-                onClick={handleSignIn}
-                className="btn-discord gap-2 text-base px-7 py-3 w-full md:w-auto"
-              >
-                <DiscordIcon className="size-5" />
-                {t('hero.signInWithDiscord')}
-              </button>
-            )}
+          <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-3">
+            <Button href="/squads" size="lg" icon={<ArrowRight />} iconPosition="end">
+              {t('exploreSquads')}
+            </Button>
+            <Button href="/squads?create=1" variant="secondary" size="lg" icon={<Plus />}>
+              {t('createSquad')}
+            </Button>
+            <HeroCodeForm />
           </div>
+          <TrustLine />
+        </div>
 
-          <div className="relative w-full max-w-5xl mt-12 -mb-8">
-            <HeroSquadShowcase />
-          </div>
+        <div className="w-full text-left">
+          <HeroDemo game={demo.game} games={demo.games} onPick={demo.pick} onIntent={demo.reach} />
         </div>
       </div>
-
-      <div className="absolute inset-x-0 bottom-0 h-20 lg:h-32 bg-linear-to-t from-background to-transparent pointer-events-none" />
     </section>
   )
 }

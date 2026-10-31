@@ -186,17 +186,55 @@
       "emptyHint": "When one of your Squads fills up, the invite lands here."
     }
   },
-  "footer": {
-    "gameDataByIgdb": "game data by IGDB"
-  },
-  "hero": {
-    "badge": "{count} GAMES SUPPORTED",
-    "titleLine1": "STOP PLAYING",
-    "titleLine2": "GAMES",
-    "titleAccent": "ALONE",
-    "subtitle": "<bold>Create</bold> or <bold>join squads</bold>, fill your squad, and get a Discord invite the second your team is ready.",
-    "exploreSquads": "Explore squads",
-    "signInWithDiscord": "Sign in with Discord"
+  "landing": {
+    "nav": {
+      "label": "Main",
+      "explore": "Squads",
+      "games": "Games",
+      "howItWorks": "How it works",
+      "faq": "FAQ",
+      "board": "Go to board",
+      "signIn": "Sign in with Discord"
+    },
+    "hero": {
+      "titleLine1": "Build your squad.",
+      "titleLine2": "Play tonight.",
+      "subtitle": "Find players to fill your team in LoL, CS2, Valorant and more. When the last slot closes, the Discord invite reaches everyone.",
+      "exploreSquads": "Explore squads",
+      "createSquad": "Create squad",
+      "codeLabel": "Have a code?",
+      "codePlaceholder": "ABC123",
+      "codeSubmit": "Join",
+      "trustDiscord": "Discord login",
+      "trustPlayers": "2 to 40 players",
+      "trustFree": "Free"
+    },
+    "demo": {
+      "label": "Illustration: the five slots of a {game} squad lock in one by one, and the last one is you. The squad closes at 5 of 5 and its Discord invite unlocks.",
+      "gamesLabel": "Game",
+      "stageLabel": "The slots of {name}",
+      "you": "You",
+      "slotReady": "READY",
+      "slotSearching": "SEARCHING…",
+      "slotYours": "YOUR SLOT",
+      "youSlotHint": "TAKE THE SLOT",
+      "youSlotAction": "Your slot: explore squads and take the last spot",
+      "onBoard": "On the board",
+      "inLobby": "In the lobby"
+    },
+    "footer": {
+      "tagline": "Find your gaming team. Real-time squads for LoL, CS2, Valorant and more.",
+      "label": "Footer",
+      "product": "PRODUCT",
+      "help": "HELP",
+      "exploreSquads": "Explore squads",
+      "createSquad": "Create squad",
+      "howItWorks": "How it works",
+      "faq": "Frequently asked questions",
+      "games": "Available games",
+      "copyright": "© {year} Squadzr — Find your gaming team",
+      "gameDataByIgdb": "game data by IGDB"
+    }
   },
   "faq": {
     "label": "FAQ",
