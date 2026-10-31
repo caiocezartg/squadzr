@@ -24,8 +24,8 @@ inventory (see the equivalence proof below).
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 33     | 208   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 31     | 320   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 875   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 31     | 324   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 876   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -195,6 +195,14 @@ closing it with the focus back on the button), the Create squad target and the h
 codes normalised, invalid ones refused with the alert and no navigation). `messages.spec.ts` keeps its 11
 tests, with the subtitle and IGDB assertions moved to `landing.hero.subtitle` and
 `landing.footer.gameDataByIgdb`.
+
+The same CCC-115 change rate-limits the Discord invite check (30 requests a minute per signed-in user,
+429 `RATE_LIMITED`). `discord-invite-http.test.ts` gains 4 tests (9 → 13: the 31st request from one user
+answering 429 with the error shape and a `Retry-After`, each user counted on their own, an unauthenticated
+request answering 401 however many it sends without spending any quota, and a user asking again once a
+shortened window has passed), so `server:integration` measures 31 files / 324 tests (320 → 324).
+`create-squad.spec.tsx` gains 1 test (78 → 79: a rate-limited check reads as unknown, with no new message),
+so `client:unit` measures 87 files / 876 tests (875 → 876).
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
