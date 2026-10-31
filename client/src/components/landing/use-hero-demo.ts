@@ -1,7 +1,7 @@
 'use client'
 
 import { useLayoutEffect, useState, type RefObject } from 'react'
-import { useReducedMotion } from '@/hooks/use-reduced-motion'
+import { prefersReducedMotion, useReducedMotion } from '@/hooks/use-reduced-motion'
 
 /** The squad the demo fills up, and how many members it starts with (reference, Motion: Hero). */
 export const DEMO_TOTAL = 5
@@ -52,7 +52,8 @@ export function useHeroDemo(target: RefObject<Element | null>): HeroDemoState {
 
   useLayoutEffect(() => {
     const element = target.current
-    if (reducedMotion || !element) {
+    // In hydration the hook still answers with the server's `false`; the browser knows better.
+    if (reducedMotion || prefersReducedMotion() || !element) {
       setState(FINAL_STATE)
       return
     }

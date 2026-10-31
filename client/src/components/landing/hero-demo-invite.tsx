@@ -28,6 +28,7 @@ export function HeroDemoInvite({ unlocked }: { readonly unlocked: boolean }) {
         <span className="text-[15px] font-extrabold">{t('inviteTitle')}</span>
         <span className="font-ds-mono text-[12.5px] opacity-90">{DEMO_SQUAD.invite}</span>
       </span>
+      {/* The ink of the DS Button's `light` variant, which the artboard gives this action. */}
       <span className="inline-flex items-center gap-2 bg-white px-4 py-3 text-[13px] font-extrabold text-[#2b33a8]">
         {t('inviteOpen')}
         <ArrowUpRight aria-hidden className="size-3.25" strokeWidth={2.8} />

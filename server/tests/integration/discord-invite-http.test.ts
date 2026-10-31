@@ -158,12 +158,12 @@ describe('GET /api/discord/invites/:code rate limit', () => {
     await server.close()
     server = await buildTestServer(
       {},
-      { discordPreviews: discord, discordInviteRateLimit: { max: 2, timeWindowMs: 200 } }
+      { discordPreviews: discord, discordInviteRateLimit: { max: 2, timeWindowMs: 50 } }
     )
     user = await signIn(server, 'Player')
 
     expect(await ask(user, 3)).toEqual([200, 200, 429])
-    await new Promise((resolve) => setTimeout(resolve, 300))
+    await new Promise((resolve) => setTimeout(resolve, 80))
 
     expect(await ask(user, 1, 10)).toEqual([200])
   })

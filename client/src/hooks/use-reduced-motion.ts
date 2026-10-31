@@ -16,6 +16,12 @@ function getSnapshot(): boolean {
   return window.matchMedia(REDUCED_MOTION_QUERY).matches
 }
 
+/**
+ * The viewer's preference read straight from the browser. During hydration `useReducedMotion` still
+ * returns the server snapshot, so an effect that must not run under reduced motion reads this too.
+ */
+export const prefersReducedMotion = getSnapshot
+
 /** The server cannot know the preference, so the server HTML is the full-motion render. */
 function getServerSnapshot(): boolean {
   return false

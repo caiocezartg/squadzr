@@ -5,7 +5,7 @@ import { Avatar } from '@/components/ds/avatar'
 import { DEMO_MEMBERS, type DemoMember } from './hero-demo-data'
 
 /** The panel's ground, which the host crown's ring blends into. */
-const RAIL_SURFACE = '#17181d'
+const RAIL_SURFACE = 'var(--color-raised)'
 
 /** The squad's first members are in it from the start; the later ones are the ones that join. */
 const FOUNDING_MEMBERS = 2

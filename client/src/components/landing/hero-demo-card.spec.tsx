@@ -63,7 +63,7 @@ function count(): string {
 /** The toasts on show, in the order they stand in the stack. */
 function visibleToasts(): string[] {
   return Array.from(document.querySelectorAll<HTMLElement>('[data-visible]'), (toast) =>
-    (toast.textContent ?? '').replace(/s+/g, ' ')
+    (toast.textContent ?? '').replace(/\s+/g, ' ')
   )
 }
 
@@ -74,8 +74,9 @@ function visibleToast(): string | null {
 
 /** The row each visible toast stands in: no two share one. */
 function visibleRows(): (string | undefined)[] {
-  return Array.from(document.querySelectorAll<HTMLElement>('[data-visible]'), (toast) =>
-    toast.className.split(' ').find((name) => /^top-\d+$/.test(name))
+  return Array.from(
+    document.querySelectorAll<HTMLElement>('[data-visible]'),
+    (toast) => toast.dataset.row
   )
 }
 

@@ -12,13 +12,18 @@ import { HeroDemoMembers } from './hero-demo-members'
 import { HeroDemoToasts } from './hero-demo-toasts'
 import { DEMO_TOTAL, useHeroDemo } from './use-hero-demo'
 
-/** The squad's count. A new digit fades in over 150ms once the script is playing, like the Lobby's. */
+/**
+ * The squad's count. A new digit fades in over 150ms once the script is playing, like the Lobby's; the
+ * rewind to the start swaps it instantly.
+ */
 function DemoCounter({
   filled,
   scripted,
+  instant,
 }: {
   readonly filled: number
   readonly scripted: boolean
+  readonly instant: boolean
 }) {
   const complete = filled === DEMO_TOTAL
 
@@ -27,7 +32,7 @@ function DemoCounter({
       <m.span
         key={filled}
         className={complete ? 'text-mint' : 'text-text'}
-        initial={scripted ? { opacity: 0 } : false}
+        initial={scripted && !instant ? { opacity: 0 } : false}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.15, ease: 'easeOut' }}
       >
@@ -76,7 +81,7 @@ export function HeroDemoCard() {
             data-complete={complete ? '' : undefined}
             className={cn(
               'pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 ease-out',
-              'shadow-[0_0_0_1px_rgba(0,255,162,0.55),0_30px_80px_-30px_rgba(0,255,162,0.55)] data-complete:opacity-100'
+              'ring-mint/55 shadow-[0_30px_80px_-30px_color-mix(in_oklab,var(--color-mint)_55%,transparent)] ring-1 data-complete:opacity-100'
             )}
           />
           <div className="relative min-h-40 sm:min-h-65.5">
@@ -111,7 +116,7 @@ export function HeroDemoCard() {
                 <div className="min-w-0 flex-1">
                   <SlotMeter variant="line" filled={demo.filled} total={DEMO_TOTAL} />
                 </div>
-                <DemoCounter filled={demo.filled} scripted={demo.scripted} />
+                <DemoCounter filled={demo.filled} scripted={demo.scripted} instant={demo.instant} />
               </div>
               <HeroDemoMembers filled={demo.filled} scripted={demo.scripted} />
             </div>

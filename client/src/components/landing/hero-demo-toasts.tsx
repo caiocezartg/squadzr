@@ -34,6 +34,7 @@ function DemoToast({
   return (
     <div
       data-visible={visible ? '' : undefined}
+      data-row={count}
       className={cn(
         'bg-raised-2 absolute inset-x-0 flex h-15 translate-x-3.5 items-center gap-2.5 py-2.5 pr-3.5 pl-2.5 opacity-0',
         'shadow-[0_20px_40px_-12px_rgba(0,0,0,0.8)] transition-[opacity,translate] duration-150 ease-out',
