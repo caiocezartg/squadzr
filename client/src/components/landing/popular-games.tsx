@@ -13,7 +13,7 @@ export function PopularGames({ games }: PopularGamesProps) {
   const t = useTranslations()
 
   return (
-    <section className="relative py-24 border-t border-border/50">
+    <section id="jogos" className="relative py-24 border-t border-border/50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <m.div
           className="text-center mb-12"

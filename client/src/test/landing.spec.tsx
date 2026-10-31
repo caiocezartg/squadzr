@@ -1,21 +1,17 @@
 /**
- * The landing on the App Router (CCC-77). The page renders on the server: its headline, copy, calls to
- * action, games badge, popular games and FAQ are in the server HTML.
+ * The landing on the App Router (CCC-77, CCC-115). The page renders on the server: its navigation,
+ * headline, copy, calls to action, games badge, demo card in its final state, popular games, FAQ and
+ * footer are in the server HTML.
  */
 
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { NextIntlClientProvider } from 'next-intl'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionDto } from '@squadzr/schemas'
 import LandingPage, { metadata } from '@/app/(landing)/page'
-import { BackgroundRipple } from '@/components/landing/background-ripple'
-import { HeroSquadShowcase } from '@/components/landing/hero-squad-showcase'
-import { ClockProvider } from '@/hooks/use-clock'
-import en from '@/locales/en.json'
 import { gameCs2, gameLol, popularGames } from './fixtures'
 import { httpOk, onHttp } from './http-router'
 import { EnglishIntlProvider } from './intl'
@@ -26,7 +22,6 @@ vi.mock('next/server', () => ({ connection: () => Promise.resolve() }))
 
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const LANDING_ROUTE_DIR = join(SRC_DIR, 'app/(landing)')
-const NOW = new Date('2031-06-01T12:00:00Z')
 
 /** The landing as the server renders it for `session`, in the English messages the suite uses. */
 async function landingHtml(session: SessionDto | null = null): Promise<string> {
@@ -34,8 +29,16 @@ async function landingHtml(session: SessionDto | null = null): Promise<string> {
   return renderToStaticMarkup(<EnglishIntlProvider session={session}>{page}</EnglishIntlProvider>)
 }
 
-function rippleCells(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>('div[style*="cell-ripple"]'))
+/** Puts the server HTML in the document, as the browser has it before any script runs. */
+async function showServerHtml(session: SessionDto | null = null): Promise<void> {
+  document.body.innerHTML = await landingHtml(session)
+}
+
+/** The hero's own calls to action: the section that carries the headline. */
+function hero(): HTMLElement {
+  const section = screen.getByRole('heading', { level: 1 }).closest('section')
+  if (!section) throw new Error('The headline is not in a section')
+  return section
 }
 
 beforeEach(() => {
@@ -43,17 +46,19 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  document.body.innerHTML = ''
+  cleanup()
   vi.restoreAllMocks()
 })
 
 describe('landing server HTML', () => {
-  it('renders the headline, the copy and the calls to action', async () => {
-    const html = await landingHtml()
+  it('renders the headline and the copy, which never name a number of games', async () => {
+    await showServerHtml()
 
-    expect(html).toContain('STOP PLAYING')
-    expect(html).toContain('get a Discord invite the second your team is ready.')
-    expect(html).toContain('Explore squads')
-    expect(html).toContain('Sign in with Discord')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Missing: you.')
+    const copy = screen.getByText(/Create or join squads for LoL, CS2, Valorant and more/)
+    expect(copy.textContent).toContain('the Discord invite reaches the whole team.')
+    expect(copy.textContent).not.toMatch(/\d+\s+(more\s+)?games/i)
   })
 
   it('renders the headline without a hidden entrance state', async () => {
@@ -64,35 +69,128 @@ describe('landing server HTML', () => {
     expect(headingOpenTag).not.toContain('opacity')
   })
 
-  it('renders the total badge, the popular games and the FAQ', async () => {
-    const html = await landingHtml()
+  it('renders the games badge with the catalog total', async () => {
+    await showServerHtml()
 
     // The badge counts every Listed Game (42), not just the two returned in the page.
-    expect(html).toContain('42 GAMES SUPPORTED')
-    expect(html).toContain(gameLol.name)
-    expect(html).toContain(gameCs2.name)
-    expect(html).toContain('4 open squads')
-    expect(html).toContain('No open squads')
-    expect(html).toContain('#ranked')
-    expect(html).toContain('#chill')
-    expect(html).toContain('Is Squadzr free?')
-    expect(html).toContain('game data by IGDB')
+    expect(screen.getByText('42 GAMES · SQUADS OPEN NOW')).toBeInTheDocument()
   })
 
-  it('shows a signed-out viewer the sign-in calls to action', async () => {
-    const html = await landingHtml(null)
+  it('leaves the games badge out when the catalog has no games', async () => {
+    onHttp('GET', '/api/games/popular', () => httpOk({ totalGames: 0, games: [] }))
+    await showServerHtml()
 
-    expect(html).toContain('Sign in with Discord')
-    expect(html).toContain('Create Account')
+    expect(screen.queryByText(/SQUADS OPEN NOW/)).not.toBeInTheDocument()
   })
 
-  it('leaves the sign-in calls to action out for a signed-in viewer', async () => {
+  it('renders the popular games and the FAQ', async () => {
+    await showServerHtml()
+
+    expect(screen.getByText(gameLol.name)).toBeInTheDocument()
+    expect(screen.getByText(gameCs2.name)).toBeInTheDocument()
+    expect(screen.getByText('4 open squads')).toBeInTheDocument()
+    expect(screen.getByText('No open squads')).toBeInTheDocument()
+    expect(screen.getByText('#ranked')).toBeInTheDocument()
+    expect(screen.getByText('#chill')).toBeInTheDocument()
+    expect(screen.getByText('Is Squadzr free?')).toBeInTheDocument()
+  })
+
+  it('points the navigation at the board and at the sections of the page', async () => {
+    await showServerHtml()
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+
+    expect(within(nav).getByRole('link', { name: 'Explore squads' })).toHaveAttribute(
+      'href',
+      '/squads'
+    )
+    expect(within(nav).getByRole('link', { name: 'Games' })).toHaveAttribute('href', '#jogos')
+    expect(within(nav).getByRole('link', { name: 'How it works' })).toHaveAttribute(
+      'href',
+      '#como-funciona'
+    )
+    expect(within(nav).getByRole('link', { name: 'FAQ' })).toHaveAttribute('href', '#faq')
+    for (const id of ['jogos', 'como-funciona', 'faq']) {
+      expect(document.getElementById(id)).toBeInTheDocument()
+    }
+  })
+
+  it('offers a signed-out viewer both hero actions, and the sign-in in the nav', async () => {
+    await showServerHtml(null)
+    const banner = screen.getByRole('banner')
+
+    expect(within(banner).getByRole('button', { name: 'Sign in with Discord' })).toBeInTheDocument()
+    expect(within(banner).queryByRole('link', { name: 'Go to board' })).not.toBeInTheDocument()
+    expect(within(hero()).getByRole('link', { name: 'Explore squads' })).toHaveAttribute(
+      'href',
+      '/squads'
+    )
+    expect(within(hero()).getByRole('link', { name: 'Create squad' })).toHaveAttribute(
+      'href',
+      '/squads?create=1'
+    )
+  })
+
+  it('offers a signed-in viewer both hero actions, and the board in the nav', async () => {
     signInAsFakeUser()
-    const html = await landingHtml(fakeSession())
+    await showServerHtml(fakeSession())
+    const banner = screen.getByRole('banner')
 
-    expect(html).not.toContain('Sign in with Discord')
-    expect(html).not.toContain('Create Account')
-    expect(html).toContain('Explore squads')
+    expect(within(banner).getByRole('link', { name: 'Go to board' })).toHaveAttribute(
+      'href',
+      '/squads'
+    )
+    expect(screen.queryByRole('button', { name: 'Sign in with Discord' })).not.toBeInTheDocument()
+    expect(within(hero()).getByRole('link', { name: 'Explore squads' })).toHaveAttribute(
+      'href',
+      '/squads'
+    )
+    expect(within(hero()).getByRole('link', { name: 'Create squad' })).toHaveAttribute(
+      'href',
+      '/squads?create=1'
+    )
+  })
+
+  it('renders the hero demo in its final state: the squad full and its invite unlocked', async () => {
+    await showServerHtml()
+    const demo = screen.getByRole('img', { name: /fills up to 5 of 5 players/ })
+    const counter = within(demo).getByText(
+      (_, element) => element?.tagName === 'P' && element.textContent === '5/5'
+    )
+
+    expect(counter).toBeInTheDocument()
+    expect(within(demo).getByText('Squad complete — invite unlocked')).toBeInTheDocument()
+    expect(demo.querySelector('[data-unlocked]')).not.toBeNull()
+    expect(demo.querySelector('[data-complete]')).not.toBeNull()
+    expect(document.querySelector('[data-visible]')).toBeNull()
+    for (const initials of ['CC', 'MF', 'BR', 'KZ', 'LU']) {
+      expect(within(demo).getByText(initials)).toBeInTheDocument()
+    }
+  })
+
+  it('credits IGDB in the footer, next to the product and help links', async () => {
+    await showServerHtml()
+    const footer = screen.getByRole('contentinfo')
+    const links = within(within(footer).getByRole('navigation', { name: 'Footer' }))
+
+    expect(within(footer).getByRole('link', { name: 'game data by IGDB' })).toHaveAttribute(
+      'href',
+      'https://www.igdb.com'
+    )
+    expect(links.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
+    expect(links.getByRole('link', { name: 'Create squad' })).toHaveAttribute(
+      'href',
+      '/squads?create=1'
+    )
+    expect(links.getByRole('link', { name: 'How it works' })).toHaveAttribute(
+      'href',
+      '#como-funciona'
+    )
+    expect(links.getByRole('link', { name: 'Frequently asked questions' })).toHaveAttribute(
+      'href',
+      '#faq'
+    )
+    expect(links.getByRole('link', { name: 'Available games' })).toHaveAttribute('href', '#jogos')
+    expect(within(footer).getByText(/^© \d{4} Squadzr/)).toBeInTheDocument()
   })
 })
 
@@ -106,63 +204,5 @@ describe('landing page', () => {
     // the content on every client navigation even when its data is already cached.
     expect(existsSync(join(SRC_DIR, 'app/loading.tsx'))).toBe(false)
     expect(existsSync(join(LANDING_ROUTE_DIR, 'loading.tsx'))).toBe(false)
-  })
-})
-
-describe('hero squad showcase', () => {
-  it('renders its sample squads from the now that next-intl hands to the client', () => {
-    render(
-      <NextIntlClientProvider locale="en" messages={en} now={NOW}>
-        <ClockProvider>
-          <HeroSquadShowcase />
-        </ClockProvider>
-      </NextIntlClientProvider>
-    )
-
-    // Each sample card reads its game from the Squad summary it carries, and shows who joined.
-    const lol = screen.getByRole('button', {
-      name: 'Ranked climbing - Gold+ — League of Legends, EN-US, 3 of 5 players',
-    })
-    expect(within(lol).getByRole('img', { name: 'Mia Ferraz' })).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', {
-        name: 'Competitive 5v5 tryhard — Counter-Strike 2, PT-BR, 4 of 5 players',
-      })
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'Fun match no stress — Dota 2, EN-US, 2 of 5 players' })
-    ).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: 'Counter-Strike 2' })).toHaveAttribute(
-      'src',
-      'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/coaczd.webp'
-    )
-  })
-})
-
-describe('background ripple', () => {
-  it('mounts a fresh set of cells on each click, so every ripple starts over', () => {
-    // A 96 px box: the grid adds a row and a column, so the click reaches a 3 x 3 set of cells.
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
-      left: 0,
-      top: 0,
-      width: 96,
-      height: 96,
-      x: 0,
-      y: 0,
-      right: 96,
-      bottom: 96,
-      toJSON: () => ({}),
-    } as DOMRect)
-    const { container } = render(<BackgroundRipple />)
-    const ripple = container.firstElementChild as HTMLElement
-
-    fireEvent.click(ripple, { clientX: 10, clientY: 10 })
-    const firstRipple = rippleCells(container)
-    expect(firstRipple).toHaveLength(9)
-
-    fireEvent.click(ripple, { clientX: 10, clientY: 10 })
-
-    expect(firstRipple.every((cell) => !cell.isConnected)).toBe(true)
-    expect(rippleCells(container)).toHaveLength(9)
   })
 })

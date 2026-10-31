@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 33     | 208   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 31     | 320   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 86     | 845   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 875   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -179,6 +179,22 @@ The CCC-114 review nits drop the stepper case that read class names (`create-squ
 `client:unit` 846 → 845; the borderless hover stays a visual check) and add tags made only of hyphens to
 the one-word rejections in `@squadzr/schemas` (160 → 162). The checking case now also asserts the
 checking announcement.
+
+CCC-115 rebuilds the landing's navigation, hero and footer and recounts `client:unit` at 87 files / 875
+tests (845 → 875). It adds `hero-demo-card.spec.tsx` beside the card (9 tests, with fake timers and a
+controlled `IntersectionObserver`: the start at 2/5 with the invite locked, no play before the card is
+visible, a member at 600ms and then every 900ms with its toast, each toast leaving after 1.6s, the final
+state held with no loop or replay, the timers cleared on unmount, the reduced-motion final state that never
+rewinds or observes, and the one description of the card for assistive technology). `landing.spec.tsx`
+goes from 9 to 12 tests: the old showcase and ripple cases leave with the components, and the server HTML
+now pins the headline and the copy without a game count, the badge with the total and without it at 0, the
+nav links and their hrefs, the signed-out and signed-in actions, the demo in its final state, and the
+footer with the IGDB credit. `landing-navigation.spec.tsx` goes from 2 to 20 tests: the nav anchors, the
+language switch, the sign-in and the board link, the menu below 640px (disclosure, Escape and link clicks
+closing it with the focus back on the button), the Create squad target and the hero code field (valid
+codes normalised, invalid ones refused with the alert and no navigation). `messages.spec.ts` keeps its 11
+tests, with the subtitle and IGDB assertions moved to `landing.hero.subtitle` and
+`landing.footer.gameDataByIgdb`.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.

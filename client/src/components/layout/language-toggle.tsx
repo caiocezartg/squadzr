@@ -16,8 +16,13 @@ function writeLocaleCookie(locale: Locale): void {
   document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE_SECONDS}; samesite=lax`
 }
 
+interface LanguageToggleProps {
+  /** Stretches the switch to its container, as the sidebar wants; the landing nav keeps it compact. */
+  readonly fluid?: boolean
+}
+
 /** The language switch: it writes the locale cookie the server reads, then refreshes the route. */
-export function LanguageToggle() {
+export function LanguageToggle({ fluid = true }: LanguageToggleProps) {
   const t = useTranslations()
   const locale: Locale = useLocale() === 'pt-BR' ? 'pt-BR' : 'en'
   const router = useRouter()
@@ -32,7 +37,7 @@ export function LanguageToggle() {
   return (
     <Segmented
       size="sm"
-      fluid
+      fluid={fluid}
       label={t('common.language')}
       options={LANGUAGE_OPTIONS}
       value={locale}

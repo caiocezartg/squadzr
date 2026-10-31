@@ -186,17 +186,52 @@
       "emptyHint": "Quando um squad seu completar, o convite chega aqui."
     }
   },
-  "footer": {
-    "gameDataByIgdb": "dados de jogos por IGDB"
-  },
-  "hero": {
-    "badge": "{count} JOGOS DISPONÍVEIS",
-    "titleLine1": "PARE DE JOGAR",
-    "titleLine2": "TUDO",
-    "titleAccent": "SOZINHO",
-    "subtitle": "<bold>Crie</bold> ou <bold>entre em squads</bold>, complete seu time e receba um convite do Discord assim que o time estiver cheio.",
-    "exploreSquads": "Explorar squads",
-    "signInWithDiscord": "Entrar com Discord"
+  "landing": {
+    "nav": {
+      "label": "Principal",
+      "explore": "Explorar squads",
+      "games": "Jogos",
+      "howItWorks": "Como funciona",
+      "faq": "FAQ",
+      "board": "Ir pro board",
+      "signIn": "Entrar com Discord"
+    },
+    "hero": {
+      "badge": "{count} JOGOS · SQUADS ABERTOS AGORA",
+      "titleLine1": "Falta só",
+      "titleAccent": "você.",
+      "subtitle": "Crie ou entre em squads de LoL, CS2, Valorant e muito mais. Quando a última vaga fecha, <bold>o convite do Discord chega pro time inteiro.</bold>",
+      "exploreSquads": "Explorar squads",
+      "createSquad": "Criar squad",
+      "codeLabel": "Tem um código?",
+      "codePlaceholder": "ABC123",
+      "codeSubmit": "Entrar",
+      "trustDiscord": "LOGIN COM DISCORD",
+      "trustPlayers": "2 A 40 JOGADORES",
+      "trustFree": "100% GRATUITO"
+    },
+    "demo": {
+      "label": "Ilustração: um squad de Valorant chamado {name} chega a 5 de 5 jogadores e libera o convite do Discord.",
+      "toastJoined": "{name} entrou",
+      "toastNow": "{count}/5 · agora",
+      "toastOneLeft": "{count}/5 · falta 1",
+      "toastFull": "{count}/5 · squad fechado",
+      "inviteTitle": "Squad completo — convite liberado",
+      "inviteOpen": "Abrir Discord"
+    },
+    "footer": {
+      "tagline": "Encontre seu time gamer. Squads em tempo real pra LoL, CS2, Valorant e muito mais.",
+      "label": "Rodapé",
+      "product": "PRODUTO",
+      "help": "AJUDA",
+      "exploreSquads": "Explorar squads",
+      "createSquad": "Criar squad",
+      "howItWorks": "Como funciona",
+      "faq": "Perguntas frequentes",
+      "games": "Jogos disponíveis",
+      "copyright": "© {year} Squadzr — Encontre seu time gamer",
+      "gameDataByIgdb": "dados de jogos por IGDB"
+    }
   },
   "faq": {
     "label": "FAQ",

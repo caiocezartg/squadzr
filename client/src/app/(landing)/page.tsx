@@ -5,6 +5,7 @@ import { FAQSection } from '@/components/landing/faq-section'
 import { HeroSection } from '@/components/landing/hero-section'
 import { HowItWorks } from '@/components/landing/how-it-works'
 import { LandingFooter } from '@/components/landing/landing-footer'
+import { LandingNav } from '@/components/landing/landing-nav'
 import { PopularGames } from '@/components/landing/popular-games'
 import { MotionProvider } from '@/components/ui/motion-provider'
 import { loadPopularGames } from '@/lib/server/games'
@@ -27,6 +28,7 @@ export default async function LandingPage() {
 
   return (
     <MotionProvider>
+      <LandingNav />
       <HeroSection gameCount={totalGames} />
       <PopularGames games={games} />
       <HowItWorks />

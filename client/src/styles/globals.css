@@ -105,6 +105,10 @@
   --animate-invite-fade: invite-fade 300ms var(--ease-out) both;
   --animate-invite-sheen: invite-sheen 1100ms var(--ease-in-out) 500ms both;
 
+  /* The landing: the hero badge's live dot (1.6s opacity loop) and the narrow nav menu opening. */
+  --animate-live: live 1.6s ease-in-out infinite;
+  --animate-menu-in: menu-in var(--dur-ui) var(--ease-out) both;
+
   @keyframes halo {
     0% {
       opacity: 0.45;
@@ -146,6 +150,21 @@
     }
     to {
       transform: translateX(420%) skewX(-18deg);
+    }
+  }
+  @keyframes live {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
     }
   }
   @keyframes fade-in {
@@ -420,18 +439,6 @@
   }
 }
 
-@keyframes cell-ripple {
-  0% {
-    opacity: 0;
-  }
-  40% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
 /*
   In-view reveal (src/components/ui/reveal.tsx): fade and rise 16px once, 400ms --ease-out, with
   children 50ms apart when staggered. The animation fills backwards only, so once it ends the
@@ -537,6 +544,12 @@
   }
 
   @keyframes slide-up {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes menu-in {
     from {
       opacity: 0;
     }

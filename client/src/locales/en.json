@@ -186,17 +186,52 @@
       "emptyHint": "When one of your Squads fills up, the invite lands here."
     }
   },
-  "footer": {
-    "gameDataByIgdb": "game data by IGDB"
-  },
-  "hero": {
-    "badge": "{count} GAMES SUPPORTED",
-    "titleLine1": "STOP PLAYING",
-    "titleLine2": "GAMES",
-    "titleAccent": "ALONE",
-    "subtitle": "<bold>Create</bold> or <bold>join squads</bold>, fill your squad, and get a Discord invite the second your team is ready.",
-    "exploreSquads": "Explore squads",
-    "signInWithDiscord": "Sign in with Discord"
+  "landing": {
+    "nav": {
+      "label": "Main",
+      "explore": "Explore squads",
+      "games": "Games",
+      "howItWorks": "How it works",
+      "faq": "FAQ",
+      "board": "Go to board",
+      "signIn": "Sign in with Discord"
+    },
+    "hero": {
+      "badge": "{count} GAMES · SQUADS OPEN NOW",
+      "titleLine1": "Missing:",
+      "titleAccent": "you.",
+      "subtitle": "Create or join squads for LoL, CS2, Valorant and more. When the last slot fills, <bold>the Discord invite reaches the whole team.</bold>",
+      "exploreSquads": "Explore squads",
+      "createSquad": "Create squad",
+      "codeLabel": "Have a code?",
+      "codePlaceholder": "ABC123",
+      "codeSubmit": "Join",
+      "trustDiscord": "DISCORD LOGIN",
+      "trustPlayers": "2 TO 40 PLAYERS",
+      "trustFree": "100% FREE"
+    },
+    "demo": {
+      "label": "Illustration: a Valorant squad called {name} fills up to 5 of 5 players and unlocks its Discord invite.",
+      "toastJoined": "{name} joined",
+      "toastNow": "{count}/5 · just now",
+      "toastOneLeft": "{count}/5 · 1 left",
+      "toastFull": "{count}/5 · squad full",
+      "inviteTitle": "Squad complete — invite unlocked",
+      "inviteOpen": "Open Discord"
+    },
+    "footer": {
+      "tagline": "Find your gaming team. Real-time squads for LoL, CS2, Valorant and more.",
+      "label": "Footer",
+      "product": "PRODUCT",
+      "help": "HELP",
+      "exploreSquads": "Explore squads",
+      "createSquad": "Create squad",
+      "howItWorks": "How it works",
+      "faq": "Frequently asked questions",
+      "games": "Available games",
+      "copyright": "© {year} Squadzr — Find your gaming team",
+      "gameDataByIgdb": "game data by IGDB"
+    }
   },
   "faq": {
     "label": "FAQ",

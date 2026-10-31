@@ -1,90 +1,90 @@
 'use client'
 
-import * as m from 'motion/react-m'
-import { Search } from 'lucide-react'
-import { useLocale, useTranslations } from 'next-intl'
-import { AppLink } from '@/components/layout/app-link'
-import { DiscordIcon } from '@/components/ui/icons'
-import { useSession } from '@/hooks/use-session'
-import { signInWithDiscord } from '@/lib/auth-client'
-import { BackgroundRipple } from './background-ripple'
-import { HeroGameBadge } from './hero-game-badge'
-import { HeroSquadShowcase } from './hero-squad-showcase'
+import { useTranslations } from 'next-intl'
+import { ArrowRight, Plus } from 'lucide-react'
+import { Button } from '@/components/ds/button'
+import { HeroCodeForm } from './hero-code-form'
+import { HeroDemoCard } from './hero-demo-card'
 
-/**
- * The hero. Its badge, headline, copy and calls to action start visible, so the server HTML shows them
- * before any script runs. Only decoration animates: the underline under the accent word, and the
- * floating squad cards.
- */
-export function HeroSection({ gameCount }: { readonly gameCount: number }) {
-  const t = useTranslations()
-  const lang = useLocale()
-  const session = useSession()
+/** The "N GAMES · SQUADS OPEN NOW" badge. The count is the catalog's total, so 0 means no badge. */
+function GamesBadge({ count }: { readonly count: number }) {
+  const t = useTranslations('landing.hero')
 
-  const handleSignIn = () => {
-    signInWithDiscord('/squads')
-  }
+  if (count === 0) return null
 
   return (
-    <section className="relative overflow-hidden">
-      <BackgroundRipple />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_50%,rgba(0,255,162,0.06),transparent_55%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_80%,rgba(88,101,242,0.04),transparent_50%)] pointer-events-none" />
+    <span className="bg-card text-text-2 font-ds-mono inline-flex items-center gap-2.5 self-start py-2.25 pr-3.5 pl-3 text-xs font-bold tracking-[0.08em]">
+      <span
+        aria-hidden="true"
+        className="bg-mint size-2 motion-safe:animate-live rounded-full shadow-[0_0_10px_var(--color-mint)]"
+      />
+      {t('badge', { count })}
+    </span>
+  )
+}
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:pt-28 sm:pb-24">
-        <div className="max-w-full flex flex-col items-center">
-          <HeroGameBadge count={gameCount} />
+function TrustLine() {
+  const t = useTranslations('landing.hero')
+  const items = [t('trustDiscord'), t('trustPlayers'), t('trustFree')]
 
-          <h1 className="font-heading text-5xl font-extrabold leading-[0.95] tracking-tight sm:leading-none sm:text-6xl lg:text-7xl xl:text-8xl">
-            {t('hero.titleLine1')}
-            <br />
-            {t('hero.titleLine2')}&nbsp;
-            <span className="relative text-accent">
-              {t('hero.titleAccent')}
-              <m.span
-                className="absolute bottom-0 left-0 h-0.75 bg-accent/60 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: '100%' }}
-                transition={{ duration: 0.6, delay: 0.7, ease: 'easeOut' }}
-              />
-            </span>
+  return (
+    <ul className="font-ds-mono text-ds-muted flex flex-wrap gap-x-5.5 gap-y-2 text-[11.5px] font-bold tracking-[0.08em]">
+      {items.map((item) => (
+        <li key={item} className="inline-flex items-center gap-2">
+          <span aria-hidden="true" className="bg-mint size-1.25" />
+          {item}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
+ * The hero. Its badge, headline, copy and calls to action arrive ready, so the server HTML shows them
+ * before any script runs and nothing in them animates in. Only the demo card plays, once.
+ */
+export function HeroSection({ gameCount }: { readonly gameCount: number }) {
+  const t = useTranslations('landing.hero')
+
+  return (
+    <section id="topo" className="relative overflow-x-clip px-4 pt-12 pb-24 sm:px-6 lg:pb-30">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-size-[64px_64px]"
+      />
+      <div
+        aria-hidden="true"
+        className="from-bg pointer-events-none absolute inset-x-0 bottom-0 h-60 bg-linear-to-t to-transparent"
+      />
+
+      <div className="relative mx-auto flex max-w-310 flex-col items-stretch gap-12 lg:flex-row lg:items-center lg:gap-16">
+        <div className="flex min-w-0 flex-col gap-7 lg:flex-1 lg:basis-115">
+          <GamesBadge count={gameCount} />
+          <h1 className="type-display tracking-[-0.005em] wrap-break-word">
+            {t('titleLine1')} <br />
+            <span className="text-mint">{t('titleAccent')}</span>
           </h1>
-
-          <p
-            className={`mt-6 text-base/relaxed text-muted sm:text-lg/7 ${lang === 'pt-BR' ? 'max-w-lg' : 'max-w-md'} text-center`}
-          >
-            {t.rich('hero.subtitle', {
-              bold: (chunks) => <strong className="text-offwhite">{chunks}</strong>,
+          <p className="text-text-3 max-w-125 text-lg/[1.6]">
+            {t.rich('subtitle', {
+              bold: (chunks) => <strong className="text-text">{chunks}</strong>,
             })}
           </p>
-
-          {/* CTAs */}
-          <div className="mt-8 flex flex-col sm:flex-row items-start gap-3">
-            <AppLink
-              href="/squads"
-              className="btn-accent gap-2 text-base px-7 py-3 w-full md:w-auto"
-            >
-              <Search className="size-5" strokeWidth={2.5} />
-              {t('hero.exploreSquads')}
-            </AppLink>
-            {!session?.user && (
-              <button
-                onClick={handleSignIn}
-                className="btn-discord gap-2 text-base px-7 py-3 w-full md:w-auto"
-              >
-                <DiscordIcon className="size-5" />
-                {t('hero.signInWithDiscord')}
-              </button>
-            )}
+          <div className="flex flex-wrap gap-3">
+            <Button href="/squads" size="lg" icon={<ArrowRight />} iconPosition="end">
+              {t('exploreSquads')}
+            </Button>
+            <Button href="/squads?create=1" variant="secondary" size="lg" icon={<Plus />}>
+              {t('createSquad')}
+            </Button>
           </div>
+          <HeroCodeForm />
+          <TrustLine />
+        </div>
 
-          <div className="relative w-full max-w-5xl mt-12 -mb-8">
-            <HeroSquadShowcase />
-          </div>
+        <div className="min-w-0 lg:flex-1 lg:basis-130">
+          <HeroDemoCard />
         </div>
       </div>
-
-      <div className="absolute inset-x-0 bottom-0 h-20 lg:h-32 bg-linear-to-t from-background to-transparent pointer-events-none" />
     </section>
   )
 }
