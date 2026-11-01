@@ -22,6 +22,14 @@ function messagePaths(value: unknown, prefix = ''): string[] {
   return []
 }
 
+interface FaqMessages {
+  readonly landing: { readonly faq: { readonly items: readonly { id: string; answer: string }[] } }
+}
+
+function faqAnswer(messages: FaqMessages, id: string): string {
+  return messages.landing.faq.items.find((item) => item.id === id)?.answer ?? ''
+}
+
 const t = createTranslator({ locale: 'en', messages: en })
 const tPtBR = createTranslator({ locale: 'pt-BR', messages: ptBR })
 
@@ -44,7 +52,7 @@ describe('ICU messages', () => {
   })
 
   it('fills single-brace placeholders', () => {
-    expect(t('popularGames.playerRange', { min: 5, max: 10 })).toBe('5-10 players')
+    expect(t('landing.games.seeSquads', { name: 'Dota 2' })).toBe('See Dota 2 squads')
     expect(tPtBR('ds.tag.remove', { label: '#ranked' })).toBe('Remover #ranked')
     expect(tPtBR('timeAgo.minutesAgo', { count: 5 })).toBe('há 5min')
   })
@@ -68,14 +76,16 @@ describe('ICU messages', () => {
   })
 
   it('keeps the text around rich tags', () => {
-    expect(t.rich('cta.title', { accent: (chunks) => chunks })).toBe('Ready to find your squad?')
-    expect(tPtBR.rich('cta.title', { accent: (chunks) => `[${chunks}]` })).toBe(
-      'Pronto para encontrar seu [squad]?'
+    expect(t.rich('landing.cta.title', { em: (chunks) => chunks })).toBe(
+      "There's a slot waiting for you."
+    )
+    expect(tPtBR.rich('landing.cta.title', { em: (chunks) => `[${chunks}]` })).toBe(
+      'Tem vaga [te esperando.]'
     )
   })
 
   it('reads the FAQ items and the how-it-works steps as raw arrays', () => {
-    const faqItems = t.raw('faq.items') as Array<{ question: string; answer: string }>
+    const faqItems = t.raw('landing.faq.items') as Array<{ question: string; answer: string }>
     const steps = t.raw('howItWorks.steps') as Array<{ title: string; description: string }>
 
     expect(faqItems).toHaveLength(8)
@@ -84,15 +94,20 @@ describe('ICU messages', () => {
     expect(steps[2]?.title).toBe('Squad Up & Play')
   })
 
+  it('lets the player count run from 2 to 40 in both languages', () => {
+    expect(faqAnswer(en, 'player-count')).toContain('from 2 to 40')
+    expect(faqAnswer(ptBR, 'player-count')).toContain('de 2 a 40')
+  })
+
   it('does not promise a fixed number of supported games in either language', () => {
-    const supportedGamesAnswer = (messages: {
-      faq: { items: readonly { id: string; answer: string }[] }
-    }) => messages.faq.items.find((item) => item.id === 'supported-games')?.answer ?? ''
+    const supportedGamesAnswer = (messages: FaqMessages) => faqAnswer(messages, 'supported-games')
 
     expect(supportedGamesAnswer(en)).not.toMatch(/\d/)
     expect(supportedGamesAnswer(ptBR)).not.toMatch(/\d/)
     expect(supportedGamesAnswer(en)).toContain('catalog')
     expect(supportedGamesAnswer(ptBR)).toContain('catálogo')
+    expect(t('landing.games.subtitle')).not.toMatch(/\d/)
+    expect(tPtBR('landing.games.subtitle')).not.toMatch(/\d/)
   })
 
   it('credits IGDB in both languages', () => {

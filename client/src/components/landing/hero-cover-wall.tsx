@@ -1,63 +1,28 @@
-import type { CSSProperties } from 'react'
-import { cn } from '@/lib/utils'
-import { coverUrl, WALL_COVER_IDS } from './hero-showcase-data'
+import { columnCovers, DriftingCoverColumn, type CoverWallShape } from './drifting-cover-column'
 
-/** Columns of the wall, and how many covers each one carries before it repeats. */
-const COLUMNS = 8
-const COVERS_PER_COLUMN = 6
+const WALL: CoverWallShape = { columns: 8, coversPerColumn: 6 }
 /** How long a column takes to travel one full set of its covers. Neighbours differ, so the wall never moves as one. */
 const COLUMN_SECONDS = [118, 96, 132, 104, 124, 92, 140, 110] as const
 
-/** Column `index`'s covers: every `COLUMNS`th id from its own start, so each column mixes the catalog. */
-function columnCovers(index: number): string[] {
-  return Array.from(
-    { length: COVERS_PER_COLUMN },
-    (_, row) => WALL_COVER_IDS[(index + row * COLUMNS) % WALL_COVER_IDS.length] as string
-  )
-}
-
 function WallColumn({ index }: { readonly index: number }) {
-  const covers = columnCovers(index)
   const seconds = COLUMN_SECONDS[index % COLUMN_SECONDS.length] ?? 120
-  // Each column starts part of the way through its journey, and still ones stand at different heights, so
-  // their covers never line up in rows.
-  const style: CSSProperties = {
-    animationDuration: `${seconds}s`,
-    animationDelay: `${-((index * 0.37) % 1) * seconds}s`,
-    marginTop: `${-((index * 53) % 160)}px`,
-  }
-  // Three copies of the set: the column travels one set's height and starts again with no seam, and the
-  // two copies below the one in travel keep the whole hero covered at every moment.
-  const loop = [...covers, ...covers, ...covers]
 
   return (
-    <div
-      className={cn(
-        'min-w-0 flex-1',
-        // Below 640px the outer columns sit off screen anyway.
-        (index === 0 || index === COLUMNS - 1) && 'max-sm:hidden'
-      )}
-    >
-      <div
-        className={cn(
-          'flex flex-col will-change-transform',
-          index % 2 === 0 ? 'motion-safe:animate-wall-up' : 'motion-safe:animate-wall-down'
-        )}
-        style={style}
-      >
-        {loop.map((id, row) => (
-          <span key={row} className="block pb-3 sm:pb-4">
-            <img
-              src={coverUrl(id)}
-              alt=""
-              decoding="async"
-              fetchPriority="low"
-              className="bg-card block aspect-3/4 w-full object-cover"
-            />
-          </span>
-        ))}
-      </div>
-    </div>
+    <DriftingCoverColumn
+      index={index}
+      covers={columnCovers(index, WALL)}
+      seconds={seconds}
+      // Each column starts part of the way through its journey, and still ones stand at different
+      // heights, so their covers never line up in rows.
+      style={{
+        animationDelay: `${-((index * 0.37) % 1) * seconds}s`,
+        marginTop: `${-((index * 53) % 160)}px`,
+      }}
+      // Below 640px the outer columns sit off screen anyway.
+      className={index === 0 || index === WALL.columns - 1 ? 'max-sm:hidden' : undefined}
+      gapClassName="pb-3 sm:pb-4"
+      imageClassName="bg-card"
+    />
   )
 }
 
@@ -75,7 +40,7 @@ export function HeroCoverWall() {
       className="pointer-events-none absolute inset-x-0 -top-40 bottom-0 -z-10 overflow-hidden"
     >
       <div className="absolute -top-64 left-1/2 flex w-[260%] origin-top -translate-x-1/2 -rotate-12 gap-3 opacity-[0.07] blur-[1.5px] saturate-[0.5] sm:w-[170%] sm:gap-4 lg:w-[150%]">
-        {Array.from({ length: COLUMNS }, (_, index) => (
+        {Array.from({ length: WALL.columns }, (_, index) => (
           <WallColumn key={index} index={index} />
         ))}
       </div>

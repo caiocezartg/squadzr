@@ -1,17 +1,18 @@
 /**
  * The landing on the App Router (CCC-77, CCC-115). The page renders on the server: its navigation,
- * headline, copy, calls to action, the squad carousel with its first squad full, popular games, FAQ and
- * footer are in the server HTML.
+ * headline, copy, calls to action, the squad carousel with its first squad full, the featured game and
+ * its rows, the FAQ, the closing call and the footer are in the server HTML (CCC-116).
  */
 
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { cleanup, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionDto } from '@squadzr/schemas'
 import LandingPage, { metadata } from '@/app/(landing)/page'
+import { PopularGames } from '@/components/landing/popular-games'
 import { gameCs2, gameLol, popularGames } from './fixtures'
 import { httpOk, onHttp } from './http-router'
 import { EnglishIntlProvider } from './intl'
@@ -80,18 +81,53 @@ describe('landing server HTML', () => {
     expect(screen.queryByText(/42 GAMES/)).not.toBeInTheDocument()
   })
 
-  it('renders the popular games and the FAQ', async () => {
+  it('features the first popular game, with its size, open squads and tags, over a row per game', async () => {
     await showServerHtml()
     // The hero carousel names games and tags of its own, so the games are read in their section.
     const games = within(document.getElementById('jogos') as HTMLElement)
+    const featured = within(games.getByRole('article'))
 
-    expect(games.getByText(gameLol.name)).toBeInTheDocument()
-    expect(games.getByText(gameCs2.name)).toBeInTheDocument()
-    expect(games.getByText('4 open squads')).toBeInTheDocument()
-    expect(games.getByText('No open squads')).toBeInTheDocument()
-    expect(games.getByText('#ranked')).toBeInTheDocument()
-    expect(games.getByText('#chill')).toBeInTheDocument()
-    expect(screen.getByText('Is Squadzr free?')).toBeInTheDocument()
+    expect(games.getByRole('heading', { level: 2 })).toHaveTextContent(
+      'From 2v2 to a 40-player raid.'
+    )
+    expect(featured.getByRole('heading', { level: 3 })).toHaveTextContent(gameLol.name)
+    expect(featured.getByText('MOBA')).toBeInTheDocument()
+    expect(featured.getByText('1–5')).toBeInTheDocument()
+    expect(featured.getByText('4')).toBeInTheDocument()
+    expect(featured.getByText('#ranked')).toBeInTheDocument()
+    expect(featured.getByText('#chill')).toBeInTheDocument()
+    expect(featured.getByRole('link', { name: 'See League of Legends squads' })).toHaveAttribute(
+      'href',
+      '/squads?search=League%20of%20Legends'
+    )
+    expect(
+      games.getByRole('button', { name: 'League of Legends, MOBA, 1–5 players' })
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      games.getByRole('button', { name: 'Counter-Strike 2, Shooter, 1–5 players' })
+    ).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('renders the eight FAQ items as collapsed accordion triggers', async () => {
+    await showServerHtml()
+    const faq = within(document.getElementById('faq') as HTMLElement)
+    const triggers = faq.getAllByRole('button')
+
+    expect(faq.getByRole('heading', { level: 2 })).toHaveTextContent('Got questions?')
+    expect(triggers).toHaveLength(8)
+    expect(triggers[0]).toHaveTextContent('Is Squadzr free?')
+    for (const trigger of triggers) expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('ends with the call to explore squads', async () => {
+    await showServerHtml()
+    const heading = screen.getByRole('heading', {
+      level: 2,
+      name: "There's a slot waiting for you.",
+    })
+    const cta = within(heading.closest('section') as HTMLElement)
+
+    expect(cta.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
   })
 
   it('points the navigation at the board and at the sections of the page', async () => {
@@ -185,6 +221,30 @@ describe('landing server HTML', () => {
     )
     expect(links.getByRole('link', { name: 'Available games' })).toHaveAttribute('href', '#jogos')
     expect(within(footer).getByText(/^© \d{4} Squadzr/)).toBeInTheDocument()
+  })
+})
+
+describe('landing games section', () => {
+  it('features the game whose row takes focus, and points its link at that game', async () => {
+    render(
+      <EnglishIntlProvider>
+        <PopularGames games={popularGames.games} />
+      </EnglishIntlProvider>
+    )
+    const cs2Row = screen.getByRole('button', { name: 'Counter-Strike 2, Shooter, 1–5 players' })
+
+    act(() => cs2Row.focus())
+
+    const featured = within(screen.getByRole('article'))
+    expect(featured.getByRole('heading', { level: 3 })).toHaveTextContent(gameCs2.name)
+    expect(featured.getByRole('link', { name: 'See Counter-Strike 2 squads' })).toHaveAttribute(
+      'href',
+      '/squads?search=Counter-Strike%202'
+    )
+    expect(cs2Row).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      screen.getByRole('button', { name: 'League of Legends, MOBA, 1–5 players' })
+    ).toHaveAttribute('aria-pressed', 'false')
   })
 })
 
