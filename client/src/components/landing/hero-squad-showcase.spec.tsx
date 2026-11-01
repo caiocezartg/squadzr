@@ -105,7 +105,7 @@ describe('HeroSquadShowcase', () => {
     )
 
     expect(html).toContain(valorant(5))
-    expect(html).toContain('Squad complete')
+    expect(html).toContain('Full')
   })
 
   describe('with motion allowed', () => {
@@ -117,7 +117,7 @@ describe('HeroSquadShowcase', () => {
       renderShowcase()
 
       expect(centre()).toBe(valorant(2))
-      expect(within(centreCard()).getByText('3 players missing')).toBeInTheDocument()
+      expect(within(centreCard()).queryByText('Full')).not.toBeInTheDocument()
 
       advance(10_000)
 
@@ -130,12 +130,11 @@ describe('HeroSquadShowcase', () => {
 
       advance(SHOWCASE_START_MS)
       expect(centre()).toBe(valorant(3))
-      expect(within(centreCard()).getByText('brunão joined')).toBeInTheDocument()
+      expect(within(centreCard()).queryByText('Full')).not.toBeInTheDocument()
 
       advance(SHOWCASE_JOIN_MS)
       advance(SHOWCASE_JOIN_MS)
       expect(centre()).toBe(valorant(5))
-      expect(within(centreCard()).getByText('Squad complete')).toBeInTheDocument()
       expect(within(centreCard()).getByText('Full')).toBeInTheDocument()
     })
 

@@ -153,7 +153,6 @@ describe('landing server HTML', () => {
       name: 'Premier quinta à noite, a Valorant squad: 5 of 5 players',
     })
 
-    expect(within(centre).getByText('Squad complete')).toBeInTheDocument()
     expect(within(centre).getByText('Full')).toBeInTheDocument()
     expect(within(carousel).getAllByRole('group')).toHaveLength(1)
     expect(

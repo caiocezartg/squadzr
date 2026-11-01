@@ -214,9 +214,6 @@
       "goTo": "Show {name} ({game})",
       "pause": "Pause the carousel",
       "play": "Resume the carousel",
-      "joined": "{name} joined",
-      "missing": "{count, plural, one {# player missing} other {# players missing}}",
-      "complete": "Squad complete",
       "full": "Full"
     },
     "footer": {

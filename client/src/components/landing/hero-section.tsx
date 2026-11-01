@@ -37,7 +37,7 @@ export function HeroSection() {
       <HeroCoverWall />
       <div className="mx-auto flex max-w-310 flex-col items-center gap-10 text-center sm:gap-12">
         <div className="flex w-full flex-col items-center gap-5 sm:gap-6">
-          <h1 className="font-display text-[clamp(52px,7.5vw,112px)] leading-[0.92] font-black text-balance uppercase drop-shadow-[0_4px_32px_rgba(0,0,0,0.6)]">
+          <h1 className="font-display text-[clamp(52px,7.5vw,112px)] leading-[1.04] font-black text-balance uppercase drop-shadow-[0_4px_32px_rgba(0,0,0,0.6)]">
             <span className="block">{t('titleLine1')}</span>{' '}
             <span className="text-mint block drop-shadow-[0_0_28px_rgba(0,255,162,0.35)]">
               {t('titleLine2')}

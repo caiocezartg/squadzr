@@ -214,9 +214,6 @@
       "goTo": "Ver {name} ({game})",
       "pause": "Pausar o carrossel",
       "play": "Retomar o carrossel",
-      "joined": "{name} entrou",
-      "missing": "{count, plural, one {Falta # jogador} other {Faltam # jogadores}}",
-      "complete": "Squad completo",
       "full": "Fechou"
     },
     "footer": {

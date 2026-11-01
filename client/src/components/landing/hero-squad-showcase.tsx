@@ -22,7 +22,7 @@ function offsetOf(index: number, active: number): number {
 /** How a card at `offset` from the centre is placed: further out, smaller, dimmer and further back. */
 function placement(offset: number): CSSProperties {
   const distance = Math.abs(offset)
-  const scale = distance === 0 ? 1 : distance === 1 ? 0.84 : 0.7
+  const scale = distance === 0 ? 1 : distance === 1 ? 0.8 : 0.64
   return {
     transform: `translateX(calc(${offset} * var(--showcase-step))) scale(${scale})`,
     opacity: distance === 0 ? 1 : distance === 1 ? 0.42 : distance === 2 ? 0.14 : 0,
@@ -105,7 +105,7 @@ export function HeroSquadShowcase() {
     >
       <div
         className={cn(
-          'relative -my-10 h-72 w-full overflow-x-clip [--showcase-card:min(80vw,470px)] [--showcase-step:calc(var(--showcase-card)*0.9)] sm:h-80',
+          'relative -my-10 h-64 w-full overflow-x-clip [--showcase-card:min(86vw,460px)] [--showcase-step:calc(var(--showcase-card)*0.86)] lg:h-[18.375rem] lg:[--showcase-card:540px]',
           // The far cards fade into the page at the edges. The mask clips on every side, so the box reaches
           // 40px past the cards above and below, where the centre card's glow falls.
           'mask-x-from-85% mask-x-to-100% sm:mask-x-from-75%'
