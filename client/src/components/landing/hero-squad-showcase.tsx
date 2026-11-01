@@ -106,9 +106,10 @@ export function HeroSquadShowcase() {
       <div
         className={cn(
           'relative -my-10 h-64 w-full overflow-x-clip [--showcase-card:min(86vw,460px)] [--showcase-step:calc(var(--showcase-card)*0.86)] lg:h-[18.375rem] lg:[--showcase-card:540px]',
-          // The far cards fade into the page at the edges. The mask clips on every side, so the box reaches
+          // From 640px the far cards fade into the page at the edges; below it the centre card takes almost the
+          // whole width, so a fade would darken its sides. The mask clips on every side, so the box reaches
           // 40px past the cards above and below, where the centre card's glow falls.
-          'mask-x-from-85% mask-x-to-100% sm:mask-x-from-75%'
+          'sm:mask-x-from-75% sm:mask-x-to-100%'
         )}
       >
         {SHOWCASE_SQUADS.map((squad, index) => {
