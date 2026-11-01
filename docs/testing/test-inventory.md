@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 33     | 208   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 31     | 324   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 877   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 871   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -218,6 +218,18 @@ motion). `landing.spec.tsx` goes from 12 to 11 tests (the badge cases become one
 final-state case pins the stage list, the viewer's link and the selected tab). `landing-navigation.spec.tsx`
 goes from 20 to 24 tests: the numbered links, the scroll-spy (marking the section in view, never the board
 route) and the sticky header's ground once the page scrolls.
+
+CCC-115 round 4 replaces the hero's slot stage with a carousel of squads over a wall of game covers and
+drops the hero code field, and recounts `client:unit` at 87 files / 871 tests (888 → 871).
+`hero-demo.spec.tsx` leaves with the stage and `hero-squad-showcase.spec.tsx` replaces it (18 → 10 tests,
+with fake timers and a controlled `IntersectionObserver`: the first squad full in the server HTML, the
+rewind to its founders with no play until it is on screen, one player per step with the full state
+announced, the hold and the next squad from its start, the hold under the pointer, the stop off screen,
+the pause and play control, a bar bringing a squad to the centre, and under reduced motion a full squad
+that never moves, offers no pause and comes to the centre full). `landing.spec.tsx` keeps its 11 tests
+(the final-state case now pins the carousel's centre squad and the absent code field, and the popular
+games are read in their own section). `landing-navigation.spec.tsx` goes from 24 to 15 tests: the 9 code
+field cases leave with the field.
 
 CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
 Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.

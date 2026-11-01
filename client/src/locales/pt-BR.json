@@ -199,28 +199,25 @@
     "hero": {
       "titleLine1": "Monte seu squad.",
       "titleLine2": "Jogue hoje.",
-      "subtitle": "Ache jogadores pra completar seu time em LoL, CS2, Valorant e outros. Quando a última vaga fecha, o convite do Discord chega pra todo mundo.",
+      "subtitle": "Chega de jogar com random. Ache quem falta pro seu time e caia na partida agora.",
       "exploreSquads": "Explorar squads",
       "createSquad": "Criar squad",
-      "codeLabel": "Tem um código?",
-      "codePlaceholder": "ABC123",
-      "codeSubmit": "Entrar",
       "trustDiscord": "Login com Discord",
       "trustPlayers": "2 a 40 jogadores",
       "trustFree": "Grátis"
     },
-    "demo": {
-      "label": "Ilustração: as cinco vagas de um squad de {game} travam uma a uma, e a última é você. O squad fecha em 5 de 5 e o convite do Discord é liberado.",
-      "gamesLabel": "Jogo",
-      "stageLabel": "As vagas de {name}",
-      "you": "Você",
-      "slotReady": "PRONTO",
-      "slotSearching": "BUSCANDO…",
-      "slotYours": "SUA VAGA",
-      "youSlotHint": "PEGAR A VAGA",
-      "youSlotAction": "Sua vaga: explore os squads e pegue a última vaga",
-      "onBoard": "No board",
-      "inLobby": "No lobby"
+    "showcase": {
+      "label": "Squads se formando agora",
+      "roleDescription": "carrossel",
+      "slide": "squad",
+      "squadLabel": "{name}, squad de {game}: {count} de {total} jogadores",
+      "goTo": "Ver {name} ({game})",
+      "pause": "Pausar o carrossel",
+      "play": "Retomar o carrossel",
+      "joined": "{name} entrou",
+      "missing": "{count, plural, one {Falta # jogador} other {Faltam # jogadores}}",
+      "complete": "Squad completo",
+      "full": "Fechou"
     },
     "footer": {
       "tagline": "Encontre seu time gamer. Squads em tempo real pra LoL, CS2, Valorant e muito mais.",

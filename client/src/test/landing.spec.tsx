@@ -1,6 +1,6 @@
 /**
  * The landing on the App Router (CCC-77, CCC-115). The page renders on the server: its navigation,
- * headline, copy, calls to action, games badge, demo card in its final state, popular games, FAQ and
+ * headline, copy, calls to action, the squad carousel with its first squad full, popular games, FAQ and
  * footer are in the server HTML.
  */
 
@@ -58,9 +58,11 @@ describe('landing server HTML', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       'Build your squad. Play tonight.'
     )
-    const copy = screen.getByText(/Find players to fill your team in LoL, CS2, Valorant and more/)
-    expect(copy.textContent).toContain('the Discord invite reaches everyone.')
-    expect(copy.textContent).not.toMatch(/\d+\s+(more\s+)?games/i)
+    expect(
+      screen.getByText(
+        'No more queueing with randoms. Find the players your team is missing and get into the match now.'
+      )
+    ).toBeInTheDocument()
   })
 
   it('renders the headline without a hidden entrance state', async () => {
@@ -80,13 +82,15 @@ describe('landing server HTML', () => {
 
   it('renders the popular games and the FAQ', async () => {
     await showServerHtml()
+    // The hero carousel names games and tags of its own, so the games are read in their section.
+    const games = within(document.getElementById('jogos') as HTMLElement)
 
-    expect(screen.getByText(gameLol.name)).toBeInTheDocument()
-    expect(screen.getByText(gameCs2.name)).toBeInTheDocument()
-    expect(screen.getByText('4 open squads')).toBeInTheDocument()
-    expect(screen.getByText('No open squads')).toBeInTheDocument()
-    expect(screen.getByText('#ranked')).toBeInTheDocument()
-    expect(screen.getByText('#chill')).toBeInTheDocument()
+    expect(games.getByText(gameLol.name)).toBeInTheDocument()
+    expect(games.getByText(gameCs2.name)).toBeInTheDocument()
+    expect(games.getByText('4 open squads')).toBeInTheDocument()
+    expect(games.getByText('No open squads')).toBeInTheDocument()
+    expect(games.getByText('#ranked')).toBeInTheDocument()
+    expect(games.getByText('#chill')).toBeInTheDocument()
     expect(screen.getByText('Is Squadzr free?')).toBeInTheDocument()
   })
 
@@ -142,31 +146,20 @@ describe('landing server HTML', () => {
     )
   })
 
-  it('renders the hero demo in its final state: five slots locked, the board card full and the invite unlocked', async () => {
+  it('renders the hero carousel with its first squad full and in the centre, and no code field', async () => {
     await showServerHtml()
-    const stage = screen.getByRole('list', { name: 'The slots of Premier quinta à noite' })
-    const slots = within(stage).getAllByRole('listitem')
-    const result = screen.getByRole('img', { name: /Valorant squad lock in one by one/ })
+    const carousel = screen.getByRole('region', { name: 'Squads forming right now' })
+    const centre = within(carousel).getByRole('group', {
+      name: 'Premier quinta à noite, a Valorant squad: 5 of 5 players',
+    })
 
-    expect(slots).toHaveLength(5)
-    expect(slots.every((slot) => slot.hasAttribute('data-locked'))).toBe(true)
-    expect(slots[4]).toHaveAttribute('data-you')
-    expect(slots[4]).toHaveTextContent('You')
-    expect(slots[0]).toHaveTextContent('caio_cz')
-    expect(within(stage).getByRole('link', { name: /Your slot/ })).toHaveAttribute(
-      'href',
-      '/squads'
-    )
-    expect(screen.getByRole('tab', { name: 'Valorant' })).toHaveAttribute('aria-selected', 'true')
+    expect(within(centre).getByText('Squad complete')).toBeInTheDocument()
+    expect(within(centre).getByText('Full')).toBeInTheDocument()
+    expect(within(carousel).getAllByRole('group')).toHaveLength(1)
     expect(
-      within(result).getByRole('group', { name: /Premier quinta à noite.*5 of 5 players/ })
-    ).toBeInTheDocument()
-    expect(within(result).getByRole('heading', { name: "Let's go to Discord" })).toBeInTheDocument()
-    expect(within(result).getByText('premier-qui')).toBeInTheDocument()
-    expect(
-      within(result).queryByRole('heading', { name: 'Discord invite' })
-    ).not.toBeInTheDocument()
-    expect(result.querySelector('[inert]')).not.toBeNull()
+      within(carousel).getByRole('button', { name: 'Show Premier quinta à noite (Valorant)' })
+    ).toHaveAttribute('aria-current', 'true')
+    expect(screen.queryByLabelText('Have a code?')).not.toBeInTheDocument()
   })
 
   it('credits IGDB in the footer, next to the product and help links', async () => {

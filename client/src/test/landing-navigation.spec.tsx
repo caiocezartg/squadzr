@@ -314,49 +314,4 @@ describe('links from the landing', () => {
 
     expect(navigation.calls).toEqual([{ method: 'push', href: '/squads?create=1' }])
   })
-
-  describe('the hero code field', () => {
-    it.each([
-      ['abc123', '/squads?join=ABC123'],
-      ['#ABC123', '/squads?join=ABC123'],
-      [' a1b2c3', '/squads?join=A1B2C3'],
-    ])('sends the code %j to the board invite link', async (typed, href) => {
-      const navigation = createHarnessNavigation('/')
-      const user = userEvent.setup({ delay: null })
-      render(<HeroSection />)
-
-      await user.type(screen.getByLabelText('Have a code?'), typed)
-      await user.click(screen.getByRole('button', { name: 'Join' }))
-
-      expect(navigation.calls).toEqual([{ method: 'push', href }])
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    })
-
-    it.each(['', 'ABC12', 'ABC1234', 'AB C12', 'ABC-12'])(
-      'refuses the code %j with a message and sends no navigation',
-      async (typed) => {
-        const navigation = createHarnessNavigation('/')
-        const user = userEvent.setup({ delay: null })
-        render(<HeroSection />)
-
-        if (typed) await user.type(screen.getByLabelText('Have a code?'), typed)
-        await user.click(screen.getByRole('button', { name: 'Join' }))
-
-        expect(screen.getByRole('alert')).toHaveTextContent('A squad code has 6 letters or digits.')
-        expect(screen.getByLabelText('Have a code?')).toBeInvalid()
-        expect(navigation.calls).toEqual([])
-      }
-    )
-
-    it('takes the message away once the viewer types again', async () => {
-      createHarnessNavigation('/')
-      const user = userEvent.setup({ delay: null })
-      render(<HeroSection />)
-      await user.click(screen.getByRole('button', { name: 'Join' }))
-
-      await user.type(screen.getByLabelText('Have a code?'), 'A')
-
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    })
-  })
 })

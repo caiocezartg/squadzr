@@ -1,14 +1,10 @@
 'use client'
 
-import { useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { ArrowRight, Plus } from 'lucide-react'
 import { Button } from '@/components/ds/button'
-import { HeroBackdrop } from './hero-backdrop'
-import { HeroCodeForm } from './hero-code-form'
-import { HeroDemo } from './hero-demo'
-import { useDemoGames } from './use-demo-games'
-import { useHeroPointer } from './use-hero-pointer'
+import { HeroCoverWall } from './hero-cover-wall'
+import { HeroSquadShowcase } from './hero-squad-showcase'
 
 /** Quiet product facts: small and muted, with a dot between them. */
 function TrustLine() {
@@ -28,33 +24,26 @@ function TrustLine() {
 }
 
 /**
- * The hero, a pre-match screen: what the product is for, in a headline and one sentence, the ways in,
- * and the slot stage that shows it working, lit by the game's art. The headline, copy and actions arrive
- * ready, so the server HTML shows them before any script runs and nothing in them animates in. Only the
- * demo plays. The backdrop and the slots answer the pointer.
+ * The hero: what the product is for, in a headline and one sentence, the two ways in, and a carousel of
+ * squads filling up that shows it working, over a wall of game covers kept almost out of sight. The
+ * headline, copy and actions arrive ready, so the server HTML shows them before any script runs and
+ * nothing in them animates in. Only the backdrop and the carousel move.
  */
 export function HeroSection() {
   const t = useTranslations('landing.hero')
-  const section = useRef<HTMLElement>(null)
-  const demo = useDemoGames()
-  useHeroPointer(section)
 
   return (
-    <section
-      ref={section}
-      id="topo"
-      className="relative isolate px-4 pt-6 pb-14 sm:px-6 sm:pt-10 lg:pb-20"
-    >
-      <HeroBackdrop game={demo.game} games={demo.games} />
-      <div className="mx-auto flex max-w-310 flex-col items-center gap-10 text-center sm:gap-14">
-        <div className="flex w-full flex-col items-center gap-5">
-          <h1 className="font-display text-[clamp(52px,8vw,128px)] leading-[0.92] font-black text-balance uppercase drop-shadow-[0_4px_32px_rgba(0,0,0,0.6)]">
+    <section id="topo" className="relative isolate px-4 pt-6 pb-16 sm:px-6 sm:pt-10 lg:pb-24">
+      <HeroCoverWall />
+      <div className="mx-auto flex max-w-310 flex-col items-center gap-10 text-center sm:gap-12">
+        <div className="flex w-full flex-col items-center gap-5 sm:gap-6">
+          <h1 className="font-display text-[clamp(52px,7.5vw,112px)] leading-[0.92] font-black text-balance uppercase drop-shadow-[0_4px_32px_rgba(0,0,0,0.6)]">
             <span className="block">{t('titleLine1')}</span>{' '}
             <span className="text-mint block drop-shadow-[0_0_28px_rgba(0,255,162,0.35)]">
               {t('titleLine2')}
             </span>
           </h1>
-          <p className="text-text-2 max-w-prose text-base/relaxed sm:text-lg/relaxed">
+          <p className="text-text-2 max-w-[34ch] text-lg/snug font-medium text-balance sm:text-xl/snug">
             {t('subtitle')}
           </p>
           <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-3">
@@ -64,14 +53,11 @@ export function HeroSection() {
             <Button href="/squads?create=1" variant="secondary" size="lg" icon={<Plus />}>
               {t('createSquad')}
             </Button>
-            <HeroCodeForm />
           </div>
           <TrustLine />
         </div>
 
-        <div className="w-full text-left">
-          <HeroDemo game={demo.game} games={demo.games} onPick={demo.pick} onIntent={demo.reach} />
-        </div>
+        <HeroSquadShowcase />
       </div>
     </section>
   )
