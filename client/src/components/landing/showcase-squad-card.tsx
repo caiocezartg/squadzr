@@ -1,6 +1,5 @@
 'use client'
 
-import * as m from 'motion/react-m'
 import { Check } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Avatar } from '@/components/ds/avatar'
@@ -11,7 +10,11 @@ import { coverUrl, squadSize, type ShowcaseMember, type ShowcaseSquad } from './
 
 interface SeatProps {
   readonly member: ShowcaseMember | undefined
-  /** The member joined under the script: the avatar pops in and its ring flashes once. */
+  /**
+   * The member joined under the script: a mint disc pops over the seat and fades to show the avatar, and
+   * a ring flashes once. The avatar itself only shows, in one step, once the disc covers it. Scaling it would have its initials snap to the
+   * pixel grid as the animation ends, so nothing that holds text is ever scaled.
+   */
   readonly entering: boolean
   readonly first: boolean
 }
@@ -38,22 +41,23 @@ function Seat({ member, entering, first }: SeatProps) {
   }
 
   return (
-    <m.span
-      className={frame}
-      initial={entering ? { opacity: 0, transform: 'scale(0.4)' } : false}
-      animate={{ opacity: 1, transform: 'scale(1)' }}
-      transition={{ type: 'spring', duration: 0.45, bounce: 0.35 }}
-    >
-      <span className={scaled}>
+    <span className={frame}>
+      <span className={cn(scaled, entering && 'motion-safe:animate-seat-in')}>
         <Avatar size={34} playerId={member.id} name={member.name} />
       </span>
       {entering && (
-        <span
-          aria-hidden="true"
-          className="border-mint motion-safe:animate-seat-ping absolute -inset-0.5 rounded-full border-2 opacity-0"
-        />
+        <>
+          <span
+            aria-hidden="true"
+            className="bg-mint motion-safe:animate-seat-burst absolute inset-0 rounded-full opacity-0"
+          />
+          <span
+            aria-hidden="true"
+            className="border-mint motion-safe:animate-seat-ping absolute -inset-0.5 rounded-full border-2 opacity-0"
+          />
+        </>
       )}
-    </m.span>
+    </span>
   )
 }
 
@@ -121,9 +125,7 @@ export function ShowcaseSquadCard({ squad, filled, centered, scripted }: Showcas
           <span className="type-code text-faint shrink-0">#{squad.code}</span>
         </span>
 
-        <span className="type-squad-name-md lg:type-squad-name line-clamp-2 wrap-break-word">
-          {squad.name}
-        </span>
+        <span className="type-squad-name-md lg:type-squad-name truncate">{squad.name}</span>
 
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
           {squad.tags.map((tag) => (
@@ -137,7 +139,8 @@ export function ShowcaseSquadCard({ squad, filled, centered, scripted }: Showcas
           <span className="flex min-w-0 flex-1 items-center py-0.5 pr-0.5">
             {Array.from({ length: total }, (_, index) => (
               <Seat
-                key={index}
+                // A seat that takes its member mounts anew, so its entrance plays from its start.
+                key={`${index}-${index < filled ? 'member' : 'vacant'}`}
                 first={index === 0}
                 member={index < filled ? squad.members[index] : undefined}
                 entering={scripted && centered && index >= squad.founders && index < filled}

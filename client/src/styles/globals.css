@@ -107,12 +107,16 @@
 
   /*
     The landing. The hero's wall of covers drifts, its columns in turn up and down, one set of covers
-    per loop. In the carousel, a player who joins flashes a ring once, and a full squad's poster takes its stamp. The squad's counter and
+    per loop. In the carousel, a player who joins arrives under a mint disc that pops and fades, the
+    avatar showing beneath it once the disc covers the seat (a step, never a fade or a scale, so the
+    initials never move), and flashes a ring once, and a full squad's poster takes its stamp. The squad's counter and
     status roll each new value in. The nav menu opens below 640px. Loops are used behind `motion-safe:`
     only.
   */
   --animate-wall-up: wall-up 120s linear infinite;
   --animate-wall-down: wall-down 120s linear infinite;
+  --animate-seat-in: seat-in 1ms step-end 180ms both;
+  --animate-seat-burst: seat-burst 420ms var(--ease-out) both;
   --animate-seat-ping: seat-ping 700ms var(--ease-out) both;
   --animate-card-stamp: card-stamp 360ms var(--ease-out) both;
   --animate-count-in: count-in var(--dur-ui) var(--ease-out) both;
@@ -175,6 +179,25 @@
     }
     to {
       transform: translateY(0);
+    }
+  }
+  @keyframes seat-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes seat-burst {
+    0% {
+      opacity: 0.95;
+      transform: scale(0.35);
+    }
+    55% {
+      opacity: 0.85;
+      transform: scale(1.12);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1);
     }
   }
   @keyframes seat-ping {
