@@ -3,6 +3,7 @@ import { inject } from 'vitest'
 import { buildApp } from '@/app'
 import type { Clock } from '@domain/services/clock.interface'
 import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
+import type { DiscordInviteRateLimit } from '@interface/routes/discord.routes'
 import { parseEnv, type Env } from '@config/env'
 import { createIsolatedDatabase } from './postgres'
 
@@ -40,6 +41,8 @@ export interface BuildTestServerOptions {
   clock?: Clock
   /** Replaces Discord's invite endpoint, which no test reaches. Defaults to a server that knows every invite. */
   discordPreviews?: DiscordInvitePreviewProvider
+  /** Replaces the limit on the Discord invite check, so a test can shrink its window. */
+  discordInviteRateLimit?: DiscordInviteRateLimit
   /**
    * Replaces the production logger for tests that read request logs. Omitted, the
    * server logs through `defaultLogger(env)`, which stays quiet at the test level.
@@ -78,6 +81,7 @@ export async function buildTestServer(
       logger: options.logger,
       clock: options.clock,
       discordPreviews: options.discordPreviews ?? KNOWN_INVITES,
+      discordInviteRateLimit: options.discordInviteRateLimit,
     })
     await app.ready()
   } catch (error) {

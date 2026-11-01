@@ -1,6 +1,7 @@
 export { AppError } from './base.error'
 export { GameNotAvailableError, InvalidGameError } from './validation.error'
 export { UnauthorizedError } from './unauthorized.error'
+export { RateLimitedError } from './rate-limited.error'
 export { GameNotFoundError, RoomNotFoundError, UserNotFoundError } from './not-found.error'
 export {
   InvalidDiscordInviteError,
