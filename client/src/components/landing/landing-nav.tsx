@@ -105,7 +105,7 @@ export function LandingNav() {
             </div>
             <div className="flex flex-wrap items-center gap-3 max-sm:flex-col max-sm:items-stretch sm:ml-auto">
               <div className="max-sm:self-start">
-                <LanguageToggle fluid={false} size="md" />
+                <LanguageToggle fluid={false} />
               </div>
               <LandingNavAuth />
             </div>

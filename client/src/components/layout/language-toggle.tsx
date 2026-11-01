@@ -19,12 +19,10 @@ function writeLocaleCookie(locale: Locale): void {
 interface LanguageToggleProps {
   /** Stretches the switch to its container, as the sidebar wants; the landing nav keeps it compact. */
   readonly fluid?: boolean
-  /** The landing nav's switch is the roomier `md`; the sidebar keeps the small one. */
-  readonly size?: 'sm' | 'md'
 }
 
 /** The language switch: it writes the locale cookie the server reads, then refreshes the route. */
-export function LanguageToggle({ fluid = true, size = 'sm' }: LanguageToggleProps) {
+export function LanguageToggle({ fluid = true }: LanguageToggleProps) {
   const t = useTranslations()
   const locale: Locale = useLocale() === 'pt-BR' ? 'pt-BR' : 'en'
   const router = useRouter()
@@ -38,7 +36,7 @@ export function LanguageToggle({ fluid = true, size = 'sm' }: LanguageToggleProp
 
   return (
     <Segmented
-      size={size}
+      size="sm"
       fluid={fluid}
       label={t('common.language')}
       options={LANGUAGE_OPTIONS}

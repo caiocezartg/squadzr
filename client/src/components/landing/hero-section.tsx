@@ -46,7 +46,8 @@ export function HeroSection() {
           <p className="text-text-2 max-w-[34ch] text-lg/snug font-medium text-balance sm:text-xl/snug">
             {t('subtitle')}
           </p>
-          <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-3">
+          {/* Below 640px the two calls stack, one width for both. */}
+          <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-3 max-sm:max-w-80 max-sm:flex-col max-sm:items-stretch">
             <Button href="/squads" size="lg" icon={<ArrowRight />} iconPosition="end">
               {t('exploreSquads')}
             </Button>

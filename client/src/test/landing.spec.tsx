@@ -56,7 +56,7 @@ describe('landing server HTML', () => {
     await showServerHtml()
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'Build your squad. Play tonight.'
+      'Build your squad Play tonight'
     )
     expect(
       screen.getByText(
