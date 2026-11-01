@@ -19,10 +19,12 @@ function writeLocaleCookie(locale: Locale): void {
 interface LanguageToggleProps {
   /** Stretches the switch to its container, as the sidebar wants; the landing nav keeps it compact. */
   readonly fluid?: boolean
+  /** Drops the switch's ground, so only the pressed language's mint marks it, as the landing nav wants. */
+  readonly bare?: boolean
 }
 
 /** The language switch: it writes the locale cookie the server reads, then refreshes the route. */
-export function LanguageToggle({ fluid = true }: LanguageToggleProps) {
+export function LanguageToggle({ fluid = true, bare = false }: LanguageToggleProps) {
   const t = useTranslations()
   const locale: Locale = useLocale() === 'pt-BR' ? 'pt-BR' : 'en'
   const router = useRouter()
@@ -38,6 +40,7 @@ export function LanguageToggle({ fluid = true }: LanguageToggleProps) {
     <Segmented
       size="sm"
       fluid={fluid}
+      className={bare ? 'bg-transparent p-0' : undefined}
       label={t('common.language')}
       options={LANGUAGE_OPTIONS}
       value={locale}

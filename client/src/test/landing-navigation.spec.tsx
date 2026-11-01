@@ -223,7 +223,7 @@ describe('the landing navigation', () => {
     expect(navigation.calls).toEqual([{ method: 'push', href: '/squads' }])
   })
 
-  describe('the menu below 640px', () => {
+  describe('the menu below 1024px', () => {
     it('opens and closes as a disclosure that names the panel it controls', async () => {
       createHarnessNavigation('/')
       const user = userEvent.setup({ delay: null })

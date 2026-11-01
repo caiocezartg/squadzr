@@ -10,7 +10,8 @@ import { LandingNavLinks } from './landing-nav-links'
 
 /**
  * The landing's own top navigation (the landing has no sidebar): the logo, the in-page links, the
- * language switch and the account action. Below 640px the links and actions collapse into a menu.
+ * language switch and the account action. Below 1024px, where they no longer fit on one row, the links
+ * and actions collapse into a menu.
  * The same elements serve both widths and CSS lays them out, so the server HTML is the same at
  * every width.
  *
@@ -86,7 +87,7 @@ export function LandingNav() {
             onClick={() => {
               setOpen((current) => !current)
             }}
-            className="press bg-card text-text hover-fine:bg-raised-2 focus-visible:outline-mint ml-auto flex size-11 items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 sm:hidden"
+            className="press bg-card text-text hover-fine:bg-raised-2 focus-visible:outline-mint ml-auto flex size-11 items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 lg:hidden"
           >
             {open ? <X aria-hidden className="size-5" /> : <Menu aria-hidden className="size-5" />}
           </button>
@@ -95,17 +96,17 @@ export function LandingNav() {
             id="landing-nav-panel"
             onClick={handlePanelClick}
             className={cn(
-              'sm:contents',
-              'max-sm:bg-panel max-sm:max-h-[calc(100dvh-5rem)] max-sm:basis-full max-sm:flex-col max-sm:gap-4 max-sm:overflow-y-auto max-sm:p-4',
-              open ? 'max-sm:animate-menu-in max-sm:flex' : 'max-sm:hidden'
+              'lg:contents',
+              'max-lg:bg-panel max-lg:max-h-[calc(100dvh-5rem)] max-lg:basis-full max-lg:flex-col max-lg:gap-4 max-lg:overflow-y-auto max-lg:p-4',
+              open ? 'max-lg:animate-menu-in max-lg:flex' : 'max-lg:hidden'
             )}
           >
-            <div className="sm:mr-auto">
+            <div className="lg:mr-auto">
               <LandingNavLinks />
             </div>
-            <div className="flex flex-wrap items-center gap-3 max-sm:flex-col max-sm:items-stretch sm:ml-auto">
-              <div className="max-sm:self-start">
-                <LanguageToggle fluid={false} />
+            <div className="flex flex-wrap items-center gap-3 max-lg:flex-col max-lg:items-stretch lg:ml-auto">
+              <div className="max-lg:self-start">
+                <LanguageToggle fluid={false} bare />
               </div>
               <LandingNavAuth />
             </div>

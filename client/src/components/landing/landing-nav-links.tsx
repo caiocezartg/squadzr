@@ -16,9 +16,9 @@ const LINK_CLASSES =
   'relative inline-flex items-baseline gap-2 text-[12.5px] font-bold tracking-[0.12em] uppercase no-underline ' +
   'transition-colors duration-200 focus-visible:outline-none ' +
   'after:bg-mint after:absolute after:inset-x-0 after:bottom-1.5 after:h-0.5 after:origin-left after:scale-x-0 ' +
-  'after:transition-transform after:duration-200 after:ease-out sm:after:-bottom-1.5 ' +
+  'after:transition-transform after:duration-200 after:ease-out lg:after:-bottom-1.5 ' +
   'hover-fine:after:scale-x-100 focus-visible:after:scale-x-100 aria-[current=location]:after:scale-x-100 ' +
-  'max-sm:min-h-11 max-sm:items-center max-sm:self-start'
+  'max-lg:min-h-11 max-lg:items-center max-lg:self-start'
 
 function Index({ children }: { readonly children: string }) {
   return (
@@ -39,10 +39,7 @@ export function LandingNavLinks() {
   const current = (id: (typeof SECTION_IDS)[number]) => (active === id ? 'location' : undefined)
 
   return (
-    <nav
-      aria-label={t('label')}
-      className="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-2 lg:gap-x-8"
-    >
+    <nav aria-label={t('label')} className="flex flex-col lg:flex-row lg:gap-x-8">
       <AppLink href="/squads" className={LINK_CLASSES}>
         <Index>01</Index>
         {t('explore')}

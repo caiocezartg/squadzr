@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { ArrowRight, Plus } from 'lucide-react'
+import { LayoutGrid, Plus } from 'lucide-react'
 import { Button } from '@/components/ds/button'
 import { HeroCoverWall } from './hero-cover-wall'
 import { HeroSquadShowcase } from './hero-squad-showcase'
@@ -46,9 +46,9 @@ export function HeroSection() {
           <p className="text-text-2 max-w-[34ch] text-lg/snug font-medium text-balance sm:text-xl/snug">
             {t('subtitle')}
           </p>
-          {/* Below 640px the two calls stack, one width for both. */}
+          {/* The calls take the sidebar's icons, before the label. Below 640px they stack, one width for both. */}
           <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-3 max-sm:max-w-80 max-sm:flex-col max-sm:items-stretch">
-            <Button href="/squads" size="lg" icon={<ArrowRight />} iconPosition="end">
+            <Button href="/squads" size="lg" icon={<LayoutGrid />}>
               {t('exploreSquads')}
             </Button>
             <Button href="/squads?create=1" variant="secondary" size="lg" icon={<Plus />}>
