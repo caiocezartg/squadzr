@@ -224,6 +224,30 @@
       "tower": "{name}, {genre}: ver os squads",
       "towerNoGenre": "{name}: ver os squads"
     },
+    "howItWorks": {
+      "label": "Como funciona",
+      "title": "Do login ao time fechado em 1 minuto.",
+      "steps": [
+        {
+          "title": "Entre com o Discord",
+          "description": "Um clique, sem formulário nem senha. Seu avatar e nome do Discord viram sua identidade no Squadzr."
+        },
+        {
+          "title": "Encontre ou crie um squad",
+          "description": "Busque por jogo, idioma ou tag. Não achou? Crie o seu com o link de convite do seu servidor."
+        },
+        {
+          "title": "Feche o time e jogue",
+          "description": "Na última vaga, o link do Discord é liberado pra todo mundo. É só entrar na call e começar a partida."
+        }
+      ],
+      "mockup": {
+        "signIn": "Entrar com Discord",
+        "filters": "Filtros",
+        "invite": "Convite liberado",
+        "open": "Abrir"
+      }
+    },
     "faq": {
       "label": "FAQ",
       "title": "Perguntas frequentes",
@@ -289,26 +313,6 @@
       "copyright": "© {year} Squadzr — Encontre seu time gamer",
       "gameDataByIgdb": "dados de jogos por IGDB"
     }
-  },
-  "howItWorks": {
-    "label": "Como Funciona",
-    "title": "Do login ao time completo em menos de um minuto.",
-    "signInButton": "Entrar",
-    "discordLinkReady": "Link do Discord pronto",
-    "steps": [
-      {
-        "title": "Entre com o Discord",
-        "description": "Um clique. Sem formulários, sem senhas. Seu avatar do Discord é sua identidade."
-      },
-      {
-        "title": "Encontre ou Crie um Squad",
-        "description": "Navegue pelos squads por jogo ou crie o seu com um link de convite do Discord."
-      },
-      {
-        "title": "Monte o Time & Jogue",
-        "description": "O squad enche, o link do Discord é liberado. Entre na call de voz e dominem juntos."
-      }
-    ]
   },
   "squads": {
     "page": {

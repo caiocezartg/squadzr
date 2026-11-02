@@ -1,7 +1,8 @@
 /**
  * The landing on the App Router (CCC-77, CCC-115). The page renders on the server: its navigation,
  * headline, copy, calls to action, the squad carousel with its first squad full, the popular games'
- * towers, the FAQ, the closing call and the footer are in the server HTML (CCC-116).
+ * towers, "How it works", the FAQ, the closing call and the footer are in the server HTML (CCC-116,
+ * CCC-117).
  */
 
 import { existsSync } from 'node:fs'
@@ -21,7 +22,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionDto } from '@squadzr/schemas'
 import LandingPage, { metadata } from '@/app/(landing)/page'
 import { NARROW_QUERY } from '@/components/ds/use-media-query'
+import { HowItWorks } from '@/components/landing/how-it-works'
+import { stepAt } from '@/components/landing/how-it-works-stage'
 import { PopularGames } from '@/components/landing/popular-games'
+import { WIDE_QUERY } from '@/components/layout/wide-query'
+import { MotionProvider } from '@/components/ui/motion-provider'
 import type { PopularGame } from '@/types'
 import { gameLol, popularGames } from './fixtures'
 import { httpOk, onHttp } from './http-router'
@@ -432,6 +437,130 @@ describe('landing games section', () => {
 
     runOutTimer(cs2)
     expect(lol).toHaveAttribute('data-open', 'true')
+  })
+})
+
+describe('landing how it works', () => {
+  const STEP_TITLES = ['Sign in with Discord', 'Find or create a squad', 'Close the team and play']
+  const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
+
+  /** Answers the media queries in `matching` as matched, and every other one as not. */
+  function matchOnly(...matching: string[]) {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query) =>
+        ({
+          matches: matching.includes(query),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList
+    )
+  }
+
+  function renderHowItWorks() {
+    render(
+      <EnglishIntlProvider>
+        <MotionProvider>
+          <HowItWorks />
+        </MotionProvider>
+      </EnglishIntlProvider>
+    )
+    return document.getElementById('como-funciona') as HTMLElement
+  }
+
+  /** The section's layout: the sticky stage or the stacked cards. */
+  function layout(section: HTMLElement) {
+    return section.querySelector('[data-layout]')?.getAttribute('data-layout')
+  }
+
+  /** The steps as the list reads them, by their titles. */
+  function stepTitles(section: HTMLElement) {
+    const list = within(section).getByRole('list')
+    return within(list)
+      .getAllByRole('listitem')
+      .map((item) => within(item).getByRole('heading', { level: 3 }).textContent)
+  }
+
+  /** The mockups are decorative: every one sits under an `aria-hidden` ancestor. */
+  function expectMockupsHidden(section: HTMLElement) {
+    for (const label of ['caio_cz', 'Invite unlocked', 'Premier quinta à noite']) {
+      const nodes = within(section).getAllByText(label)
+      for (const node of nodes) expect(node.closest('[aria-hidden="true"]')).not.toBeNull()
+    }
+  }
+
+  it('renders the heading and the three steps in order in the server HTML', async () => {
+    await showServerHtml()
+    const section = document.getElementById('como-funciona') as HTMLElement
+
+    expect(within(section).getByRole('heading', { level: 2 })).toHaveTextContent(
+      'From login to a full team in 1 minute.'
+    )
+    expect(stepTitles(section)).toEqual(STEP_TITLES)
+    expect(
+      within(section).getByText(
+        "Search by game, language or tag. Nothing there? Create yours with your server's invite link."
+      )
+    ).toBeInTheDocument()
+    // The server cannot know the width, so it renders the cards, with no animated mockup in them.
+    expect(layout(section)).toBe('stacked')
+    expect(section.querySelector('[data-hiw-mockup]')).toBeNull()
+  })
+
+  it('renders the stacked cards with final-state mockups under reduced motion, even when wide', () => {
+    matchOnly(WIDE_QUERY, REDUCED_MOTION_QUERY)
+    const section = renderHowItWorks()
+
+    expect(layout(section)).toBe('stacked')
+    expect(stepTitles(section)).toEqual(STEP_TITLES)
+    // The final state: signed in, the squad found and picked, the invite unlocked.
+    expect(within(section).getByText('caio_cz')).toBeInTheDocument()
+    expect(within(section).getAllByText('Premier quinta à noite')).toHaveLength(1)
+    expect(within(section).getByText('Invite unlocked')).toBeInTheDocument()
+    expect(section.querySelector('[data-hiw-mockup]')).toBeNull()
+    expectMockupsHidden(section)
+  })
+
+  it('renders the stacked cards with final-state mockups below 1024px', () => {
+    matchOnly()
+    const section = renderHowItWorks()
+
+    expect(layout(section)).toBe('stacked')
+    expect(stepTitles(section)).toEqual(STEP_TITLES)
+    expect(within(section).getByText('Invite unlocked')).toBeInTheDocument()
+    expect(section.querySelector('[data-hiw-mockup]')).toBeNull()
+  })
+
+  it('pins the steps in a sticky stage at wide widths, the first step active and none hidden', () => {
+    matchOnly(WIDE_QUERY)
+    const section = renderHowItWorks()
+    const items = within(within(section).getByRole('list')).getAllByRole('listitem')
+    const mockups = section.querySelectorAll('[data-hiw-mockup]')
+
+    expect(layout(section)).toBe('sticky')
+    expect(stepTitles(section)).toEqual(STEP_TITLES)
+    expect(items.map((item) => item.hasAttribute('data-active'))).toEqual([true, false, false])
+    expect(mockups).toHaveLength(3)
+    expect([...mockups].map((mockup) => mockup.hasAttribute('data-active'))).toEqual([
+      true,
+      false,
+      false,
+    ])
+    // Nothing has played before the stage is on screen.
+    expect(section.querySelector('[data-play]')).toBeNull()
+    for (const item of items) expect(item.closest('[aria-hidden="true"]')).toBeNull()
+    expectMockupsHidden(section)
+  })
+
+  it.each([
+    { progress: 0, step: 0 },
+    { progress: 0.33, step: 0 },
+    { progress: 0.34, step: 1 },
+    { progress: 0.66, step: 1 },
+    { progress: 0.67, step: 2 },
+    { progress: 1, step: 2 },
+  ])('makes step $step active at $progress of the track', ({ progress, step }) => {
+    expect(stepAt(progress)).toBe(step)
   })
 })
 

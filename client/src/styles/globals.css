@@ -560,6 +560,165 @@
 }
 
 /*
+  "Como funciona" mockups (src/components/landing/how-it-works-mockups.tsx). Each mockup is drawn in
+  its final state; in the sticky stage (`[data-hiw-mockup]`) its parts hold the opening frame of
+  their animation, paused, until the stage marks the mockup `data-play`, the first time its step is
+  active. Then it plays once, starting after the 300ms crossfade. Every animation ends on the final
+  state and fills both ways, and none loops. The stacked cards carry no `data-hiw-mockup`, so they
+  show the final state, and under reduced motion nothing here applies.
+*/
+@keyframes hiw-cursor-s1 {
+  0% {
+    opacity: 0;
+    transform: translate(70px, 46px);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  62% {
+    transform: translate(0, 0) scale(0.82);
+  }
+  74% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+}
+@keyframes hiw-cursor-s2 {
+  0% {
+    opacity: 0;
+    transform: translate(60px, 40px);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  62% {
+    transform: translate(0, 0) scale(0.82);
+  }
+  74% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+}
+@keyframes hiw-press-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  12% {
+    transform: scale(0.94);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes hiw-rise-8 {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes hiw-rise-10 {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+/*
+  Mono characters are 0.6em wide, so the eight steps uncover "valorant" one character at a time. The
+  end is explicit: an inset does not interpolate with the element's own `none`.
+*/
+@keyframes hiw-type {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes hiw-caret {
+  from {
+    transform: translateX(-4.8em);
+  }
+}
+@keyframes hiw-fade {
+  from {
+    opacity: 0;
+  }
+}
+/* A member joining (reference, Member joins) and the invite unlocking (reference, Squad becomes Ready). */
+@keyframes hiw-join {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes hiw-invite {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.99);
+  }
+}
+
+@layer components {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-hiw-mockup] .hiw-s1-cursor {
+      animation: hiw-cursor-s1 1100ms var(--ease-out) 300ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s1-button {
+      animation: hiw-press-out 700ms var(--ease-out) 900ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s1-chip {
+      animation: hiw-rise-8 400ms var(--ease-out) 1250ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s2-type {
+      animation: hiw-type 640ms steps(8, end) 500ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s2-caret {
+      animation: hiw-caret 640ms steps(8, end) 500ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s2-row1 {
+      animation: hiw-rise-10 300ms var(--ease-out) 1200ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s2-row2 {
+      animation: hiw-rise-10 300ms var(--ease-out) 1260ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s2-cursor {
+      animation: hiw-cursor-s2 900ms var(--ease-out) 1550ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s2-pick {
+      animation: hiw-fade 200ms var(--ease-out) 2100ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s3-join1 {
+      animation: hiw-join 400ms var(--ease-out) 600ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s3-join2 {
+      animation: hiw-join 400ms var(--ease-out) 1100ms both paused;
+    }
+    [data-hiw-mockup] .hiw-s3-invite {
+      animation: hiw-invite 500ms var(--ease-out) 1600ms both paused;
+    }
+    [data-hiw-mockup][data-play] [class*='hiw-'] {
+      animation-play-state: running;
+    }
+  }
+}
+
+/*
   Reduced motion keeps opacity and colour changes and removes movement, scale and loops (reference,
   Rules). The motion utilities above gate their own movement; this rule covers the rest:
   - Tailwind's transition classes, and the arbitrary lists (`transition-[scale,opacity]`), stop

@@ -91,12 +91,12 @@ describe('ICU messages', () => {
 
   it('reads the FAQ items and the how-it-works steps as raw arrays', () => {
     const faqItems = t.raw('landing.faq.items') as Array<{ question: string; answer: string }>
-    const steps = t.raw('howItWorks.steps') as Array<{ title: string; description: string }>
+    const steps = t.raw('landing.howItWorks.steps') as Array<{ title: string; description: string }>
 
     expect(faqItems).toHaveLength(8)
     expect(faqItems[0]?.question).toBe('Is Squadzr free?')
     expect(steps).toHaveLength(3)
-    expect(steps[2]?.title).toBe('Squad Up & Play')
+    expect(steps[2]?.title).toBe('Close the team and play')
   })
 
   it('lets the player count run from 2 to 40 in both languages', () => {
