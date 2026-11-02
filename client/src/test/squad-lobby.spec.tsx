@@ -596,6 +596,11 @@ describe('squad lobby — failure and access gates', () => {
 
     expect(await screen.findByText('Squad not found')).toBeInTheDocument()
     expect(screen.getByText('ZZZZZZ')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to Squads' })).toHaveAttribute('href', '/squads')
+    expect(screen.getByRole('link', { name: 'Create New Squad' })).toHaveAttribute(
+      'href',
+      '/squads?create=1'
+    )
   })
 
   it('gates the lobby behind sign-in for guests', async () => {

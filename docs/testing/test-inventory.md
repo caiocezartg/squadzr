@@ -37,8 +37,8 @@ components, and `reduced-motion.spec.ts` drops the `.animate-pulse-glow` loop ca
 name instead of a class. `server:unit` (33 / 208) and `schemas:unit` (5 / 162) rerun unchanged;
 `server:integration` (31 / 324) was not rerun, because this ticket touches no server code.
 
-Suites are test files. The counts above are the current inventory, recounted on 2026-10-25 on the
-merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104 and CCC-105. CCC-104 puts `memberPreview` on every Squad and orders the roster: it adds `tests/integration/member-preview.test.ts` (+1 file / +9 tests: the preview on the list, the single read for non-members and members, My Squads, `POST /api/rooms` with `room_created`, and `room_snapshot`, with its content, the limit of five and the order), the contract cases in `schemas:unit` (+8), the use-case, projection and ordering cases in `server:unit` (+5), and updates the client fixtures without adding client tests. CCC-90 adds the
+Suites are test files. The counts above are the current inventory, last recounted by CCC-118 on
+2026-11-02 (above). The 2026-10-25 recount ran on the merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104 and CCC-105. CCC-104 puts `memberPreview` on every Squad and orders the roster: it adds `tests/integration/member-preview.test.ts` (+1 file / +9 tests: the preview on the list, the single read for non-members and members, My Squads, `POST /api/rooms` with `room_created`, and `room_snapshot`, with its content, the limit of five and the order), the contract cases in `schemas:unit` (+8), the use-case, projection and ordering cases in `server:unit` (+5), and updates the client fixtures without adding client tests. CCC-90 adds the
 IGDB adapter suite (`igdb-game-catalog-source.spec.ts`, +1 file / +10 tests, with a recorded IGDB
 page as fixture) and the import environment suite (`catalog-import-env.spec.ts`, +1 file / +9
 tests), plus one curated-id case in `curated-games.spec.ts` (+1). It adds no integration suite: the

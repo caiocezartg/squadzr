@@ -25,7 +25,7 @@ export function JoinSquadAuthModal({
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => onOpenChange(next)}
+      onOpenChange={onOpenChange}
       title={t('squads.authModal.title')}
       className="max-w-115"
     >

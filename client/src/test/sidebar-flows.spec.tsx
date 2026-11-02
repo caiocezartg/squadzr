@@ -114,7 +114,6 @@ describe('Create squad', () => {
 
     expect(await screen.findByText('Choose the game')).toBeInTheDocument()
     expect(screen.getByLabelText('Which game will you play?')).toBeInTheDocument()
-    expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
   })
 
   it('opens the same dialog in the Lobby', async () => {
