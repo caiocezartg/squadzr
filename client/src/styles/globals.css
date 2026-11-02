@@ -482,10 +482,6 @@
   @apply badge bg-surface-light text-muted border border-border;
 }
 
-@utility section-label {
-  @apply text-xs font-semibold uppercase tracking-widest text-accent;
-}
-
 @layer base {
   *,
   *::before,
@@ -563,35 +559,16 @@
   "Como funciona" mockups (src/components/landing/how-it-works-mockups.tsx). Each mockup is drawn in
   its final state; in the sticky stage (`[data-hiw-mockup]`) its parts hold the opening frame of
   their animation, paused, until the stage marks the mockup `data-play`, the first time its step is
-  active. Then it plays once, starting after the 300ms crossfade. Every animation ends on the final
-  state and fills both ways, and none loops. The stacked cards carry no `data-hiw-mockup`, so they
-  show the final state, and under reduced motion nothing here applies.
+  active on screen. Then it plays once, starting after the 300ms crossfade. Every animation ends on
+  the final state and fills both ways, and none loops. Only transform and opacity move. The stacked
+  cards carry no `data-hiw-mockup`, so they show the final state, and under reduced motion nothing
+  here applies. The invite's entrance and the pick's fade are the invite panel's own (`--animate-invite-*`).
 */
-@keyframes hiw-cursor-s1 {
+/* A pointer comes in from `--hiw-cursor-from`, presses, and fades out where it clicked. */
+@keyframes hiw-cursor {
   0% {
     opacity: 0;
-    transform: translate(70px, 46px);
-  }
-  50% {
-    opacity: 1;
-    transform: translate(0, 0);
-  }
-  62% {
-    transform: translate(0, 0) scale(0.82);
-  }
-  74% {
-    opacity: 1;
-    transform: translate(0, 0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(0, 0);
-  }
-}
-@keyframes hiw-cursor-s2 {
-  0% {
-    opacity: 0;
-    transform: translate(60px, 40px);
+    transform: var(--hiw-cursor-from);
   }
   50% {
     opacity: 1;
@@ -626,28 +603,24 @@
     transform: scale(0.96);
   }
 }
-@keyframes hiw-rise-8 {
+@keyframes hiw-rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
-  }
-}
-@keyframes hiw-rise-10 {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(var(--hiw-rise));
   }
 }
 /*
-  Mono characters are 0.6em wide, so the eight steps uncover "valorant" one character at a time. The
-  end is explicit: an inset does not interpolate with the element's own `none`.
+  A cover over the query slides off it in eight steps. Mono characters are 0.6em wide, so each step
+  uncovers one character of "valorant", and the caret steps along with it.
 */
-@keyframes hiw-type {
+@keyframes hiw-uncover {
   from {
-    clip-path: inset(0 100% 0 0);
+    opacity: 1;
+    transform: translateX(0);
   }
   to {
-    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transform: translateX(100%);
   }
 }
 @keyframes hiw-caret {
@@ -655,64 +628,64 @@
     transform: translateX(-4.8em);
   }
 }
-@keyframes hiw-fade {
-  from {
-    opacity: 0;
-  }
-}
-/* A member joining (reference, Member joins) and the invite unlocking (reference, Squad becomes Ready). */
+/* A member joining (reference, Member joins). */
 @keyframes hiw-join {
   from {
     opacity: 0;
     transform: scale(0.9);
   }
 }
-@keyframes hiw-invite {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.99);
-  }
-}
 
 @layer components {
   @media (prefers-reduced-motion: no-preference) {
     [data-hiw-mockup] .hiw-s1-cursor {
-      animation: hiw-cursor-s1 1100ms var(--ease-out) 300ms both paused;
+      --hiw-cursor-from: translate(70px, 46px);
+      animation: hiw-cursor 1100ms var(--ease-out) 300ms both paused;
     }
     [data-hiw-mockup] .hiw-s1-button {
       animation: hiw-press-out 700ms var(--ease-out) 900ms both paused;
     }
     [data-hiw-mockup] .hiw-s1-chip {
-      animation: hiw-rise-8 400ms var(--ease-out) 1250ms both paused;
+      --hiw-rise: 8px;
+      animation: hiw-rise 400ms var(--ease-out) 1250ms both paused;
     }
-    [data-hiw-mockup] .hiw-s2-type {
-      animation: hiw-type 640ms steps(8, end) 500ms both paused;
+    [data-hiw-mockup] .hiw-s2-cover {
+      animation: hiw-uncover 640ms steps(8, end) 500ms both paused;
     }
     [data-hiw-mockup] .hiw-s2-caret {
       animation: hiw-caret 640ms steps(8, end) 500ms both paused;
     }
-    [data-hiw-mockup] .hiw-s2-row1 {
-      animation: hiw-rise-10 300ms var(--ease-out) 1200ms both paused;
+    [data-hiw-mockup] .hiw-s2-row1,
+    [data-hiw-mockup] .hiw-s2-row2 {
+      --hiw-rise: 10px;
+      animation: hiw-rise 300ms var(--ease-out) 1200ms both paused;
     }
     [data-hiw-mockup] .hiw-s2-row2 {
-      animation: hiw-rise-10 300ms var(--ease-out) 1260ms both paused;
+      animation-delay: 1260ms;
     }
     [data-hiw-mockup] .hiw-s2-cursor {
-      animation: hiw-cursor-s2 900ms var(--ease-out) 1550ms both paused;
+      --hiw-cursor-from: translate(60px, 40px);
+      animation: hiw-cursor 900ms var(--ease-out) 1550ms both paused;
     }
     [data-hiw-mockup] .hiw-s2-pick {
-      animation: hiw-fade 200ms var(--ease-out) 2100ms both paused;
+      animation: var(--animate-invite-fade);
+      animation-duration: 200ms;
+      animation-delay: 2100ms;
+      animation-play-state: paused;
     }
-    [data-hiw-mockup] .hiw-s3-join1 {
+    [data-hiw-mockup] .hiw-s3-join1,
+    [data-hiw-mockup] .hiw-s3-join2 {
       animation: hiw-join 400ms var(--ease-out) 600ms both paused;
     }
     [data-hiw-mockup] .hiw-s3-join2 {
-      animation: hiw-join 400ms var(--ease-out) 1100ms both paused;
+      animation-delay: 1100ms;
     }
     [data-hiw-mockup] .hiw-s3-invite {
-      animation: hiw-invite 500ms var(--ease-out) 1600ms both paused;
+      animation: var(--animate-invite-enter);
+      animation-delay: 1600ms;
+      animation-play-state: paused;
     }
-    [data-hiw-mockup][data-play] [class*='hiw-'] {
+    [data-hiw-mockup][data-play] [class] {
       animation-play-state: running;
     }
   }

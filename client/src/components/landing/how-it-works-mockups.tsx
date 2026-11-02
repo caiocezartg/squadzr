@@ -23,8 +23,8 @@ function Cursor({ className }: { readonly className: string }) {
       width="22"
       height="22"
       viewBox="0 0 24 24"
-      fill="#F2F3F5"
-      stroke="#07080A"
+      fill="var(--color-text)"
+      stroke="var(--color-bg)"
       strokeWidth="1.2"
     >
       <path d="M5 2v17l4.6-4.4 3.2 7.2 2.6-1.1-3.1-7.1H19L5 2z" />
@@ -48,7 +48,13 @@ export function SignInMockup() {
           {t('mockup.signIn')}
         </span>
         <span className="hiw-s1-chip bg-raised-2 absolute inset-0 flex items-center gap-2.5 pr-3.5 pl-2">
-          <Avatar size={34} state="online" playerId="cc-2" name="caio_cz" surface="#1a1b20" />
+          <Avatar
+            size={34}
+            state="online"
+            playerId="cc-2"
+            name="caio_cz"
+            surface="var(--color-raised-2)"
+          />
           <span className="text-text text-[13px] font-bold">caio_cz</span>
           <svg
             aria-hidden="true"
@@ -57,7 +63,7 @@ export function SignInMockup() {
             height="14"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#80838C"
+            stroke="var(--color-ds-muted)"
             strokeWidth="2.4"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -128,16 +134,22 @@ export function FindSquadMockup() {
             height="14"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#80838C"
+            stroke="var(--color-ds-muted)"
             strokeWidth="2.6"
             strokeLinecap="round"
           >
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.5-3.5" />
           </svg>
-          {/* Mono, so each character is 0.6em wide and the caret steps along with the typing. */}
+          {/*
+            Mono, so each character is 0.6em wide: the cover slides off the query one character at a
+            time and the caret steps along with it. At rest the cover is out of sight.
+          */}
           <span className="font-ds-mono text-text relative block text-[13px] font-semibold">
-            <span className="hiw-s2-type block whitespace-nowrap">{QUERY}</span>
+            <span className="relative block overflow-hidden whitespace-nowrap">
+              {QUERY}
+              <span className="hiw-s2-cover bg-raised-2 absolute inset-0 block opacity-0" />
+            </span>
             <span className="hiw-s2-caret bg-mint absolute top-0.5 -right-1 block h-3.75 w-[1.5px]" />
           </span>
         </span>

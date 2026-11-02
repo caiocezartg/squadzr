@@ -1,5 +1,6 @@
 'use client'
 
+import { useSyncExternalStore } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMediaQuery } from '@/components/ds/use-media-query'
 import { WIDE_QUERY } from '@/components/layout/wide-query'
@@ -12,8 +13,8 @@ import { SectionEyebrow } from './section-eyebrow'
 
 /**
  * "Como funciona" as three stacked cards, each step with its numeral, its mockup in its final state
- * and its copy, revealed with the section. Below 1024px, under reduced motion at any width, and in
- * the server HTML, which cannot know the width.
+ * and its copy, revealed with the section. Below 1024px and under reduced motion at any width; CSS
+ * hides them otherwise, which is what the server HTML relies on.
  */
 function HowItWorksCards({ steps }: { readonly steps: readonly HowItWorksStep[] }) {
   return (
@@ -21,7 +22,7 @@ function HowItWorksCards({ steps }: { readonly steps: readonly HowItWorksStep[] 
       as="ol"
       stagger
       data-layout="stacked"
-      className="mt-14 grid gap-12 lg:grid-cols-3 lg:gap-6"
+      className="mt-14 grid gap-12 lg:grid-cols-3 lg:gap-6 lg:motion-safe:hidden"
     >
       {steps.map((step, index) => {
         const Mockup = MOCKUPS[index]?.Mockup
@@ -44,17 +45,35 @@ function HowItWorksCards({ steps }: { readonly steps: readonly HowItWorksStep[] 
   )
 }
 
+function subscribeToNothing(): () => void {
+  return () => undefined
+}
+
+/** False in the server render and while hydrating, true once the client renders on its own. */
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false
+  )
+}
+
 /**
  * The landing's "Como funciona" (reference, Motion: "Como funciona"): the three steps from signing in
  * with Discord to a full team. At wide widths with motion they advance in a sticky stage as the
- * visitor scrolls; otherwise they are stacked cards. The server renders the cards, and a wide screen
- * swaps them for the stage once it hydrates, while the section is still below the fold.
+ * visitor scrolls; otherwise they are stacked cards.
+ *
+ * The server cannot know the width or the motion preference, so its HTML carries both layouts and CSS
+ * shows the one that fits. The page then has its final height before any script runs, and a link to a
+ * section below this one lands in place. Once hydrated, only the layout that fits stays mounted.
  */
 export function HowItWorks() {
   const t = useTranslations('landing.howItWorks')
   const steps = t.raw('steps') as readonly HowItWorksStep[]
   const wide = useMediaQuery(WIDE_QUERY)
   const reducedMotion = useReducedMotion()
+  const hydrated = useHydrated()
+  const staged = wide && !reducedMotion
 
   return (
     <section id="como-funciona" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-30">
@@ -63,11 +82,8 @@ export function HowItWorks() {
           <SectionEyebrow>{t('label')}</SectionEyebrow>
           <h2 className="type-section-title text-balance">{t('title')}</h2>
         </Reveal>
-        {wide && !reducedMotion ? (
-          <HowItWorksStage steps={steps} />
-        ) : (
-          <HowItWorksCards steps={steps} />
-        )}
+        {(!hydrated || staged) && <HowItWorksStage steps={steps} />}
+        {(!hydrated || !staged) && <HowItWorksCards steps={steps} />}
       </div>
     </section>
   )

@@ -64,20 +64,34 @@ export function HowItWorksStage({ steps }: { readonly steps: readonly HowItWorks
   const { scrollYProgress } = useScroll({ target: track, offset: ['start start', 'end end'] })
   const stageInView = useInView(stage, { once: true, amount: FIRST_PLAY_AMOUNT })
   const [active, setActive] = useState(0)
-  // One bit per step whose mockup has played. The first step also plays once the stage is in view.
-  const [played, setPlayed] = useState(0)
+  // Whether each step's mockup has played. Once it has, it holds its final state.
+  const [played, setPlayed] = useState<readonly boolean[]>(() => MOCKUPS.map(() => false))
+  const markPlayed = (step: number) => {
+    if (played[step]) return
+    setPlayed((current) =>
+      current[step] ? current : current.map((done, index) => done || index === step)
+    )
+  }
 
   useMotionValueEvent(scrollYProgress, 'change', (progress) => {
     const step = stepAt(progress)
     setActive(step)
     // At 0 the track has not reached the top yet: the stage may still be below the fold.
-    if (progress > 0) setPlayed((mask) => mask | (1 << step))
+    if (progress > 0) markPlayed(step)
   })
 
-  const hasPlayed = (index: number) => (played & (1 << index)) !== 0 || (index === 0 && stageInView)
+  // Before the track reaches the top, the first step plays once most of the stage is on screen, and
+  // only while it is the active step: a stage reached mid-track never plays a step out of sight.
+  // Adjusting state while rendering, from what the render reads, is React's derived-state pattern.
+  if (stageInView && active === 0) markPlayed(0)
 
   return (
-    <div ref={track} data-layout="sticky" className="relative mt-14 h-[300svh]">
+    // Shown by CSS from 1024px with motion, so the server HTML already takes the track's height there.
+    <div
+      ref={track}
+      data-layout="sticky"
+      className="relative mt-14 hidden h-[300svh] lg:motion-safe:block"
+    >
       <div
         ref={stage}
         className="sticky top-0 grid h-svh grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-center gap-16 pt-17"
@@ -102,14 +116,14 @@ export function HowItWorksStage({ steps }: { readonly steps: readonly HowItWorks
 
         <div
           aria-hidden="true"
-          className="relative h-75 w-95 justify-self-center lg:[zoom:1.2] xl:[zoom:1.45]"
+          className="relative h-75 w-95 justify-self-center [zoom:1.2] xl:[zoom:1.45]"
         >
           {MOCKUPS.map(({ id, Mockup }, index) => (
             <div
               key={id}
               data-hiw-mockup=""
               data-active={index === active ? '' : undefined}
-              data-play={hasPlayed(index) ? '' : undefined}
+              data-play={played[index] ? '' : undefined}
               className="absolute inset-0 opacity-0 blur-[2px] transition-[opacity,filter] duration-300 ease-(--ease-out) data-active:opacity-100 data-active:blur-none"
             >
               <Mockup />

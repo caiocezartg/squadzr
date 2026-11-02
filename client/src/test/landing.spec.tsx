@@ -468,14 +468,21 @@ describe('landing how it works', () => {
     return document.getElementById('como-funciona') as HTMLElement
   }
 
-  /** The section's layout: the sticky stage or the stacked cards. */
-  function layout(section: HTMLElement) {
-    return section.querySelector('[data-layout]')?.getAttribute('data-layout')
+  /** The layouts the section has mounted: the sticky stage, the stacked cards, or both. */
+  function layouts(section: HTMLElement) {
+    return [...section.querySelectorAll('[data-layout]')].map((node) =>
+      node.getAttribute('data-layout')
+    )
   }
 
-  /** The steps as the list reads them, by their titles. */
-  function stepTitles(section: HTMLElement) {
-    const list = within(section).getByRole('list')
+  /** The element of one layout. */
+  function layoutOf(section: HTMLElement, name: 'sticky' | 'stacked') {
+    return section.querySelector(`[data-layout="${name}"]`) as HTMLElement
+  }
+
+  /** The steps as a list reads them, by their titles: the section's only list, or the one in `root`. */
+  function stepTitles(root: HTMLElement) {
+    const list = root.tagName === 'OL' ? root : within(root).getByRole('list')
     return within(list)
       .getAllByRole('listitem')
       .map((item) => within(item).getByRole('heading', { level: 3 }).textContent)
@@ -496,22 +503,31 @@ describe('landing how it works', () => {
     expect(within(section).getByRole('heading', { level: 2 })).toHaveTextContent(
       'From login to a full team in 1 minute.'
     )
-    expect(stepTitles(section)).toEqual(STEP_TITLES)
+    // The server cannot know the width or the motion preference, so it renders both layouts and CSS
+    // shows the one that fits: the stage from 1024px with motion, the cards otherwise.
+    expect(layouts(section)).toEqual(['sticky', 'stacked'])
+    const stage = layoutOf(section, 'sticky')
+    const cards = layoutOf(section, 'stacked')
+    expect(stage).toHaveClass('hidden', 'lg:motion-safe:block')
+    expect(cards).toHaveClass('lg:motion-safe:hidden')
+    expect(stepTitles(stage)).toEqual(STEP_TITLES)
+    expect(stepTitles(cards)).toEqual(STEP_TITLES)
     expect(
-      within(section).getByText(
+      within(cards).getByText(
         "Search by game, language or tag. Nothing there? Create yours with your server's invite link."
       )
     ).toBeInTheDocument()
-    // The server cannot know the width, so it renders the cards, with no animated mockup in them.
-    expect(layout(section)).toBe('stacked')
-    expect(section.querySelector('[data-hiw-mockup]')).toBeNull()
+    // The cards' mockups are in their final state: none of them is an animated one.
+    expect(cards.querySelector('[data-hiw-mockup]')).toBeNull()
+    // Nothing has played in the server HTML.
+    expect(stage.querySelector('[data-play]')).toBeNull()
   })
 
   it('renders the stacked cards with final-state mockups under reduced motion, even when wide', () => {
     matchOnly(WIDE_QUERY, REDUCED_MOTION_QUERY)
     const section = renderHowItWorks()
 
-    expect(layout(section)).toBe('stacked')
+    expect(layouts(section)).toEqual(['stacked'])
     expect(stepTitles(section)).toEqual(STEP_TITLES)
     // The final state: signed in, the squad found and picked, the invite unlocked.
     expect(within(section).getByText('caio_cz')).toBeInTheDocument()
@@ -525,7 +541,7 @@ describe('landing how it works', () => {
     matchOnly()
     const section = renderHowItWorks()
 
-    expect(layout(section)).toBe('stacked')
+    expect(layouts(section)).toEqual(['stacked'])
     expect(stepTitles(section)).toEqual(STEP_TITLES)
     expect(within(section).getByText('Invite unlocked')).toBeInTheDocument()
     expect(section.querySelector('[data-hiw-mockup]')).toBeNull()
@@ -537,7 +553,7 @@ describe('landing how it works', () => {
     const items = within(within(section).getByRole('list')).getAllByRole('listitem')
     const mockups = section.querySelectorAll('[data-hiw-mockup]')
 
-    expect(layout(section)).toBe('sticky')
+    expect(layouts(section)).toEqual(['sticky'])
     expect(stepTitles(section)).toEqual(STEP_TITLES)
     expect(items.map((item) => item.hasAttribute('data-active'))).toEqual([true, false, false])
     expect(mockups).toHaveLength(3)
@@ -550,6 +566,38 @@ describe('landing how it works', () => {
     expect(section.querySelector('[data-play]')).toBeNull()
     for (const item of items) expect(item.closest('[aria-hidden="true"]')).toBeNull()
     expectMockupsHidden(section)
+  })
+
+  it('plays the first step once the stage is on screen, and only that step', () => {
+    const OriginalObserver = window.IntersectionObserver
+    // This observer reports every element it observes as on screen.
+    window.IntersectionObserver = class {
+      constructor(private readonly report: IntersectionObserverCallback) {}
+      observe(target: Element) {
+        this.report(
+          [{ isIntersecting: true, intersectionRatio: 1, target } as IntersectionObserverEntry],
+          this as unknown as IntersectionObserver
+        )
+      }
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return []
+      }
+    } as unknown as typeof IntersectionObserver
+    try {
+      matchOnly(WIDE_QUERY)
+      const section = renderHowItWorks()
+      const mockups = [...section.querySelectorAll('[data-hiw-mockup]')]
+
+      expect(mockups.map((mockup) => mockup.hasAttribute('data-play'))).toEqual([
+        true,
+        false,
+        false,
+      ])
+    } finally {
+      window.IntersectionObserver = OriginalObserver
+    }
   })
 
   it.each([
