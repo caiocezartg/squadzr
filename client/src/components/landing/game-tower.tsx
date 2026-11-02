@@ -102,13 +102,14 @@ export function GameTower({
           {game.name}
         </span>
       </span>
-      {/* The animation's fill paints the line empty before it starts. A `scale-x-0` would set `scale`,
-          which multiplies with the keyframes' `transform` and keeps the line empty to the end. */}
+      {/* The line is empty until the animation fills it, even if the animation never runs. It is a
+          `transform`, which the keyframes override: a `scale-x-0` would set `scale`, which multiplies
+          with the keyframes' `transform` and keeps the line empty to the end. */}
       {open && timed && (
         <span
           aria-hidden="true"
           data-timer=""
-          className="bg-mint motion-safe:animate-tower-progress absolute inset-x-0 bottom-0 h-0.75 origin-left motion-reduce:hidden"
+          className="bg-mint motion-safe:animate-tower-progress absolute inset-x-0 bottom-0 h-0.75 origin-left [transform:scaleX(0)] motion-reduce:hidden"
           style={{ animationPlayState: paused ? 'paused' : 'running' }}
         />
       )}

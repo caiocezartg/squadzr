@@ -313,11 +313,15 @@ describe('landing games section', () => {
         <PopularGames games={games} />
       </EnglishIntlProvider>
     )
+    return screen.getByRole('list', { name: 'Popular games' })
+  }
+
+  /** The towers of the fixture's two games. */
+  function fixtureTowers() {
     return {
-      row: screen.getByRole('list', { name: 'Popular games' }),
-      lol: screen.queryByRole('link', { name: 'League of Legends, MOBA: see its squads' }),
-      cs2: screen.queryByRole('link', { name: 'Counter-Strike 2, Shooter: see its squads' }),
-    } as { row: HTMLElement; lol: HTMLElement; cs2: HTMLElement }
+      lol: screen.getByRole('link', { name: 'League of Legends, MOBA: see its squads' }),
+      cs2: screen.getByRole('link', { name: 'Counter-Strike 2, Shooter: see its squads' }),
+    }
   }
 
   it.each([
@@ -347,7 +351,7 @@ describe('landing games section', () => {
   })
 
   it('holds the timer while a mouse is over the row, and not after a touch', () => {
-    const { row } = renderGames()
+    const row = renderGames()
     expect(timer()).toHaveStyle({ animationPlayState: 'running' })
 
     pointer(row, 'over', 'touch')
@@ -361,7 +365,8 @@ describe('landing games section', () => {
   })
 
   it('holds the timer while a tower has focus, and while the row is off screen', () => {
-    const { cs2 } = renderGames()
+    renderGames()
+    const { cs2 } = fixtureTowers()
 
     act(() => cs2.focus())
     expect(timer()).toHaveStyle({ animationPlayState: 'paused' })
@@ -377,7 +382,8 @@ describe('landing games section', () => {
 
   it('opens a tower under a moving mouse only once the row has settled', () => {
     const now = vi.spyOn(performance, 'now').mockReturnValue(1000)
-    const { cs2 } = renderGames()
+    renderGames()
+    const { cs2 } = fixtureTowers()
 
     moveMouseOver(cs2)
     expect(cs2).toHaveAttribute('data-open', 'false')
@@ -390,8 +396,13 @@ describe('landing games section', () => {
   it('runs the timer line only with motion, and paints it from the animation alone', () => {
     renderGames()
 
-    // `scale-x-0` sets `scale`, which multiplies with the keyframes' transform and hides the line.
-    expect(timer()).toHaveClass('motion-safe:animate-tower-progress', 'motion-reduce:hidden')
+    // The line is empty until the animation fills it, whatever the animation's fill mode. A
+    // `scale-x-0` would set `scale`, which multiplies with the keyframes' transform and hides it.
+    expect(timer()).toHaveClass(
+      'motion-safe:animate-tower-progress',
+      'motion-reduce:hidden',
+      '[transform:scaleX(0)]'
+    )
     expect(timer()?.className).not.toMatch(/scale-x-/)
   })
 
@@ -403,7 +414,8 @@ describe('landing games section', () => {
   })
 
   it('opens the tower that takes focus', () => {
-    const { lol, cs2 } = renderGames()
+    renderGames()
+    const { lol, cs2 } = fixtureTowers()
 
     act(() => cs2.focus())
 
@@ -412,7 +424,8 @@ describe('landing games section', () => {
   })
 
   it('opens the next tower when the open one has had its time, and the first after the last', () => {
-    const { lol, cs2 } = renderGames()
+    renderGames()
+    const { lol, cs2 } = fixtureTowers()
 
     runOutTimer(lol)
     expect(cs2).toHaveAttribute('data-open', 'true')
