@@ -224,6 +224,38 @@
       "tower": "{name}, {genre}: see its squads",
       "towerNoGenre": "{name}: see its squads"
     },
+    "howItWorks": {
+      "label": "How it works",
+      "title": "From login to a full team in 1 minute.",
+      "steps": [
+        {
+          "title": "Sign in with Discord",
+          "description": "One click, no form and no password. Your Discord avatar and name become your identity on Squadzr."
+        },
+        {
+          "title": "Find or create a squad",
+          "description": "Search by game, language or tag. Nothing there? Create yours with your server's invite link."
+        },
+        {
+          "title": "Close the team and play",
+          "description": "When the last slot fills, the Discord link opens to everyone. Just join the call and start the match."
+        }
+      ],
+      "mockup": {
+        "signIn": "Sign in with Discord",
+        "signInTitle": "Sign in and build your squad",
+        "signInHint": "No form and no password.",
+        "connecting": "Connecting to Discord…",
+        "connected": "Connected with Discord",
+        "explore": "Explore squads",
+        "searchPlaceholder": "Search a game or tag",
+        "filters": "Filters",
+        "join": "Join",
+        "joined": "You're in",
+        "members": "Members",
+        "complete": "Squad complete"
+      }
+    },
     "faq": {
       "label": "FAQ",
       "title": "Got questions?",
@@ -289,26 +321,6 @@
       "copyright": "© {year} Squadzr — Find your gaming team",
       "gameDataByIgdb": "game data by IGDB"
     }
-  },
-  "howItWorks": {
-    "label": "How It Works",
-    "title": "From login to full squad in under a minute.",
-    "signInButton": "Sign in",
-    "discordLinkReady": "Discord link ready",
-    "steps": [
-      {
-        "title": "Sign In with Discord",
-        "description": "One click. No forms, no passwords. Your Discord avatar is your identity."
-      },
-      {
-        "title": "Find or Create a Squad",
-        "description": "Browse squads by game or spin up your own with a Discord invite link."
-      },
-      {
-        "title": "Squad Up & Play",
-        "description": "Squad fills up, Discord link unlocks. Join voice and dominate together."
-      }
-    ]
   },
   "squads": {
     "page": {

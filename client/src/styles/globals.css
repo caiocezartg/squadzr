@@ -482,10 +482,6 @@
   @apply badge bg-surface-light text-muted border border-border;
 }
 
-@utility section-label {
-  @apply text-xs font-semibold uppercase tracking-widest text-accent;
-}
-
 @layer base {
   *,
   *::before,

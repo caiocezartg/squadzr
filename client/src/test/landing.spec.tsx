@@ -1,7 +1,8 @@
 /**
  * The landing on the App Router (CCC-77, CCC-115). The page renders on the server: its navigation,
  * headline, copy, calls to action, the squad carousel with its first squad full, the popular games'
- * towers, the FAQ, the closing call and the footer are in the server HTML (CCC-116).
+ * towers, "How it works", the FAQ, the closing call and the footer are in the server HTML (CCC-116,
+ * CCC-117).
  */
 
 import { existsSync } from 'node:fs'
@@ -21,7 +22,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionDto } from '@squadzr/schemas'
 import LandingPage, { metadata } from '@/app/(landing)/page'
 import { NARROW_QUERY } from '@/components/ds/use-media-query'
+import { HowItWorks } from '@/components/landing/how-it-works'
+import { stepAt } from '@/components/landing/how-it-works-stage'
 import { PopularGames } from '@/components/landing/popular-games'
+import { WIDE_QUERY } from '@/components/layout/wide-query'
+import { MotionProvider } from '@/components/ui/motion-provider'
+import { mockMediaQuery } from './media-query'
 import type { PopularGame } from '@/types'
 import { gameLol, popularGames } from './fixtures'
 import { httpOk, onHttp } from './http-router'
@@ -432,6 +438,269 @@ describe('landing games section', () => {
 
     runOutTimer(cs2)
     expect(lol).toHaveAttribute('data-open', 'true')
+  })
+})
+
+describe('landing how it works', () => {
+  const STEP_TITLES = ['Sign in with Discord', 'Find or create a squad', 'Close the team and play']
+  const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
+
+  /** Answers the media queries in `matching` as matched, and every other one as not. */
+  function matchOnly(...matching: string[]) {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query) =>
+        ({
+          matches: matching.includes(query),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList
+    )
+  }
+
+  function renderHowItWorks() {
+    render(
+      <EnglishIntlProvider>
+        <MotionProvider>
+          <HowItWorks />
+        </MotionProvider>
+      </EnglishIntlProvider>
+    )
+    return document.getElementById('como-funciona') as HTMLElement
+  }
+
+  /** The layouts the section has mounted: the sticky stage, the stacked cards, or both. */
+  function layouts(section: HTMLElement) {
+    return [...section.querySelectorAll('[data-layout]')].map((node) =>
+      node.getAttribute('data-layout')
+    )
+  }
+
+  /** The element of one layout. */
+  function layoutOf(section: HTMLElement, name: 'sticky' | 'stacked') {
+    return section.querySelector(`[data-layout="${name}"]`) as HTMLElement
+  }
+
+  /** The steps as a list reads them, by their titles: the section's only list, or the one in `root`. */
+  function stepTitles(root: HTMLElement) {
+    const list = root.tagName === 'OL' ? root : within(root).getByRole('list')
+    return within(list)
+      .getAllByRole('listitem')
+      .map((item) => within(item).getByRole('heading', { level: 3 }).textContent)
+  }
+
+  /** The element that shows or hides with a mockup beat, around `text`. */
+  function beatOf(section: HTMLElement, text: string) {
+    const element = within(section).getByText(text)
+    return element.closest('[data-shown]') ?? element
+  }
+
+  /**
+   * The mockups' last beat: signed in with the call to explore up, the Valorant squad joined, and the team complete
+   * with the Discord invite unlocked.
+   */
+  function expectFinalMockups(section: HTMLElement) {
+    expect(beatOf(section, 'Explore squads')).toHaveAttribute('data-shown')
+    expect(beatOf(section, "You're in")).toHaveAttribute('data-shown')
+    expect(within(section).getAllByText('Premier quinta à noite')).toHaveLength(1)
+    expect(within(section).getByText('Squad complete')).toBeInTheDocument()
+    expect(within(section).getByText('5')).toBeInTheDocument()
+    expect(within(section).queryByText('Open slot')).not.toBeInTheDocument()
+    expect(beatOf(section, "Let's go to Discord")).toHaveAttribute('data-shown')
+    // Nothing plays in the cards: no pointer is shown and no join burst is mounted.
+    expect(section.querySelector('[class*="animate-seat-burst"]')).toBeNull()
+  }
+
+  /** The mockups are decorative: every one sits under an `aria-hidden` ancestor. */
+  function expectMockupsHidden(section: HTMLElement) {
+    for (const label of ['caio_cz', "Let's go to Discord", 'Filters']) {
+      const nodes = within(section).getAllByText(label)
+      for (const node of nodes) expect(node.closest('[aria-hidden="true"]')).not.toBeNull()
+    }
+  }
+
+  it('renders the heading and the three steps in order in the server HTML', async () => {
+    await showServerHtml()
+    const section = document.getElementById('como-funciona') as HTMLElement
+
+    // The server cannot know the width or the motion preference, so it renders both layouts and CSS
+    // shows the one that fits: the stage from 1024px with motion, the cards otherwise. Each carries
+    // the heading: the stage pins it above the steps.
+    expect(layouts(section)).toEqual(['sticky', 'stacked'])
+    const stage = layoutOf(section, 'sticky')
+    const cards = layoutOf(section, 'stacked')
+    for (const layout of [stage, cards]) {
+      expect(within(layout).getByRole('heading', { level: 2 })).toHaveTextContent(
+        'From login to a full team in 1 minute.'
+      )
+    }
+    expect(stage).toHaveClass('hidden', 'lg:motion-safe:block')
+    expect(cards).toHaveClass('lg:motion-safe:hidden')
+    expect(stepTitles(stage)).toEqual(STEP_TITLES)
+    expect(stepTitles(cards)).toEqual(STEP_TITLES)
+    expect(
+      within(cards).getByText(
+        "Search by game, language or tag. Nothing there? Create yours with your server's invite link."
+      )
+    ).toBeInTheDocument()
+    // The cards' mockups are in their final state: none of them is an animated one.
+    expect(cards.querySelector('[data-hiw-mockup]')).toBeNull()
+    // Nothing has played in the server HTML.
+    expect(stage.querySelector('[data-play]')).toBeNull()
+  })
+
+  it('renders the stacked cards with final-state mockups under reduced motion, even when wide', () => {
+    matchOnly(WIDE_QUERY, REDUCED_MOTION_QUERY)
+    const section = renderHowItWorks()
+
+    expect(layouts(section)).toEqual(['stacked'])
+    expect(stepTitles(section)).toEqual(STEP_TITLES)
+    expectFinalMockups(section)
+    expect(section.querySelector('[data-hiw-mockup]')).toBeNull()
+    expectMockupsHidden(section)
+  })
+
+  it('renders the stacked cards with final-state mockups below 1024px', () => {
+    matchOnly()
+    const section = renderHowItWorks()
+
+    expect(layouts(section)).toEqual(['stacked'])
+    expect(stepTitles(section)).toEqual(STEP_TITLES)
+    expectFinalMockups(section)
+    expect(section.querySelector('[data-hiw-mockup]')).toBeNull()
+  })
+
+  it('pins the steps in a sticky stage at wide widths, the first step active and none hidden', () => {
+    matchOnly(WIDE_QUERY)
+    const section = renderHowItWorks()
+    const items = within(within(section).getByRole('list')).getAllByRole('listitem')
+    const mockups = section.querySelectorAll('[data-hiw-mockup]')
+
+    expect(layouts(section)).toEqual(['sticky'])
+    expect(stepTitles(section)).toEqual(STEP_TITLES)
+    expect(items.map((item) => item.hasAttribute('data-active'))).toEqual([true, false, false])
+    expect(mockups).toHaveLength(3)
+    expect([...mockups].map((mockup) => mockup.hasAttribute('data-active'))).toEqual([
+      true,
+      false,
+      false,
+    ])
+    // Nothing has played before the stage is on screen.
+    expect(section.querySelector('[data-play]')).toBeNull()
+    for (const item of items) expect(item.closest('[aria-hidden="true"]')).toBeNull()
+    expectMockupsHidden(section)
+  })
+
+  /** Whether an observed element counts as on screen; the suite's own observer never reports. */
+  let onScreen = false
+  const OriginalObserver = window.IntersectionObserver
+  beforeEach(() => {
+    onScreen = false
+    window.IntersectionObserver = class {
+      constructor(private readonly report: IntersectionObserverCallback) {}
+      observe(target: Element) {
+        if (!onScreen) return
+        this.report(
+          [{ isIntersecting: true, intersectionRatio: 1, target } as IntersectionObserverEntry],
+          this as unknown as IntersectionObserver
+        )
+      }
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return []
+      }
+    } as unknown as typeof IntersectionObserver
+  })
+  afterEach(() => {
+    window.IntersectionObserver = OriginalObserver
+  })
+
+  /** Which of the stage's mockups have played. */
+  function playedMockups(section: HTMLElement) {
+    return [...section.querySelectorAll('[data-hiw-mockup]')].map((mockup) =>
+      mockup.hasAttribute('data-play')
+    )
+  }
+
+  it('plays the first step once the stage is on screen, and only that step', () => {
+    onScreen = true
+    matchOnly(WIDE_QUERY)
+    const section = renderHowItWorks()
+
+    expect(playedMockups(section)).toEqual([true, false, false])
+  })
+
+  it('opens on the step the scroll is at when the stage mounts mid-track, not on step 01', () => {
+    // The track is 2700px tall and its top has risen 1500px past the viewport's: past two thirds.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+      this: HTMLElement
+    ) {
+      return this.dataset.layout === 'sticky' ? 2700 : 0
+    })
+    const rect = HTMLElement.prototype.getBoundingClientRect
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement
+    ) {
+      return this.dataset.layout === 'sticky' ? ({ top: -1500 } as DOMRect) : rect.call(this)
+    })
+    onScreen = true
+    matchOnly(WIDE_QUERY)
+    const section = renderHowItWorks()
+    const items = within(within(section).getByRole('list')).getAllByRole('listitem')
+
+    expect(items.map((item) => item.hasAttribute('data-active'))).toEqual([false, false, true])
+    // The third step plays; the first, never active on screen, does not.
+    expect(playedMockups(section)).toEqual([false, false, true])
+  })
+
+  it('does not play a mockup again when the stage mounts again', () => {
+    onScreen = true
+    const wide = mockMediaQuery(WIDE_QUERY, true)
+    const section = renderHowItWorks()
+    expect(playedMockups(section)).toEqual([true, false, false])
+
+    // The window narrows to the cards and widens back, now with the stage out of sight.
+    act(() => wide.set(false))
+    expect(layouts(section)).toEqual(['stacked'])
+    onScreen = false
+    act(() => wide.set(true))
+
+    expect(layouts(section)).toEqual(['sticky'])
+    expect(playedMockups(section)).toEqual([true, false, false])
+  })
+
+  it('acts the first step out once it plays, and ends signed in, with no looping halo', () => {
+    vi.useFakeTimers()
+    try {
+      onScreen = true
+      matchOnly(WIDE_QUERY)
+      const section = renderHowItWorks()
+      const stage = layoutOf(section, 'sticky')
+
+      // Before its beats run, the first mockup waits signed out; the third waits with open slots.
+      expect(beatOf(stage, 'Explore squads')).not.toHaveAttribute('data-shown')
+      expect(within(stage).getAllByText('Open slot')).toHaveLength(2)
+      act(() => vi.advanceTimersByTime(3_000))
+
+      expect(beatOf(stage, 'Explore squads')).toHaveAttribute('data-shown')
+      // The steps not yet active have not moved.
+      expect(within(stage).getAllByText('Open slot')).toHaveLength(2)
+      expect(stage.querySelector('[class*="animate-halo"]')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it.each([
+    { progress: 0, step: 0 },
+    { progress: 0.33, step: 0 },
+    { progress: 0.34, step: 1 },
+    { progress: 0.66, step: 1 },
+    { progress: 0.67, step: 2 },
+    { progress: 1, step: 2 },
+  ])('makes step $step active at $progress of the track', ({ progress, step }) => {
+    expect(stepAt(progress)).toBe(step)
   })
 })
 
