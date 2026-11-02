@@ -116,7 +116,7 @@ describe('landing server HTML', () => {
     for (const trigger of triggers) expect(trigger).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('ends with the hero calls: explore squads and create one', async () => {
+  it('ends with the call to explore squads', async () => {
     await showServerHtml()
     const heading = screen.getByRole('heading', {
       level: 2,
@@ -125,10 +125,6 @@ describe('landing server HTML', () => {
     const cta = within(heading.closest('section') as HTMLElement)
 
     expect(cta.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
-    expect(cta.getByRole('link', { name: 'Create squad' })).toHaveAttribute(
-      'href',
-      '/squads?create=1'
-    )
   })
 
   it('points the navigation at the board and at the sections of the page', async () => {

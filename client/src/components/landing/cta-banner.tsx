@@ -1,6 +1,6 @@
 'use client'
 
-import { LayoutGrid, Plus } from 'lucide-react'
+import { LayoutGrid } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
 import { Reveal } from '@/components/ui/reveal'
@@ -38,16 +38,16 @@ function CoverDrift() {
 }
 
 /**
- * The landing's closing call: a compact mint banner over drifting covers, with the hero's two calls
- * (the board and a new squad) on the banner's own grounds. It hangs 64px into the footer, whose top
- * padding leaves room for it. Below 1024px the calls go under the copy, and below 640px they stack
- * at one width, as in the hero.
+ * The landing's closing call: a compact mint banner over drifting covers, with the hero's call to the
+ * board. It sits on the footer's ground and hangs 64px into the footer, whose top padding leaves room
+ * for it, so the FAQ, the banner and the footer read as one surface. Below 1024px the call goes under
+ * the copy, and below 640px it takes the hero's width.
  */
 export function CTABanner() {
   const t = useTranslations('landing.cta')
 
   return (
-    <section className="relative z-10 -mb-16 px-4 pt-16 sm:px-6">
+    <section className="bg-menu relative z-10 -mb-16 px-4 sm:px-6">
       <div className="bg-mint text-mint-ink relative mx-auto max-w-310 overflow-hidden">
         <CoverDrift />
         <Reveal
@@ -65,15 +65,6 @@ export function CTABanner() {
           <div className="flex shrink-0 flex-wrap gap-3 max-sm:w-full max-sm:max-w-80 max-sm:flex-col">
             <Button href="/squads" variant="dark" size="lg" icon={<LayoutGrid />}>
               {t('exploreSquads')}
-            </Button>
-            <Button
-              href="/squads?create=1"
-              variant="secondary"
-              size="lg"
-              icon={<Plus />}
-              className="bg-mint text-mint-ink hover-fine:bg-mint-hover font-extrabold shadow-[inset_0_0_0_2px_var(--color-mint-ink)]"
-            >
-              {t('createSquad')}
             </Button>
           </div>
         </Reveal>

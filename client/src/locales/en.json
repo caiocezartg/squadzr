@@ -274,8 +274,7 @@
     "cta": {
       "title": "There's a slot <em>waiting for you.</em>",
       "subtitle": "Sign in with Discord and find your squad now, or open your own and let the team come to you.",
-      "exploreSquads": "Explore squads",
-      "createSquad": "Create squad"
+      "exploreSquads": "Explore squads"
     },
     "footer": {
       "tagline": "Find your gaming team. Real-time squads for LoL, CS2, Valorant and more.",
