@@ -393,7 +393,7 @@ describe('landing games section', () => {
     expect(cs2).toHaveAttribute('data-open', 'true')
   })
 
-  it('runs the timer line only with motion, and paints it from the animation alone', () => {
+  it('runs the timer line only with motion, and starts it empty until the animation fills it', () => {
     renderGames()
 
     // The line is empty until the animation fills it, whatever the animation's fill mode. A
