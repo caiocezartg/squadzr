@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import {
   useInView,
   useMotionValueEvent,
@@ -58,8 +58,8 @@ const FIRST_PLAY_AMOUNT = 0.75
 
 /**
  * "Como funciona" at wide widths with motion (reference, Motion: "Como funciona"). A track three
- * viewports tall holds a sticky stage: the steps on the left and the active step's mockup on the
- * right. The scroll through the track picks the active step in thirds; its numeral fills mint, the
+ * viewports tall holds a sticky stage: the section heading, then the steps on the left and the active
+ * step's mockup on the right. The scroll through the track picks the active step in thirds; its numeral fills mint, the
  * bar under each numeral fills with its third, and the mockups crossfade. Each mockup plays its
  * micro-animation once, the first time its step is active on screen. Once the third step completes,
  * the track ends and the stage scrolls away with the page.
@@ -69,6 +69,8 @@ const FIRST_PLAY_AMOUNT = 0.75
  * hidden.
  */
 interface HowItWorksStageProps {
+  /** The section's heading, pinned above the steps. */
+  readonly heading: ReactNode
   readonly steps: readonly HowItWorksStep[]
   /**
    * Whether each step's mockup has played. The section keeps it, so a stage that mounts again (the
@@ -78,7 +80,7 @@ interface HowItWorksStageProps {
   readonly onPlayed: (step: number) => void
 }
 
-export function HowItWorksStage({ steps, played, onPlayed }: HowItWorksStageProps) {
+export function HowItWorksStage({ heading, steps, played, onPlayed }: HowItWorksStageProps) {
   const track = useRef<HTMLDivElement>(null)
   const stage = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target: track, offset: ['start start', 'end end'] })
@@ -117,45 +119,53 @@ export function HowItWorksStage({ steps, played, onPlayed }: HowItWorksStageProp
     <div
       ref={track}
       data-layout="sticky"
-      className="relative mt-14 hidden h-[300svh] lg:motion-safe:block"
+      className="relative hidden h-[300svh] lg:motion-safe:block"
     >
+      {/* Under 860px of height the stage tightens, so the heading, the steps and the frame fit. */}
       <div
         ref={stage}
-        className="sticky top-0 grid h-svh grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-center gap-16 pt-17"
+        className="sticky top-0 flex h-svh flex-col justify-center gap-10 pt-17 [@media(max-height:860px)]:gap-7"
       >
-        <ol className="flex flex-col gap-10">
-          {steps.map((step, index) => (
-            <li
-              key={step.title}
-              data-active={index === active ? '' : undefined}
-              className="group grid grid-cols-[7.5rem_minmax(0,1fr)] items-start gap-x-7"
-            >
-              <span aria-hidden="true" className="flex flex-col gap-3">
-                <StepNumeral index={index} lit={index === active} className="text-[104px]" />
-                <StepBar progress={scrollYProgress} index={index} />
-              </span>
-              <div className="opacity-45 transition-opacity duration-300 ease-(--ease-out) group-data-active:opacity-100">
-                <StepCopy step={step} />
-              </div>
-            </li>
-          ))}
-        </ol>
+        {heading}
+        <div className="grid grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-center gap-16">
+          <ol className="flex flex-col gap-10 [@media(max-height:860px)]:gap-5">
+            {steps.map((step, index) => (
+              <li
+                key={step.title}
+                data-active={index === active ? '' : undefined}
+                className="group grid grid-cols-[7.5rem_minmax(0,1fr)] items-start gap-x-7 [@media(max-height:860px)]:grid-cols-[5.5rem_minmax(0,1fr)] [@media(max-height:860px)]:gap-x-5"
+              >
+                <span aria-hidden="true" className="flex flex-col gap-3">
+                  <StepNumeral
+                    index={index}
+                    lit={index === active}
+                    className="text-[104px] [@media(max-height:860px)]:text-[76px]"
+                  />
+                  <StepBar progress={scrollYProgress} index={index} />
+                </span>
+                <div className="opacity-45 transition-opacity duration-300 ease-(--ease-out) group-data-active:opacity-100">
+                  <StepCopy step={step} />
+                </div>
+              </li>
+            ))}
+          </ol>
 
-        <div
-          aria-hidden="true"
-          className="relative h-75 w-95 justify-self-center [zoom:1.2] xl:[zoom:1.45]"
-        >
-          {MOCKUPS.map(({ id, Mockup }, index) => (
-            <div
-              key={id}
-              data-hiw-mockup=""
-              data-active={index === active ? '' : undefined}
-              data-play={played[index] ? '' : undefined}
-              className="absolute inset-0 opacity-0 blur-[2px] transition-[opacity,filter] duration-300 ease-(--ease-out) data-active:opacity-100 data-active:blur-none"
-            >
-              <Mockup mode={played[index] ? 'play' : 'waiting'} />
-            </div>
-          ))}
+          <div
+            aria-hidden="true"
+            className="relative h-75 w-95 justify-self-center [zoom:1.2] xl:[@media(min-height:800px)]:[zoom:1.45]"
+          >
+            {MOCKUPS.map(({ id, Mockup }, index) => (
+              <div
+                key={id}
+                data-hiw-mockup=""
+                data-active={index === active ? '' : undefined}
+                data-play={played[index] ? '' : undefined}
+                className="absolute inset-0 opacity-0 blur-[2px] transition-[opacity,filter] duration-300 ease-(--ease-out) data-active:opacity-100 data-active:blur-none"
+              >
+                <Mockup mode={played[index] ? 'play' : 'waiting'} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

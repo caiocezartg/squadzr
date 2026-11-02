@@ -523,14 +523,17 @@ describe('landing how it works', () => {
     await showServerHtml()
     const section = document.getElementById('como-funciona') as HTMLElement
 
-    expect(within(section).getByRole('heading', { level: 2 })).toHaveTextContent(
-      'From login to a full team in 1 minute.'
-    )
     // The server cannot know the width or the motion preference, so it renders both layouts and CSS
-    // shows the one that fits: the stage from 1024px with motion, the cards otherwise.
+    // shows the one that fits: the stage from 1024px with motion, the cards otherwise. Each carries
+    // the heading: the stage pins it above the steps.
     expect(layouts(section)).toEqual(['sticky', 'stacked'])
     const stage = layoutOf(section, 'sticky')
     const cards = layoutOf(section, 'stacked')
+    for (const layout of [stage, cards]) {
+      expect(within(layout).getByRole('heading', { level: 2 })).toHaveTextContent(
+        'From login to a full team in 1 minute.'
+      )
+    }
     expect(stage).toHaveClass('hidden', 'lg:motion-safe:block')
     expect(cards).toHaveClass('lg:motion-safe:hidden')
     expect(stepTitles(stage)).toEqual(STEP_TITLES)
