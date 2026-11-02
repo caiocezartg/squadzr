@@ -52,7 +52,9 @@ describe('ICU messages', () => {
   })
 
   it('fills single-brace placeholders', () => {
-    expect(t('landing.games.seeSquads', { name: 'Dota 2' })).toBe('See Dota 2 squads')
+    expect(t('landing.games.tower', { name: 'Dota 2', genre: 'MOBA' })).toBe(
+      'Dota 2, MOBA: see its squads'
+    )
     expect(tPtBR('ds.tag.remove', { label: '#ranked' })).toBe('Remover #ranked')
     expect(tPtBR('timeAgo.minutesAgo', { count: 5 })).toBe('há 5min')
   })

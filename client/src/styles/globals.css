@@ -121,6 +121,12 @@
   --animate-card-stamp: card-stamp 360ms var(--ease-out) both;
   --animate-count-in: count-in var(--dur-ui) var(--ease-out) both;
   --animate-menu-in: menu-in var(--dur-ui) var(--ease-out) both;
+  /*
+    The games towers: the open tower's timer line fills once, and when it ends the next tower opens
+    (src/components/landing/game-towers.tsx), so the line is the clock. Used behind `motion-safe:`
+    only, so under reduced motion nothing advances on its own.
+  */
+  --animate-tower-progress: tower-progress 4200ms linear both;
 
   @keyframes halo {
     0% {
@@ -179,6 +185,14 @@
     }
     to {
       transform: translateY(0);
+    }
+  }
+  @keyframes tower-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
     }
   }
   @keyframes seat-in {

@@ -219,14 +219,10 @@
     "games": {
       "label": "Available games",
       "title": "From 2v2 to a 40-player raid.",
-      "subtitle": "Multiplayer games, each with the right squad size. Pick one to see how teams come together in it.",
+      "subtitle": "Multiplayer games, each with the right squad size. Pick one to see the squads forming in it.",
       "listLabel": "Popular games",
-      "squadSize": "Squad size",
-      "openNow": "Open now",
-      "topTags": "Most used tags",
-      "seeSquads": "See {name} squads",
-      "row": "{name}, {genre}, {range} players",
-      "rowNoGenre": "{name}, {range} players"
+      "tower": "{name}, {genre}: see its squads",
+      "towerNoGenre": "{name}: see its squads"
     },
     "faq": {
       "label": "FAQ",
@@ -278,7 +274,8 @@
     "cta": {
       "title": "There's a slot <em>waiting for you.</em>",
       "subtitle": "Sign in with Discord and find your squad now, or open your own and let the team come to you.",
-      "exploreSquads": "Explore squads"
+      "exploreSquads": "Explore squads",
+      "createSquad": "Create squad"
     },
     "footer": {
       "tagline": "Find your gaming team. Real-time squads for LoL, CS2, Valorant and more.",

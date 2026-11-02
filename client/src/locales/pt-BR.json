@@ -219,14 +219,10 @@
     "games": {
       "label": "Jogos disponíveis",
       "title": "Do 2v2 ao raid de 40.",
-      "subtitle": "Jogos multiplayer, cada um com o tamanho de squad certo. Escolha um pra ver como os times se formam nele.",
+      "subtitle": "Jogos multiplayer, cada um com o tamanho de squad certo. Escolha um pra ver os squads se formando nele.",
       "listLabel": "Jogos populares",
-      "squadSize": "Tamanho do squad",
-      "openNow": "Abertos agora",
-      "topTags": "Tags mais usadas",
-      "seeSquads": "Ver squads de {name}",
-      "row": "{name}, {genre}, {range} jogadores",
-      "rowNoGenre": "{name}, {range} jogadores"
+      "tower": "{name}, {genre}: ver os squads",
+      "towerNoGenre": "{name}: ver os squads"
     },
     "faq": {
       "label": "FAQ",
@@ -278,7 +274,8 @@
     "cta": {
       "title": "Tem vaga <em>te esperando.</em>",
       "subtitle": "Entre com o Discord e ache o seu squad agora — ou abra o seu e deixa o time vir até você.",
-      "exploreSquads": "Explorar squads"
+      "exploreSquads": "Explorar squads",
+      "createSquad": "Criar squad"
     },
     "footer": {
       "tagline": "Encontre seu time gamer. Squads em tempo real pra LoL, CS2, Valorant e muito mais.",
