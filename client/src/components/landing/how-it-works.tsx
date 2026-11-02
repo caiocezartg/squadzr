@@ -11,6 +11,18 @@ import { HowItWorksStage } from './how-it-works-stage'
 import { StepCopy, StepNumeral, type HowItWorksStep } from './how-it-works-step'
 import { SectionEyebrow } from './section-eyebrow'
 
+/*
+  A card reads numeral, mockup, copy from top to bottom, below 640px and in the three columns from
+  1024px. In between, on a tablet, it is a row: the numeral over the copy on one side and the mockup on
+  the other, the sides swapping from card to card.
+*/
+const CARD =
+  'flex min-w-0 flex-col gap-5.5 sm:max-lg:grid sm:max-lg:grid-cols-2 sm:max-lg:gap-x-8 sm:max-lg:gap-y-5 ' +
+  "sm:max-lg:[grid-template-areas:'num_mock'_'copy_mock'] sm:max-lg:even:[grid-template-areas:'mock_num'_'mock_copy']"
+const CARD_NUMERAL = 'sm:max-lg:self-end sm:max-lg:[grid-area:num]'
+const CARD_MOCKUP = 'sm:max-lg:max-w-none sm:max-lg:self-center sm:max-lg:[grid-area:mock]'
+const CARD_COPY = 'sm:max-lg:self-start sm:max-lg:[grid-area:copy]'
+
 /**
  * "Como funciona" as three stacked cards, each step with its numeral, its mockup in its final state
  * and its copy, revealed with the section, under the section's heading. Below 1024px and under reduced
@@ -30,17 +42,23 @@ function HowItWorksCards({
         {steps.map((step, index) => {
           const Mockup = MOCKUPS[index]?.Mockup
           return (
-            <li key={step.title} className="flex min-w-0 flex-col gap-5.5">
-              <span aria-hidden="true" className="flex flex-col gap-3.5">
-                <StepNumeral index={index} lit className="text-[120px] sm:text-[176px]" />
+            <li key={step.title} className={CARD}>
+              <span aria-hidden="true" className={`flex flex-col gap-3.5 ${CARD_NUMERAL}`}>
+                <StepNumeral
+                  index={index}
+                  lit
+                  className="text-[120px] sm:text-[104px] lg:text-[176px]"
+                />
                 <span className="bg-mint block h-0.5" />
               </span>
               {Mockup && (
-                <div aria-hidden="true" className="h-75 w-full max-w-105">
+                <div aria-hidden="true" className={`h-75 w-full max-w-105 ${CARD_MOCKUP}`}>
                   <Mockup mode="final" />
                 </div>
               )}
-              <StepCopy step={step} />
+              <div className={CARD_COPY}>
+                <StepCopy step={step} />
+              </div>
             </li>
           )
         })}

@@ -11,6 +11,7 @@ import {
 import * as m from 'motion/react-m'
 import { MOCKUPS } from './how-it-works-mockups'
 import { StepCopy, StepNumeral, type HowItWorksStep } from './how-it-works-step'
+import { useJumpPastTrack } from './use-jump-past-track'
 
 /** The steps, and the thirds of the track each one owns. */
 const STEP_COUNT = MOCKUPS.length
@@ -91,9 +92,12 @@ export function HowItWorksStage({ heading, steps, played, onPlayed }: HowItWorks
   const showProgress = (progress: number) => {
     const step = stepAt(progress)
     setActive(step)
-    // At 0 the track has not reached the top yet: the stage may still be below the fold.
-    if (progress > 0 && !played[step]) onPlayed(step)
+    // A mockup plays only while the stage is pinned. At 0 the track has not reached the top yet, and at
+    // 1 it has passed, as after a jump past it to a later section: the stage may be out of sight.
+    if (progress > 0 && progress < 1 && !played[step]) onPlayed(step)
   }
+
+  useJumpPastTrack(track)
 
   // motion measures the track on the next frame. A stage that mounts mid-track (a restored scroll, or
   // the window widening past 1024px) reads its progress once before the first paint instead, so it
