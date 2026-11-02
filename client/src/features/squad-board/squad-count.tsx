@@ -12,7 +12,7 @@ export function SquadCount({ baseline }: SquadCountProps) {
   const squads = useSquadBoardSquads(baseline)
 
   return (
-    <p className="font-ds-mono text-text-3 inline-flex items-center gap-2.25 text-xs font-bold tracking-[0.06em] uppercase">
+    <p className="font-mono text-text-3 inline-flex items-center gap-2.25 text-xs font-bold tracking-[0.06em] uppercase">
       <span
         aria-hidden="true"
         className="bg-mint size-1.75 rounded-full motion-safe:animate-[pulse_1.6s_ease-in-out_infinite]"

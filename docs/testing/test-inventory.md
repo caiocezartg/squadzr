@@ -25,9 +25,17 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 33     | 208   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 31     | 324   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 871   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 901   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
+
+CCC-118 removes the old design system and recounts every row on the merged `design-v2` tree after
+CCC-117: `client:unit` measures 87 files / 901 tests (89 / 909 before it; the table had drifted since
+CCC-115). The unused `tooltip.spec.tsx` (4 tests) and `user-avatar.spec.tsx` (3 tests) leave with their
+components, and `reduced-motion.spec.ts` drops the `.animate-pulse-glow` loop case with the keyframe
+(1 test). The guest sign-in prompt case in `squads-page.spec.tsx` now finds the dialog by its role and
+name instead of a class. `server:unit` (33 / 208) and `schemas:unit` (5 / 162) rerun unchanged;
+`server:integration` (31 / 324) was not rerun, because this ticket touches no server code.
 
 Suites are test files. The counts above are the current inventory, recounted on 2026-10-25 on the
 merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104 and CCC-105. CCC-104 puts `memberPreview` on every Squad and orders the roster: it adds `tests/integration/member-preview.test.ts` (+1 file / +9 tests: the preview on the list, the single read for non-members and members, My Squads, `POST /api/rooms` with `room_created`, and `room_snapshot`, with its content, the limit of five and the order), the contract cases in `schemas:unit` (+8), the use-case, projection and ordering cases in `server:unit` (+5), and updates the client fixtures without adding client tests. CCC-90 adds the

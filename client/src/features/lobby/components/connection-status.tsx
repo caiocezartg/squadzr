@@ -1,6 +1,4 @@
-import * as m from 'motion/react-m'
 import { useTranslations } from 'next-intl'
-import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { cn } from '@/lib/utils'
 import type { RealtimeStatus } from '@/lib/ws-client'
 
@@ -19,7 +17,7 @@ const TONE_CLASSES: Record<RealtimeStatus, string> = {
   connecting: 'bg-amber/10 text-amber',
   open: 'bg-mint/8 text-mint',
   reconnecting: 'bg-amber/10 text-amber',
-  closed: 'bg-danger-ground text-ds-danger',
+  closed: 'bg-danger-ground text-danger',
 }
 
 /**
@@ -32,23 +30,23 @@ export function ConnectionStatus({ status }: ConnectionStatusProps) {
   const t = useTranslations()
   const label = t(LABEL_KEYS[status])
   const live = status === 'open'
-  const reducedMotion = useReducedMotion()
 
   return (
     <span
       role="status"
       title={label}
       className={cn(
-        'font-ds-mono inline-flex min-h-11 min-w-11 items-center justify-center gap-2 text-[11.5px] font-bold tracking-[0.08em] whitespace-nowrap uppercase',
+        'font-mono inline-flex min-h-11 min-w-11 items-center justify-center gap-2 text-[11.5px] font-bold tracking-[0.08em] whitespace-nowrap uppercase',
         live ? '@min-[41rem]:px-3' : '@min-[45rem]:px-3',
         TONE_CLASSES[status]
       )}
     >
-      <m.span
+      <span
         aria-hidden="true"
-        className="size-1.75 rounded-full bg-current"
-        animate={live && !reducedMotion ? { opacity: [1, 0.35, 1] } : undefined}
-        transition={{ duration: 1.6, ease: 'easeInOut', repeat: Infinity }}
+        className={cn(
+          'size-1.75 rounded-full bg-current',
+          live && 'motion-safe:animate-[pulse_1.6s_ease-in-out_infinite]'
+        )}
       />
       {live ? (
         <>

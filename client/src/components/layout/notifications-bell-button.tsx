@@ -32,7 +32,7 @@ export function BellButton({ unreadCount, className, ...props }: BellButtonProps
       {unreadCount > 0 && (
         <span
           aria-hidden
-          className="bg-mint text-mint-ink font-ds-mono shadow-[0_0_0_2px_var(--color-bg)] absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1.25 text-[10.5px] font-extrabold"
+          className="bg-mint text-mint-ink font-mono shadow-[0_0_0_2px_var(--color-bg)] absolute -top-1 -right-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1.25 text-[10.5px] font-extrabold"
         >
           {unreadCount > BADGE_CAP ? `${BADGE_CAP}+` : unreadCount}
         </span>

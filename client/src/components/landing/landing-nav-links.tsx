@@ -12,7 +12,7 @@ const SECTION_IDS = ['jogos', 'como-funciona', 'faq'] as const
  * from the left on hover, on focus and while the entry is the section in view.
  */
 const LINK_CLASSES =
-  'font-ds-mono text-text-3 hover-fine:text-text focus-visible:text-text aria-[current=location]:text-text ' +
+  'font-mono text-text-3 hover-fine:text-text focus-visible:text-text aria-[current=location]:text-text ' +
   'relative inline-flex items-baseline gap-2 text-[12.5px] font-bold tracking-[0.12em] uppercase no-underline ' +
   'transition-colors duration-200 focus-visible:outline-none ' +
   'after:bg-mint after:absolute after:inset-x-0 after:bottom-1.5 after:h-0.5 after:origin-left after:scale-x-0 ' +

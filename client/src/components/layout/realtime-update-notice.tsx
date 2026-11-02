@@ -10,7 +10,7 @@ import {
 } from '@/lib/realtime-update-store'
 
 const NOTICE_CLASS =
-  'fixed inset-x-0 top-0 z-100 border-b border-border bg-surface px-4 py-2 text-center text-sm text-offwhite'
+  'fixed inset-x-0 top-0 z-100 border-b border-line bg-panel px-4 py-2 text-center text-sm font-semibold text-text'
 
 /**
  * The realtime update notice, mounted in the root layout. It renders the store that the WebSocket's
@@ -54,7 +54,7 @@ function UpdateNoticeMessage({
       <button
         type="button"
         onClick={() => window.location.reload()}
-        className="rounded-md border border-border-light bg-surface px-3 py-1 text-xs font-medium text-offwhite transition-all hover:border-muted/30 hover:bg-surface-hover"
+        className="press bg-raised-2 text-text hover-fine:bg-track min-h-8 px-3 text-xs font-bold"
       >
         {t('realtime.reload')}
       </button>

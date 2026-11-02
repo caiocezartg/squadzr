@@ -17,7 +17,7 @@ function FooterColumn({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <span className="type-label text-ds-muted">{title}</span>
+      <span className="type-label text-muted">{title}</span>
       {children}
     </div>
   )
@@ -73,12 +73,12 @@ export function LandingFooter() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 pt-5.5 shadow-[inset_0_1px_0_var(--color-raised-2)]">
-          <span className="text-ds-muted text-[13px]">{t('copyright', { year })}</span>
+          <span className="text-muted text-[13px]">{t('copyright', { year })}</span>
           <a
             href="https://www.igdb.com"
             target="_blank"
             rel="noreferrer"
-            className="font-ds-mono text-ds-muted hover-fine:text-text-2 focus-visible:outline-mint text-[11px] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-4"
+            className="font-mono text-muted hover-fine:text-text-2 focus-visible:outline-mint text-[11px] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-4"
           >
             {t('gameDataByIgdb')}
           </a>

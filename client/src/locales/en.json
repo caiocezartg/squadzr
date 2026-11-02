@@ -8,8 +8,6 @@
   "common": {
     "signOut": "Sign Out",
     "createSquad": "Create Squad",
-    "createNewSquad": "Create new squad",
-    "loading": "Loading…",
     "language": "Language",
     "close": "Close"
   },
@@ -386,18 +384,11 @@
     "reconnecting": "Reconnecting…",
     "disconnected": "Disconnected",
     "online": "Online",
-    "offline": "Offline",
     "offlineSince": "Offline · {time}"
   },
   "languages": {
     "ptBr": "PT-BR",
     "enUs": "EN-US"
-  },
-  "pagination": {
-    "label": "Pagination",
-    "previous": "Go to previous page",
-    "next": "Go to next page",
-    "page": "Go to page {page}"
   },
   "errors": {
     "GAME_NOT_FOUND": "This game could not be found.",

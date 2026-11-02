@@ -57,7 +57,7 @@ export function Segmented<T extends string>({
               'press focus-visible:outline-text focus-visible:outline-2 focus-visible:-outline-offset-2',
               fluid && 'flex-1',
               small
-                ? 'font-ds-mono min-h-9 px-2.25 text-[11px] font-bold'
+                ? 'font-mono min-h-9 px-2.25 text-[11px] font-bold'
                 : 'type-ui min-h-11 px-4 text-[13px]',
               pressed ? 'bg-mint text-mint-ink' : 'text-text-3 hover-fine:text-text bg-transparent'
             )}

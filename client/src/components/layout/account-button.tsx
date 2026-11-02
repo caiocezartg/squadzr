@@ -35,7 +35,7 @@ export function AccountButton({ user, ref, ...button }: AccountButtonProps) {
         />
       </span>
       <span className="type-ui min-w-0 flex-1 truncate text-[13px]">{user.name}</span>
-      <ChevronDown aria-hidden className="text-ds-muted size-3.5 shrink-0" strokeWidth={2.4} />
+      <ChevronDown aria-hidden className="text-muted size-3.5 shrink-0" strokeWidth={2.4} />
     </button>
   )
 }

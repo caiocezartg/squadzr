@@ -13,7 +13,7 @@ interface EmptyStateProps {
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
     <div className="bg-card flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-      <span className="bg-line text-ds-muted flex size-13 items-center justify-center">
+      <span className="bg-line text-muted flex size-13 items-center justify-center">
         <LayoutGrid aria-hidden="true" className="size-5.5" strokeWidth={2.2} />
       </span>
       <h2 className="type-panel-title-sm text-text">{title}</h2>

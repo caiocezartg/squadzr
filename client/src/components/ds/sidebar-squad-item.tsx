@@ -72,7 +72,7 @@ export function SidebarSquadItem({
           </span>
           <span
             className={cn(
-              'font-ds-mono shrink-0 text-[10.5px] font-bold',
+              'font-mono shrink-0 text-[10.5px] font-bold',
               ready ? 'text-discord-soft' : lastSlot ? 'text-amber' : 'text-text-3'
             )}
           >
@@ -85,7 +85,7 @@ export function SidebarSquadItem({
         <span
           role="img"
           aria-label={t('inviteUnlocked')}
-          className="bg-ds-discord absolute top-2 right-2 flex size-4.5 items-center justify-center text-white"
+          className="bg-discord absolute top-2 right-2 flex size-4.5 items-center justify-center text-white"
         >
           <DiscordIcon aria-hidden="true" className="size-2.75" />
         </span>

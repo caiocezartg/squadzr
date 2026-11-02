@@ -126,7 +126,7 @@ function ResultRow({ row, target, state, live, dimmed }: ResultRowProps) {
         className="bg-raised-2 block h-11.5 w-8.5 shrink-0 object-cover"
       />
       <span className="flex min-w-0 flex-1 flex-col gap-0.75">
-        <span className="font-ds-mono text-text-3 truncate text-[9.5px] font-bold tracking-[0.12em]">
+        <span className="font-mono text-text-3 truncate text-[9.5px] font-bold tracking-[0.12em]">
           {row.game} · PT-BR
         </span>
         <span className="text-text truncate text-[13px] font-extrabold">{row.name}</span>
@@ -219,7 +219,7 @@ export function FindSquadMockup({ mode }: MockupProps) {
             height="14"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="var(--color-ds-muted)"
+            stroke="var(--color-muted)"
             strokeWidth="2.6"
             strokeLinecap="round"
           >
@@ -228,11 +228,11 @@ export function FindSquadMockup({ mode }: MockupProps) {
           </svg>
           <span className="flex min-w-0 items-center">
             {typed > 0 ? (
-              <span className="font-ds-mono text-text text-[13px] font-semibold whitespace-nowrap">
+              <span className="font-mono text-text text-[13px] font-semibold whitespace-nowrap">
                 {QUERY.slice(0, typed)}
               </span>
             ) : (
-              <span className="text-ds-muted truncate text-[12px] font-medium">
+              <span className="text-muted truncate text-[12px] font-medium">
                 {t('mockup.searchPlaceholder')}
               </span>
             )}

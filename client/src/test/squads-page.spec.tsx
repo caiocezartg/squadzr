@@ -9,7 +9,7 @@
 
 import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import SquadsPage from '@/app/(app)/squads/page'
@@ -143,11 +143,13 @@ describe('squad board on the App Router', () => {
     const user = userEvent.setup({ delay: null })
     await user.click(await screen.findByText('Ranked grind'))
 
-    // The prompt's card animates in like the create dialog's, so it must reach full opacity too.
-    const title = await screen.findByText('Sign in required', {}, { timeout: 5000 })
-    const card = title.closest('.max-w-xl')
-    expect(card).not.toBeNull()
-    await waitFor(() => expect(card).toHaveStyle({ opacity: '1' }))
+    // The prompt is the design system's dialog, so it is open and visible from the first frame.
+    const prompt = await screen.findByRole(
+      'dialog',
+      { name: 'Sign in required' },
+      { timeout: 5000 }
+    )
+    expect(prompt).toBeVisible()
   })
 
   it('reads the board again in the browser when the server read fails', async () => {

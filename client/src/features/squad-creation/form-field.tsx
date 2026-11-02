@@ -6,8 +6,7 @@ export const CONTROL_CLASSES =
   'bg-[#0c0d10] shadow-[inset_0_0_0_1px_var(--color-line)] focus-within:shadow-[inset_0_0_0_1.5px_var(--color-mint)]'
 
 /** The same control with a validation error: the ring turns danger and stays so on focus. */
-export const CONTROL_ERROR_CLASSES =
-  'bg-[#0c0d10] shadow-[inset_0_0_0_1.5px_var(--color-ds-danger)]'
+export const CONTROL_ERROR_CLASSES = 'bg-[#0c0d10] shadow-[inset_0_0_0_1.5px_var(--color-danger)]'
 
 export interface FormFieldProps {
   /** The control the label names; omit it when `labelId` names a group of controls. */
@@ -58,7 +57,7 @@ export function FormField({
         {children}
         <div aria-live="polite">
           {error && (
-            <p id={errorId} className="text-ds-danger mt-2 text-[12.5px] leading-normal">
+            <p id={errorId} className="text-danger mt-2 text-[12.5px] leading-normal">
               {error}
             </p>
           )}

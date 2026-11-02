@@ -34,9 +34,9 @@ export function TagFilter({ options, selected, onToggle, text, onTextChange }: T
 
   return (
     <div className="flex flex-col gap-2.5">
-      <span className="type-label text-ds-muted">{t('tags')}</span>
+      <span className="type-label text-muted">{t('tags')}</span>
       <span className="bg-panel focus-within:shadow-[inset_0_0_0_1.5px_var(--color-mint)] flex min-h-11 items-center gap-2 px-3.5">
-        <span aria-hidden="true" className="font-ds-mono text-ds-muted">
+        <span aria-hidden="true" className="font-mono text-muted">
           #
         </span>
         <input

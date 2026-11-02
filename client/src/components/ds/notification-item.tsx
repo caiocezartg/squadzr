@@ -74,11 +74,11 @@ export function NotificationItem({
               className={cn('block size-full object-cover', !unread && 'grayscale-60')}
             />
           ) : (
-            <span className="bg-track text-ds-muted flex size-full items-center justify-center">
+            <span className="bg-track text-muted flex size-full items-center justify-center">
               <Gamepad2 aria-hidden className="size-4" />
             </span>
           )}
-          <span className="bg-ds-discord absolute -right-1.25 -bottom-1.25 flex size-5 items-center justify-center text-white shadow-[0_0_0_2px_var(--ground)]">
+          <span className="bg-discord absolute -right-1.25 -bottom-1.25 flex size-5 items-center justify-center text-white shadow-[0_0_0_2px_var(--ground)]">
             <DiscordIcon aria-hidden className="size-3" />
           </span>
         </span>
@@ -94,10 +94,10 @@ export function NotificationItem({
             </span>
             {unread && <span aria-hidden className="bg-mint size-1.5 shrink-0 rounded-full" />}
           </span>
-          <span className={cn('text-[12.5px]', unread ? 'text-text-2' : 'text-ds-muted')}>
+          <span className={cn('text-[12.5px]', unread ? 'text-text-2' : 'text-muted')}>
             {t('message')}
           </span>
-          <span className="text-ds-muted text-[11.5px]">
+          <span className="text-muted text-[11.5px]">
             {gameName} · {timeAgo}
           </span>
         </span>

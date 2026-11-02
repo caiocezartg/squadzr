@@ -65,7 +65,7 @@ function SignInPrompt() {
 
   return (
     <div className="flex flex-col items-center justify-center px-4 py-24 text-center">
-      <p className="text-ds-muted">{t('lobby.pleaseSignIn')}</p>
+      <p className="text-muted">{t('lobby.pleaseSignIn')}</p>
     </div>
   )
 }
@@ -124,10 +124,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
     return (
       <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-12 sm:px-6 lg:px-8">
         <LobbyBackLink />
-        <AlertBox
-          type="error"
-          message={translateErrorCode(lobby.errorCode ?? 'NOT_ROOM_MEMBER', t)}
-        />
+        <AlertBox message={translateErrorCode(lobby.errorCode ?? 'NOT_ROOM_MEMBER', t)} />
       </div>
     )
   }
@@ -143,11 +140,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
       />
 
       {lobby.errorCode && (
-        <AlertBox
-          type="error"
-          message={translateErrorCode(lobby.errorCode, t)}
-          onClose={lobby.dismissError}
-        />
+        <AlertBox message={translateErrorCode(lobby.errorCode, t)} onClose={lobby.dismissError} />
       )}
 
       <LobbyColumns cover={<LobbyCover squad={lobby.squad} />}>

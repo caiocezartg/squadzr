@@ -8,8 +8,6 @@
   "common": {
     "signOut": "Sair",
     "createSquad": "Criar novo squad",
-    "createNewSquad": "Criar novo squad",
-    "loading": "Carregando…",
     "language": "Idioma",
     "close": "Fechar"
   },
@@ -386,18 +384,11 @@
     "reconnecting": "Reconectando…",
     "disconnected": "Desconectado",
     "online": "Online",
-    "offline": "Offline",
     "offlineSince": "Offline · {time}"
   },
   "languages": {
     "ptBr": "PT-BR",
     "enUs": "EN-US"
-  },
-  "pagination": {
-    "label": "Paginação",
-    "previous": "Ir para a página anterior",
-    "next": "Ir para a próxima página",
-    "page": "Ir para a página {page}"
   },
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",

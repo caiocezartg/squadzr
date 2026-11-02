@@ -73,11 +73,11 @@ function MemberCell({ member, arriving }: MemberCellProps) {
           >
             {member.name}
           </span>
-          {member.you && <span className="text-ds-muted shrink-0 text-[10.5px]">{t('you')}</span>}
+          {member.you && <span className="text-muted shrink-0 text-[10.5px]">{t('you')}</span>}
         </>
       ) : (
         <>
-          <span className="bg-raised-2 text-ds-muted flex size-7 shrink-0 items-center justify-center rounded-full shadow-[inset_0_0_0_1.5px_#34353c]">
+          <span className="bg-raised-2 text-muted flex size-7 shrink-0 items-center justify-center rounded-full shadow-[inset_0_0_0_1.5px_#34353c]">
             <Plus className="size-3" strokeWidth={2.6} />
           </span>
           <span className="text-text-2 min-w-0 flex-1 truncate text-[12.5px] font-bold">
@@ -110,13 +110,13 @@ function InviteBanner({ ready, live }: { readonly ready: boolean; readonly live:
             {t('lockedBody')}
           </span>
         </span>
-        <span className="font-ds-mono text-[11.5px] font-bold text-[#4a4c54]">
+        <span className="font-mono text-[11.5px] font-bold text-[#4a4c54]">
           discord.gg/••••••••
         </span>
       </span>
       <span
         data-shown={ready ? '' : undefined}
-        className="bg-ds-discord absolute inset-0 flex translate-y-3.5 scale-[0.99] flex-col justify-center gap-2 overflow-hidden px-3 text-white opacity-0 transition-[opacity,translate,scale] duration-500 ease-(--ease-out) data-shown:translate-y-0 data-shown:scale-100 data-shown:opacity-100"
+        className="bg-discord absolute inset-0 flex translate-y-3.5 scale-[0.99] flex-col justify-center gap-2 overflow-hidden px-3 text-white opacity-0 transition-[opacity,translate,scale] duration-500 ease-(--ease-out) data-shown:translate-y-0 data-shown:scale-100 data-shown:opacity-100"
       >
         <DiscordIcon
           aria-hidden="true"
@@ -132,7 +132,7 @@ function InviteBanner({ ready, live }: { readonly ready: boolean; readonly live:
           {t('title')}
         </span>
         <span className="relative flex min-w-0 items-center gap-2">
-          <span className="font-ds-mono min-w-0 flex-1 truncate text-[11.5px] font-bold">
+          <span className="font-mono min-w-0 flex-1 truncate text-[11.5px] font-bold">
             <span className="text-white/60">discord.gg/</span>premier5
           </span>
           <span className="flex shrink-0 items-center gap-1 bg-white px-2 py-1.25 text-[10.5px] font-extrabold text-[#2b33a8]">
@@ -161,7 +161,7 @@ export function CloseTeamMockup({ mode }: MockupProps) {
       <span className="flex items-baseline justify-between">
         <span
           className={cn(
-            'font-ds-mono text-[10px] font-bold tracking-[0.14em] uppercase transition-colors duration-200',
+            'font-mono text-[10px] font-bold tracking-[0.14em] uppercase transition-colors duration-200',
             complete ? 'text-mint' : 'text-text-3'
           )}
         >

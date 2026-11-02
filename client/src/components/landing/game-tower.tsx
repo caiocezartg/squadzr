@@ -94,7 +94,7 @@ export function GameTower({
         )}
       >
         {genre && (
-          <span className="font-ds-mono text-mint text-[11px] font-bold tracking-[0.14em] uppercase">
+          <span className="font-mono text-mint text-[11px] font-bold tracking-[0.14em] uppercase">
             {genre}
           </span>
         )}

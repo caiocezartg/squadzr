@@ -34,7 +34,7 @@ export function AvailabilityOptions({ value, onChange }: AvailabilityOptionsProp
 
   return (
     <fieldset className="m-0 border-0 p-0">
-      <legend className="type-label text-ds-muted mb-2.5 p-0">{t('ds.board.availability')}</legend>
+      <legend className="type-label text-muted mb-2.5 p-0">{t('ds.board.availability')}</legend>
       <div className="grid grid-cols-3 gap-1.5">
         {OPTIONS.map((option) => {
           const pressed = option.value === value
