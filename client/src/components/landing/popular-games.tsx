@@ -101,7 +101,10 @@ export function PopularGames({ games }: PopularGamesProps) {
             <ul
               ref={rowRef}
               aria-label={t('listLabel')}
-              onPointerEnter={() => setHovered(true)}
+              // Only a mouse holds the row: a touch leaves the row "hovered" after the tap.
+              onPointerEnter={(event) => {
+                if (event.pointerType === 'mouse') setHovered(true)
+              }}
               onPointerLeave={() => setHovered(false)}
               onFocus={() => setFocused(true)}
               onBlur={(event) => {
@@ -113,7 +116,9 @@ export function PopularGames({ games }: PopularGamesProps) {
                 <li
                   key={entry.game.id}
                   className={cn(
-                    'flex min-w-0 transition-[flex-grow,flex-basis] duration-500 ease-(--ease-in-out)',
+                    // No tower grows past the open width, so a short catalog does not stretch a
+                    // closed slice across the row.
+                    'flex max-w-[calc(var(--tower-h)*0.75)] min-w-0 transition-[flex-grow,flex-basis] duration-500 ease-(--ease-in-out)',
                     index === open ? 'grow-0 basis-[calc(var(--tower-h)*0.75)]' : 'grow basis-0',
                     towerVisibility(index)
                   )}
@@ -121,6 +126,7 @@ export function PopularGames({ games }: PopularGamesProps) {
                   <GameTower
                     entry={entry}
                     open={index === open}
+                    timed={count > 1}
                     paused={paused}
                     onFocus={() => setActive(index)}
                     onMouseOpen={() => openFromMouse(index)}

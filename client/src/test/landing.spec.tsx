@@ -20,8 +20,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionDto } from '@squadzr/schemas'
 import LandingPage, { metadata } from '@/app/(landing)/page'
+import { NARROW_QUERY } from '@/components/ds/use-media-query'
 import { PopularGames } from '@/components/landing/popular-games'
-import { popularGames } from './fixtures'
+import type { PopularGame } from '@/types'
+import { gameLol, popularGames } from './fixtures'
 import { httpOk, onHttp } from './http-router'
 import { EnglishIntlProvider } from './intl'
 import { fakeSession, signInAsFakeUser } from './stubs'
@@ -229,17 +231,176 @@ describe('landing games section', () => {
     fireEvent(tower, event)
   }
 
-  function renderGames() {
+  /** `count` games of their own, named "Game 0", "Game 1"… */
+  function manyGames(count: number): PopularGame[] {
+    return Array.from({ length: count }, (_, index) => ({
+      ...popularGames.games[0]!,
+      game: { ...gameLol, id: `game-${index}`, name: `Game ${index}` },
+    }))
+  }
+
+  /** The towers of `manyGames`, in order. */
+  function towers(): HTMLElement[] {
+    return screen.getAllByRole('link', { name: /^Game \d+, MOBA/ })
+  }
+
+  /** The open tower's timer line, if it has one. */
+  function timer(): HTMLElement | null {
+    return document.querySelector('[data-timer]')
+  }
+
+  /** Answers the media queries in `matching` as matched, and every other one as not. */
+  function matchOnly(...matching: string[]) {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query) =>
+        ({
+          matches: matching.includes(query),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList
+    )
+  }
+
+  /** A mouse moving over `tower`. jsdom has no PointerEvent, so the fields are set here. */
+  function moveMouseOver(tower: HTMLElement) {
+    const event = createEvent.pointerMove(tower)
+    Object.defineProperties(event, {
+      pointerType: { value: 'mouse' },
+      movementX: { value: 4 },
+      movementY: { value: 0 },
+    })
+    fireEvent(tower, event)
+  }
+
+  /**
+   * A pointer of `pointerType` coming over the row or leaving it: React reads enter and leave from
+   * `pointerover` and `pointerout`. jsdom has no PointerEvent, so the type is set here.
+   */
+  function pointer(row: HTMLElement, move: 'over' | 'out', pointerType: 'mouse' | 'touch') {
+    const event = move === 'over' ? createEvent.pointerOver(row) : createEvent.pointerOut(row)
+    Object.defineProperty(event, 'pointerType', { value: pointerType })
+    fireEvent(row, event)
+  }
+
+  // The suite's observer never reports; this one says the row is on screen, or not, as it observes.
+  const OriginalObserver = window.IntersectionObserver
+  let rowOnScreen = true
+  beforeEach(() => {
+    rowOnScreen = true
+    window.IntersectionObserver = class {
+      constructor(private readonly report: IntersectionObserverCallback) {}
+      observe() {
+        this.report(
+          [{ isIntersecting: rowOnScreen } as IntersectionObserverEntry],
+          this as unknown as IntersectionObserver
+        )
+      }
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return []
+      }
+    } as unknown as typeof IntersectionObserver
+  })
+  afterEach(() => {
+    window.IntersectionObserver = OriginalObserver
+  })
+
+  function renderGames(games: readonly PopularGame[] = popularGames.games) {
     render(
       <EnglishIntlProvider>
-        <PopularGames games={popularGames.games} />
+        <PopularGames games={games} />
       </EnglishIntlProvider>
     )
     return {
-      lol: screen.getByRole('link', { name: 'League of Legends, MOBA: see its squads' }),
-      cs2: screen.getByRole('link', { name: 'Counter-Strike 2, Shooter: see its squads' }),
-    }
+      row: screen.getByRole('list', { name: 'Popular games' }),
+      lol: screen.queryByRole('link', { name: 'League of Legends, MOBA: see its squads' }),
+      cs2: screen.queryByRole('link', { name: 'Counter-Strike 2, Shooter: see its squads' }),
+    } as { row: HTMLElement; lol: HTMLElement; cs2: HTMLElement }
   }
+
+  it.each([
+    { width: 'narrow', matching: [NARROW_QUERY, '(max-width: 1023px)'], last: 2 },
+    { width: 'medium', matching: ['(max-width: 1023px)'], last: 5 },
+    { width: 'wide', matching: [], last: 7 },
+  ])('passes from the last tower a $width window shows back to the first', ({ matching, last }) => {
+    matchOnly(...matching)
+    renderGames(manyGames(9))
+    const all = towers()
+
+    act(() => all[last]!.focus())
+    act(() => all[last]!.blur())
+    runOutTimer(all[last]!)
+
+    expect(all[0]).toHaveAttribute('data-open', 'true')
+  })
+
+  it('hides each tower at the widths that do not count it', () => {
+    renderGames(manyGames(9))
+    const slots = towers().map((tower) => tower.parentElement as HTMLElement)
+
+    for (const slot of slots.slice(0, 3)) expect(slot.className).not.toMatch(/hidden/)
+    for (const slot of slots.slice(3, 6)) expect(slot).toHaveClass('max-sm:hidden')
+    for (const slot of slots.slice(6, 8)) expect(slot).toHaveClass('max-lg:hidden')
+    expect(slots[8]).toHaveClass('hidden')
+  })
+
+  it('holds the timer while a mouse is over the row, and not after a touch', () => {
+    const { row } = renderGames()
+    expect(timer()).toHaveStyle({ animationPlayState: 'running' })
+
+    pointer(row, 'over', 'touch')
+    expect(timer()).toHaveStyle({ animationPlayState: 'running' })
+
+    pointer(row, 'over', 'mouse')
+    expect(timer()).toHaveStyle({ animationPlayState: 'paused' })
+
+    pointer(row, 'out', 'mouse')
+    expect(timer()).toHaveStyle({ animationPlayState: 'running' })
+  })
+
+  it('holds the timer while a tower has focus, and while the row is off screen', () => {
+    const { cs2 } = renderGames()
+
+    act(() => cs2.focus())
+    expect(timer()).toHaveStyle({ animationPlayState: 'paused' })
+
+    act(() => cs2.blur())
+    expect(timer()).toHaveStyle({ animationPlayState: 'running' })
+
+    cleanup()
+    rowOnScreen = false
+    renderGames()
+    expect(timer()).toHaveStyle({ animationPlayState: 'paused' })
+  })
+
+  it('opens a tower under a moving mouse only once the row has settled', () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(1000)
+    const { cs2 } = renderGames()
+
+    moveMouseOver(cs2)
+    expect(cs2).toHaveAttribute('data-open', 'false')
+
+    now.mockReturnValue(1600)
+    moveMouseOver(cs2)
+    expect(cs2).toHaveAttribute('data-open', 'true')
+  })
+
+  it('runs the timer line only with motion, and paints it from the animation alone', () => {
+    renderGames()
+
+    // `scale-x-0` sets `scale`, which multiplies with the keyframes' transform and hides the line.
+    expect(timer()).toHaveClass('motion-safe:animate-tower-progress', 'motion-reduce:hidden')
+    expect(timer()?.className).not.toMatch(/scale-x-/)
+  })
+
+  it('gives a lone tower no timer, as there is no other tower to pass to', () => {
+    renderGames(manyGames(1))
+
+    expect(towers()[0]).toHaveAttribute('data-open', 'true')
+    expect(timer()).not.toBeInTheDocument()
+  })
 
   it('opens the tower that takes focus', () => {
     const { lol, cs2 } = renderGames()

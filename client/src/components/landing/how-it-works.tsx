@@ -194,8 +194,11 @@ export function HowItWorks() {
   }))
 
   return (
-    <section id="como-funciona" className="relative scroll-mt-20 py-24 border-t border-border/50">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section
+      id="como-funciona"
+      className="relative scroll-mt-20 px-4 py-24 border-t border-border/50 sm:px-6"
+    >
+      <div className="mx-auto max-w-310">
         {/* Section header */}
         <m.div
           className="text-center mb-16"

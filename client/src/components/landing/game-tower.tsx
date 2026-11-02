@@ -13,6 +13,8 @@ interface GameTowerProps {
   readonly entry: PopularGame
   /** The open tower shows the whole cover, the genre and the name; the others are dim slices. */
   readonly open: boolean
+  /** Whether the open tower has a timer: a lone tower has no next one to pass to. */
+  readonly timed: boolean
   /** Holds the open tower's timer where it is. */
   readonly paused: boolean
   /** Opens this tower when it takes focus. */
@@ -27,7 +29,15 @@ interface GameTowerProps {
  * One tower of the games row: a link to the game's Squads on the board, over its cover. When it is
  * open, a mint timer line fills along its foot, and the next tower opens when the line is full.
  */
-export function GameTower({ entry, open, paused, onFocus, onMouseOpen, onTimeUp }: GameTowerProps) {
+export function GameTower({
+  entry,
+  open,
+  timed,
+  paused,
+  onFocus,
+  onMouseOpen,
+  onTimeUp,
+}: GameTowerProps) {
   const t = useTranslations('landing.games')
   const { game } = entry
   const genre = game.genres[0]?.name
@@ -92,10 +102,13 @@ export function GameTower({ entry, open, paused, onFocus, onMouseOpen, onTimeUp 
           {game.name}
         </span>
       </span>
-      {open && (
+      {/* The animation's fill paints the line empty before it starts. A `scale-x-0` would set `scale`,
+          which multiplies with the keyframes' `transform` and keeps the line empty to the end. */}
+      {open && timed && (
         <span
           aria-hidden="true"
-          className="bg-mint motion-safe:animate-tower-progress absolute inset-x-0 bottom-0 h-0.75 origin-left scale-x-0 motion-reduce:hidden"
+          data-timer=""
+          className="bg-mint motion-safe:animate-tower-progress absolute inset-x-0 bottom-0 h-0.75 origin-left motion-reduce:hidden"
           style={{ animationPlayState: paused ? 'paused' : 'running' }}
         />
       )}
