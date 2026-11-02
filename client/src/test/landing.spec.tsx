@@ -496,11 +496,11 @@ describe('landing how it works', () => {
   }
 
   /**
-   * The mockups' last beat: signed in with the toast up, the Valorant squad joined, and the team complete
+   * The mockups' last beat: signed in with the call to explore up, the Valorant squad joined, and the team complete
    * with the Discord invite unlocked.
    */
   function expectFinalMockups(section: HTMLElement) {
-    expect(beatOf(section, 'Signed in as caio_cz')).toHaveAttribute('data-shown')
+    expect(beatOf(section, 'Explore squads')).toHaveAttribute('data-shown')
     expect(beatOf(section, "You're in")).toHaveAttribute('data-shown')
     expect(within(section).getAllByText('Premier quinta à noite')).toHaveLength(1)
     expect(within(section).getByText('Squad complete')).toBeInTheDocument()
@@ -676,11 +676,11 @@ describe('landing how it works', () => {
       const stage = layoutOf(section, 'sticky')
 
       // Before its beats run, the first mockup waits signed out; the third waits with open slots.
-      expect(beatOf(stage, 'Signed in as caio_cz')).not.toHaveAttribute('data-shown')
+      expect(beatOf(stage, 'Explore squads')).not.toHaveAttribute('data-shown')
       expect(within(stage).getAllByText('Open slot')).toHaveLength(2)
       act(() => vi.advanceTimersByTime(3_000))
 
-      expect(beatOf(stage, 'Signed in as caio_cz')).toHaveAttribute('data-shown')
+      expect(beatOf(stage, 'Explore squads')).toHaveAttribute('data-shown')
       // The steps not yet active have not moved.
       expect(within(stage).getAllByText('Open slot')).toHaveLength(2)
       expect(stage.querySelector('[class*="animate-halo"]')).toBeNull()

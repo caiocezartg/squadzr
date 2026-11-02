@@ -1,6 +1,6 @@
 'use client'
 
-import { Avatar } from '@/components/ds/avatar'
+import { Avatar, type AvatarSize } from '@/components/ds/avatar'
 import { cn } from '@/lib/utils'
 import type { MockupMode } from './use-mockup-timeline'
 
@@ -80,13 +80,15 @@ interface SeatProps {
   readonly surface: string
   /** The member arrives in front of the visitor: the join plays on the seat. */
   readonly arriving: boolean
+  /** @default 28 */
+  readonly size?: AvatarSize
 }
 
 /**
  * A member's avatar with the mint ring of presence, held still (no halo loop). An arriving member shows
  * under the mint disc in one step, never with a fade or a scale, so the initials never move.
  */
-export function Seat({ id, name, host = false, surface, arriving }: SeatProps) {
+export function Seat({ id, name, host = false, surface, arriving, size = 28 }: SeatProps) {
   return (
     <span className="relative block shrink-0">
       <span
@@ -95,7 +97,7 @@ export function Seat({ id, name, host = false, surface, arriving }: SeatProps) {
           arriving && 'motion-safe:animate-seat-in'
         )}
       >
-        <Avatar size={28} playerId={id} name={name} host={host} surface={surface} />
+        <Avatar size={size} playerId={id} name={name} host={host} surface={surface} />
       </span>
       {arriving && <JoinFlash />}
     </span>
