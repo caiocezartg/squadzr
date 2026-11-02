@@ -1,18 +1,29 @@
 /**
  * The landing on the App Router (CCC-77, CCC-115). The page renders on the server: its navigation,
- * headline, copy, calls to action, the squad carousel with its first squad full, popular games, FAQ and
- * footer are in the server HTML.
+ * headline, copy, calls to action, the squad carousel with its first squad full, the popular games'
+ * towers, the FAQ, the closing call and the footer are in the server HTML (CCC-116).
  */
 
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { cleanup, screen, within } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  createEvent,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionDto } from '@squadzr/schemas'
 import LandingPage, { metadata } from '@/app/(landing)/page'
-import { gameCs2, gameLol, popularGames } from './fixtures'
+import { NARROW_QUERY } from '@/components/ds/use-media-query'
+import { PopularGames } from '@/components/landing/popular-games'
+import type { PopularGame } from '@/types'
+import { gameLol, popularGames } from './fixtures'
 import { httpOk, onHttp } from './http-router'
 import { EnglishIntlProvider } from './intl'
 import { fakeSession, signInAsFakeUser } from './stubs'
@@ -80,18 +91,42 @@ describe('landing server HTML', () => {
     expect(screen.queryByText(/42 GAMES/)).not.toBeInTheDocument()
   })
 
-  it('renders the popular games and the FAQ', async () => {
+  it('renders a tower per popular game, the first one open, each linking to its squads', async () => {
     await showServerHtml()
-    // The hero carousel names games and tags of its own, so the games are read in their section.
+    // The hero carousel names games of its own, so the games are read in their section.
     const games = within(document.getElementById('jogos') as HTMLElement)
+    const lol = games.getByRole('link', { name: 'League of Legends, MOBA: see its squads' })
+    const cs2 = games.getByRole('link', { name: 'Counter-Strike 2, Shooter: see its squads' })
 
-    expect(games.getByText(gameLol.name)).toBeInTheDocument()
-    expect(games.getByText(gameCs2.name)).toBeInTheDocument()
-    expect(games.getByText('4 open squads')).toBeInTheDocument()
-    expect(games.getByText('No open squads')).toBeInTheDocument()
-    expect(games.getByText('#ranked')).toBeInTheDocument()
-    expect(games.getByText('#chill')).toBeInTheDocument()
-    expect(screen.getByText('Is Squadzr free?')).toBeInTheDocument()
+    expect(games.getByRole('heading', { level: 2 })).toHaveTextContent(
+      'From 2v2 to a 40-player raid.'
+    )
+    expect(lol).toHaveAttribute('href', '/squads?search=League%20of%20Legends')
+    expect(cs2).toHaveAttribute('href', '/squads?search=Counter-Strike%202')
+    expect(lol).toHaveAttribute('data-open', 'true')
+    expect(cs2).toHaveAttribute('data-open', 'false')
+  })
+
+  it('renders the eight FAQ items as collapsed accordion triggers', async () => {
+    await showServerHtml()
+    const faq = within(document.getElementById('faq') as HTMLElement)
+    const triggers = faq.getAllByRole('button')
+
+    expect(faq.getByRole('heading', { level: 2 })).toHaveTextContent('Got questions?')
+    expect(triggers).toHaveLength(8)
+    expect(triggers[0]).toHaveTextContent('Is Squadzr free?')
+    for (const trigger of triggers) expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('ends with the call to explore squads', async () => {
+    await showServerHtml()
+    const heading = screen.getByRole('heading', {
+      level: 2,
+      name: "There's a slot waiting for you.",
+    })
+    const cta = within(heading.closest('section') as HTMLElement)
+
+    expect(cta.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
   })
 
   it('points the navigation at the board and at the sections of the page', async () => {
@@ -185,6 +220,218 @@ describe('landing server HTML', () => {
     )
     expect(links.getByRole('link', { name: 'Available games' })).toHaveAttribute('href', '#jogos')
     expect(within(footer).getByText(/^© \d{4} Squadzr/)).toBeInTheDocument()
+  })
+})
+
+describe('landing games section', () => {
+  /** The open tower's timer line ends. jsdom leaves `animationName` out of the event, so it is set here. */
+  function runOutTimer(tower: HTMLElement) {
+    const event = createEvent.animationEnd(tower)
+    Object.defineProperty(event, 'animationName', { value: 'tower-progress' })
+    fireEvent(tower, event)
+  }
+
+  /** `count` games of their own, named "Game 0", "Game 1"… */
+  function manyGames(count: number): PopularGame[] {
+    return Array.from({ length: count }, (_, index) => ({
+      ...popularGames.games[0]!,
+      game: { ...gameLol, id: `game-${index}`, name: `Game ${index}` },
+    }))
+  }
+
+  /** The towers of `manyGames`, in order. */
+  function towers(): HTMLElement[] {
+    return screen.getAllByRole('link', { name: /^Game \d+, MOBA/ })
+  }
+
+  /** The open tower's timer line, if it has one. */
+  function timer(): HTMLElement | null {
+    return document.querySelector('[data-timer]')
+  }
+
+  /** Answers the media queries in `matching` as matched, and every other one as not. */
+  function matchOnly(...matching: string[]) {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query) =>
+        ({
+          matches: matching.includes(query),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList
+    )
+  }
+
+  /** A mouse moving over `tower`. jsdom has no PointerEvent, so the fields are set here. */
+  function moveMouseOver(tower: HTMLElement) {
+    const event = createEvent.pointerMove(tower)
+    Object.defineProperties(event, {
+      pointerType: { value: 'mouse' },
+      movementX: { value: 4 },
+      movementY: { value: 0 },
+    })
+    fireEvent(tower, event)
+  }
+
+  /**
+   * A pointer of `pointerType` coming over the row or leaving it: React reads enter and leave from
+   * `pointerover` and `pointerout`. jsdom has no PointerEvent, so the type is set here.
+   */
+  function pointer(row: HTMLElement, move: 'over' | 'out', pointerType: 'mouse' | 'touch') {
+    const event = move === 'over' ? createEvent.pointerOver(row) : createEvent.pointerOut(row)
+    Object.defineProperty(event, 'pointerType', { value: pointerType })
+    fireEvent(row, event)
+  }
+
+  // The suite's observer never reports; this one says the row is on screen, or not, as it observes.
+  const OriginalObserver = window.IntersectionObserver
+  let rowOnScreen = true
+  beforeEach(() => {
+    rowOnScreen = true
+    window.IntersectionObserver = class {
+      constructor(private readonly report: IntersectionObserverCallback) {}
+      observe() {
+        this.report(
+          [{ isIntersecting: rowOnScreen } as IntersectionObserverEntry],
+          this as unknown as IntersectionObserver
+        )
+      }
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return []
+      }
+    } as unknown as typeof IntersectionObserver
+  })
+  afterEach(() => {
+    window.IntersectionObserver = OriginalObserver
+  })
+
+  function renderGames(games: readonly PopularGame[] = popularGames.games) {
+    render(
+      <EnglishIntlProvider>
+        <PopularGames games={games} />
+      </EnglishIntlProvider>
+    )
+    return screen.getByRole('list', { name: 'Popular games' })
+  }
+
+  /** The towers of the fixture's two games. */
+  function fixtureTowers() {
+    return {
+      lol: screen.getByRole('link', { name: 'League of Legends, MOBA: see its squads' }),
+      cs2: screen.getByRole('link', { name: 'Counter-Strike 2, Shooter: see its squads' }),
+    }
+  }
+
+  it.each([
+    { width: 'narrow', matching: [NARROW_QUERY, '(max-width: 1023px)'], last: 2 },
+    { width: 'medium', matching: ['(max-width: 1023px)'], last: 5 },
+    { width: 'wide', matching: [], last: 7 },
+  ])('passes from the last tower a $width window shows back to the first', ({ matching, last }) => {
+    matchOnly(...matching)
+    renderGames(manyGames(9))
+    const all = towers()
+
+    act(() => all[last]!.focus())
+    act(() => all[last]!.blur())
+    runOutTimer(all[last]!)
+
+    expect(all[0]).toHaveAttribute('data-open', 'true')
+  })
+
+  it('hides each tower at the widths that do not count it', () => {
+    renderGames(manyGames(9))
+    const slots = towers().map((tower) => tower.parentElement as HTMLElement)
+
+    for (const slot of slots.slice(0, 3)) expect(slot.className).not.toMatch(/hidden/)
+    for (const slot of slots.slice(3, 6)) expect(slot).toHaveClass('max-sm:hidden')
+    for (const slot of slots.slice(6, 8)) expect(slot).toHaveClass('max-lg:hidden')
+    expect(slots[8]).toHaveClass('hidden')
+  })
+
+  it('holds the timer while a mouse is over the row, and not after a touch', () => {
+    const row = renderGames()
+    expect(timer()).toHaveStyle({ animationPlayState: 'running' })
+
+    pointer(row, 'over', 'touch')
+    expect(timer()).toHaveStyle({ animationPlayState: 'running' })
+
+    pointer(row, 'over', 'mouse')
+    expect(timer()).toHaveStyle({ animationPlayState: 'paused' })
+
+    pointer(row, 'out', 'mouse')
+    expect(timer()).toHaveStyle({ animationPlayState: 'running' })
+  })
+
+  it('holds the timer while a tower has focus, and while the row is off screen', () => {
+    renderGames()
+    const { cs2 } = fixtureTowers()
+
+    act(() => cs2.focus())
+    expect(timer()).toHaveStyle({ animationPlayState: 'paused' })
+
+    act(() => cs2.blur())
+    expect(timer()).toHaveStyle({ animationPlayState: 'running' })
+
+    cleanup()
+    rowOnScreen = false
+    renderGames()
+    expect(timer()).toHaveStyle({ animationPlayState: 'paused' })
+  })
+
+  it('opens a tower under a moving mouse only once the row has settled', () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(1000)
+    renderGames()
+    const { cs2 } = fixtureTowers()
+
+    moveMouseOver(cs2)
+    expect(cs2).toHaveAttribute('data-open', 'false')
+
+    now.mockReturnValue(1600)
+    moveMouseOver(cs2)
+    expect(cs2).toHaveAttribute('data-open', 'true')
+  })
+
+  it('runs the timer line only with motion, and starts it empty until the animation fills it', () => {
+    renderGames()
+
+    // The line is empty until the animation fills it, whatever the animation's fill mode. A
+    // `scale-x-0` would set `scale`, which multiplies with the keyframes' transform and hides it.
+    expect(timer()).toHaveClass(
+      'motion-safe:animate-tower-progress',
+      'motion-reduce:hidden',
+      '[transform:scaleX(0)]'
+    )
+    expect(timer()?.className).not.toMatch(/scale-x-/)
+  })
+
+  it('gives a lone tower no timer, as there is no other tower to pass to', () => {
+    renderGames(manyGames(1))
+
+    expect(towers()[0]).toHaveAttribute('data-open', 'true')
+    expect(timer()).not.toBeInTheDocument()
+  })
+
+  it('opens the tower that takes focus', () => {
+    renderGames()
+    const { lol, cs2 } = fixtureTowers()
+
+    act(() => cs2.focus())
+
+    expect(cs2).toHaveAttribute('data-open', 'true')
+    expect(lol).toHaveAttribute('data-open', 'false')
+  })
+
+  it('opens the next tower when the open one has had its time, and the first after the last', () => {
+    renderGames()
+    const { lol, cs2 } = fixtureTowers()
+
+    runOutTimer(lol)
+    expect(cs2).toHaveAttribute('data-open', 'true')
+
+    runOutTimer(cs2)
+    expect(lol).toHaveAttribute('data-open', 'true')
   })
 })
 
