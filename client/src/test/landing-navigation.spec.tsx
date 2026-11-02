@@ -92,7 +92,7 @@ describe('links to the landing', () => {
     const user = userEvent.setup({ delay: null })
     render(<NotFound />)
 
-    await user.click(await screen.findByRole('link', { name: 'Back to Home' }))
+    await user.click(await screen.findByRole('link', { name: 'Back to home' }))
 
     expect(navigation.calls).toEqual([{ method: 'push', href: '/' }])
   })

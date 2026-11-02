@@ -191,7 +191,7 @@ describe('the Lobby on the App Router', () => {
     await renderLobbyRoute('ZZZZZZ')
 
     expect(await screen.findByText('Squad not found')).toBeInTheDocument()
-    expect(screen.getByText('ZZZZZZ')).toBeInTheDocument()
+    expect(screen.getByText('#ZZZZZZ')).toBeInTheDocument()
   })
 
   it("shows a player's initial in the roster once the avatar image fails to load", async () => {

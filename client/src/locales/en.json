@@ -6,8 +6,8 @@
     "daysAgo": "{count}d ago"
   },
   "common": {
-    "signOut": "Sign Out",
-    "createSquad": "Create Squad",
+    "signOut": "Sign out",
+    "createSquad": "Create squad",
     "language": "Language",
     "close": "Close"
   },
@@ -181,7 +181,10 @@
       "unread": "Unread",
       "dismiss": "Dismiss notification for {squad}",
       "emptyTitle": "All caught up",
-      "emptyHint": "When one of your Squads fills up, the invite lands here."
+      "emptyHint": "When one of your squads fills up, the invite lands here."
+    },
+    "notice": {
+      "emptySlots": "Nobody here"
     }
   },
   "landing": {
@@ -360,9 +363,9 @@
   "squadNotFound": {
     "title": "Squad not found",
     "description": "This squad no longer exists or the code is invalid. Check the code and try again.",
-    "codeLabel": "Code entered:",
-    "backToSquads": "Back to Squads",
-    "createSquad": "Create New Squad"
+    "codeLabel": "Code entered",
+    "createSquad": "Create squad",
+    "exploreSquads": "Explore squads"
   },
   "lobby": {
     "backToSquads": "Back to squads",
@@ -372,8 +375,9 @@
   "notFound": {
     "title": "Page not found",
     "description": "Looks like you've wandered off the map. The page you're looking for doesn't exist or has been moved.",
-    "backToHome": "Back to Home",
-    "exploreSquads": "Explore Squads"
+    "backToHome": "Back to home",
+    "exploreSquads": "Explore squads",
+    "eyebrow": "Off the map"
   },
   "realtime": {
     "updating": "A new version is available. Reloading…",

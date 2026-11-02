@@ -127,7 +127,7 @@ describe('squad board on the App Router', () => {
     await renderSquadsRoute()
     const user = userEvent.setup({ delay: null })
     // The empty board offers the create action; the shell's launcher opens the dialog.
-    await user.click(await screen.findByRole('button', { name: 'Create Squad' }))
+    await user.click(await screen.findByRole('button', { name: 'Create squad' }))
 
     // The shared dialog fades in with CSS, so it needs no route animation features to show.
     const dialog = await screen.findByRole('dialog', { name: 'Choose the game' }, { timeout: 5000 })
