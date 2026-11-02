@@ -59,7 +59,7 @@ export function CTABanner() {
               {t.rich('title', { em: (chunks) => <em className="italic">{chunks}</em> })}
             </h2>
             <p className="max-w-[46ch] text-base/[1.55] font-semibold text-[#0B3A27]">
-              {t('subtitle')}
+              {t.rich('subtitle', { line: (chunks) => <span className="block">{chunks}</span> })}
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-3 max-sm:w-full max-sm:max-w-80 max-sm:flex-col">

@@ -273,7 +273,7 @@
     },
     "cta": {
       "title": "There's a slot <em>waiting for you.</em>",
-      "subtitle": "Sign in with Discord and find your squad now, or open your own and let the team come to you.",
+      "subtitle": "Sign in with Discord and find your squad now <line>or open your own and let the team come to you.</line>",
       "exploreSquads": "Explore squads"
     },
     "footer": {

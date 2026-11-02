@@ -84,6 +84,9 @@ describe('ICU messages', () => {
     expect(tPtBR.rich('landing.cta.title', { em: (chunks) => `[${chunks}]` })).toBe(
       'Tem vaga [te esperando.]'
     )
+    expect(tPtBR.rich('landing.cta.subtitle', { line: (chunks) => `[${chunks}]` })).toBe(
+      'Entre com o Discord e ache o seu squad agora [ou abra o seu e deixa o time vir até você.]'
+    )
   })
 
   it('reads the FAQ items and the how-it-works steps as raw arrays', () => {

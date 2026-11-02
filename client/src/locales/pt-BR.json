@@ -273,7 +273,7 @@
     },
     "cta": {
       "title": "Tem vaga <em>te esperando.</em>",
-      "subtitle": "Entre com o Discord e ache o seu squad agora — ou abra o seu e deixa o time vir até você.",
+      "subtitle": "Entre com o Discord e ache o seu squad agora <line>ou abra o seu e deixa o time vir até você.</line>",
       "exploreSquads": "Explorar squads"
     },
     "footer": {
