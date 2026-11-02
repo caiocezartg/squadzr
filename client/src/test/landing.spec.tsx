@@ -489,9 +489,31 @@ describe('landing how it works', () => {
       .map((item) => within(item).getByRole('heading', { level: 3 }).textContent)
   }
 
+  /** The element that shows or hides with a mockup beat, around `text`. */
+  function beatOf(section: HTMLElement, text: string) {
+    const element = within(section).getByText(text)
+    return element.closest('[data-shown]') ?? element
+  }
+
+  /**
+   * The mockups' last beat: signed in with the toast up, the Valorant squad joined, and the team complete
+   * with the Discord invite unlocked.
+   */
+  function expectFinalMockups(section: HTMLElement) {
+    expect(beatOf(section, 'Signed in as caio_cz')).toHaveAttribute('data-shown')
+    expect(beatOf(section, "You're in")).toHaveAttribute('data-shown')
+    expect(within(section).getAllByText('Premier quinta à noite')).toHaveLength(1)
+    expect(within(section).getByText('Squad complete')).toBeInTheDocument()
+    expect(within(section).getByText('5')).toBeInTheDocument()
+    expect(within(section).queryByText('Open slot')).not.toBeInTheDocument()
+    expect(beatOf(section, "Let's go to Discord")).toHaveAttribute('data-shown')
+    // Nothing plays in the cards: no pointer is shown and no join burst is mounted.
+    expect(section.querySelector('[class*="animate-seat-burst"]')).toBeNull()
+  }
+
   /** The mockups are decorative: every one sits under an `aria-hidden` ancestor. */
   function expectMockupsHidden(section: HTMLElement) {
-    for (const label of ['caio_cz', 'Invite unlocked', 'Premier quinta à noite']) {
+    for (const label of ['caio_cz', "Let's go to Discord", 'Filters']) {
       const nodes = within(section).getAllByText(label)
       for (const node of nodes) expect(node.closest('[aria-hidden="true"]')).not.toBeNull()
     }
@@ -530,10 +552,7 @@ describe('landing how it works', () => {
 
     expect(layouts(section)).toEqual(['stacked'])
     expect(stepTitles(section)).toEqual(STEP_TITLES)
-    // The final state: signed in, the squad found and picked, the invite unlocked.
-    expect(within(section).getByText('caio_cz')).toBeInTheDocument()
-    expect(within(section).getAllByText('Premier quinta à noite')).toHaveLength(1)
-    expect(within(section).getByText('Invite unlocked')).toBeInTheDocument()
+    expectFinalMockups(section)
     expect(section.querySelector('[data-hiw-mockup]')).toBeNull()
     expectMockupsHidden(section)
   })
@@ -544,7 +563,7 @@ describe('landing how it works', () => {
 
     expect(layouts(section)).toEqual(['stacked'])
     expect(stepTitles(section)).toEqual(STEP_TITLES)
-    expect(within(section).getByText('Invite unlocked')).toBeInTheDocument()
+    expectFinalMockups(section)
     expect(section.querySelector('[data-hiw-mockup]')).toBeNull()
   })
 
@@ -648,17 +667,26 @@ describe('landing how it works', () => {
     expect(playedMockups(section)).toEqual([true, false, false])
   })
 
-  it('draws the mockups as the canvas does: open slots per row and a still presence dot', () => {
-    matchOnly()
-    const section = renderHowItWorks()
-    const row = (name: string) =>
-      within(section).getByText(name).closest('.bg-raised') as HTMLElement
-    const openSlots = (name: string) => row(name).querySelectorAll('[class*="bg-[#2a2b31]"]').length
+  it('acts the first step out once it plays, and ends signed in, with no looping halo', () => {
+    vi.useFakeTimers()
+    try {
+      onScreen = true
+      matchOnly(WIDE_QUERY)
+      const section = renderHowItWorks()
+      const stage = layoutOf(section, 'sticky')
 
-    expect(openSlots('Premier quinta à noite')).toBe(1)
-    expect(openSlots('Unrated sem tilt')).toBe(2)
-    // The mockups loop nothing: no avatar in them carries the board's pulsing halo.
-    expect(section.querySelector('[class*="animate-halo"]')).toBeNull()
+      // Before its beats run, the first mockup waits signed out; the third waits with open slots.
+      expect(beatOf(stage, 'Signed in as caio_cz')).not.toHaveAttribute('data-shown')
+      expect(within(stage).getAllByText('Open slot')).toHaveLength(2)
+      act(() => vi.advanceTimersByTime(3_000))
+
+      expect(beatOf(stage, 'Signed in as caio_cz')).toHaveAttribute('data-shown')
+      // The steps not yet active have not moved.
+      expect(within(stage).getAllByText('Open slot')).toHaveLength(2)
+      expect(stage.querySelector('[class*="animate-halo"]')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it.each([

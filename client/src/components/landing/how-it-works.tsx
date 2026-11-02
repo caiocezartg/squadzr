@@ -33,8 +33,8 @@ function HowItWorksCards({ steps }: { readonly steps: readonly HowItWorksStep[] 
               <span className="bg-mint block h-0.5" />
             </span>
             {Mockup && (
-              <div aria-hidden="true" className="h-52.5">
-                <Mockup />
+              <div aria-hidden="true" className="h-75 w-full max-w-105">
+                <Mockup mode="final" />
               </div>
             )}
             <StepCopy step={step} />

@@ -153,7 +153,7 @@ export function HowItWorksStage({ steps, played, onPlayed }: HowItWorksStageProp
               data-play={played[index] ? '' : undefined}
               className="absolute inset-0 opacity-0 blur-[2px] transition-[opacity,filter] duration-300 ease-(--ease-out) data-active:opacity-100 data-active:blur-none"
             >
-              <Mockup />
+              <Mockup mode={played[index] ? 'play' : 'waiting'} />
             </div>
           ))}
         </div>

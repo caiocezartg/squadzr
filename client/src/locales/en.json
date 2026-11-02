@@ -243,9 +243,15 @@
       ],
       "mockup": {
         "signIn": "Sign in with Discord",
+        "authorizeTitle": "Squadzr wants to access your Discord account",
+        "authorize": "Authorize",
+        "signedIn": "Signed in as {name}",
+        "searchPlaceholder": "Search a game or tag",
         "filters": "Filters",
-        "invite": "Invite unlocked",
-        "open": "Open"
+        "join": "Join",
+        "joined": "You're in",
+        "members": "Members",
+        "complete": "Squad complete"
       }
     },
     "faq": {
