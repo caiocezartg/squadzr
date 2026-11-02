@@ -1,6 +1,6 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
+import { useCallback, useState, useSyncExternalStore } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMediaQuery } from '@/components/ds/use-media-query'
 import { WIDE_QUERY } from '@/components/layout/wide-query'
@@ -65,7 +65,9 @@ function useHydrated(): boolean {
  *
  * The server cannot know the width or the motion preference, so its HTML carries both layouts and CSS
  * shows the one that fits. The page then has its final height before any script runs, and a link to a
- * section below this one lands in place. Once hydrated, only the layout that fits stays mounted.
+ * section below this one lands in place. Once hydrated, only the layout that fits stays mounted. A
+ * window that later crosses 1024px swaps the layout, and the section's height with it, as any
+ * responsive layout does; the mockups that have played stay played.
  */
 export function HowItWorks() {
   const t = useTranslations('landing.howItWorks')
@@ -74,6 +76,14 @@ export function HowItWorks() {
   const reducedMotion = useReducedMotion()
   const hydrated = useHydrated()
   const staged = wide && !reducedMotion
+  // Whether each step's mockup has played in the stage. It lives here, above the stage, so it outlasts
+  // a stage that unmounts and mounts again.
+  const [played, setPlayed] = useState<readonly boolean[]>(() => MOCKUPS.map(() => false))
+  const markPlayed = useCallback((step: number) => {
+    setPlayed((current) =>
+      current[step] ? current : current.map((done, index) => done || index === step)
+    )
+  }, [])
 
   return (
     <section id="como-funciona" className="scroll-mt-20 px-4 py-24 sm:px-6 sm:py-30">
@@ -82,7 +92,9 @@ export function HowItWorks() {
           <SectionEyebrow>{t('label')}</SectionEyebrow>
           <h2 className="type-section-title text-balance">{t('title')}</h2>
         </Reveal>
-        {(!hydrated || staged) && <HowItWorksStage steps={steps} />}
+        {(!hydrated || staged) && (
+          <HowItWorksStage steps={steps} played={played} onPlayed={markPlayed} />
+        )}
         {(!hydrated || !staged) && <HowItWorksCards steps={steps} />}
       </div>
     </section>

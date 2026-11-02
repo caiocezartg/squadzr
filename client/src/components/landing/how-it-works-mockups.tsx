@@ -48,13 +48,11 @@ export function SignInMockup() {
           {t('mockup.signIn')}
         </span>
         <span className="hiw-s1-chip bg-raised-2 absolute inset-0 flex items-center gap-2.5 pr-3.5 pl-2">
-          <Avatar
-            size={34}
-            state="online"
-            playerId="cc-2"
-            name="caio_cz"
-            surface="var(--color-raised-2)"
-          />
+          {/* Signed in: the canvas marks it with a still presence dot, not the board's pulsing halo. */}
+          <span className="relative block">
+            <Avatar size={34} playerId="cc-2" name="caio_cz" />
+            <span className="bg-mint ring-raised-2 absolute -right-px -bottom-px block size-2.75 rounded-full ring-2" />
+          </span>
           <span className="text-text text-[13px] font-bold">caio_cz</span>
           <svg
             aria-hidden="true"
@@ -82,14 +80,16 @@ const QUERY = 'valorant'
 
 interface ResultRowProps {
   readonly name: string
-  /** The members' player ids, which pick their colours; one open slot follows them. */
+  /** The members' player ids, which pick their colours. */
   readonly members: readonly string[]
+  /** The open slots drawn after the members. */
+  readonly openSlots: number
   readonly className: string
   readonly children?: ReactNode
 }
 
 /** One squad of the board's results, as compact as the canvas draws it. */
-function ResultRow({ name, members, className, children }: ResultRowProps) {
+function ResultRow({ name, members, openSlots, className, children }: ResultRowProps) {
   return (
     <span className={`bg-raised relative flex items-center gap-2.5 p-1.5 ${className}`}>
       <img
@@ -113,7 +113,12 @@ function ResultRow({ name, members, className, children }: ResultRowProps) {
             style={{ backgroundColor: pickAvatarColors(id).background }}
           />
         ))}
-        <span className="ring-raised -ml-1.25 block size-4.5 rounded-full bg-[#2a2b31] ring-2" />
+        {Array.from({ length: openSlots }, (_, slot) => (
+          <span
+            key={slot}
+            className="ring-raised -ml-1.25 block size-4.5 rounded-full bg-[#2a2b31] ring-2"
+          />
+        ))}
       </span>
       {children}
     </span>
@@ -161,12 +166,13 @@ export function FindSquadMockup() {
       <ResultRow
         name="Premier quinta à noite"
         members={['cc-2', 'mf-7', 'br-0']}
+        openSlots={1}
         className="hiw-s2-row1"
       >
         <span className="hiw-s2-pick pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1.5px_var(--color-mint)]" />
         <Cursor className="hiw-s2-cursor absolute right-6.5 -bottom-2 opacity-0" />
       </ResultRow>
-      <ResultRow name="Unrated sem tilt" members={['kz-4']} className="hiw-s2-row2" />
+      <ResultRow name="Unrated sem tilt" members={['kz-4']} openSlots={2} className="hiw-s2-row2" />
     </div>
   )
 }

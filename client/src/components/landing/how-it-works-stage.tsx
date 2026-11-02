@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   useInView,
   useMotionValueEvent,
@@ -43,6 +43,16 @@ function StepBar({
   )
 }
 
+/**
+ * The track's scroll progress, read once from its layout: how far its top has risen past the viewport's
+ * top, over the distance it scrolls while pinned. A hidden track (narrow, or reduced motion) has none.
+ */
+function measureProgress(track: HTMLElement): number | null {
+  const travel = track.offsetHeight - window.innerHeight
+  if (track.offsetHeight === 0 || travel <= 0) return null
+  return Math.min(1, Math.max(0, -track.getBoundingClientRect().top / travel))
+}
+
 /** How much of the stage must be on screen before the first step's mockup plays. */
 const FIRST_PLAY_AMOUNT = 0.75
 
@@ -58,32 +68,49 @@ const FIRST_PLAY_AMOUNT = 0.75
  * Every step's copy stays in the list at every scroll position: an inactive step is dimmed, never
  * hidden.
  */
-export function HowItWorksStage({ steps }: { readonly steps: readonly HowItWorksStep[] }) {
+interface HowItWorksStageProps {
+  readonly steps: readonly HowItWorksStep[]
+  /**
+   * Whether each step's mockup has played. The section keeps it, so a stage that mounts again (the
+   * window crossing 1024px, or the motion preference changing) does not play a mockup twice.
+   */
+  readonly played: readonly boolean[]
+  readonly onPlayed: (step: number) => void
+}
+
+export function HowItWorksStage({ steps, played, onPlayed }: HowItWorksStageProps) {
   const track = useRef<HTMLDivElement>(null)
   const stage = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target: track, offset: ['start start', 'end end'] })
   const stageInView = useInView(stage, { once: true, amount: FIRST_PLAY_AMOUNT })
   const [active, setActive] = useState(0)
-  // Whether each step's mockup has played. Once it has, it holds its final state.
-  const [played, setPlayed] = useState<readonly boolean[]>(() => MOCKUPS.map(() => false))
-  const markPlayed = (step: number) => {
-    if (played[step]) return
-    setPlayed((current) =>
-      current[step] ? current : current.map((done, index) => done || index === step)
-    )
-  }
 
-  useMotionValueEvent(scrollYProgress, 'change', (progress) => {
+  /** The step at `progress` becomes active, and plays once the track has reached the top. */
+  const showProgress = (progress: number) => {
     const step = stepAt(progress)
     setActive(step)
     // At 0 the track has not reached the top yet: the stage may still be below the fold.
-    if (progress > 0) markPlayed(step)
-  })
+    if (progress > 0 && !played[step]) onPlayed(step)
+  }
+
+  // motion measures the track on the next frame. A stage that mounts mid-track (a restored scroll, or
+  // the window widening past 1024px) reads its progress once before the first paint instead, so it
+  // never shows step 01 for a frame. This is a single read at mount, not in the scroll handler.
+  useLayoutEffect(() => {
+    const progress = track.current ? measureProgress(track.current) : null
+    if (progress !== null) showProgress(progress)
+    // Only at mount: from then on, the scroll handler below follows the progress.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useMotionValueEvent(scrollYProgress, 'change', showProgress)
 
   // Before the track reaches the top, the first step plays once most of the stage is on screen, and
   // only while it is the active step: a stage reached mid-track never plays a step out of sight.
-  // Adjusting state while rendering, from what the render reads, is React's derived-state pattern.
-  if (stageInView && active === 0) markPlayed(0)
+  const playFirstStep = stageInView && active === 0 && !played[0]
+  useEffect(() => {
+    if (playFirstStep) onPlayed(0)
+  }, [playFirstStep, onPlayed])
 
   return (
     // Shown by CSS from 1024px with motion, so the server HTML already takes the track's height there.

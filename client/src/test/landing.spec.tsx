@@ -27,6 +27,7 @@ import { stepAt } from '@/components/landing/how-it-works-stage'
 import { PopularGames } from '@/components/landing/popular-games'
 import { WIDE_QUERY } from '@/components/layout/wide-query'
 import { MotionProvider } from '@/components/ui/motion-provider'
+import { mockMediaQuery } from './media-query'
 import type { PopularGame } from '@/types'
 import { gameLol, popularGames } from './fixtures'
 import { httpOk, onHttp } from './http-router'
@@ -568,12 +569,15 @@ describe('landing how it works', () => {
     expectMockupsHidden(section)
   })
 
-  it('plays the first step once the stage is on screen, and only that step', () => {
-    const OriginalObserver = window.IntersectionObserver
-    // This observer reports every element it observes as on screen.
+  /** Whether an observed element counts as on screen; the suite's own observer never reports. */
+  let onScreen = false
+  const OriginalObserver = window.IntersectionObserver
+  beforeEach(() => {
+    onScreen = false
     window.IntersectionObserver = class {
       constructor(private readonly report: IntersectionObserverCallback) {}
       observe(target: Element) {
+        if (!onScreen) return
         this.report(
           [{ isIntersecting: true, intersectionRatio: 1, target } as IntersectionObserverEntry],
           this as unknown as IntersectionObserver
@@ -585,19 +589,76 @@ describe('landing how it works', () => {
         return []
       }
     } as unknown as typeof IntersectionObserver
-    try {
-      matchOnly(WIDE_QUERY)
-      const section = renderHowItWorks()
-      const mockups = [...section.querySelectorAll('[data-hiw-mockup]')]
+  })
+  afterEach(() => {
+    window.IntersectionObserver = OriginalObserver
+  })
 
-      expect(mockups.map((mockup) => mockup.hasAttribute('data-play'))).toEqual([
-        true,
-        false,
-        false,
-      ])
-    } finally {
-      window.IntersectionObserver = OriginalObserver
-    }
+  /** Which of the stage's mockups have played. */
+  function playedMockups(section: HTMLElement) {
+    return [...section.querySelectorAll('[data-hiw-mockup]')].map((mockup) =>
+      mockup.hasAttribute('data-play')
+    )
+  }
+
+  it('plays the first step once the stage is on screen, and only that step', () => {
+    onScreen = true
+    matchOnly(WIDE_QUERY)
+    const section = renderHowItWorks()
+
+    expect(playedMockups(section)).toEqual([true, false, false])
+  })
+
+  it('opens on the step the scroll is at when the stage mounts mid-track, not on step 01', () => {
+    // The track is 2700px tall and its top has risen 1500px past the viewport's: past two thirds.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+      this: HTMLElement
+    ) {
+      return this.dataset.layout === 'sticky' ? 2700 : 0
+    })
+    const rect = HTMLElement.prototype.getBoundingClientRect
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement
+    ) {
+      return this.dataset.layout === 'sticky' ? ({ top: -1500 } as DOMRect) : rect.call(this)
+    })
+    onScreen = true
+    matchOnly(WIDE_QUERY)
+    const section = renderHowItWorks()
+    const items = within(within(section).getByRole('list')).getAllByRole('listitem')
+
+    expect(items.map((item) => item.hasAttribute('data-active'))).toEqual([false, false, true])
+    // The third step plays; the first, never active on screen, does not.
+    expect(playedMockups(section)).toEqual([false, false, true])
+  })
+
+  it('does not play a mockup again when the stage mounts again', () => {
+    onScreen = true
+    const wide = mockMediaQuery(WIDE_QUERY, true)
+    const section = renderHowItWorks()
+    expect(playedMockups(section)).toEqual([true, false, false])
+
+    // The window narrows to the cards and widens back, now with the stage out of sight.
+    act(() => wide.set(false))
+    expect(layouts(section)).toEqual(['stacked'])
+    onScreen = false
+    act(() => wide.set(true))
+
+    expect(layouts(section)).toEqual(['sticky'])
+    expect(playedMockups(section)).toEqual([true, false, false])
+  })
+
+  it('draws the mockups as the canvas does: open slots per row and a still presence dot', () => {
+    matchOnly()
+    const section = renderHowItWorks()
+    const row = (name: string) =>
+      within(section).getByText(name).closest('.bg-raised') as HTMLElement
+    const openSlots = (name: string) => row(name).querySelectorAll('[class*="bg-[#2a2b31]"]').length
+
+    expect(openSlots('Premier quinta à noite')).toBe(1)
+    expect(openSlots('Unrated sem tilt')).toBe(2)
+    // The mockups loop nothing: no avatar in them carries the board's pulsing halo.
+    expect(section.querySelector('[class*="animate-halo"]')).toBeNull()
   })
 
   it.each([
