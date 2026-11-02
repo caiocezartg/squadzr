@@ -44,8 +44,7 @@ export function SignInMockup({ mode }: MockupProps) {
     <div className="bg-card relative size-full overflow-hidden">
       <span className="bg-menu absolute inset-x-0 top-0 flex h-11 items-center gap-2 px-3.5">
         <img src="/squadzr-logo.svg" alt="" className="block w-14.5 opacity-90" />
-        <span className="font-ds-mono text-ds-muted ml-auto text-[10px]">PT</span>
-        <span data-shown={signedIn ? '' : undefined} className={FACE_SHOWN}>
+        <span data-shown={signedIn ? '' : undefined} className={`ml-auto ${FACE_SHOWN}`}>
           <Seat id="cc-2" name="caio_cz" surface="var(--color-menu)" arriving={false} />
         </span>
       </span>
