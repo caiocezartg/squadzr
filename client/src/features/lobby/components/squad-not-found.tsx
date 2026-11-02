@@ -1,5 +1,5 @@
 import { useTranslations } from 'next-intl'
-import { Compass, Plus } from 'lucide-react'
+import { LayoutGrid, Plus } from 'lucide-react'
 import { Button } from '@/components/ds/button'
 import { NoticeScreen } from '@/components/ds/notice-screen'
 
@@ -13,7 +13,6 @@ export function SquadNotFound({ code }: SquadNotFoundProps) {
 
   return (
     <NoticeScreen
-      eyebrow={t('squadNotFound.codeLabel')}
       mark={
         <span className="text-text-2 block font-mono text-[clamp(36px,9vw,64px)] leading-none font-bold tracking-[0.14em]">
           #{code}
@@ -21,8 +20,10 @@ export function SquadNotFound({ code }: SquadNotFoundProps) {
       }
       title={t('squadNotFound.title')}
       description={t('squadNotFound.description')}
+      // The shell's top bar is 3.5rem below 1024px; from there up the page has no bar above it.
+      className="min-h-[calc(100dvh-3.5rem)] lg:min-h-dvh"
     >
-      <Button href="/squads" full icon={<Compass />} className="sm:w-auto">
+      <Button href="/squads" full icon={<LayoutGrid />} className="sm:w-auto">
         {t('squadNotFound.exploreSquads')}
       </Button>
       <Button

@@ -363,7 +363,6 @@
   "squadNotFound": {
     "title": "Squad not found",
     "description": "This squad no longer exists or the code is invalid. Check the code and try again.",
-    "codeLabel": "Code entered",
     "createSquad": "Create squad",
     "exploreSquads": "Explore squads"
   },
@@ -376,8 +375,7 @@
     "title": "Page not found",
     "description": "Looks like you've wandered off the map. The page you're looking for doesn't exist or has been moved.",
     "backToHome": "Back to home",
-    "exploreSquads": "Explore squads",
-    "eyebrow": "Off the map"
+    "exploreSquads": "Explore squads"
   },
   "realtime": {
     "updating": "A new version is available. Reloading…",

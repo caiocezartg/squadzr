@@ -1,16 +1,19 @@
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Compass } from 'lucide-react'
+import { ArrowLeft, LayoutGrid } from 'lucide-react'
 import { Button } from '@/components/ds/button'
 import { NoticeScreen } from '@/components/ds/notice-screen'
 import { AppLink } from '@/components/layout/app-link'
 
-/** The App Router's not-found content. It has no motion, so it is visible in the server HTML as is. */
+/**
+ * The App Router's not-found content. It has no motion, so it is visible in the server HTML as is. The
+ * logo floats over the screen, so the content centres in the whole viewport.
+ */
 export function NotFound() {
   const t = useTranslations()
 
   return (
     <>
-      <header className="px-4 pt-6 sm:px-8">
+      <header className="absolute top-0 left-0 z-10 px-4 pt-6 sm:px-8">
         <AppLink
           href="/"
           aria-label={t('ds.shell.home')}
@@ -20,7 +23,6 @@ export function NotFound() {
         </AppLink>
       </header>
       <NoticeScreen
-        eyebrow={t('notFound.eyebrow')}
         mark={
           <span aria-hidden="true" className="type-display text-text block">
             404
@@ -28,11 +30,12 @@ export function NotFound() {
         }
         title={t('notFound.title')}
         description={t('notFound.description')}
+        className="min-h-dvh"
       >
         <Button href="/" full icon={<ArrowLeft />} className="sm:w-auto">
           {t('notFound.backToHome')}
         </Button>
-        <Button href="/squads" variant="secondary" full icon={<Compass />} className="sm:w-auto">
+        <Button href="/squads" variant="secondary" full icon={<LayoutGrid />} className="sm:w-auto">
           {t('notFound.exploreSquads')}
         </Button>
       </NoticeScreen>

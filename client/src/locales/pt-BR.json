@@ -363,7 +363,6 @@
   "squadNotFound": {
     "title": "Squad não encontrado",
     "description": "Este squad não existe mais ou o código é inválido. Verifique o código e tente novamente.",
-    "codeLabel": "Código informado",
     "createSquad": "Criar squad",
     "exploreSquads": "Explorar squads"
   },
@@ -376,8 +375,7 @@
     "title": "Página não encontrada",
     "description": "Parece que você saiu do mapa. A página que você procura não existe ou foi movida.",
     "backToHome": "Voltar ao início",
-    "exploreSquads": "Explorar squads",
-    "eyebrow": "Fora do mapa"
+    "exploreSquads": "Explorar squads"
   },
   "realtime": {
     "updating": "Uma nova versão está disponível. Recarregando…",
