@@ -1,6 +1,9 @@
 'use client'
 
-import { useEffect, type RefObject } from 'react'
+import { useEffect, useState, type RefObject } from 'react'
+
+/** The longest a browser's smooth scroll takes over the glide's distance (about a viewport). */
+const GLIDE_MAX_MS = 1_200
 
 /** A plain left click, with nothing that would open the link elsewhere. */
 function isPlainClick(event: MouseEvent): boolean {
@@ -31,14 +34,32 @@ function scrollTopFor(target: HTMLElement): number {
 }
 
 /**
- * Links to the landing's sections jump straight to them when the way there runs through the pinned
- * part of the "Como funciona" track. The smooth scroll would otherwise run the stage's steps past the
- * visitor in a blur. The jump is instant, and it lands past the track, so no mockup plays on the way.
- * Every other in-page link keeps the page's smooth scroll, and so does a link to the track itself from
- * above, whose stage is the destination.
+ * Links to the landing's sections skip the pinned part of the "Como funciona" track when the way there
+ * runs through it. The smooth scroll would otherwise run the stage's steps past the visitor in a blur.
+ * The page jumps at once to the edge of the pinned part on the far side, where the stage is released,
+ * and smooth-scrolls the rest of the way, so the visitor still glides into the section. The stage reads
+ * no step from the jump, so no mockup plays on the way. Every other in-page link keeps the page's smooth
+ * scroll, and so does a link to the track itself from above, whose stage is the destination.
+ *
+ * Returns whether a skip is under way: from the jump until the glide ends. The stage, glimpsed at its
+ * edge on the way, does not play its first step then.
  */
-export function useJumpPastTrack(track: RefObject<HTMLElement | null>): void {
+export function useJumpPastTrack(track: RefObject<HTMLElement | null>): boolean {
+  const [skipping, setSkipping] = useState(false)
+
   useEffect(() => {
+    let settle: number | undefined
+    let destination = 0
+    const settled = () => {
+      window.clearTimeout(settle)
+      window.removeEventListener('scrollend', onScrollEnd)
+      setSkipping(false)
+    }
+    // The instant jump ends a scroll of its own; only the end of the glide, at the section, settles.
+    const onScrollEnd = () => {
+      if (Math.abs(window.scrollY - destination) < 2) settled()
+    }
+
     const onClick = (event: MouseEvent) => {
       const element = track.current
       if (!element || !isPlainClick(event)) return
@@ -56,12 +77,25 @@ export function useJumpPastTrack(track: RefObject<HTMLElement | null>): void {
 
       event.preventDefault()
       window.history.pushState(null, '', anchor.href)
-      window.scrollTo({ top: to, behavior: 'instant' })
+      const skipTo = to > from ? Math.max(from, pinnedTo) : Math.min(from, pinnedFrom)
+      window.scrollTo({ top: skipTo, behavior: 'instant' })
+      if (skipTo === to) return
+      setSkipping(true)
+      window.scrollTo({ top: to, behavior: 'smooth' })
+      // The glide ends with `scrollend`; the timeout covers a browser without it.
+      destination = to
+      window.addEventListener('scrollend', onScrollEnd)
+      window.clearTimeout(settle)
+      settle = window.setTimeout(settled, GLIDE_MAX_MS)
     }
 
     document.addEventListener('click', onClick)
     return () => {
       document.removeEventListener('click', onClick)
+      window.removeEventListener('scrollend', onScrollEnd)
+      window.clearTimeout(settle)
     }
   }, [track])
+
+  return skipping
 }

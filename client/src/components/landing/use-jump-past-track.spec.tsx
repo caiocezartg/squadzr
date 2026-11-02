@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useJumpPastTrack } from './use-jump-past-track'
 
@@ -23,6 +23,7 @@ function clickLinkTo(id: string, init: MouseEventInit = {}): boolean {
 }
 
 let scrollTo: ReturnType<typeof vi.spyOn>
+let skipping: () => boolean
 
 beforeEach(() => {
   // The track is pinned from 2000 to 2000 + 2700 - the viewport (768 in jsdom).
@@ -30,7 +31,10 @@ beforeEach(() => {
   placed('jogos', 900, 600)
   placed('faq', 4700, 800)
   scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
-  renderHook(() => useJumpPastTrack({ current: track }))
+  // A stable ref, as the stage's `useRef` is.
+  const ref = { current: track }
+  const { result } = renderHook(() => useJumpPastTrack(ref))
+  skipping = () => result.current
 })
 
 afterEach(() => {
@@ -39,11 +43,52 @@ afterEach(() => {
 })
 
 describe('useJumpPastTrack', () => {
-  it('jumps straight to a section past the track, and puts it in the address', () => {
+  it('skips the pinned part to a section past the track, then glides in, and puts it in the address', () => {
     expect(clickLinkTo('faq')).toBe(true)
 
-    expect(scrollTo).toHaveBeenCalledWith({ top: 4700, behavior: 'instant' })
+    // 3932 is where the stage is released: 2000 + 2700 - 768.
+    expect(scrollTo.mock.calls).toEqual([
+      [{ top: 3932, behavior: 'instant' }],
+      [{ top: 4700, behavior: 'smooth' }],
+    ])
     expect(window.location.hash).toBe('#faq')
+  })
+
+  it('skips the pinned part on the way up too, from the track start', () => {
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(5000)
+    // The layout is read from the viewport, which has moved with the page.
+    for (const element of document.querySelectorAll('section')) {
+      const top = (element.getBoundingClientRect() as DOMRect).top
+      vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({ top: top - 5000 } as DOMRect)
+    }
+
+    expect(clickLinkTo('jogos')).toBe(true)
+
+    expect(scrollTo.mock.calls).toEqual([
+      [{ top: 2000, behavior: 'instant' }],
+      [{ top: 900, behavior: 'smooth' }],
+    ])
+  })
+
+  it('is skipping from the jump until the glide ends at the section', () => {
+    expect(skipping()).toBe(false)
+    act(() => {
+      clickLinkTo('faq')
+    })
+    expect(skipping()).toBe(true)
+
+    // The instant jump ends a scroll of its own, short of the section: still skipping.
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(3932)
+    act(() => {
+      window.dispatchEvent(new Event('scrollend'))
+    })
+    expect(skipping()).toBe(true)
+
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(4700)
+    act(() => {
+      window.dispatchEvent(new Event('scrollend'))
+    })
+    expect(skipping()).toBe(false)
   })
 
   it('leaves a link that does not cross the track to the smooth scroll', () => {

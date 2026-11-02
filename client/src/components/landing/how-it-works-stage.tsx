@@ -85,7 +85,7 @@ export function HowItWorksStage({ heading, steps, played, onPlayed }: HowItWorks
   const track = useRef<HTMLDivElement>(null)
   const stage = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target: track, offset: ['start start', 'end end'] })
-  const stageInView = useInView(stage, { once: true, amount: FIRST_PLAY_AMOUNT })
+  const stageInView = useInView(stage, { amount: FIRST_PLAY_AMOUNT })
   const [active, setActive] = useState(0)
 
   /** The step at `progress` becomes active, and plays once the track has reached the top. */
@@ -97,7 +97,7 @@ export function HowItWorksStage({ heading, steps, played, onPlayed }: HowItWorks
     if (progress > 0 && progress < 1 && !played[step]) onPlayed(step)
   }
 
-  useJumpPastTrack(track)
+  const skipping = useJumpPastTrack(track)
 
   // motion measures the track on the next frame. A stage that mounts mid-track (a restored scroll, or
   // the window widening past 1024px) reads its progress once before the first paint instead, so it
@@ -113,7 +113,8 @@ export function HowItWorksStage({ heading, steps, played, onPlayed }: HowItWorks
 
   // Before the track reaches the top, the first step plays once most of the stage is on screen, and
   // only while it is the active step: a stage reached mid-track never plays a step out of sight.
-  const playFirstStep = stageInView && active === 0 && !played[0]
+  // A stage glimpsed while a link skips past it does not count.
+  const playFirstStep = stageInView && active === 0 && !played[0] && !skipping
   useEffect(() => {
     if (playFirstStep) onPlayed(0)
   }, [playFirstStep, onPlayed])
