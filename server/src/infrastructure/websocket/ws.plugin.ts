@@ -72,6 +72,9 @@ async function wsPlugin(
     })
     const invalid = new InvalidMessages(fastify.clock)
     const rate = new MessageRate(fastify.clock)
+    // A socket that keeps sending past its rate is looping, not lagging: it is closed like one that keeps
+    // sending invalid frames.
+    const refused = new InvalidMessages(fastify.clock)
     let inFlight = 0
 
     function dispatch(message: WsIncomingMessage): void | Promise<void> {
@@ -129,6 +132,7 @@ async function wsPlugin(
           'WebSocket message rate exceeded'
         )
         sendError(socket, 'TOO_MANY_REQUESTS', 'Too many messages', manager, fastify.clock)
+        if (refused.record() >= INVALID_MESSAGE_LIMIT) socket.close(1008, 'Too many messages')
         return
       }
       if (inFlight >= SOCKET_OPERATION_LIMIT) {

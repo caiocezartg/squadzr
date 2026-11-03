@@ -64,22 +64,7 @@ describe('serverApi.get credentials', () => {
     expect(new Headers(sentInit(fetchMock).headers).has('cookie')).toBe(false)
   })
 
-  it("forwards the incoming request's x-forwarded-for on a viewer call", async () => {
-    const fetchMock = stubFetch(jsonResponse({ ok: true }))
-
-    await serverApi.get('/api/me', schema, {
-      credentials: 'viewer',
-      caching: 'uncached',
-      cookie: null,
-      forwardedFor: '203.0.113.7, 10.0.0.1',
-    })
-
-    expect(new Headers(sentInit(fetchMock).headers).get('x-forwarded-for')).toBe(
-      '203.0.113.7, 10.0.0.1'
-    )
-  })
-
-  it('sends no x-forwarded-for for a viewer request that has none', async () => {
+  it("never sends the viewer's address, which the API would not believe", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       jsonResponse({ ok: true })
     )
@@ -89,31 +74,12 @@ describe('serverApi.get credentials', () => {
       credentials: 'viewer',
       caching: 'uncached',
       cookie: 'a=b',
-      forwardedFor: null,
     })
-    await serverApi.get('/api/me', schema, {
-      credentials: 'viewer',
-      caching: 'uncached',
-      cookie: 'a=b',
-    })
+    await serverApi.get('/api/public', schema, { credentials: 'anonymous', caching: 'uncached' })
 
     for (const [, init] of fetchMock.mock.calls) {
       expect(new Headers(init?.headers).has('x-forwarded-for')).toBe(false)
     }
-  })
-
-  it('never sends x-forwarded-for on an anonymous call', async () => {
-    const fetchMock = stubFetch(jsonResponse({ ok: true }))
-    // A viewer-only field slipping past the types must not leak into an anonymous call.
-    const policy = {
-      credentials: 'anonymous',
-      caching: 'uncached',
-      forwardedFor: '203.0.113.7',
-    } as const
-
-    await serverApi.get('/api/public', schema, policy)
-
-    expect(new Headers(sentInit(fetchMock).headers).has('x-forwarded-for')).toBe(false)
   })
 
   it('calls the internal API URL with the path and its query', async () => {

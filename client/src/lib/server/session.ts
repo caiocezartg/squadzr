@@ -22,20 +22,17 @@ const betterAuthErrorSchema = z.object({
 })
 
 /**
- * Reads the session of the viewer who sent `cookie` from `forwardedFor`. A `null` body and a 401
+ * Reads the session of the viewer who sent `cookie`. A `null` body and a 401
  * both mean signed out; a 200 whose body breaks the contract throws. Any other failure is logged
  * once and the page renders signed out, so the browser's check corrects it. A network error, a
  * timeout or a 5xx is retried once first; a refused request (a 429 included) is not.
  */
-async function loadSession(
-  cookie: string | null,
-  forwardedFor: string | null = null
-): Promise<SessionDto | null> {
+async function loadSession(cookie: string | null): Promise<SessionDto | null> {
   let lastFailure: unknown
 
   for (let attempt = 1; attempt <= SESSION_TRIES; attempt += 1) {
     try {
-      return await readSession(cookie, forwardedFor)
+      return await readSession(cookie)
     } catch (error) {
       if (isMalformedSuccess(error)) throw error
       lastFailure = error
@@ -54,15 +51,12 @@ async function loadSession(
  * One try at the session, bounded by the timeout. A 401 is signed out; anything else is either an
  * answer or an error for the caller to retry or rethrow.
  */
-async function readSession(
-  cookie: string | null,
-  forwardedFor: string | null
-): Promise<SessionDto | null> {
+async function readSession(cookie: string | null): Promise<SessionDto | null> {
   try {
     return await serverApi.get(
       GET_SESSION_PATH,
       sessionResponseSchema,
-      { credentials: 'viewer', caching: 'uncached', cookie, forwardedFor },
+      { credentials: 'viewer', caching: 'uncached', cookie },
       { timeoutMs: SESSION_TIMEOUT_MS, errorSchema: betterAuthErrorSchema }
     )
   } catch (error) {
@@ -71,13 +65,10 @@ async function readSession(
   }
 }
 
-/**
- * The session of the current request. React's cache makes every server component share one read.
- * The viewer's `x-forwarded-for` goes along so Fastify rate-limits the viewer, not the Next server.
- */
+/** The session of the current request. React's cache makes every server component share one read. */
 export const getRequestSession = cache(async () => {
   const requestHeaders = await headers()
-  return loadSession(requestHeaders.get('cookie'), requestHeaders.get('x-forwarded-for'))
+  return loadSession(requestHeaders.get('cookie'))
 })
 
 /**

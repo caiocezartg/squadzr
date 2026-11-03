@@ -15,6 +15,24 @@ export interface AuthPluginOptions {
   config: AuthConfig
 }
 
+/**
+ * The headers Better Auth reads. It takes the client address from the leftmost x-forwarded-for entry,
+ * which the client writes itself, and keys its sign-in rate limit on it; so the header carries only the
+ * address Fastify resolved through the trusted proxy hops.
+ */
+export function authRequestHeaders(
+  incoming: Record<string, string | string[] | undefined>,
+  clientIp: string
+): Headers {
+  const headers = new Headers()
+  for (const [key, value] of Object.entries(incoming)) {
+    if (!value || key.toLowerCase() === 'x-forwarded-for') continue
+    headers.append(key, Array.isArray(value) ? value.join(', ') : value)
+  }
+  headers.set('x-forwarded-for', clientIp)
+  return headers
+}
+
 async function authPlugin(fastify: FastifyInstance, options: AuthPluginOptions): Promise<void> {
   const auth = createAuth(fastify.db, options.config)
 
@@ -30,10 +48,7 @@ async function authPlugin(fastify: FastifyInstance, options: AuthPluginOptions):
       try {
         const url = new URL(request.url, `http://${request.headers.host}`)
 
-        const headers = new Headers()
-        Object.entries(request.headers).forEach(([key, value]) => {
-          if (value) headers.append(key, Array.isArray(value) ? value.join(', ') : value)
-        })
+        const headers = authRequestHeaders(request.headers, request.ip)
 
         const req = new Request(url.toString(), {
           method: request.method,

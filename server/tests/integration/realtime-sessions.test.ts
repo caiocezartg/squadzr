@@ -1,6 +1,10 @@
 import { eq } from 'drizzle-orm'
+import { SESSION_ENDED_CLOSE_CODE as SESSION_ENDED } from '@squadzr/schemas/ws'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MESSAGE_RATE_LIMIT } from '@infrastructure/websocket/message-rate'
+import { INVALID_MESSAGE_LIMIT } from '@infrastructure/websocket/invalid-messages'
+import { DrizzleActiveSessions } from '@infrastructure/services/drizzle-active-sessions'
+import { SystemClock } from '@infrastructure/services/system-clock'
 import { session } from '@infrastructure/database/schema'
 import { signIn, type TestUser } from '@test/harness/auth'
 import { connect } from '@test/harness/realtime'
@@ -8,8 +12,6 @@ import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
 // A socket keeps the session it opened with. Once that session ends (sign-out or
 // expiry), the socket must stop receiving the member's lobby and notifications.
-
-const SESSION_ENDED = 4001
 
 let server: TestServer
 let player: TestUser
@@ -72,6 +74,20 @@ describe('realtime sessions', () => {
   })
 })
 
+describe('active sessions', () => {
+  it('finds a live session among more ids than one query takes', async () => {
+    const [row] = await server.app.db
+      .select({ id: session.id })
+      .from(session)
+      .where(eq(session.userId, player.id))
+    const ids = [...Array.from({ length: 1_500 }, (_, i) => `missing-${i}`), row!.id]
+
+    const active = await new DrizzleActiveSessions(server.app.db, new SystemClock()).findActive(ids)
+
+    expect([...active]).toEqual([row!.id])
+  })
+})
+
 describe('realtime message rate', () => {
   it('refuses messages beyond the rate a socket may send', async () => {
     const tab = await connect(server, player)
@@ -91,5 +107,18 @@ describe('realtime message rate', () => {
       }),
     ])
     tab.client.close()
+  })
+
+  it('closes a socket that keeps sending past its rate', async () => {
+    const tab = await connect(server, player)
+    for (let sent = 0; sent < MESSAGE_RATE_LIMIT; sent++) {
+      tab.send({ type: 'unsubscribe_lobby' })
+      if (sent % 5 === 4) await tab.drain()
+    }
+
+    for (let refused = 0; refused < INVALID_MESSAGE_LIMIT; refused++)
+      tab.send({ type: 'unsubscribe_lobby' })
+
+    expect(await tab.serverClosed).toEqual({ code: 1008, reason: 'Too many messages' })
   })
 })

@@ -12,13 +12,13 @@ const LOBBY_TIMEOUT_MS = 2_000
  * the member view to a member. It is not cached: it is that viewer's, or read for a Squad that may
  * change at any moment. The response carries the Squad's game summary.
  */
-export function viewerSquadSource({ cookie, forwardedFor }: RequestViewer): SquadSource {
+export function viewerSquadSource({ cookie }: RequestViewer): SquadSource {
   return {
     readSquad: (squadCode) =>
       serverApi.get(
         `/api/rooms/${encodeURIComponent(squadCode)}`,
         roomResponseSchema,
-        { credentials: 'viewer', caching: 'uncached', cookie, forwardedFor },
+        { credentials: 'viewer', caching: 'uncached', cookie },
         { timeoutMs: LOBBY_TIMEOUT_MS }
       ),
   }

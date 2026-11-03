@@ -1,4 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify'
+import { SESSION_ENDED_CLOSE_CODE } from '@squadzr/schemas/ws'
 import type { Database } from '@infrastructure/database/drizzle'
 import type { Clock } from '@domain/services/clock.interface'
 import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
@@ -19,8 +20,16 @@ import type { ConnectionInspection, Realtime } from '@infrastructure/websocket/t
 
 /** How often the live sockets' sign-in sessions are checked. */
 const SESSION_CHECK_INTERVAL_MS = 30_000
-/** Close code of a socket whose session ended; not terminal, so the app reconnects as a visitor. */
-const SESSION_ENDED_CLOSE_CODE = 4001
+/** A session check that has not answered by then is abandoned, so a stuck query cannot stop later checks. */
+const SESSION_CHECK_TIMEOUT_MS = 5_000
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Timed out after ${ms} ms`)), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
 
 export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogger): Realtime {
   const operations = new OrderedOperations()
@@ -88,13 +97,22 @@ export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogge
     if (sockets.length === 0) return
     checkingSessions = true
     try {
-      const active = await activeSessions.findActive([...new Set(sockets.map((s) => s.sessionId))])
+      const active = await withTimeout(
+        activeSessions.findActive([...new Set(sockets.map((s) => s.sessionId))]),
+        SESSION_CHECK_TIMEOUT_MS
+      )
       for (const { socket, sessionId } of sockets) {
         if (active.has(sessionId) || !manager.isConnected(socket)) continue
         log.info({ category: 'transport', event: 'session_ended' }, 'WebSocket session ended')
         disconnect(socket)
         socket.close(SESSION_ENDED_CLOSE_CODE, 'Session ended')
       }
+    } catch (error) {
+      // The sockets stay as they are; the next check, 30 s later, tries again.
+      log.error(
+        { err: error, category: 'transport', event: 'session_check_failed' },
+        'WebSocket session check failed'
+      )
     } finally {
       checkingSessions = false
     }

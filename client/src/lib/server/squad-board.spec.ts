@@ -23,7 +23,7 @@ function sentInit(fetchMock: ReturnType<typeof stubFetch>): RecordedInit {
   return fetchMock.mock.calls[0]?.[1] as RecordedInit
 }
 
-const VIEWER = { cookie: 'better-auth.session_token=abc', forwardedFor: '203.0.113.7' }
+const VIEWER = { cookie: 'better-auth.session_token=abc' }
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -31,7 +31,7 @@ afterEach(() => {
 })
 
 describe('loadSquadBoard', () => {
-  it('forwards the viewer cookie and client IP to Fastify', async () => {
+  it('forwards the viewer cookie to Fastify, and not their address', async () => {
     const fetchMock = stubFetch(jsonResponse(boardSquads))
 
     await loadSquadBoard(VIEWER)
@@ -39,13 +39,13 @@ describe('loadSquadBoard', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe(`${API_INTERNAL_URL}/api/rooms`)
     const headers = new Headers(sentInit(fetchMock).headers)
     expect(headers.get('cookie')).toBe(VIEWER.cookie)
-    expect(headers.get('x-forwarded-for')).toBe(VIEWER.forwardedFor)
+    expect(headers.get('x-forwarded-for')).toBeNull()
   })
 
   it('sends no cookie for a signed-out viewer', async () => {
     const fetchMock = stubFetch(jsonResponse(boardSquads))
 
-    await loadSquadBoard({ cookie: null, forwardedFor: null })
+    await loadSquadBoard({ cookie: null })
 
     const headers = new Headers(sentInit(fetchMock).headers)
     expect(headers.get('cookie')).toBeNull()

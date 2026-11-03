@@ -26,6 +26,8 @@ const wsMessageTypeSchema = z.enum([
 
 export const REALTIME_PROTOCOL_VERSION = 3
 export const WS_MAX_PAYLOAD_BYTES = 16 * 1024
+/** Close code of a socket whose sign-in session was signed out or expired; the app reconnects as a visitor. */
+export const SESSION_ENDED_CLOSE_CODE = 4001
 
 const baseWsMessageSchema = z.object({
   type: wsMessageTypeSchema,

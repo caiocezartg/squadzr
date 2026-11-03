@@ -23,9 +23,9 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 35     | 230   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 34     | 340   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 905   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 36     | 234   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 35     | 344   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 907   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -62,6 +62,21 @@ allows instead of 64, so the in-flight limit alone refuses them; it measures 34 
 `client:unit` replaces the headers case of `next-config.spec.ts` with three (the baseline headers with
 HSTS, the production Content-Security-Policy, eval allowed in development), so it measures 87 files / 905
 tests.
+
+Its review round hands Better Auth only the trusted address and keeps the Next server out of the
+visitor's address. `server:unit` gains `auth.plugin.spec.ts` (+1 file / 3 tests: the trusted address
+replaces the one the client wrote, is set when none came, and every other header is kept) and the empty
+`TRUST_PROXY_HOPS` refused in `env.spec.ts` (+1), so it measures 36 files / 234 tests.
+`server:integration` gains `auth-rate-limit.test.ts` (+1 file / 2 tests: sign-in limited by the address the
+proxy saw whatever the client wrote, and the session read never limited) and two cases in
+`realtime-sessions.test.ts` (a live session found among more ids than one query takes, and a socket that
+keeps sending past its rate closed with 1008), so it measures 35 files / 344 tests. `client:unit` folds the
+three `x-forwarded-for` cases of `api.spec.ts` into one (the viewer's address is never sent, −2), rewrites
+the forwarding cases of `session.spec.ts`, `my-squads.spec.ts`, `squad-board.spec.ts` and
+`server-squad-source.spec.ts` to assert the header is absent, and adds two cases to `ws-client.spec.ts` (a
+session end reported and a reconnect still made, no report for any other close) and two to
+`realtime-protocol.spec.tsx` (the page reloads once without the update notice when the server ends the
+session, and not on a dropped socket), so it measures 87 files / 907 tests.
 
 Suites are test files. The counts above are the current inventory, last recounted by CCC-118 on
 2026-11-02 (above). The 2026-10-25 recount ran on the merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104 and CCC-105. CCC-104 puts `memberPreview` on every Squad and orders the roster: it adds `tests/integration/member-preview.test.ts` (+1 file / +9 tests: the preview on the list, the single read for non-members and members, My Squads, `POST /api/rooms` with `room_created`, and `room_snapshot`, with its content, the limit of five and the order), the contract cases in `schemas:unit` (+8), the use-case, projection and ordering cases in `server:unit` (+5), and updates the client fixtures without adding client tests. CCC-90 adds the

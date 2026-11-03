@@ -18,7 +18,7 @@ describe('TRUST_PROXY_HOPS', () => {
     expect(parseEnv({ ...REQUIRED_ENV, TRUST_PROXY_HOPS: '0' }).TRUST_PROXY_HOPS).toBe(0)
   })
 
-  it.each(['-1', '1.5', 'true'])('refuses %s', (value) => {
+  it.each(['-1', '1.5', 'true', ''])('refuses %j', (value) => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(() => parseEnv({ ...REQUIRED_ENV, TRUST_PROXY_HOPS: value })).toThrow()
   })

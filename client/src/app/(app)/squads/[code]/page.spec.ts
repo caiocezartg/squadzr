@@ -13,7 +13,7 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 vi.mock('@/lib/server/viewer', () => ({
-  getRequestViewer: async () => ({ cookie: null, forwardedFor: null }),
+  getRequestViewer: async () => ({ cookie: null }),
 }))
 
 const params = (code: string) => ({ params: Promise.resolve({ code }) })

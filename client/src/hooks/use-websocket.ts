@@ -10,7 +10,7 @@ import {
   type RealtimeStatus,
   type RealtimeSubscription,
 } from '@/lib/ws-client'
-import { reloadToMatchingBuild } from '@/lib/realtime-update'
+import { reloadAfterSessionEnded, reloadToMatchingBuild } from '@/lib/realtime-update'
 
 interface UseWebSocketReturn {
   status: RealtimeStatus
@@ -29,14 +29,18 @@ const noop = () => {
 /**
  * Opens the realtime connection of a screen. The socket lives for the mount and reconnects on its
  * own; the screen only sends frames and registers handlers. A protocol mismatch reloads the app
- * into the matching build.
+ * into the matching build, and a session the server ended reloads it signed out.
  */
 export function useWebSocket(url: string): UseWebSocketReturn {
   const [status, setStatus] = useState<RealtimeStatus>('closed')
   const clientRef = useRef<WebSocketClient | null>(null)
 
   useEffect(() => {
-    const client = new WebSocketClient({ url, onProtocolFailure: reloadToMatchingBuild })
+    const client = new WebSocketClient({
+      url,
+      onProtocolFailure: reloadToMatchingBuild,
+      onSessionEnded: reloadAfterSessionEnded,
+    })
 
     clientRef.current = client
     const unsubscribeStatus = client.onStatusChange(setStatus)

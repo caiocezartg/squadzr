@@ -18,8 +18,6 @@ export type RequestPolicy =
       readonly credentials: 'viewer'
       readonly caching: 'uncached'
       readonly cookie: string | null
-      /** The viewer's `x-forwarded-for`, so Fastify rate-limits the viewer and not the Next server. */
-      readonly forwardedFor?: string | null
     }
 
 type ServerFetchInit = RequestInit & { next?: { revalidate: number } }
@@ -41,12 +39,14 @@ export interface GetOptions {
   readonly errorSchema?: z.ZodType<ErrorBody>
 }
 
-/** The fetch options a policy stands for. The cookie and the client IP go out only with a viewer call. */
+/**
+ * The fetch options a policy stands for. The cookie goes out only with a viewer call. The viewer's
+ * address does not: the API believes only the address its own edge proxy saw.
+ */
 function requestInit(policy: RequestPolicy, { timeoutMs }: GetOptions): ServerFetchInit {
   const headers = new Headers({ accept: 'application/json' })
   if (policy.credentials === 'viewer') {
     if (policy.cookie) headers.set('cookie', policy.cookie)
-    if (policy.forwardedFor) headers.set('x-forwarded-for', policy.forwardedFor)
   }
   // The signal runs until the body is read too, so a stalled body rejects like a dropped connection.
   const signal = timeoutMs === undefined ? undefined : AbortSignal.timeout(timeoutMs)

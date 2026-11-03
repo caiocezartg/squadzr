@@ -210,15 +210,13 @@ describe('getRequestSession', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it("forwards the viewer's x-forwarded-for, and nothing when it has none", async () => {
+  it("does not pass the viewer's x-forwarded-for on, which the API would not believe", async () => {
     const fetchMock = stubFetch('null')
 
     await readSession('better-auth.session_token=abc', '203.0.113.7')
-    await readSession('better-auth.session_token=abc')
 
-    const sent = fetchMock.mock.calls.map(([, init]) => new Headers(init?.headers))
-    expect(sent[0]?.get('x-forwarded-for')).toBe('203.0.113.7')
-    expect(sent[1]?.has('x-forwarded-for')).toBe(false)
+    const sent = new Headers(fetchMock.mock.calls[0]?.[1]?.headers)
+    expect(sent.has('x-forwarded-for')).toBe(false)
   })
 
   it('does not retry a null body', async () => {

@@ -34,6 +34,15 @@ function claimReloadAttempt(now: number): boolean {
 }
 
 /**
+ * Reloads after the server closed the socket because the viewer's session ended (signed out in another
+ * tab, or expired), so the page stops showing what only a signed-in member may see. The reloaded page
+ * opens its socket without that session, so the server never ends it again: no loop is possible.
+ */
+export function reloadAfterSessionEnded(): void {
+  window.location.reload()
+}
+
+/**
  * Reloads so the client fetches the matching build, at most once per cooldown
  * window per tab. A divergence that repeats inside the window (a server
  * announcing another version persistently, a stale cached page, a repeated bad

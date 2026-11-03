@@ -15,6 +15,7 @@ import { httpOk, onHttp } from './http-router'
 import { boardSquads, openSquad } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
+import { SESSION_ENDED_CLOSE_CODE } from '@squadzr/schemas/ws'
 import { setRealtimeUpdateNotice } from '@/lib/realtime-update-store'
 
 const originalLocation = window.location
@@ -205,5 +206,30 @@ describe('realtime protocol reload bound', () => {
     await user.click(screen.getByRole('button', { name: 'Reload' }))
 
     expect(reload).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('session ended by the server', () => {
+  it('reloads once, without the update notice, when the server closes the socket for an ended session', async () => {
+    const reload = stubReload()
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
+
+    openLatestWebSocket()
+    act(() => latestWebSocket().close(SESSION_ENDED_CLOSE_CODE))
+
+    expect(reload).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText(RELOADING_NOTICE)).not.toBeInTheDocument()
+  })
+
+  it('does not reload when the socket merely drops', async () => {
+    const reload = stubReload()
+    renderSquadsFlow('/squads')
+    await screen.findByText(openSquad.name)
+
+    openLatestWebSocket()
+    act(() => latestWebSocket().close(1006))
+
+    expect(reload).not.toHaveBeenCalled()
   })
 })

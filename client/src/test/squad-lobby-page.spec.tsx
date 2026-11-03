@@ -40,7 +40,7 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
 
 // The viewer's cookies and address come from a request, which the suite does not have.
 vi.mock('@/lib/server/viewer', () => ({
-  getRequestViewer: async () => ({ cookie: null, forwardedFor: null }),
+  getRequestViewer: async () => ({ cookie: null }),
 }))
 
 /** A promise the test settles by hand, for a read the test holds back. */

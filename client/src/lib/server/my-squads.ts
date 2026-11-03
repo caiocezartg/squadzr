@@ -22,7 +22,6 @@ export async function loadMySquads(viewer: RequestViewer): Promise<MyRoomsRespon
         credentials: 'viewer',
         caching: 'uncached',
         cookie: viewer.cookie,
-        forwardedFor: viewer.forwardedFor,
       },
       { timeoutMs: MY_SQUADS_TIMEOUT_MS }
     )
