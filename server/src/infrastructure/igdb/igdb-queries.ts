@@ -12,7 +12,7 @@ export const IGDB_PAGE_SIZE = 500
 export const IGDB_POPULARITY_TYPE_PLAYING = 3
 export const IGDB_POPULARITY_TYPE_STEAM_PEAK = 5
 
-/** Two rows per game at most (one per type), so 250 ids never exceed the 500-row limit. */
+/** Ids per popularity query; each batch is still paged, so extra rows are never cut off. */
 export const IGDB_POPULARITY_BATCH_SIZE = 250
 
 const GAME_FIELDS = [
@@ -69,11 +69,16 @@ export function buildCuratedGamesQuery(igdbIds: readonly number[]): string {
   ].join(' ')
 }
 
-/** The Playing and Steam Peak rows of up to {@link IGDB_POPULARITY_BATCH_SIZE} games. */
-export function buildPopularityPrimitivesQuery(igdbIds: readonly number[]): string {
+/**
+ * One page of the Playing and Steam Peak rows of up to
+ * {@link IGDB_POPULARITY_BATCH_SIZE} games, sorted by id so offsets are stable.
+ */
+export function buildPopularityPrimitivesQuery(igdbIds: readonly number[], offset = 0): string {
   return [
     'fields game_id,popularity_type,value;',
     `where popularity_type = (${IGDB_POPULARITY_TYPE_PLAYING},${IGDB_POPULARITY_TYPE_STEAM_PEAK}) & game_id = (${igdbIds.join(',')});`,
     `limit ${IGDB_PAGE_SIZE};`,
+    `offset ${offset};`,
+    'sort id asc;',
   ].join(' ')
 }

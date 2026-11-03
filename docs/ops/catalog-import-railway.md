@@ -22,9 +22,9 @@ migration (`bun --no-env-file src/interface/scripts/migrate.ts`), and the schedu
 changes never deploy or run the import. Railway runs cron schedules in UTC.
 
 Besides the games pages, each run calls IGDB's `popularity_primitives` endpoint once per batch of
-250 candidates to read the Playing and Steam Peak signals behind the stored popularity: about 14
-extra requests at the current catalog size, through the same pacer (4 requests per second) and
-retry as the games pages. The run still uses one Twitch token and no new variable.
+250 candidates to read the Playing and Steam Peak signals behind the stored popularity: about 7
+extra requests at the current catalog size (each batch is paged, so a batch past 500 rows costs one
+more), through the same pacer (4 requests per second) and retry as the games pages. The run still uses one Twitch token and no new variable.
 
 It uses Railway Infrastructure as Code rather than the older Config as Code (`railway.json` with a
 per-service config path): Railway deprecated Config as Code, new services cannot opt in, and the

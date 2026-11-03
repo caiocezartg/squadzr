@@ -128,7 +128,8 @@ function imageUrl(imageId: string, size: 'cover_big_2x' | 'cover_small_2x'): str
 /**
  * The IGDB implementation of the Game Catalog Source (CCC-90): one Twitch app
  * access token per run, paced and retried IGDB v4 games pages, the popularity
- * primitives of every candidate, and IGDB image URLs. This is the only module that talks to IGDB or builds IGDB URLs.
+ * primitives of every candidate, and IGDB image URLs. This is the only module
+ * that talks to IGDB or builds IGDB URLs.
  */
 export class IgdbGameCatalogSource implements IGameCatalogSource {
   private readonly fetchImpl: typeof globalThis.fetch
@@ -206,26 +207,31 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
     return this.requestGamesPage(accessToken, query)
   }
 
-  /** Playing and Steam Peak rows of every candidate, in batches under the row limit. */
+  /** Playing and Steam Peak rows of every candidate, batched by id and paged within each batch. */
   private async fetchPopularitySignals(
     accessToken: string,
     igdbIds: readonly number[]
   ): Promise<Map<number, GamePopularitySignals>> {
     const rows: IgdbPopularityPrimitive[] = []
     for (const batch of chunk(igdbIds, IGDB_POPULARITY_BATCH_SIZE)) {
-      rows.push(...(await this.requestPopularityPrimitives(accessToken, batch)))
+      for (let offset = 0; ; offset += IGDB_PAGE_SIZE) {
+        const page = await this.requestPopularityPrimitives(accessToken, batch, offset)
+        rows.push(...page)
+        if (page.length < IGDB_PAGE_SIZE) break
+      }
     }
     return toSignalsByGame(rows)
   }
 
   private async requestPopularityPrimitives(
     accessToken: string,
-    igdbIds: readonly number[]
+    igdbIds: readonly number[],
+    offset: number
   ): Promise<IgdbPopularityPrimitive[]> {
     const response = await this.postQuery(
       IGDB_POPULARITY_PRIMITIVES_URL,
       accessToken,
-      buildPopularityPrimitivesQuery(igdbIds)
+      buildPopularityPrimitivesQuery(igdbIds, offset)
     )
 
     const payload: unknown = await response.json()

@@ -318,7 +318,7 @@ describe('IgdbGameCatalogSource', () => {
       'Bearer app-access-token'
     )
     expect(bodyOf(primitives!)).toBe(
-      'fields game_id,popularity_type,value; where popularity_type = (3,5) & game_id = (11,12); limit 500;'
+      'fields game_id,popularity_type,value; where popularity_type = (3,5) & game_id = (11,12); limit 500; offset 0; sort id asc;'
     )
     expect(tokenRequests(harness.requests)).toHaveLength(1)
   })
@@ -338,6 +338,39 @@ describe('IgdbGameCatalogSource', () => {
       return ids.length
     })
     expect(batches).toEqual([250, 250, 1])
+  })
+
+  it('pages a primitives batch until a short page, so rows past the 500-row limit are kept', async () => {
+    const harness = createHarness(
+      (request) =>
+        request.url === TOKEN_URL
+          ? tokenResponse()
+          : Response.json([game({ id: 51 }), game({ id: 52, name: 'Game 52', slug: 'game-52' })]),
+      {
+        primitives: (request) =>
+          bodyOf(request).includes('offset 0;')
+            ? Response.json(
+                Array.from({ length: PAGE_SIZE }, (_, index) => ({
+                  game_id: 51,
+                  popularity_type: 3,
+                  value: index,
+                }))
+              )
+            : Response.json([{ game_id: 52, popularity_type: 5, value: 4_000 }]),
+      }
+    )
+
+    const { candidates } = await harness.source.fetchCandidates()
+
+    expect(
+      primitivesRequests(harness.requests).map(
+        (request) => /offset (\d+);/.exec(bodyOf(request))![1]
+      )
+    ).toEqual(['0', '500'])
+    expect(candidates.map((candidate) => [candidate.igdbId, candidate.popularitySignals])).toEqual([
+      [51, { playing: PAGE_SIZE - 1, steamPeakPlayers: null }],
+      [52, { playing: null, steamPeakPlayers: 4_000 }],
+    ])
   })
 
   it('does not query primitives for games that were dropped as invalid or when there are none', async () => {
