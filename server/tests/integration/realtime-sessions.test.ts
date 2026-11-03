@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { SESSION_ENDED_CLOSE_CODE as SESSION_ENDED } from '@squadzr/schemas/ws'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MESSAGE_RATE_LIMIT } from '@infrastructure/websocket/message-rate'
+import { MESSAGE_RATE_LIMIT, PING_RATE_LIMIT } from '@infrastructure/websocket/message-rate'
 import { INVALID_MESSAGE_LIMIT } from '@infrastructure/websocket/invalid-messages'
 import { DrizzleActiveSessions } from '@infrastructure/services/drizzle-active-sessions'
 import { SystemClock } from '@infrastructure/services/system-clock'
@@ -118,6 +118,18 @@ describe('realtime message rate', () => {
 
     for (let refused = 0; refused < INVALID_MESSAGE_LIMIT; refused++)
       tab.send({ type: 'unsubscribe_lobby' })
+
+    expect(await tab.serverClosed).toEqual({ code: 1008, reason: 'Too many messages' })
+  })
+
+  it('answers pings up to their own rate, then closes a socket that keeps pinging', async () => {
+    const tab = await connect(server, player)
+    for (let sent = 0; sent < PING_RATE_LIMIT; sent++) {
+      tab.send({ type: 'ping' })
+      expect((await tab.next()).type).toBe('pong')
+    }
+
+    for (let refused = 0; refused < INVALID_MESSAGE_LIMIT; refused++) tab.send({ type: 'ping' })
 
     expect(await tab.serverClosed).toEqual({ code: 1008, reason: 'Too many messages' })
   })

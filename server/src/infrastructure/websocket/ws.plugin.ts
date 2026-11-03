@@ -5,7 +5,7 @@ import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interfa
 import { AppError } from '@application/errors'
 import { parseIncomingMessage } from './incoming-message'
 import { InvalidMessages, INVALID_MESSAGE_LIMIT } from './invalid-messages'
-import { MessageRate } from './message-rate'
+import { MessageRate, PING_RATE_LIMIT } from './message-rate'
 import type { Realtime, WsClient } from './types'
 import {
   handleJoinRoom,
@@ -72,6 +72,7 @@ async function wsPlugin(
     })
     const invalid = new InvalidMessages(fastify.clock)
     const rate = new MessageRate(fastify.clock)
+    const pingRate = new MessageRate(fastify.clock, PING_RATE_LIMIT)
     // A socket that keeps sending past its rate is looping, not lagging: it is closed like one that keeps
     // sending invalid frames.
     const refused = new InvalidMessages(fastify.clock)
@@ -117,7 +118,9 @@ async function wsPlugin(
         return
       }
       if (parsed.message.type === 'ping') {
-        dispatch(parsed.message)
+        // A ping past its rate gets no pong, so a flood cannot double itself into outbound frames.
+        if (pingRate.allow()) dispatch(parsed.message)
+        else if (refused.record() >= INVALID_MESSAGE_LIMIT) socket.close(1008, 'Too many messages')
         return
       }
       if (!rate.allow()) {

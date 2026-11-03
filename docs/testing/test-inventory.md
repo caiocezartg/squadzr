@@ -23,8 +23,8 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 36     | 234   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 35     | 344   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 36     | 235   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 35     | 345   |
 | `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 907   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
@@ -77,6 +77,14 @@ the forwarding cases of `session.spec.ts`, `my-squads.spec.ts`, `squad-board.spe
 session end reported and a reconnect still made, no report for any other close) and two to
 `realtime-protocol.spec.tsx` (the page reloads once without the update notice when the server ends the
 session, and not on a dropped socket), so it measures 87 files / 907 tests.
+
+Its last round caps pings and stops the invite link from joining on its own. `server:unit` gains a case in
+`message-rate.spec.ts` (the limit it is given, as the ping rate uses), so it measures 36 files / 235 tests,
+and `server:integration` one in `realtime-sessions.test.ts` (pings answered up to their rate, then a
+socket that keeps pinging closed with 1008), so it measures 35 files / 345 tests. `client:unit` keeps 87
+files / 907 tests: `squad-board.spec.tsx` now opens the Lobby from a `?join=` link without joining (and
+with invalid sibling parameters), and `sidebar-flows.spec.tsx` opens the Lobby for a signed-in viewer's
+link without joining and sends the code form straight to the Lobby.
 
 Suites are test files. The counts above are the current inventory, last recounted by CCC-118 on
 2026-11-02 (above). The 2026-10-25 recount ran on the merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104 and CCC-105. CCC-104 puts `memberPreview` on every Squad and orders the roster: it adds `tests/integration/member-preview.test.ts` (+1 file / +9 tests: the preview on the list, the single read for non-members and members, My Squads, `POST /api/rooms` with `room_created`, and `room_snapshot`, with its content, the limit of five and the order), the contract cases in `schemas:unit` (+8), the use-case, projection and ordering cases in `server:unit` (+5), and updates the client fixtures without adding client tests. CCC-90 adds the

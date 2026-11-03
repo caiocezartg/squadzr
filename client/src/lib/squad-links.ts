@@ -18,7 +18,7 @@ export function parseSquadCode(input: string): string | null {
   return SQUAD_CODE_PATTERN.test(code) ? code.toUpperCase() : null
 }
 
-/** The Squad Board's invite link for a code: signed-in viewers join it, visitors are asked to sign in. */
+/** The Squad Board's invite link for a code: signed-in viewers land on its Lobby, visitors are asked to sign in. */
 export function joinHref(squadCode: string): string {
   return `/squads?join=${encodeURIComponent(squadCode)}`
 }

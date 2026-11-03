@@ -1004,34 +1004,23 @@ describe('squad board — join flows', () => {
     )
   })
 
-  it('auto-joins a squad from a shared ?join link and returns to the board', async () => {
-    // The search-clear write in useAutoJoin lands on the board's URL while the lobby navigation is
-    // still in flight, so the navigation is discarded and the user stays on the board even though the
-    // join POST succeeded.
+  it('opens the Lobby from a shared ?join link and leaves joining to the player', async () => {
+    // Any site can send a signed-in player to the link, so it never joins by itself.
     registerLobbyRoutes()
     const { navigation } = renderSquadsFlow('/squads?join=ABC123')
 
-    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1))
-
-    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads'))
-    expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1)
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/ABC123'))
+    expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(0)
   })
 
-  it('opens a board URL with invalid parameters: they fall back, the valid ones and the auto-join stay', async () => {
-    // The join stays pending so the URL still carries every parameter it was opened with.
-    onHttp('POST', '/api/rooms/:code/join', () => new Promise<MockHttpResponse>(() => {}))
+  it('opens a board URL with invalid parameters: the invite link still opens its Lobby', async () => {
+    registerLobbyRoutes()
     const { navigation } = renderSquadsFlow(
       '/squads?filter=bogus&sort=sideways&page=0&language=pt-br&join=ABC123'
     )
 
-    // The valid join is kept: the auto-join fires once for its code.
-    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms/ABC123/join')).toBe(1))
-    const params = new URLSearchParams(navigation.history.location.search)
-    expect(params.get('language')).toBe('pt-br')
-    expect(params.get('join')).toBe('ABC123')
-
-    // The valid language filters the board; the invalid filter, sort and page use their defaults.
-    await waitFor(() => expect(listedSquadNames()).toEqual(['Full lobby', 'Casual five stack']))
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/ABC123'))
+    expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(0)
   })
 
   it('opens the lobby directly for squads the user already belongs to', async () => {
@@ -1188,7 +1177,7 @@ describe('squad board — URL state', () => {
 })
 
 describe('squad board — invite links', () => {
-  it('does not auto-join a join value that is not a squad code', async () => {
+  it('does not open or join a join value that is not a squad code', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     renderSquadsFlow('/squads?join=..%2F..%2Fadmin', { queryClient: seededClient(boardSquads) })
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()

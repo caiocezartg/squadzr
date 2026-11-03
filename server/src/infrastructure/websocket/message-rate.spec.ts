@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FakeClock } from '@test/harness/clock'
-import { MessageRate, MESSAGE_RATE_LIMIT } from './message-rate'
+import { MessageRate, MESSAGE_RATE_LIMIT, PING_RATE_LIMIT } from './message-rate'
 
 describe('MessageRate', () => {
   it('allows the limit within one window and refuses the next message', () => {
@@ -30,5 +30,15 @@ describe('MessageRate', () => {
     clock.advance(5_000)
 
     expect(rate.allow()).toBe(true)
+  })
+
+  it('applies the limit it is given, as the ping rate does', () => {
+    const rate = new MessageRate(
+      new FakeClock(new Date('2026-01-01T00:00:00.000Z')),
+      PING_RATE_LIMIT
+    )
+
+    for (let i = 0; i < PING_RATE_LIMIT; i++) expect(rate.allow()).toBe(true)
+    expect(rate.allow()).toBe(false)
   })
 })

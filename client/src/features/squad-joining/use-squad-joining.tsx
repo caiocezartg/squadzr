@@ -5,7 +5,7 @@ import { useAppNavigation } from '@/lib/navigation'
 import { joinHref, lobbyHref } from '@/lib/squad-links'
 import type { SquadSearchAccess } from '@/features/squad-list'
 import { JoinSquadAuthModal } from './join-squad-auth-modal'
-import { useAutoJoin } from './use-auto-join'
+import { useInviteLink } from './use-invite-link'
 import { useJoinSquad } from './use-join-squad'
 
 /** The squad facts the join flow needs from a board card. */
@@ -30,7 +30,7 @@ export interface SquadJoining {
  * The join workflow for the Squad Board: the mutation validates the shared
  * response contract, typed application errors become toasts, the board is
  * refreshed before navigating to the lobby, and the `?join=` invite link
- * auto-joins once. A visitor who opens the invite link gets the sign-in prompt for its code. The
+ * opens the Squad's Lobby once, where the player chooses to join. A visitor who opens the invite link gets the sign-in prompt for its code. The
  * sign-in callback keeps the intended squad code so it survives the Discord round trip. `invite`
  * is the board's URL access.
  */
@@ -47,7 +47,7 @@ export function useSquadJoining(invite: SquadSearchAccess): SquadJoining {
     onFailed: () => setJoiningSquadCode(null),
   })
 
-  useAutoJoin({ search: invite, session, mutate: join })
+  useInviteLink({ search: invite, session, openLobby: (code) => navigateApp(lobbyHref(code)) })
 
   const requestJoin = (squad: JoinableSquad) => {
     if (squad.isMember) {

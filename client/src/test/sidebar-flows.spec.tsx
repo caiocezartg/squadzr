@@ -196,22 +196,25 @@ describe('?join=', () => {
     await waitFor(() => expect(screen.queryByText('Sign in required')).not.toBeInTheDocument())
   })
 
-  it('joins the squad for a signed-in viewer, with no prompt', async () => {
-    renderShell('/squads?join=ABC123')
+  it('opens the Lobby for a signed-in viewer without joining, and with no prompt', async () => {
+    const { navigation } = renderShell('/squads?join=ABC123')
 
-    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1))
+    await waitFor(() =>
+      expect(navigation.calls).toContainEqual({ method: 'push', href: '/squads/ABC123' })
+    )
+    expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(0)
     expect(screen.queryByText('Sign in required')).not.toBeInTheDocument()
   })
 })
 
 describe('the code form', () => {
-  it('sends a valid code, in any case, to the board invite link', async () => {
+  it('opens the Lobby of a valid code, in any case', async () => {
     const { user, navigation } = renderShell('/')
 
     await user.type(sidebar().getByLabelText('Join by code'), 'abc123')
     await user.click(sidebar().getByRole('button', { name: 'Join the squad with this code' }))
 
-    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads?join=ABC123' }])
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads/ABC123' }])
   })
 
   it('accepts the code as it is shown, with its #', async () => {
@@ -219,7 +222,7 @@ describe('the code form', () => {
 
     await user.type(sidebar().getByLabelText('Join by code'), '#vlr77a{Enter}')
 
-    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads?join=VLR77A' }])
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads/VLR77A' }])
   })
 
   it.each(['abc', 'abc1234', 'abc-12', ''])(

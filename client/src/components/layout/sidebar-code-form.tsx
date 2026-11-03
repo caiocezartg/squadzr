@@ -4,17 +4,17 @@ import { useId, useState, type FormEvent } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAppNavigation } from '@/lib/navigation'
-import { joinHref, parseSquadCode } from '@/lib/squad-links'
+import { lobbyHref, parseSquadCode } from '@/lib/squad-links'
 import { cn } from '@/lib/utils'
 
 interface SidebarCodeFormProps {
-  /** Called once the code leads to the board's invite link. */
+  /** Called once the code leads to its Squad's Lobby. */
   readonly onNavigate?: () => void
 }
 
 /**
- * The join-by-code form. A valid code (six letters or digits, in either case) leads to the board's
- * invite link, which joins a signed-in viewer and asks a visitor to sign in. Anything else shows its
+ * The join-by-code form. A valid code (six letters or digits, in either case) opens its Squad's Lobby,
+ * where a signed-in viewer chooses to join and a visitor is asked to sign in. Anything else shows its
  * message in place and sends no request.
  */
 export function SidebarCodeForm({ onNavigate }: SidebarCodeFormProps) {
@@ -33,7 +33,7 @@ export function SidebarCodeForm({ onNavigate }: SidebarCodeFormProps) {
 
     setCode('')
     onNavigate?.()
-    navigate(joinHref(parsed))
+    navigate(lobbyHref(parsed))
   }
 
   return (
