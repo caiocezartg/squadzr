@@ -47,3 +47,17 @@ export type IgdbGame = z.infer<typeof igdbGameSchema>
 
 /** The whole page must be an array; a malformed entry fails the run. */
 export const igdbGamesPageSchema = z.array(igdbGameSchema)
+
+/**
+ * One `popularity_primitives` row. `value` can be a decimal (Playing is an
+ * average), so it is not constrained to an integer.
+ */
+export const igdbPopularityPrimitiveSchema = z.object({
+  game_id: z.number().int().positive(),
+  popularity_type: z.number().int(),
+  value: z.number().nonnegative(),
+})
+
+export type IgdbPopularityPrimitive = z.infer<typeof igdbPopularityPrimitiveSchema>
+
+export const igdbPopularityPrimitivesPageSchema = z.array(igdbPopularityPrimitiveSchema)

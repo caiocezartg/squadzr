@@ -8,6 +8,13 @@ const CANDIDATE_GAME_TYPES = [0, 4, 8, 9, 10] as const
 
 export const IGDB_PAGE_SIZE = 500
 
+/** IGDB `popularity_primitives` types: 3 is IGDB "Playing", 5 is Steam "24hr Peak Players". */
+export const IGDB_POPULARITY_TYPE_PLAYING = 3
+export const IGDB_POPULARITY_TYPE_STEAM_PEAK = 5
+
+/** Two rows per game at most (one per type), so 250 ids never exceed the 500-row limit. */
+export const IGDB_POPULARITY_BATCH_SIZE = 250
+
 const GAME_FIELDS = [
   'id',
   'name',
@@ -59,5 +66,14 @@ export function buildCuratedGamesQuery(igdbIds: readonly number[]): string {
     `where id = (${igdbIds.join(',')});`,
     `limit ${IGDB_PAGE_SIZE};`,
     'sort id asc;',
+  ].join(' ')
+}
+
+/** The Playing and Steam Peak rows of up to {@link IGDB_POPULARITY_BATCH_SIZE} games. */
+export function buildPopularityPrimitivesQuery(igdbIds: readonly number[]): string {
+  return [
+    'fields game_id,popularity_type,value;',
+    `where popularity_type = (${IGDB_POPULARITY_TYPE_PLAYING},${IGDB_POPULARITY_TYPE_STEAM_PEAK}) & game_id = (${igdbIds.join(',')});`,
+    `limit ${IGDB_PAGE_SIZE};`,
   ].join(' ')
 }

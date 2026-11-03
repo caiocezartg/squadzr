@@ -44,6 +44,10 @@ _Avoid_: Game list, games table, catalog list
 A Game that appears in the Game Catalog and can be chosen when forming a Squad. A delisted Game keeps its row so existing Squads still render, but the Catalog Import does not count it as today's catalog and only the Catalog Import relists it.
 _Avoid_: Active game, visible game, enabled game
 
+**Popularity**:
+A Game's integer score from 0 to 10000 for how much it is played right now, computed by the Catalog Import from the source's Playing and Steam 24hr Peak Players signals: each signal becomes a percentile among the candidates that have it (the top one is 1.0, ties share a percentile, a missing signal is 0) and the higher percentile, times 10000, is the score. Without a search, Featured Games come first and the rest follow by Popularity.
+_Avoid_: Rating count, rank, hotness
+
 **Featured Game**:
 A Listed Game the curated list highlights, ordered by its featured rank.
 _Avoid_: Highlight, promoted game, top game

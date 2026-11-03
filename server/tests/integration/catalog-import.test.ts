@@ -165,7 +165,7 @@ describe('CatalogImportUseCase', () => {
         coverUrl: 'https://images.igdb.com/cover/drg.webp',
         thumbnailUrl: 'https://images.igdb.com/thumb/drg.webp',
         multiplayer: { onlineCoopMax: 8, onlineMax: null },
-        popularity: 250,
+        popularitySignals: { playing: 250, steamPeakPlayers: null },
       }),
     ])
 
@@ -189,6 +189,7 @@ describe('CatalogImportUseCase', () => {
       minPlayers: 4,
       maxPlayers: 40,
       featuredRank: 1,
+      popularity: 6667,
       listed: true,
     })
     expect(rows.find((row) => row.igdbId === 1002)).toMatchObject({
@@ -201,7 +202,7 @@ describe('CatalogImportUseCase', () => {
       genres: [{ slug: 'shooter', name: 'Shooter' }],
       coverUrl: 'https://images.igdb.com/cover/drg.webp',
       thumbnailUrl: 'https://images.igdb.com/thumb/drg.webp',
-      popularity: 250,
+      popularity: 10_000,
       minPlayers: 2,
       maxPlayers: 8,
     })
@@ -241,7 +242,7 @@ describe('CatalogImportUseCase', () => {
         genres: [{ slug: 'moba', name: 'MOBA' }],
         coverUrl: 'https://images.igdb.com/cover/lol-2.webp',
         thumbnailUrl: 'https://images.igdb.com/thumb/lol-2.webp',
-        popularity: 990,
+        popularitySignals: { playing: null, steamPeakPlayers: null },
       }),
     ])
     const updated = await buildUseCase().execute()
@@ -253,7 +254,7 @@ describe('CatalogImportUseCase', () => {
       id: before?.id,
       slug: 'league-of-legends',
       coverUrl: 'https://images.igdb.com/cover/lol-2.webp',
-      popularity: 990,
+      popularity: 0,
     })
   })
 
@@ -471,7 +472,7 @@ describe('CatalogImportUseCase', () => {
         name: 'Seeded 5000 updated',
         slug: 'seeded-5000-updated',
         genres: [{ slug: 'shooter', name: 'Shooter' }],
-        popularity: 999,
+        popularitySignals: { playing: 999, steamPeakPlayers: null },
         multiplayer: { onlineCoopMax: null, onlineMax: 12 },
       }),
       createCandidate({ igdbId: 4001 }),

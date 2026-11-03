@@ -58,6 +58,29 @@ describe('GET /api/games', () => {
     expect(await searchGames('')).toEqual(['Popular Game', 'Quiet Game'])
   })
 
+  it('puts the Featured Games first without a search, then orders by popularity, name and id', async () => {
+    await insertGame(server, { name: 'Popular Game', popularity: 100 })
+    await insertGame(server, { name: 'Zeta Quiet', popularity: 1 })
+    await insertGame(server, { name: 'Alpha Quiet', popularity: 1 })
+    await insertGame(server, { name: 'Featured Second', popularity: 0, featuredRank: 2 })
+    await insertGame(server, { name: 'Featured First', popularity: 0, featuredRank: 1 })
+
+    expect(await searchGames('')).toEqual([
+      'Featured First',
+      'Featured Second',
+      'Popular Game',
+      'Alpha Quiet',
+      'Zeta Quiet',
+    ])
+  })
+
+  it('keeps the search order, ignoring the featured rank, when there is a search', async () => {
+    await insertGame(server, { name: 'Pro League', popularity: 100, featuredRank: 1 })
+    await insertGame(server, { name: 'League of Legends', popularity: 10 })
+
+    expect(await searchGames('?search=league')).toEqual(['League of Legends', 'Pro League'])
+  })
+
   it('matches a case-insensitive name contains', async () => {
     await insertGame(server, { name: 'League of Legends' })
     await insertGame(server, { name: 'Counter-Strike 2' })

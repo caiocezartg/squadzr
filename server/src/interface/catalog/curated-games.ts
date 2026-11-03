@@ -13,7 +13,7 @@ import type { CuratedGame } from '@application/use-cases/game/catalog-import.use
  * is exercised.
  */
 export const CURATED_GAMES: readonly CuratedGame[] = [
-  { igdbId: 17269, name: 'Roblox', minPlayers: 2, maxPlayers: 50, featuredRank: null },
+  { igdbId: 17269, name: 'Roblox', minPlayers: 2, maxPlayers: 50, featuredRank: 6 },
   { igdbId: 135400, name: 'Minecraft', minPlayers: 2, maxPlayers: 10, featuredRank: null },
   { igdbId: 242408, name: 'Counter-Strike 2', minPlayers: 2, maxPlayers: 5, featuredRank: 1 },
   { igdbId: 1905, name: 'Fortnite', minPlayers: 2, maxPlayers: 4, featuredRank: 4 },
@@ -35,7 +35,7 @@ export const CURATED_GAMES: readonly CuratedGame[] = [
     maxPlayers: 4,
     featuredRank: null,
   },
-  { igdbId: 114795, name: 'Apex Legends', minPlayers: 2, maxPlayers: 3, featuredRank: 6 },
+  { igdbId: 114795, name: 'Apex Legends', minPlayers: 2, maxPlayers: 3, featuredRank: null },
   { igdbId: 134710, name: 'GTA Online', minPlayers: 2, maxPlayers: 30, featuredRank: null },
   { igdbId: 11198, name: 'Rocket League', minPlayers: 2, maxPlayers: 4, featuredRank: null },
   {
