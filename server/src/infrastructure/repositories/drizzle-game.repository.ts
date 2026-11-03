@@ -110,10 +110,12 @@ export class DrizzleGameRepository implements IGameRepository {
           : and(eq(games.listed, true), sql`${games.name} ILIKE ${contains} ESCAPE ${LIKE_ESCAPE}`)
       )
       .orderBy(
-        // A name that starts with the term comes before one that contains it
-        // later. `starts_with` compares text literally, so no escaping here.
+        // No term: the Featured Games come first (NULLs last), then the rest by
+        // popularity. A term: a name that starts with it comes before one that
+        // contains it later. `starts_with` compares text literally, so no
+        // escaping here.
         term === ''
-          ? desc(games.popularity)
+          ? asc(games.featuredRank)
           : sql`CASE WHEN starts_with(lower(${games.name}), lower(${term})) THEN 0 ELSE 1 END`,
         desc(games.popularity),
         asc(games.name),

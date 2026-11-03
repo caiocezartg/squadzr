@@ -11,6 +11,7 @@ const NOW = new Date('2026-10-23T12:00:00.000Z')
 const RELEASED_BEFORE_SECONDS = Math.floor(NOW.getTime() / 1000)
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
 const GAMES_URL = 'https://api.igdb.com/v4/games'
+const PRIMITIVES_URL = 'https://api.igdb.com/v4/popularity_primitives'
 const PAGE_SIZE = 500
 
 interface RecordedRequest {
@@ -24,6 +25,8 @@ type Responder = (request: RecordedRequest, index: number) => Response | Promise
 interface HarnessOptions {
   readonly curatedIgdbIds?: readonly number[]
   readonly threshold?: number
+  /** Answers the popularity primitives requests; no signals by default. */
+  readonly primitives?: Responder
 }
 
 function tokenResponse(): Response {
@@ -58,7 +61,10 @@ function createHarness(respond: Responder, options: HarnessOptions = {}) {
       typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
     const request = { url, init, at: clock.now().getTime() }
     requests.push(request)
-    return respond(request, requests.length - 1)
+    const index = requests.length - 1
+    if (url === PRIMITIVES_URL)
+      return (options.primitives ?? (() => Response.json([])))(request, index)
+    return respond(request, index)
   })
   vi.stubGlobal('fetch', fetch)
 
@@ -85,6 +91,10 @@ function gamesRequests(requests: readonly RecordedRequest[]): RecordedRequest[] 
   return requests.filter((request) => request.url === GAMES_URL)
 }
 
+function primitivesRequests(requests: readonly RecordedRequest[]): RecordedRequest[] {
+  return requests.filter((request) => request.url === PRIMITIVES_URL)
+}
+
 function bodyOf(request: RecordedRequest): string {
   return String(request.init.body)
 }
@@ -95,8 +105,15 @@ afterEach(() => {
 
 describe('IgdbGameCatalogSource', () => {
   it('requests one app access token per run and maps a game, including both cover URLs', async () => {
-    const harness = createHarness((request) =>
-      request.url === TOKEN_URL ? tokenResponse() : Response.json([game()])
+    const harness = createHarness(
+      (request) => (request.url === TOKEN_URL ? tokenResponse() : Response.json([game()])),
+      {
+        primitives: () =>
+          Response.json([
+            { id: 1, game_id: 2000, popularity_type: 3, value: 12.5 },
+            { id: 2, game_id: 2000, popularity_type: 5, value: 48_000 },
+          ]),
+      }
     )
 
     const result = await harness.source.fetchCandidates()
@@ -123,7 +140,7 @@ describe('IgdbGameCatalogSource', () => {
         coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/cover-2000.jpg',
         thumbnailUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_small_2x/cover-2000.jpg',
         multiplayer: { onlineCoopMax: 4, onlineMax: 8 },
-        popularity: 120,
+        popularitySignals: { playing: 12.5, steamPeakPlayers: 48_000 },
       },
     ])
     expect(result.invalid).toBe(0)
@@ -161,12 +178,13 @@ describe('IgdbGameCatalogSource', () => {
 
     await harness.source.fetchCandidates()
 
+    // Token, two games pages and the popularity primitives (501 ids = 3 batches).
     const instants = harness.requests.map((request) => request.at)
-    expect(instants).toHaveLength(3)
+    expect(instants).toHaveLength(6)
     for (let index = 1; index < instants.length; index += 1) {
       expect(instants[index]! - instants[index - 1]!).toBeGreaterThanOrEqual(250)
     }
-    expect(harness.sleeps).toEqual([250, 250])
+    expect(harness.sleeps).toEqual([250, 250, 250, 250, 250])
   })
 
   it('retries 429 and 5xx with bounded backoff, then succeeds', async () => {
@@ -183,8 +201,9 @@ describe('IgdbGameCatalogSource', () => {
 
     expect(attempts).toBe(3)
     expect(candidates).toHaveLength(1)
-    // 250ms is the pacing wait before the first page; 500ms and 1000ms are backoff.
-    expect(harness.sleeps).toEqual([250, 500, 1_000])
+    // 250ms is the pacing wait before the first page and again before the popularity
+    // primitives; 500ms and 1000ms are backoff.
+    expect(harness.sleeps).toEqual([250, 500, 1_000, 250])
   })
 
   it('fails after the retry budget when a page keeps returning 429', async () => {
@@ -264,7 +283,7 @@ describe('IgdbGameCatalogSource', () => {
       coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co20gb.jpg',
       thumbnailUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_small_2x/co20gb.jpg',
       multiplayer: { onlineCoopMax: null, onlineMax: null },
-      popularity: 355,
+      popularitySignals: { playing: null, steamPeakPlayers: null },
     })
     // The recorded page has online co-op but no online maximum.
     expect(result.candidates[1]).toMatchObject({
@@ -277,9 +296,187 @@ describe('IgdbGameCatalogSource', () => {
       igdbId: 134710,
       genres: [],
       multiplayer: { onlineCoopMax: null, onlineMax: null },
-      popularity: 72,
+      popularitySignals: { playing: null, steamPeakPlayers: null },
     })
     expect(result.invalid).toBe(3)
+  })
+
+  it('queries the Playing and Steam Peak primitives of the candidates with the run token', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL
+        ? tokenResponse()
+        : Response.json([game({ id: 11 }), game({ id: 12, name: 'Game 12', slug: 'game-12' })])
+    )
+
+    await harness.source.fetchCandidates()
+
+    const [primitives] = primitivesRequests(harness.requests)
+    expect(primitivesRequests(harness.requests)).toHaveLength(1)
+    expect(primitives!.init.method).toBe('POST')
+    expect(new Headers(primitives!.init.headers).get('Client-ID')).toBe('test-client-id')
+    expect(new Headers(primitives!.init.headers).get('Authorization')).toBe(
+      'Bearer app-access-token'
+    )
+    expect(bodyOf(primitives!)).toBe(
+      'fields game_id,popularity_type,value; where popularity_type = (3,5) & game_id = (11,12); limit 500; offset 0; sort id asc;'
+    )
+    expect(tokenRequests(harness.requests)).toHaveLength(1)
+  })
+
+  it('splits the primitives query into batches of at most 250 ids', async () => {
+    const harness = createHarness((request) => {
+      if (request.url === TOKEN_URL) return tokenResponse()
+      return bodyOf(request).includes('offset 0;')
+        ? Response.json(Array.from({ length: PAGE_SIZE }, (_, index) => game({ id: 100 + index })))
+        : Response.json([game({ id: 700 })])
+    })
+
+    await harness.source.fetchCandidates()
+
+    const batches = primitivesRequests(harness.requests).map((request) => {
+      const ids = /game_id = \(([\d,]+)\)/.exec(bodyOf(request))![1]!.split(',')
+      return ids.length
+    })
+    expect(batches).toEqual([250, 250, 1])
+  })
+
+  it('pages a primitives batch until a short page, so rows past the 500-row limit are kept', async () => {
+    const harness = createHarness(
+      (request) =>
+        request.url === TOKEN_URL
+          ? tokenResponse()
+          : Response.json([game({ id: 51 }), game({ id: 52, name: 'Game 52', slug: 'game-52' })]),
+      {
+        primitives: (request) =>
+          bodyOf(request).includes('offset 0;')
+            ? Response.json(
+                Array.from({ length: PAGE_SIZE }, (_, index) => ({
+                  game_id: 51,
+                  popularity_type: 3,
+                  value: index,
+                }))
+              )
+            : Response.json([{ game_id: 52, popularity_type: 5, value: 4_000 }]),
+      }
+    )
+
+    const { candidates } = await harness.source.fetchCandidates()
+
+    expect(
+      primitivesRequests(harness.requests).map(
+        (request) => /offset (\d+);/.exec(bodyOf(request))![1]
+      )
+    ).toEqual(['0', '500'])
+    expect(candidates.map((candidate) => [candidate.igdbId, candidate.popularitySignals])).toEqual([
+      [51, { playing: PAGE_SIZE - 1, steamPeakPlayers: null }],
+      [52, { playing: null, steamPeakPlayers: 4_000 }],
+    ])
+  })
+
+  it('does not query primitives for games that were dropped as invalid or when there are none', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL
+        ? tokenResponse()
+        : Response.json([game({ id: 21, cover: null }), game({ id: 22, name: null })])
+    )
+
+    const result = await harness.source.fetchCandidates()
+
+    expect(result.candidates).toEqual([])
+    expect(result.invalid).toBe(2)
+    expect(primitivesRequests(harness.requests)).toHaveLength(0)
+  })
+
+  it('maps each game to its own signals, with null for the ones IGDB does not have', async () => {
+    const harness = createHarness(
+      (request) =>
+        request.url === TOKEN_URL
+          ? tokenResponse()
+          : Response.json([
+              game({ id: 31 }),
+              game({ id: 32, name: 'Game 32', slug: 'game-32' }),
+              game({ id: 33, name: 'Game 33', slug: 'game-33' }),
+              game({ id: 34, name: 'Game 34', slug: 'game-34' }),
+            ]),
+      {
+        primitives: () =>
+          Response.json([
+            { game_id: 31, popularity_type: 3, value: 80.25 },
+            { game_id: 31, popularity_type: 5, value: 1_200 },
+            { game_id: 32, popularity_type: 3, value: 5 },
+            { game_id: 33, popularity_type: 5, value: 30_000 },
+            { game_id: 999, popularity_type: 3, value: 1 },
+            { game_id: 34, popularity_type: 1, value: 77 },
+          ]),
+      }
+    )
+
+    const { candidates } = await harness.source.fetchCandidates()
+
+    expect(candidates.map((candidate) => [candidate.igdbId, candidate.popularitySignals])).toEqual([
+      [31, { playing: 80.25, steamPeakPlayers: 1_200 }],
+      [32, { playing: 5, steamPeakPlayers: null }],
+      [33, { playing: null, steamPeakPlayers: 30_000 }],
+      [34, { playing: null, steamPeakPlayers: null }],
+    ])
+  })
+
+  it('keeps the highest value when a game has several rows of the same type', async () => {
+    const harness = createHarness(
+      (request) =>
+        request.url === TOKEN_URL ? tokenResponse() : Response.json([game({ id: 41 })]),
+      {
+        primitives: () =>
+          Response.json([
+            { game_id: 41, popularity_type: 3, value: 10 },
+            { game_id: 41, popularity_type: 3, value: 90.5 },
+            { game_id: 41, popularity_type: 3, value: 30 },
+            { game_id: 41, popularity_type: 5, value: 700 },
+            { game_id: 41, popularity_type: 5, value: 200 },
+          ]),
+      }
+    )
+
+    const { candidates } = await harness.source.fetchCandidates()
+
+    expect(candidates[0]?.popularitySignals).toEqual({ playing: 90.5, steamPeakPlayers: 700 })
+  })
+
+  it('fails when a primitives page is malformed', async () => {
+    const harness = createHarness(
+      (request) => (request.url === TOKEN_URL ? tokenResponse() : Response.json([game()])),
+      { primitives: () => Response.json([{ game_id: 2000, popularity_type: 3, value: 'many' }]) }
+    )
+
+    await expect(harness.source.fetchCandidates()).rejects.toThrow(
+      'Invalid IGDB popularity primitives page'
+    )
+  })
+
+  it('retries the primitives request on 429 with the same token', async () => {
+    let primitiveAttempts = 0
+    const harness = createHarness(
+      (request) => (request.url === TOKEN_URL ? tokenResponse() : Response.json([game()])),
+      {
+        primitives: () => {
+          primitiveAttempts += 1
+          return primitiveAttempts === 1
+            ? new Response('slow down', { status: 429 })
+            : Response.json([{ game_id: 2000, popularity_type: 3, value: 3 }])
+        },
+      }
+    )
+
+    const { candidates } = await harness.source.fetchCandidates()
+
+    expect(primitiveAttempts).toBe(2)
+    expect(candidates[0]?.popularitySignals.playing).toBe(3)
+    expect(tokenRequests(harness.requests)).toHaveLength(1)
+    expect(
+      primitivesRequests(harness.requests).map((request) =>
+        new Headers(request.init.headers).get('Authorization')
+      )
+    ).toEqual(['Bearer app-access-token', 'Bearer app-access-token'])
   })
 
   it('fails when the token response is malformed', async () => {

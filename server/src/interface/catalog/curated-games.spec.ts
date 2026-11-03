@@ -24,6 +24,21 @@ describe('CURATED_GAMES', () => {
     expect(new Set(ranks).size).toBe(ranks.length)
   })
 
+  it('features exactly CS2, LoL, Valorant, Fortnite, Dota 2 and Roblox, in that order', () => {
+    const featured = CURATED_GAMES.filter((game) => game.featuredRank !== null)
+      .sort((a, b) => a.featuredRank! - b.featuredRank!)
+      .map((game) => [game.featuredRank, game.name])
+
+    expect(featured).toEqual([
+      [1, 'Counter-Strike 2'],
+      [2, 'League of Legends'],
+      [3, 'Valorant'],
+      [4, 'Fortnite'],
+      [5, 'Dota 2'],
+      [6, 'Roblox'],
+    ])
+  })
+
   it('keeps the verified ids of the ambiguous games', () => {
     expect(CURATED_GAMES.find((game) => game.name === 'Overwatch')).toMatchObject({
       igdbId: 125174,

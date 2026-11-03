@@ -1,7 +1,7 @@
 import type { Game, PopularGames, UpsertGameInput } from '@domain/entities/game.entity'
 
 export interface SearchGamesInput {
-  /** The player's text; empty or absent lists the most popular Listed Games. */
+  /** The player's text; empty or absent lists the Featured Games first, then by popularity. */
   readonly search?: string
   /** The maximum number of games to return. */
   readonly limit: number
@@ -17,7 +17,10 @@ export interface FindPopularGamesInput {
 export interface IGameRepository {
   findById(id: string): Promise<Game | null>
   findAll(): Promise<Game[]>
-  /** Listed Games only: name contains `search`, prefix matches first, then popularity. */
+  /**
+   * Listed Games only. With `search`: name contains it, prefix matches first,
+   * then popularity. Without it: featured rank (unranked last), then popularity.
+   */
   search(input: SearchGamesInput): Promise<Game[]>
   /**
    * Listed Games ranked by Open Squads descending, then featured rank,

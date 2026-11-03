@@ -4,22 +4,30 @@ import type {
   GameCatalogCandidate,
   GameCatalogFetchResult,
   GameMultiplayerCapacity,
+  GamePopularitySignals,
   IGameCatalogSource,
 } from '@domain/services/game-catalog-source.interface'
 import {
   igdbGamesPageSchema,
+  igdbPopularityPrimitivesPageSchema,
   igdbTokenResponseSchema,
   type IgdbGame,
+  type IgdbPopularityPrimitive,
 } from '@infrastructure/igdb/igdb.schemas'
 import {
   buildCuratedGamesQuery,
   buildGamesPageQuery,
+  buildPopularityPrimitivesQuery,
   IGDB_PAGE_SIZE,
+  IGDB_POPULARITY_BATCH_SIZE,
+  IGDB_POPULARITY_TYPE_PLAYING,
+  IGDB_POPULARITY_TYPE_STEAM_PEAK,
 } from '@infrastructure/igdb/igdb-queries'
 import { RequestPacer, defaultSleep, type Sleep } from '@infrastructure/igdb/request-pacer'
 
 const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
 const IGDB_GAMES_URL = 'https://api.igdb.com/v4/games'
+const IGDB_POPULARITY_PRIMITIVES_URL = 'https://api.igdb.com/v4/popularity_primitives'
 const IGDB_IMAGE_BASE_URL = 'https://images.igdb.com/igdb/image/upload'
 
 /** A 429 or a 5xx is retried; every other status fails the run immediately. */
@@ -79,14 +87,49 @@ function toMultiplayerCapacity(game: IgdbGame): GameMultiplayerCapacity {
   }
 }
 
+/** A candidate before the popularity signals are fetched for it. */
+type CandidateWithoutSignals = Omit<GameCatalogCandidate, 'popularitySignals'>
+
+const NO_SIGNALS: GamePopularitySignals = { playing: null, steamPeakPlayers: null }
+
+/** Keeps the highest value per game and type; the other types are ignored. */
+function toSignalsByGame(
+  rows: readonly IgdbPopularityPrimitive[]
+): Map<number, GamePopularitySignals> {
+  const byGame = new Map<number, GamePopularitySignals>()
+
+  for (const row of rows) {
+    const current = byGame.get(row.game_id) ?? NO_SIGNALS
+    if (row.popularity_type === IGDB_POPULARITY_TYPE_PLAYING) {
+      byGame.set(row.game_id, { ...current, playing: Math.max(current.playing ?? 0, row.value) })
+    } else if (row.popularity_type === IGDB_POPULARITY_TYPE_STEAM_PEAK) {
+      byGame.set(row.game_id, {
+        ...current,
+        steamPeakPlayers: Math.max(current.steamPeakPlayers ?? 0, row.value),
+      })
+    }
+  }
+
+  return byGame
+}
+
+function chunk<T>(items: readonly T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let start = 0; start < items.length; start += size) {
+    chunks.push(items.slice(start, start + size))
+  }
+  return chunks
+}
+
 function imageUrl(imageId: string, size: 'cover_big_2x' | 'cover_small_2x'): string {
   return `${IGDB_IMAGE_BASE_URL}/t_${size}/${imageId}.jpg`
 }
 
 /**
  * The IGDB implementation of the Game Catalog Source (CCC-90): one Twitch app
- * access token per run, paced and retried IGDB v4 games pages, and IGDB image
- * URLs. This is the only module that talks to IGDB or builds IGDB URLs.
+ * access token per run, paced and retried IGDB v4 games pages, the popularity
+ * primitives of every candidate, and IGDB image URLs. This is the only module
+ * that talks to IGDB or builds IGDB URLs.
  */
 export class IgdbGameCatalogSource implements IGameCatalogSource {
   private readonly fetchImpl: typeof globalThis.fetch
@@ -104,7 +147,7 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
     const filtered = await this.fetchFilteredGames(accessToken)
     const curated = await this.fetchCuratedGames(accessToken)
 
-    const byIgdbId = new Map<number, GameCatalogCandidate>()
+    const byIgdbId = new Map<number, CandidateWithoutSignals>()
     for (const game of [...filtered, ...curated]) {
       const candidate = this.toCandidate(game)
       if (candidate && !byIgdbId.has(candidate.igdbId)) {
@@ -112,7 +155,13 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
       }
     }
 
-    return { candidates: [...byIgdbId.values()], invalid: this.invalidCandidates }
+    const signals = await this.fetchPopularitySignals(accessToken, [...byIgdbId.keys()])
+    const candidates = [...byIgdbId.values()].map((candidate) => ({
+      ...candidate,
+      popularitySignals: signals.get(candidate.igdbId) ?? NO_SIGNALS,
+    }))
+
+    return { candidates, invalid: this.invalidCandidates }
   }
 
   /** One client-credentials token per run; it lives in this call only. */
@@ -158,8 +207,55 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
     return this.requestGamesPage(accessToken, query)
   }
 
+  /** Playing and Steam Peak rows of every candidate, batched by id and paged within each batch. */
+  private async fetchPopularitySignals(
+    accessToken: string,
+    igdbIds: readonly number[]
+  ): Promise<Map<number, GamePopularitySignals>> {
+    const rows: IgdbPopularityPrimitive[] = []
+    for (const batch of chunk(igdbIds, IGDB_POPULARITY_BATCH_SIZE)) {
+      for (let offset = 0; ; offset += IGDB_PAGE_SIZE) {
+        const page = await this.requestPopularityPrimitives(accessToken, batch, offset)
+        rows.push(...page)
+        if (page.length < IGDB_PAGE_SIZE) break
+      }
+    }
+    return toSignalsByGame(rows)
+  }
+
+  private async requestPopularityPrimitives(
+    accessToken: string,
+    igdbIds: readonly number[],
+    offset: number
+  ): Promise<IgdbPopularityPrimitive[]> {
+    const response = await this.postQuery(
+      IGDB_POPULARITY_PRIMITIVES_URL,
+      accessToken,
+      buildPopularityPrimitivesQuery(igdbIds, offset)
+    )
+
+    const payload: unknown = await response.json()
+    const parsed = igdbPopularityPrimitivesPageSchema.safeParse(payload)
+    if (!parsed.success) {
+      throw new Error(`Invalid IGDB popularity primitives page: ${z.prettifyError(parsed.error)}`)
+    }
+    return parsed.data
+  }
+
   private async requestGamesPage(accessToken: string, query: string): Promise<IgdbGame[]> {
-    const response = await this.requestWithRetry(IGDB_GAMES_URL, {
+    const response = await this.postQuery(IGDB_GAMES_URL, accessToken, query)
+
+    const payload: unknown = await response.json()
+    const parsed = igdbGamesPageSchema.safeParse(payload)
+    if (!parsed.success) {
+      throw new Error(`Invalid IGDB games page: ${z.prettifyError(parsed.error)}`)
+    }
+    return parsed.data
+  }
+
+  /** One authenticated Apicalypse query against an IGDB v4 endpoint. */
+  private postQuery(url: string, accessToken: string, query: string): Promise<Response> {
+    return this.requestWithRetry(url, {
       method: 'POST',
       headers: {
         'Client-ID': this.options.clientId,
@@ -169,13 +265,6 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
       },
       body: query,
     })
-
-    const payload: unknown = await response.json()
-    const parsed = igdbGamesPageSchema.safeParse(payload)
-    if (!parsed.success) {
-      throw new Error(`Invalid IGDB games page: ${z.prettifyError(parsed.error)}`)
-    }
-    return parsed.data
   }
 
   /** Paces every request and retries 429/5xx with bounded exponential backoff. */
@@ -199,7 +288,7 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
   }
 
   /** Maps one IGDB game, dropping and counting the ones missing name, slug or cover. */
-  private toCandidate(game: IgdbGame): GameCatalogCandidate | null {
+  private toCandidate(game: IgdbGame): CandidateWithoutSignals | null {
     const name = game.name?.trim()
     const slug = game.slug?.trim()
     const imageId = game.cover?.image_id?.trim()
@@ -217,7 +306,6 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
       coverUrl: imageUrl(imageId, 'cover_big_2x'),
       thumbnailUrl: imageUrl(imageId, 'cover_small_2x'),
       multiplayer: toMultiplayerCapacity(game),
-      popularity: game.total_rating_count ?? 0,
     }
   }
 }

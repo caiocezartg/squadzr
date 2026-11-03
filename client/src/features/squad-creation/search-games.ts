@@ -6,8 +6,9 @@ import type { Game } from '@/types'
 const GAME_SEARCH_LIMIT = 20
 
 /**
- * The game search behind the create dialog. An empty term asks for the most
- * popular Listed Games, which is what the dialog shows before the player types.
+ * The game search behind the create dialog. An empty term asks for the
+ * suggestions (Featured Games first, then by popularity), which is what the
+ * dialog shows before the player types.
  * The optional signal lets a newer term cancel the request it superseded.
  */
 export function searchGames(term: string, signal?: AbortSignal): Promise<Game[]> {

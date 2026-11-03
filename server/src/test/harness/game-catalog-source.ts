@@ -16,7 +16,7 @@ export function createCandidate(
     coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/lol.webp',
     thumbnailUrl: 'https://images.igdb.com/igdb/image/upload/t_thumb/lol.webp',
     multiplayer: { onlineCoopMax: null, onlineMax: 5 },
-    popularity: 100,
+    popularitySignals: { playing: 100, steamPeakPlayers: null },
     ...overrides,
   }
 }

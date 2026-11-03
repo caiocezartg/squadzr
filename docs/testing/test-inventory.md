@@ -92,7 +92,11 @@ IGDB adapter suite (`igdb-game-catalog-source.spec.ts`, +1 file / +10 tests, wit
 page as fixture) and the import environment suite (`catalog-import-env.spec.ts`, +1 file / +9
 tests), plus one curated-id case in `curated-games.spec.ts` (+1). It adds no integration suite: the
 adapter runs with a stubbed `fetch` and needs no database or IGDB credentials. It does add one
-invalid-summary case to `tests/integration/catalog-import.test.ts` (+1 test).
+invalid-summary case to `tests/integration/catalog-import.test.ts` (+1 test). Issue #96 adds the
+popularity score suite (`popularity-score.spec.ts`: percentile per signal, ties, absent signal, the
+maximum of both and the 0–10000 scale), the `popularity_primitives` cases of the IGDB adapter suite
+(query shape, 250-id batches, paging past 500 rows, signal mapping, retry), the signal-based score in
+`catalog-import.test.ts`, and the featured-first empty search in `games-http`.
 
 CCC-94 moves the client onto the game summary every Squad carries: the full-list games hooks and the
 games map are gone, the game-list stubs leave the board, My Squads and Lobby flow specs, and the flow
@@ -334,7 +338,7 @@ Integration projects follow the same naming convention:
   silently change what they prove. `catalog-migration` (CCC-88) seeds a legacy game and a Squad
   that references it, then asserts the catalog migration delists the game, keeps the Squad and
   applies the defaults. `games-http` (CCC-93) covers the Listed-only search, prefix/popularity
-  ranking, wildcard escaping, the `limit` bounds and the delisted single-game read; `rooms-http`
+  ranking, the featured-first empty search (#96), wildcard escaping, the `limit` bounds and the delisted single-game read; `rooms-http`
   covers the 2–40 Squad-size bounds and the `INVALID_GAME` rejection for a delisted Game.
   `popular-games-http` (CCC-96) drives `GET /api/games/popular`: open-Squad ranking, the Featured
   fallback on a quiet day, expired and Ready Squads excluded, the top-tag tie-break, `totalGames`

@@ -5,6 +5,7 @@ import type {
   GameCatalogCandidate,
   IGameCatalogSource,
 } from '@domain/services/game-catalog-source.interface'
+import { computePopularityScores } from '@application/use-cases/game/popularity-score'
 
 /** No Squad can exceed 40 players; larger capacities are lobby sizes, not squads. */
 const MAX_SQUAD_SIZE = 40
@@ -117,6 +118,7 @@ function resolveSquadSize(
 
 function toUpsertInput(
   candidate: GameCatalogCandidate,
+  popularity: number,
   curated: CuratedGame | undefined
 ): UpsertGameInput {
   const squadSize = resolveSquadSize(candidate, curated)
@@ -128,7 +130,7 @@ function toUpsertInput(
     genres: candidate.genres,
     coverUrl: candidate.coverUrl,
     thumbnailUrl: candidate.thumbnailUrl,
-    popularity: candidate.popularity,
+    popularity,
     minPlayers: squadSize.minPlayers,
     maxPlayers: squadSize.maxPlayers,
     featuredRank: curated?.featuredRank ?? null,
@@ -153,6 +155,7 @@ export class CatalogImportUseCase implements ICatalogImportUseCase {
     const fetched = await this.source.fetchCandidates()
     const { unique: candidates, dropped } = dedupeCandidates(fetched.candidates)
 
+    const scores = computePopularityScores(candidates.map((c) => c.popularitySignals))
     const curatedByIgdbId = new Map(this.curatedGames.map((game) => [game.igdbId, game]))
     const candidateIds = new Set(candidates.map((candidate) => candidate.igdbId))
 
@@ -174,9 +177,9 @@ export class CatalogImportUseCase implements ICatalogImportUseCase {
 
       let created = 0
       let updated = 0
-      for (const candidate of candidates) {
+      for (const [index, candidate] of candidates.entries()) {
         await repository.upsertByIgdbId(
-          toUpsertInput(candidate, curatedByIgdbId.get(candidate.igdbId))
+          toUpsertInput(candidate, scores[index] ?? 0, curatedByIgdbId.get(candidate.igdbId))
         )
         if (existingByIgdbId.has(candidate.igdbId)) updated += 1
         else created += 1

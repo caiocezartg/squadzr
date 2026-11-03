@@ -8,6 +8,18 @@ export interface GameMultiplayerCapacity {
   readonly onlineMax: number | null
 }
 
+/**
+ * The raw "who plays this today" numbers a source has for one game. A signal the
+ * source does not have is null; turning signals into a score is the Catalog
+ * Import's job, never the source's.
+ */
+export interface GamePopularitySignals {
+  /** Players currently playing the game, as the source's own platform counts them. */
+  readonly playing: number | null
+  /** Highest number of concurrent Steam players over the last 24 hours. */
+  readonly steamPeakPlayers: number | null
+}
+
 /** One game the Catalog Import may create, update or relist. */
 export interface GameCatalogCandidate {
   readonly igdbId: number
@@ -17,7 +29,7 @@ export interface GameCatalogCandidate {
   readonly coverUrl: string
   readonly thumbnailUrl: string
   readonly multiplayer: GameMultiplayerCapacity
-  readonly popularity: number
+  readonly popularitySignals: GamePopularitySignals
 }
 
 /** One candidate list as fetched by a source, plus what it could not use. */
