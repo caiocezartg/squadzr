@@ -31,11 +31,12 @@ export function NoticeScreen({ mark, title, description, children, className }: 
         className
       )}
     >
-      <span
-        aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_50%_45%_at_50%_40%,rgba(0,255,162,0.06),transparent_70%)]"
-      />
-      <div className="flex w-full max-w-xl flex-col items-center text-center">
+      <div className="relative flex w-full max-w-xl flex-col items-center text-center">
+        {/* A round glow centred on the content, whatever the screen's shape. */}
+        <span
+          aria-hidden="true"
+          className="absolute top-1/2 left-1/2 -z-10 size-[min(760px,150vw)] -translate-1/2 bg-[radial-gradient(closest-side,rgba(0,255,162,0.07),transparent)]"
+        />
         <div className="max-w-full break-all">{mark}</div>
         <EmptySquad />
         <h1 className="type-panel-title text-text mt-8 text-[32px] sm:text-[40px]">{title}</h1>
