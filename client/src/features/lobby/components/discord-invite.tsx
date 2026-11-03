@@ -153,7 +153,7 @@ export function ReadyInvite({
     <section
       aria-labelledby="lobby-invite-heading"
       className={cn(
-        'bg-ds-discord @container relative overflow-hidden text-white',
+        'bg-discord @container relative overflow-hidden text-white',
         entering && 'motion-safe:animate-invite-enter motion-reduce:animate-invite-fade'
       )}
     >
@@ -166,7 +166,7 @@ export function ReadyInvite({
           />
           <span
             aria-hidden="true"
-            className="from-ds-discord/20 to-ds-discord absolute inset-0 bg-linear-to-b"
+            className="from-discord/20 to-discord absolute inset-0 bg-linear-to-b"
           />
         </>
       ) : (
@@ -291,7 +291,7 @@ function LinkRow({ tone, link, actions }: LinkRowProps) {
     <div className={cn(FOOTER_CLASSES, tone)}>
       <span className="flex min-w-0 flex-1 items-center gap-2.5">
         <LinkIcon aria-hidden="true" className="size-4 shrink-0 stroke-[2.4] opacity-70" />
-        <span className="font-ds-mono min-w-0 flex-1 truncate text-[14px] font-bold">{link}</span>
+        <span className="font-mono min-w-0 flex-1 truncate text-[14px] font-bold">{link}</span>
       </span>
       <div className={ACTIONS_CLASSES}>{actions}</div>
     </div>
@@ -324,7 +324,7 @@ function ServerIcon({ src, pending }: ServerIconProps) {
       ) : (
         src && <img src={src} alt="" className="block size-13 rounded-2xl object-cover" />
       )}
-      <span className="bg-ds-discord absolute -right-1 -bottom-1 flex size-5.5 items-center justify-center rounded-full text-white shadow-[0_0_0_2px_#3941a5]">
+      <span className="bg-discord absolute -right-1 -bottom-1 flex size-5.5 items-center justify-center rounded-full text-white shadow-[0_0_0_2px_#3941a5]">
         <DiscordIcon aria-hidden="true" className="size-3" />
       </span>
     </span>

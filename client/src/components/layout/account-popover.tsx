@@ -50,7 +50,7 @@ export function AccountPopover({ user, defaultOpen, takeFocus }: AccountPopoverP
       className="w-57 p-1.5"
       trigger={<AccountButton user={user} ref={focusOnce} />}
     >
-      <p className="text-ds-muted truncate px-3 pt-2 pb-3 text-xs">{user.email}</p>
+      <p className="text-muted truncate px-3 pt-2 pb-3 text-xs">{user.email}</p>
       <Button
         variant="ghost"
         full

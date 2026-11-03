@@ -1,18 +1,14 @@
 import { ArrowLeft } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { AppLink } from '@/components/layout/app-link'
+import { Button } from '@/components/ds/button'
 
-/** The Lobby's way back to the Squad Board, shown in every state that has the Lobby's header. */
+/** The Lobby's way back to the Squad Board, shown when the viewer lost their place in the Squad. */
 export function LobbyBackLink() {
   const t = useTranslations()
 
   return (
-    <AppLink
-      href="/squads"
-      className="flex w-fit items-center gap-2 rounded-lg border border-border-light bg-surface px-4 py-2 text-sm text-muted hover:border-muted/30 hover:bg-surface-hover hover:text-offwhite transition-all"
-    >
-      <ArrowLeft className="size-4" />
+    <Button href="/squads" variant="secondary" size="sm" icon={<ArrowLeft />} className="w-fit">
       {t('lobby.backToSquads')}
-    </AppLink>
+    </Button>
   )
 }

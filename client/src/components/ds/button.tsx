@@ -21,8 +21,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   secondary: 'bg-raised-2 text-text hover-fine:bg-track',
   ghost: 'bg-transparent text-text-2 hover-fine:bg-raised-2',
   link: 'bg-transparent text-mint hover-fine:text-[#7cffcf]',
-  danger: 'bg-danger-ground text-ds-danger hover-fine:bg-danger-ground-hover',
-  discord: 'bg-ds-discord text-white hover-fine:bg-discord-hover',
+  danger: 'bg-danger-ground text-danger hover-fine:bg-danger-ground-hover',
+  discord: 'bg-discord text-white hover-fine:bg-discord-hover',
   light: 'bg-white text-[#2b33a8] hover-fine:shadow-[0_0_0_5px_rgba(255,255,255,0.18)]',
   dark: 'bg-bg text-text hover-fine:bg-raised-2',
   glass: 'bg-white/14 text-white hover-fine:bg-white/24',
@@ -233,7 +233,7 @@ function buttonClassName({
     BASE_CLASSES,
     sizeClasses.box,
     sizeClasses.icon,
-    mono ? ['font-ds-mono tracking-widest', sizeClasses.mono] : 'font-body',
+    mono ? ['font-mono tracking-widest', sizeClasses.mono] : 'font-body',
     HEAVY_VARIANTS.includes(variant) ? 'font-extrabold' : 'font-bold',
     disabled
       ? QUIET_VARIANTS.includes(variant)

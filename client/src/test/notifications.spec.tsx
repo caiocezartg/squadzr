@@ -156,7 +156,7 @@ describe('the bell and its panel', () => {
 
     expect(await screen.findByText('All caught up')).toBeInTheDocument()
     expect(
-      screen.getByText('When one of your Squads fills up, the invite lands here.')
+      screen.getByText('When one of your squads fills up, the invite lands here.')
     ).toBeInTheDocument()
     expect(screen.getByRole('button', MARK_ALL)).toBeDisabled()
   })

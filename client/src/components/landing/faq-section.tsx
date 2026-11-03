@@ -39,7 +39,7 @@ export function FAQSection() {
             >
               <Accordion.Header>
                 <Accordion.Trigger className="group focus-visible:outline-mint flex min-h-11 w-full cursor-pointer items-center gap-4 px-4 py-5 text-left focus-visible:-outline-offset-2 focus-visible:outline-2 sm:gap-4.5 sm:px-5.5">
-                  <span className="font-ds-mono text-ds-muted w-7 shrink-0 text-xs font-bold">
+                  <span className="font-mono text-muted w-7 shrink-0 text-xs font-bold">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <span className="text-text flex-1 text-base font-bold sm:text-[17px]">

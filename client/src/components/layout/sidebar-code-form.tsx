@@ -42,7 +42,7 @@ export function SidebarCodeForm({ onNavigate }: SidebarCodeFormProps) {
         <label htmlFor={inputId} className="sr-only">
           {t('codeLabel')}
         </label>
-        <span aria-hidden="true" className="font-ds-mono text-ds-muted text-[13px]">
+        <span aria-hidden="true" className="font-mono text-muted text-[13px]">
           #
         </span>
         <input
@@ -60,7 +60,7 @@ export function SidebarCodeForm({ onNavigate }: SidebarCodeFormProps) {
           spellCheck={false}
           aria-invalid={invalid}
           aria-describedby={invalid ? messageId : undefined}
-          className="font-ds-mono text-text placeholder:text-faint min-w-0 flex-1 bg-transparent py-2.5 text-[13px] font-bold tracking-widest uppercase outline-none"
+          className="font-mono text-text placeholder:text-faint min-w-0 flex-1 bg-transparent py-2.5 text-[13px] font-bold tracking-widest uppercase outline-none"
         />
         <button
           type="submit"
@@ -74,7 +74,7 @@ export function SidebarCodeForm({ onNavigate }: SidebarCodeFormProps) {
         </button>
       </div>
       {invalid && (
-        <p id={messageId} role="alert" className="text-ds-danger mt-2 px-1 text-xs font-semibold">
+        <p id={messageId} role="alert" className="text-danger mt-2 px-1 text-xs font-semibold">
           {t('codeInvalid')}
         </p>
       )}

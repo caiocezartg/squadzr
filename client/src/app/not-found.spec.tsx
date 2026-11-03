@@ -24,8 +24,8 @@ describe('not-found page', () => {
 
     expect(html).toContain('Page not found')
     expect(html).toContain('wandered off the map')
-    expect(html).toContain('Back to Home')
-    expect(html).toContain('Explore Squads')
+    expect(html).toContain('Back to home')
+    expect(html).toContain('Explore squads')
     expect(html).not.toMatch(/opacity:\s*0/)
   })
 

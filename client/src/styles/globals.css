@@ -1,29 +1,6 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-background: #0a0a0b;
-
-  --color-surface: #141416;
-  --color-surface-hover: #1a1a1d;
-  --color-surface-light: #1e1e22;
-
-  --color-border: #1f1f23;
-  --color-border-light: #2a2a2f;
-
-  --color-accent: #00ffa2;
-  --color-accent-hover: #00e694;
-  --color-accent-muted: rgba(0, 255, 162, 0.1);
-  --color-accent-glow: rgba(0, 255, 162, 0.15);
-
-  --color-muted: #8a8a8e;
-  --color-muted-light: #a0a0a4;
-
-  --color-offwhite: #f0f0f0;
-  --color-discord: #5865f2;
-
-  --color-danger: #ef4444;
-  --color-danger-hover: #dc2626;
-
   /*
     Tailwind 3 gave each font size a fixed line height in rem; Tailwind 4 uses ratios, which resize
     when a text-[Npx] class overrides the size. These keep the Tailwind 3 values.
@@ -37,22 +14,9 @@
   --text-3xl--line-height: 2.25rem;
   --text-4xl--line-height: 2.5rem;
 
-  /* Tailwind 4 redefined these palette colors; the app keeps its Tailwind 3 look. */
-  --color-red-500: #ef4444;
-  --color-blue-500: #3b82f6;
-  --color-amber-400: #fbbf24;
-  --color-amber-500: #f59e0b;
-  --color-yellow-400: #facc15;
-  --color-yellow-500: #eab308;
-
-  --font-heading: var(--font-exo-2), sans-serif;
   --font-body: var(--font-plus-jakarta-sans), sans-serif;
 
-  /*
-    Redesign v2 palette (docs/design/reference.md, Colour tokens). It sits next to today's palette
-    until CCC-118 removes the old tokens. Three names clash with today's tokens, so they carry a
-    ds- prefix until then: ds-muted, ds-discord and ds-danger.
-  */
+  /* The palette (docs/design/reference.md, Colour tokens). */
   --color-bg: #07080a;
   --color-menu: #0b0c0f;
   --color-panel: #0f1013;
@@ -64,30 +28,26 @@
   --color-text: #f2f3f5;
   --color-text-2: #c9cbd1;
   --color-text-3: #a9abb3;
-  --color-ds-muted: #80838c;
+  --color-muted: #80838c;
   --color-faint: #5f626b;
   --color-mint: #00ffa2;
   --color-mint-hover: #5cffc4;
   --color-mint-ink: #03140d;
   --color-amber: #ffb547;
-  --color-ds-discord: #4e5ae8;
+  --color-discord: #4e5ae8;
   --color-discord-hover: #5d68f0;
   --color-discord-soft: #8b93f5;
-  --color-ds-danger: #ff8a8a;
+  --color-danger: #ff8a8a;
   --color-danger-ground: rgba(239, 68, 68, 0.1);
   --color-danger-ground-hover: rgba(239, 68, 68, 0.18);
 
-  /* Redesign v2 families. Mono is ds-mono until CCC-118, because today's screens use font-mono. */
+  /* The display and mono families (reference, Typography); the body family is above. */
   --font-display: var(--font-big-shoulders), sans-serif;
-  --font-ds-mono: var(--font-jetbrains-mono), monospace;
+  --font-mono: var(--font-jetbrains-mono), monospace;
 
   /* Motion curves (reference, Motion tokens). They also drive the ease-out and ease-in-out classes. */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-
-  --animate-fade-in: fade-in 0.4s ease-out;
-  --animate-slide-up: slide-up 0.5s ease-out;
-  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
 
   /*
     Avatar loops (reference, Per element): the online halo and the open slot's wait pulse. Both are
@@ -246,35 +206,6 @@
       transform: translateY(-8px);
     }
   }
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  @keyframes slide-up {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  @keyframes pulse-glow {
-    0%,
-    100% {
-      box-shadow: 0 0 8px rgba(0, 255, 162, 0.2);
-    }
-    50% {
-      box-shadow: 0 0 20px rgba(0, 255, 162, 0.4);
-    }
-  }
 }
 
 /* Motion durations (reference, Motion tokens). */
@@ -366,7 +297,7 @@
 }
 
 @utility type-label {
-  font-family: var(--font-ds-mono);
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -375,7 +306,7 @@
 
 /* A Squad code such as #VLR77: the label's metrics, in the code's own case. */
 @utility type-code {
-  font-family: var(--font-ds-mono);
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -437,51 +368,6 @@
   }
 }
 
-@utility btn {
-  @apply inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold
-      transition-all duration-200 focus-visible:outline-hidden focus-visible:ring-2
-      focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background
-      disabled:pointer-events-none disabled:opacity-40;
-}
-
-@utility btn-accent {
-  @apply btn bg-accent text-background hover:bg-accent-hover
-      shadow-[0_0_20px_rgba(0,255,162,0.15)] hover:shadow-[0_0_30px_rgba(0,255,162,0.25)];
-}
-
-@utility btn-discord {
-  @apply btn bg-discord text-white hover:bg-discord/85;
-}
-
-@utility btn-ghost {
-  @apply btn border border-border-light text-offwhite hover:bg-surface-hover hover:border-muted/30;
-}
-
-@utility btn-danger {
-  @apply btn bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20;
-}
-
-@utility card {
-  @apply rounded-xl border border-border bg-surface overflow-hidden;
-}
-
-@utility card-hover {
-  @apply card transition-all duration-300
-      hover:border-accent/20 hover:shadow-[0_0_30px_rgba(0,255,162,0.05)];
-}
-
-@utility badge {
-  @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium;
-}
-
-@utility badge-accent {
-  @apply badge bg-accent/10 text-accent border border-accent/20;
-}
-
-@utility badge-muted {
-  @apply badge bg-surface-light text-muted border border-border;
-}
-
 @layer base {
   *,
   *::before,
@@ -496,7 +382,7 @@
   }
 
   body {
-    @apply min-h-screen bg-background text-offwhite font-body;
+    @apply min-h-screen bg-bg text-text font-body;
   }
 
   #root {
@@ -607,21 +493,8 @@
   .animate-spin,
   .animate-ping,
   .animate-bounce,
-  .animate-pulse,
-  .animate-pulse-glow {
+  .animate-pulse {
     animation: none;
-  }
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-  }
-
-  @keyframes slide-up {
-    from {
-      opacity: 0;
-    }
   }
 
   @keyframes menu-in {

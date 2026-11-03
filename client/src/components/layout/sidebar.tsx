@@ -69,7 +69,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         >
           <LayoutGrid aria-hidden className="size-4.25 shrink-0" strokeWidth={2.2} />
           {t('allSquads')}
-          <OpenSquadCount className="font-ds-mono text-text-3 ml-auto text-[11px] font-bold" />
+          <OpenSquadCount className="font-mono text-text-3 ml-auto text-[11px] font-bold" />
         </AppLink>
       </nav>
 

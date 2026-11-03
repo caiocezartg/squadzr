@@ -35,7 +35,7 @@ export function SidebarMySquads({ onNavigate }: SidebarMySquadsProps) {
         <MySquadsList headingId={headingId} userId={userId} onNavigate={onNavigate} />
       ) : (
         <>
-          <h2 id={headingId} className="type-label text-ds-muted px-2">
+          <h2 id={headingId} className="type-label text-muted px-2">
             {t('mySquads')}
           </h2>
           <div className="flex flex-col items-start gap-3 px-2">
@@ -77,10 +77,10 @@ function MySquadsList({
   return (
     <>
       <div className="flex items-center justify-between px-2">
-        <h2 id={headingId} className="type-label text-ds-muted">
+        <h2 id={headingId} className="type-label text-muted">
           {t('mySquads')}
         </h2>
-        <span className="font-ds-mono text-ds-muted text-[11px] font-bold">{squads.length}</span>
+        <span className="font-mono text-muted text-[11px] font-bold">{squads.length}</span>
       </div>
       <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
         {squads.map((squad) => {

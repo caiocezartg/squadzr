@@ -30,7 +30,7 @@ export function GameCover({ game, compact = false }: { game: Game; compact?: boo
       <span
         data-testid="game-initials"
         className={cn(
-          'bg-track text-text-3 font-ds-mono flex shrink-0 items-center justify-center text-[11px] font-extrabold',
+          'bg-track text-text-3 font-mono flex shrink-0 items-center justify-center text-[11px] font-extrabold',
           size
         )}
       >

@@ -71,15 +71,12 @@ describe('reduced motion styles', () => {
     expect(declarationsOf(block, '.transition-transform')).toContain('transition-property: none')
   })
 
-  it.each([
-    '.animate-spin',
-    '.animate-ping',
-    '.animate-bounce',
-    '.animate-pulse',
-    '.animate-pulse-glow',
-  ])('does not run the loop %s', (selector) => {
-    expect(declarationsOf(block, selector)).toContain('animation: none')
-  })
+  it.each(['.animate-spin', '.animate-ping', '.animate-bounce', '.animate-pulse'])(
+    'does not run the loop %s',
+    (selector) => {
+      expect(declarationsOf(block, selector)).toContain('animation: none')
+    }
+  )
 
   describe('the invite panel', () => {
     const source = readFileSync(

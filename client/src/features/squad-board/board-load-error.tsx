@@ -10,7 +10,7 @@ export function BoardLoadError({ onRetry }: { readonly onRetry: () => void }) {
     <div className="flex flex-col items-start gap-3">
       <div
         role="alert"
-        className="bg-danger-ground text-ds-danger flex w-full items-center gap-3 px-4 py-3.5 text-sm font-semibold"
+        className="bg-danger-ground text-danger flex w-full items-center gap-3 px-4 py-3.5 text-sm font-semibold"
       >
         <TriangleAlert aria-hidden="true" className="size-4.5 shrink-0" strokeWidth={2.4} />
         {t('loadError')}

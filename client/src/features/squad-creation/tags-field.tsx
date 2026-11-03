@@ -115,7 +115,7 @@ export function TagsField({ inputId, value: tags, onChange, formError }: TagsFie
         </div>
         <div aria-live="polite">
           {message && (
-            <p id={errorId} className="text-ds-danger mt-2 text-[12.5px] leading-normal">
+            <p id={errorId} className="text-danger mt-2 text-[12.5px] leading-normal">
               {translateTagError(message, t)}
             </p>
           )}

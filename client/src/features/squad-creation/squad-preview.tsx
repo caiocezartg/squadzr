@@ -39,7 +39,7 @@ export function SquadPreview({ game }: { game: Game }) {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <span className="type-label text-ds-muted tracking-[0.12em]">{t('preview')}</span>
+      <span className="type-label text-muted tracking-[0.12em]">{t('preview')}</span>
       <SquadCard squad={squad} preview />
     </div>
   )

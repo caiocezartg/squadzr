@@ -79,7 +79,7 @@ function FiltersButton({
           <span
             aria-hidden="true"
             className={cn(
-              'font-ds-mono px-1.5 py-0.5 text-[11px] font-extrabold',
+              'font-mono px-1.5 py-0.5 text-[11px] font-extrabold',
               open ? 'bg-bg text-mint' : 'bg-mint text-mint-ink'
             )}
           >

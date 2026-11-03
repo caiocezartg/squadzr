@@ -129,8 +129,11 @@ describe('squad board — rendering', () => {
     onHttp('GET', '/api/rooms', () => httpOk({ rooms: [] }))
     renderSquadsFlow('/squads', { user: null, shell: true })
 
-    expect(await screen.findByText('No squads yet')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Create Squad' })).not.toBeInTheDocument()
+    // The shell's sidebar has its own "Create squad"; the empty state must not add one.
+    const emptyState = (await screen.findByText('No squads yet')).parentElement!
+    expect(
+      within(emptyState).queryByRole('button', { name: 'Create squad' })
+    ).not.toBeInTheDocument()
   })
 
   it('offers a signed-in player a create action in the empty state', async () => {
@@ -138,7 +141,7 @@ describe('squad board — rendering', () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
 
     expect(await screen.findByText('No squads yet')).toBeInTheDocument()
-    await user.click(screen.getAllByRole('button', { name: 'Create Squad' }).at(-1)!)
+    await user.click(screen.getAllByRole('button', { name: 'Create squad' }).at(-1)!)
 
     expect(await screen.findByText('Choose the game', {}, { timeout: 5000 })).toBeInTheDocument()
   })

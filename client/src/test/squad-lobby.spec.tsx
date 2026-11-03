@@ -591,17 +591,35 @@ describe('squad lobby — server-driven errors and redirects', () => {
 })
 
 describe('squad lobby — failure and access gates', () => {
+  it('cuts a code longer than a Squad code in the not-found state', async () => {
+    renderSquadsFlow('/squads/ABCDEF1234567890')
+
+    expect(await screen.findByText('Squad not found')).toBeInTheDocument()
+    expect(screen.getByText('#ABCDEF')).toBeInTheDocument()
+    expect(screen.queryByText(/1234567890/)).not.toBeInTheDocument()
+  })
+
   it('shows the not-found state for an unknown squad code', async () => {
     renderSquadsFlow('/squads/ZZZZZZ')
 
     expect(await screen.findByText('Squad not found')).toBeInTheDocument()
-    expect(screen.getByText('ZZZZZZ')).toBeInTheDocument()
+    expect(screen.getByText('#ZZZZZZ')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
+    expect(screen.getByRole('link', { name: 'Create squad' })).toHaveAttribute(
+      'href',
+      '/squads?create=1'
+    )
   })
 
   it('gates the lobby behind sign-in for guests', async () => {
     renderSquadsFlow('/squads/LOBBY1', { user: null })
 
-    expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to view this squad' })
+    ).toBeInTheDocument()
+    expect(screen.getByText('#LOBBY1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign in with Discord' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
   })
 })
 
@@ -613,7 +631,9 @@ describe('squad lobby — Ready Squad access gates', () => {
     onHttp('GET', '/api/rooms/:code', () => httpError(404, notFoundBody))
     renderSquadsFlow('/squads/LOBBY1', { user: null })
 
-    expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to view this squad' })
+    ).toBeInTheDocument()
 
     // A visitor never joins the squad channel, so no snapshot can ever arrive.
     openLatestWebSocket()

@@ -51,10 +51,10 @@ function sidebar() {
   return within(screen.getByRole('complementary', { name: 'Menu' }))
 }
 
-/** Opens the account menu in the sidebar and picks Sign Out. The menu opens in a popover, outside the sidebar. */
+/** Opens the account menu in the sidebar and picks Sign out. The menu opens in a popover, outside the sidebar. */
 async function signOutFromSidebar(user: UserEvent): Promise<void> {
   await user.click(sidebar().getByRole('button', { name: /caio/i }))
-  await user.click(await screen.findByRole('button', { name: 'Sign Out' }))
+  await user.click(await screen.findByRole('button', { name: 'Sign out' }))
 }
 
 beforeEach(() => {

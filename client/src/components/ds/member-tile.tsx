@@ -111,7 +111,7 @@ export function MemberTile(props: MemberTileProps) {
         surface={look.groundColor}
       />
       <Name look={look}>{props.name}</Name>
-      {props.you && <span className="shrink-0 text-xs text-ds-muted">{t('you')}</span>}
+      {props.you && <span className="shrink-0 text-xs text-muted">{t('you')}</span>}
     </Tile>
   )
 }

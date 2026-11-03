@@ -211,7 +211,7 @@ function SquadCardBody({
               <RailCircle key={index} slot={slot} first={index === 0} lit={!isFull} />
             ))}
             {extra > 0 && (
-              <span className="ml-3.5 shrink-0 font-ds-mono text-xs font-bold text-text-3">
+              <span className="ml-3.5 shrink-0 font-mono text-xs font-bold text-text-3">
                 +{extra}
               </span>
             )}
@@ -300,7 +300,7 @@ function JoinedBadge() {
   const t = useTranslations('squads.card')
 
   return (
-    <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-mint px-1.5 py-1 font-ds-mono text-[9.5px] font-bold tracking-[0.08em] text-mint-ink uppercase">
+    <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-mint px-1.5 py-1 font-mono text-[9.5px] font-bold tracking-[0.08em] text-mint-ink uppercase">
       <Check aria-hidden="true" className="size-2.5 stroke-[3.5]" />
       {t('joined')}
     </span>

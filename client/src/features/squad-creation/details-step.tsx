@@ -57,7 +57,7 @@ export function DetailsStep({ selectedGame, onChangeGame }: DetailsStepProps) {
     <>
       <div className="flex items-center gap-3 bg-[#0c0d10] p-2">
         <GameCover game={selectedGame} compact />
-        <span className="font-ds-mono min-w-0 flex-1 truncate text-xs font-bold tracking-widest uppercase">
+        <span className="font-mono min-w-0 flex-1 truncate text-xs font-bold tracking-widest uppercase">
           {selectedGame.name}
         </span>
         <Button variant="secondary" size="sm" onClick={onChangeGame}>
@@ -71,8 +71,8 @@ export function DetailsStep({ selectedGame, onChangeGame }: DetailsStepProps) {
         aside={
           <span
             className={cn(
-              'font-ds-mono text-[11px] tabular-nums',
-              name.trim().length > NAME_MAX_LENGTH ? 'text-ds-danger' : 'text-ds-muted'
+              'font-mono text-[11px] tabular-nums',
+              name.trim().length > NAME_MAX_LENGTH ? 'text-danger' : 'text-muted'
             )}
           >
             {name.trim().length}/{NAME_MAX_LENGTH}
@@ -138,7 +138,7 @@ export function DetailsStep({ selectedGame, onChangeGame }: DetailsStepProps) {
         label={
           <>
             {t('ds.createSquad.tagsLabel')}{' '}
-            <span className="text-ds-muted font-medium">{t('ds.createSquad.optional')}</span>
+            <span className="text-muted font-medium">{t('ds.createSquad.optional')}</span>
           </>
         }
       >

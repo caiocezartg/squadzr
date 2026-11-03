@@ -162,7 +162,7 @@ export function HeroSquadShowcase() {
             type="button"
             onClick={show.togglePause}
             aria-label={show.paused ? t('play') : t('pause')}
-            className="text-ds-muted hover-fine:text-text focus-visible:outline-mint flex size-8 items-center justify-center focus-visible:outline-2"
+            className="text-muted hover-fine:text-text focus-visible:outline-mint flex size-8 items-center justify-center focus-visible:outline-2"
           >
             {show.paused ? (
               <Play aria-hidden className="size-3.5 fill-current" />

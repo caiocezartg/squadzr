@@ -62,7 +62,7 @@ export function Pagination({
             className={cn(
               square,
               control,
-              'font-ds-mono font-extrabold',
+              'font-mono font-extrabold',
               size === 'sm' ? 'text-[13px]' : 'text-sm',
               isCurrent
                 ? tone === 'light'

@@ -6,10 +6,8 @@
     "daysAgo": "{count}d ago"
   },
   "common": {
-    "signOut": "Sign Out",
-    "createSquad": "Create Squad",
-    "createNewSquad": "Create new squad",
-    "loading": "Loading…",
+    "signOut": "Sign out",
+    "createSquad": "Create squad",
     "language": "Language",
     "close": "Close"
   },
@@ -183,7 +181,10 @@
       "unread": "Unread",
       "dismiss": "Dismiss notification for {squad}",
       "emptyTitle": "All caught up",
-      "emptyHint": "When one of your Squads fills up, the invite lands here."
+      "emptyHint": "When one of your squads fills up, the invite lands here."
+    },
+    "notice": {
+      "emptySlots": "Nobody here"
     }
   },
   "landing": {
@@ -362,20 +363,24 @@
   "squadNotFound": {
     "title": "Squad not found",
     "description": "This squad no longer exists or the code is invalid. Check the code and try again.",
-    "codeLabel": "Code entered:",
-    "backToSquads": "Back to Squads",
-    "createSquad": "Create New Squad"
+    "createSquad": "Create squad",
+    "exploreSquads": "Explore squads"
   },
   "lobby": {
     "backToSquads": "Back to squads",
     "cannotLeave": "Cannot leave a full squad",
-    "pleaseSignIn": "Please sign in to view this squad."
+    "signInPrompt": {
+      "title": "Sign in to view this squad",
+      "description": "You can browse squads as a guest, but viewing a squad requires signing in with Discord.",
+      "signIn": "Sign in with Discord",
+      "exploreSquads": "Explore squads"
+    }
   },
   "notFound": {
     "title": "Page not found",
     "description": "Looks like you've wandered off the map. The page you're looking for doesn't exist or has been moved.",
-    "backToHome": "Back to Home",
-    "exploreSquads": "Explore Squads"
+    "backToHome": "Back to home",
+    "exploreSquads": "Explore squads"
   },
   "realtime": {
     "updating": "A new version is available. Reloading…",
@@ -384,20 +389,11 @@
     "connected": "Connected",
     "connecting": "Connecting…",
     "reconnecting": "Reconnecting…",
-    "disconnected": "Disconnected",
-    "online": "Online",
-    "offline": "Offline",
-    "offlineSince": "Offline · {time}"
+    "disconnected": "Disconnected"
   },
   "languages": {
     "ptBr": "PT-BR",
     "enUs": "EN-US"
-  },
-  "pagination": {
-    "label": "Pagination",
-    "previous": "Go to previous page",
-    "next": "Go to next page",
-    "page": "Go to page {page}"
   },
   "errors": {
     "GAME_NOT_FOUND": "This game could not be found.",

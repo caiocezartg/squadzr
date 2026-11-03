@@ -52,7 +52,7 @@ export function NotificationsPanel({
       </div>
       {notifications.length === 0 ? (
         <div className="flex flex-col items-center gap-3 px-6 pt-7 pb-8.5 text-center">
-          <span className="bg-line text-ds-muted flex size-13 items-center justify-center">
+          <span className="bg-line text-muted flex size-13 items-center justify-center">
             <Bell aria-hidden className="size-5.5" strokeWidth={2.2} />
           </span>
           <p className="text-text text-[15px] font-bold">{t('emptyTitle')}</p>

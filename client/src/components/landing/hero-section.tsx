@@ -12,7 +12,7 @@ function TrustLine() {
   const items = [t('trustDiscord'), t('trustPlayers'), t('trustFree')]
 
   return (
-    <ul className="text-ds-muted flex flex-wrap justify-center gap-x-3 gap-y-1 text-[13px] font-semibold">
+    <ul className="text-muted flex flex-wrap justify-center gap-x-3 gap-y-1 text-[13px] font-semibold">
       {items.map((item, index) => (
         <li key={item} className="flex gap-3">
           {index > 0 && <span aria-hidden="true">·</span>}

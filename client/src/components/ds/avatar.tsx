@@ -66,7 +66,7 @@ const SIZE_STYLES: Record<AvatarSize, SizeStyle> = {
 const STATE_CLASSES: Record<AvatarState, string> = {
   online: 'ring-2 ring-mint',
   away: 'opacity-50 grayscale-[0.85] outline-2 outline-offset-2 outline-[#4a4c54] outline-dashed',
-  open: 'bg-raised-2 text-ds-muted shadow-[inset_0_0_0_1.5px_#34353c] motion-safe:animate-wait-pulse',
+  open: 'bg-raised-2 text-muted shadow-[inset_0_0_0_1.5px_#34353c] motion-safe:animate-wait-pulse',
   vacant: 'bg-[#2a2b31] shadow-[inset_0_0_0_1px_#3a3b42]',
   none: '',
 }

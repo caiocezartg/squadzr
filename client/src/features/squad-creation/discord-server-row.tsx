@@ -31,7 +31,7 @@ export function DiscordServerRow({ name, iconUrl, memberCount }: DiscordServerRo
       ) : (
         <span
           aria-hidden
-          className="bg-ds-discord font-display flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold text-white"
+          className="bg-discord font-display flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold text-white"
         >
           {initials(name)}
         </span>
@@ -39,7 +39,7 @@ export function DiscordServerRow({ name, iconUrl, memberCount }: DiscordServerRo
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-sm/5 font-extrabold">{name}</span>
         {memberCount !== null && (
-          <span className="font-ds-mono text-ds-muted text-[11px] tabular-nums">
+          <span className="font-mono text-muted text-[11px] tabular-nums">
             {t('discordServerMembers', { count: memberCount })}
           </span>
         )}

@@ -76,7 +76,7 @@ export function DiscordStep({ game, invite }: DiscordStepProps) {
               valid
                 ? 'shadow-[inset_0_0_0_1.5px_var(--color-mint)]'
                 : errorMessage
-                  ? 'shadow-[inset_0_0_0_1.5px_var(--color-ds-danger)]'
+                  ? 'shadow-[inset_0_0_0_1.5px_var(--color-danger)]'
                   : 'shadow-[inset_0_0_0_1.5px_var(--color-track)] focus-within:shadow-[inset_0_0_0_1.5px_var(--color-mint)]'
             )}
           >
@@ -88,20 +88,20 @@ export function DiscordStep({ game, invite }: DiscordStepProps) {
               aria-invalid={errorMessage ? true : undefined}
               aria-describedby={errorMessage ? errorId : undefined}
               placeholder={t('ds.createSquad.discordPlaceholder')}
-              className="text-text placeholder:text-faint font-ds-mono min-w-0 flex-1 border-0 bg-transparent py-3 text-sm font-semibold outline-none"
+              className="text-text placeholder:text-faint font-mono min-w-0 flex-1 border-0 bg-transparent py-3 text-sm font-semibold outline-none"
               {...register('discordLink')}
             />
             {checking && (
-              <span className="font-ds-mono text-ds-muted inline-flex shrink-0 items-center gap-1.5 text-[11px] font-bold">
+              <span className="font-mono text-muted inline-flex shrink-0 items-center gap-1.5 text-[11px] font-bold">
                 <span
                   aria-hidden
-                  className="bg-ds-muted size-1.75 rounded-full motion-safe:animate-[pulse_1.6s_ease-in-out_infinite]"
+                  className="bg-muted size-1.75 rounded-full motion-safe:animate-[pulse_1.6s_ease-in-out_infinite]"
                 />
                 {t('ds.createSquad.discordChecking')}
               </span>
             )}
             {valid && (
-              <span className="font-ds-mono text-mint inline-flex shrink-0 items-center gap-1.5 text-[11px] font-bold">
+              <span className="font-mono text-mint inline-flex shrink-0 items-center gap-1.5 text-[11px] font-bold">
                 <Check aria-hidden className="size-3" strokeWidth={3.2} />
                 {t('ds.createSquad.discordValid')}
               </span>
@@ -121,7 +121,7 @@ export function DiscordStep({ game, invite }: DiscordStepProps) {
           </p>
         )}
         {valid && invite.status === 'unknown' && (
-          <p className="text-ds-muted text-[12.5px] leading-normal">
+          <p className="text-muted text-[12.5px] leading-normal">
             {t('ds.createSquad.discordUnknown')}
           </p>
         )}
@@ -129,7 +129,7 @@ export function DiscordStep({ game, invite }: DiscordStepProps) {
           {announcement}
         </p>
         <p className="text-text-3 flex gap-2 text-[12.5px] leading-normal">
-          <Lock aria-hidden className="text-ds-muted mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} />
+          <Lock aria-hidden className="text-muted mt-0.5 size-3.5 shrink-0" strokeWidth={2.4} />
           {t('ds.createSquad.discordHint')}
         </p>
       </div>

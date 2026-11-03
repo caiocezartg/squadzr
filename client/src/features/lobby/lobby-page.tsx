@@ -18,6 +18,7 @@ import { MembersPanel } from './components/members-panel'
 import { NonMemberLobby } from './components/non-member-lobby'
 import { SquadErrorBoundary } from './components/squad-error-boundary'
 import { SquadNotFound } from './components/squad-not-found'
+import { SquadSignIn } from './components/squad-sign-in'
 import { LobbySkeleton } from './skeleton'
 import { discardFailedSquadRead } from './squad-details'
 import { useDiscordPreview } from './use-discord-preview'
@@ -59,22 +60,11 @@ export function LobbyPage({ squadCode }: LobbyPageProps) {
   )
 }
 
-/** The sign-in prompt a visitor sees instead of a Squad, whatever the Squad's state. */
-function SignInPrompt() {
-  const t = useTranslations()
-
-  return (
-    <div className="flex flex-col items-center justify-center px-4 py-24 text-center">
-      <p className="text-ds-muted">{t('lobby.pleaseSignIn')}</p>
-    </div>
-  )
-}
-
 /** The Lobby when its Squad read fails: a signed-in viewer sees the not-found state, a visitor the sign-in prompt. */
 function LobbyReadFailed({ squadCode }: LobbyPageProps) {
   const session = useSession()
 
-  return session?.user ? <SquadNotFound code={squadCode} /> : <SignInPrompt />
+  return session?.user ? <SquadNotFound code={squadCode} /> : <SquadSignIn code={squadCode} />
 }
 
 interface LobbyContentProps {
@@ -99,7 +89,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
   })
 
   if (!session?.user) {
-    return <SignInPrompt />
+    return <SquadSignIn code={squadCode} />
   }
 
   if (lobby.squadMissing) {
@@ -124,10 +114,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
     return (
       <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-12 sm:px-6 lg:px-8">
         <LobbyBackLink />
-        <AlertBox
-          type="error"
-          message={translateErrorCode(lobby.errorCode ?? 'NOT_ROOM_MEMBER', t)}
-        />
+        <AlertBox message={translateErrorCode(lobby.errorCode ?? 'NOT_ROOM_MEMBER', t)} />
       </div>
     )
   }
@@ -143,11 +130,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
       />
 
       {lobby.errorCode && (
-        <AlertBox
-          type="error"
-          message={translateErrorCode(lobby.errorCode, t)}
-          onClose={lobby.dismissError}
-        />
+        <AlertBox message={translateErrorCode(lobby.errorCode, t)} onClose={lobby.dismissError} />
       )}
 
       <LobbyColumns cover={<LobbyCover squad={lobby.squad} />}>

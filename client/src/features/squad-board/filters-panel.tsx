@@ -44,7 +44,7 @@ export function FiltersPanel({ filters, onClose }: FiltersPanelProps) {
       <AvailabilityOptions value={filters.filter} onChange={filters.setFilter} />
 
       <fieldset className="m-0 border-0 p-0">
-        <legend className="type-label text-ds-muted mb-2.5 p-0">{t('language')}</legend>
+        <legend className="type-label text-muted mb-2.5 p-0">{t('language')}</legend>
         <Segmented
           label={t('language')}
           fluid
@@ -67,7 +67,7 @@ export function FiltersPanel({ filters, onClose }: FiltersPanelProps) {
       />
 
       <fieldset className="m-0 border-0 p-0">
-        <legend className="type-label text-ds-muted mb-2.5 p-0">{t('sort')}</legend>
+        <legend className="type-label text-muted mb-2.5 p-0">{t('sort')}</legend>
         <Segmented
           label={t('sort')}
           fluid

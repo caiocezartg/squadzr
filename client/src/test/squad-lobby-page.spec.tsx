@@ -85,7 +85,9 @@ describe('the Lobby on the App Router', () => {
 
     await renderLobbyRoute(lobbySquad.code)
 
-    expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to view this squad' })
+    ).toBeInTheDocument()
     expect(screen.queryByText('Squad not found')).not.toBeInTheDocument()
   })
 
@@ -191,7 +193,7 @@ describe('the Lobby on the App Router', () => {
     await renderLobbyRoute('ZZZZZZ')
 
     expect(await screen.findByText('Squad not found')).toBeInTheDocument()
-    expect(screen.getByText('ZZZZZZ')).toBeInTheDocument()
+    expect(screen.getByText('#ZZZZZZ')).toBeInTheDocument()
   })
 
   it("shows a player's initial in the roster once the avatar image fails to load", async () => {

@@ -74,7 +74,9 @@ describe('the Lobby for a visitor', () => {
   it('shows the sign-in prompt and nothing of the Squad', async () => {
     renderSquadsFlow('/squads/LOBBY1', { user: null })
 
-    expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to view this squad' })
+    ).toBeInTheDocument()
 
     openLatestWebSocket()
     expect(latestWebSocket().sentFrames()).toEqual([])

@@ -65,7 +65,7 @@ export function SearchField({
         className
       )}
     >
-      <Search aria-hidden className="text-ds-muted size-4.5 shrink-0" strokeWidth={2.4} />
+      <Search aria-hidden className="text-muted size-4.5 shrink-0" strokeWidth={2.4} />
       <label htmlFor={inputId} className="sr-only">
         {label}
       </label>

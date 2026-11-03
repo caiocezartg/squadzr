@@ -7,9 +7,7 @@
   },
   "common": {
     "signOut": "Sair",
-    "createSquad": "Criar novo squad",
-    "createNewSquad": "Criar novo squad",
-    "loading": "Carregando…",
+    "createSquad": "Criar squad",
     "language": "Idioma",
     "close": "Fechar"
   },
@@ -184,6 +182,9 @@
       "dismiss": "Dispensar notificação de {squad}",
       "emptyTitle": "Tudo em dia",
       "emptyHint": "Quando um squad seu completar, o convite chega aqui."
+    },
+    "notice": {
+      "emptySlots": "Ninguém por aqui"
     }
   },
   "landing": {
@@ -362,20 +363,24 @@
   "squadNotFound": {
     "title": "Squad não encontrado",
     "description": "Este squad não existe mais ou o código é inválido. Verifique o código e tente novamente.",
-    "codeLabel": "Código informado:",
-    "backToSquads": "Voltar para Squads",
-    "createSquad": "Criar squad"
+    "createSquad": "Criar squad",
+    "exploreSquads": "Explorar squads"
   },
   "lobby": {
     "backToSquads": "Voltar aos squads",
     "cannotLeave": "Não é possível sair de um squad cheio",
-    "pleaseSignIn": "Por favor, entre com sua conta para ver este squad."
+    "signInPrompt": {
+      "title": "Entre para ver este squad",
+      "description": "Você pode explorar os squads como visitante, mas ver um squad exige entrar com o Discord.",
+      "signIn": "Entrar com Discord",
+      "exploreSquads": "Explorar squads"
+    }
   },
   "notFound": {
     "title": "Página não encontrada",
     "description": "Parece que você saiu do mapa. A página que você procura não existe ou foi movida.",
-    "backToHome": "Voltar ao Início",
-    "exploreSquads": "Explorar Squads"
+    "backToHome": "Voltar ao início",
+    "exploreSquads": "Explorar squads"
   },
   "realtime": {
     "updating": "Uma nova versão está disponível. Recarregando…",
@@ -384,20 +389,11 @@
     "connected": "Conectado",
     "connecting": "Conectando…",
     "reconnecting": "Reconectando…",
-    "disconnected": "Desconectado",
-    "online": "Online",
-    "offline": "Offline",
-    "offlineSince": "Offline · {time}"
+    "disconnected": "Desconectado"
   },
   "languages": {
     "ptBr": "PT-BR",
     "enUs": "EN-US"
-  },
-  "pagination": {
-    "label": "Paginação",
-    "previous": "Ir para a página anterior",
-    "next": "Ir para a próxima página",
-    "page": "Ir para a página {page}"
   },
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",

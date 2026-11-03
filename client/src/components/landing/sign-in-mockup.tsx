@@ -67,7 +67,7 @@ export function SignInMockup({ mode }: MockupProps) {
             <span
               data-hover={beat === 2 || beat === 3 ? '' : undefined}
               data-pressed={beat === 3 ? '' : undefined}
-              className="bg-ds-discord data-hover:bg-discord-hover relative mt-auto block h-11 overflow-hidden text-[13px] font-bold text-white transition-[background-color,scale] duration-150 ease-(--ease-out) data-pressed:scale-[0.97]"
+              className="bg-discord data-hover:bg-discord-hover relative mt-auto block h-11 overflow-hidden text-[13px] font-bold text-white transition-[background-color,scale] duration-150 ease-(--ease-out) data-pressed:scale-[0.97]"
             >
               <span
                 className={LABEL}
