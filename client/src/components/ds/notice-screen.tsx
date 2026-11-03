@@ -7,6 +7,13 @@ import { cn } from '@/lib/utils'
 /** The empty squad under the copy has this many open seats. */
 const EMPTY_SLOTS = 5
 
+/**
+ * The glow behind the content. Its alpha falls on a bell curve, so it thins out into the ground with no
+ * edge the eye reads as a circle.
+ */
+const GLOW =
+  'radial-gradient(closest-side, rgba(0, 255, 162, 0.0800) 0%, rgba(0, 255, 162, 0.0765) 10%, rgba(0, 255, 162, 0.0668) 20%, rgba(0, 255, 162, 0.0534) 30%, rgba(0, 255, 162, 0.0389) 40%, rgba(0, 255, 162, 0.0260) 50%, rgba(0, 255, 162, 0.0158) 60%, rgba(0, 255, 162, 0.0088) 70%, rgba(0, 255, 162, 0.0045) 80%, rgba(0, 255, 162, 0.0021) 90%, rgba(0, 255, 162, 0.0000) 100%)'
+
 interface NoticeScreenProps {
   /** The large mark the screen is about: "404", or the code the player tried. */
   mark: ReactNode
@@ -32,10 +39,11 @@ export function NoticeScreen({ mark, title, description, children, className }: 
       )}
     >
       <div className="relative flex w-full max-w-xl flex-col items-center text-center">
-        {/* A round glow centred on the content, whatever the screen's shape. */}
+        {/* A round glow centred on the content, whatever the screen's shape; its stops ease it into the ground. */}
         <span
           aria-hidden="true"
-          className="absolute top-1/2 left-1/2 -z-10 size-[min(760px,150vw)] -translate-1/2 bg-[radial-gradient(closest-side,rgba(0,255,162,0.07),transparent)]"
+          className="absolute top-1/2 left-1/2 -z-10 size-[min(1100px,220vw)] -translate-1/2"
+          style={{ backgroundImage: GLOW }}
         />
         <div className="max-w-full break-all">{mark}</div>
         <EmptySquad />
