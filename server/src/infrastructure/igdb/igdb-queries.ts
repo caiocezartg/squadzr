@@ -1,9 +1,9 @@
 /** IGDB game-mode ids that make a game formable in a Squad. */
-export const CANDIDATE_GAME_MODES = [2, 3, 5, 6] as const
+const CANDIDATE_GAME_MODES = [2, 3, 5, 6] as const
 // 2 Multiplayer, 3 Co-operative, 5 MMO, 6 Battle Royale.
 
 /** IGDB game-type ids that are real games, not DLCs, bundles or editions. */
-export const CANDIDATE_GAME_TYPES = [0, 4, 8, 9, 10] as const
+const CANDIDATE_GAME_TYPES = [0, 4, 8, 9, 10] as const
 // 0 Main game, 4 Standalone expansion, 8 Remake, 9 Remaster, 10 Expanded game.
 
 export const IGDB_PAGE_SIZE = 500

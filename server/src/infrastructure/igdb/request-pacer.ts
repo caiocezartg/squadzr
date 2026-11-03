@@ -1,7 +1,7 @@
 import type { Clock } from '@domain/services/clock.interface'
 
 /** IGDB allows at most 4 requests per second. */
-export const MIN_REQUEST_INTERVAL_MS = 250
+const MIN_REQUEST_INTERVAL_MS = 250
 
 export type Sleep = (ms: number) => Promise<void>
 

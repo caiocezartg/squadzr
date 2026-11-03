@@ -17,7 +17,7 @@ function limitDraft(text: string): string {
 }
 
 /** The tags the form offers as one-tap chips, in this order. */
-export const TAG_SUGGESTIONS = [
+const TAG_SUGGESTIONS = [
   'ranked',
   'casual',
   'chill',

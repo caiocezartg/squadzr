@@ -52,4 +52,19 @@ describe('next.config startup validation', () => {
     expect(redirects.map((redirect) => redirect.destination)).not.toContain('/squads/my')
     expect(redirects.map((redirect) => redirect.source)).toEqual(['/rooms', '/rooms/:code'])
   })
+
+  it('keeps every page out of another site’s frame and sends the baseline security headers', async () => {
+    const config = (await loadConfig('http://squadzr-api:3000')).default
+    const rules = (await config.headers?.()) ?? []
+
+    const everyPage = rules.find((rule) => rule.source === '/:path*')
+    expect(everyPage?.headers).toEqual(
+      expect.arrayContaining([
+        { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      ])
+    )
+  })
 })

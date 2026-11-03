@@ -1,7 +1,7 @@
 import type { PublicSquad } from '@/types'
 
 /** The rail never draws more circles than this; the slots beyond them are the `+N` that follows. */
-export const RAIL_LIMIT = 5
+const RAIL_LIMIT = 5
 
 type MemberPreview = PublicSquad['memberPreview'][number]
 

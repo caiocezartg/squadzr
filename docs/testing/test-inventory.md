@@ -23,9 +23,9 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 33     | 208   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 31     | 324   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 902   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 34     | 221   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 32     | 332   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 903   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -37,6 +37,17 @@ components, and `reduced-motion.spec.ts` drops the `.animate-pulse-glow` loop ca
 name instead of a class, and `squad-lobby.spec.tsx` adds the case that cuts an over-long code in the
 Lobby's not-found state (1 test). `server:unit` (33 / 208) and `schemas:unit` (5 / 162) rerun unchanged;
 `server:integration` (31 / 324) was not rerun, because this ticket touches no server code.
+
+The pre-merge security audit of the redesign (on `design-v2`, after CCC-119) adds an Origin guard to the
+server and framing headers to the client. `server:unit` gains `origin-guard.plugin.spec.ts` (+1 file / 13
+tests: every state-changing method from another site refused, the app's origin and a request without an
+Origin accepted, safe methods let through, the WebSocket handshake from another site refused with and
+without a query string, a path that only starts like `/ws`, and the `null` origin), so it measures 34 files /
+221 tests. `server:integration` gains `cross-site-requests.test.ts` (+1 file / 8 tests: a cross-site
+text/plain post that would end the host's Squad or join a visitor, a cross-site notification delete, the app's
+own origin, a request without an Origin, a cross-site read still served, and a WebSocket opened by another site
+and by the app), so it measures 32 files / 332 tests. `client:unit` gains one case in `next-config.spec.ts`
+(the framing and baseline security headers on every page), so it measures 87 files / 903 tests.
 
 Suites are test files. The counts above are the current inventory, last recounted by CCC-118 on
 2026-11-02 (above). The 2026-10-25 recount ran on the merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104 and CCC-105. CCC-104 puts `memberPreview` on every Squad and orders the roster: it adds `tests/integration/member-preview.test.ts` (+1 file / +9 tests: the preview on the list, the single read for non-members and members, My Squads, `POST /api/rooms` with `room_created`, and `room_snapshot`, with its content, the limit of five and the order), the contract cases in `schemas:unit` (+8), the use-case, projection and ordering cases in `server:unit` (+5), and updates the client fixtures without adding client tests. CCC-90 adds the

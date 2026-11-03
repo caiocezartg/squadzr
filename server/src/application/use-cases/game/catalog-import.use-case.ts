@@ -93,7 +93,7 @@ function dedupeCandidates(candidates: readonly GameCatalogCandidate[]): {
  * largest online capacity between 2 and 40 becomes the maximum, with a minimum
  * of 2. Everything else (unknown, 0/1 players, or a lobby above 40) is 2-5.
  */
-export function resolveSquadSize(
+function resolveSquadSize(
   candidate: GameCatalogCandidate,
   curated: CuratedGame | undefined
 ): SquadSize {

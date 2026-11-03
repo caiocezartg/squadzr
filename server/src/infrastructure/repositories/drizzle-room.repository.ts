@@ -45,7 +45,7 @@ function retainedRoomCondition(now: Date) {
 }
 
 /** Rooms whose activity/retention window ended at or before `now`. */
-export function expiredRoomCondition(now: Date) {
+function expiredRoomCondition(now: Date) {
   return or(
     and(isNotNull(rooms.readyAt), lte(rooms.readyAt, readyRoomCutoff(now))),
     and(isNull(rooms.readyAt), lte(rooms.lastActivityAt, openRoomCutoff(now)))

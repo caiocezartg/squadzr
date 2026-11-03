@@ -7,7 +7,7 @@ import { GetGameUseCase } from '@application/use-cases/game/get-game.use-case'
 import { GetPopularGamesUseCase } from '@application/use-cases/game/get-popular-games.use-case'
 import { GameController } from '@interface/controllers/game.controller'
 
-export function createGameRepository(db: Database, clock: Clock): IGameRepository {
+function createGameRepository(db: Database, clock: Clock): IGameRepository {
   return new DrizzleGameRepository(db, clock)
 }
 

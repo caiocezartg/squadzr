@@ -15,7 +15,7 @@ export interface DiscordInviteRateLimit {
 }
 
 /** Thirty checks a minute: far above a host pasting links into the create form, far below a loop. */
-export const DEFAULT_DISCORD_INVITE_RATE_LIMIT: DiscordInviteRateLimit = {
+const DEFAULT_DISCORD_INVITE_RATE_LIMIT: DiscordInviteRateLimit = {
   max: 30,
   timeWindowMs: 60_000,
 }

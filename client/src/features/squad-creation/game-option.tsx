@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import type { Game } from '@/types'
 
 /** The name split around the first case-insensitive occurrence of the typed term. */
-export function splitMatch(name: string, term: string): [string, string, string] {
+function splitMatch(name: string, term: string): [string, string, string] {
   const at = term === '' ? -1 : name.toLowerCase().indexOf(term.toLowerCase())
   if (at < 0) return [name, '', '']
   return [name.slice(0, at), name.slice(at, at + term.length), name.slice(at + term.length)]

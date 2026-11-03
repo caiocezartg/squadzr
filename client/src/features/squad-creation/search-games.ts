@@ -3,7 +3,7 @@ import { api } from '@/lib/api'
 import type { Game } from '@/types'
 
 /** How many matching games the create dialog lists. */
-export const GAME_SEARCH_LIMIT = 20
+const GAME_SEARCH_LIMIT = 20
 
 /**
  * The game search behind the create dialog. An empty term asks for the most

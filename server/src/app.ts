@@ -16,6 +16,7 @@ import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invi
 import { RateLimitedError } from '@application/errors'
 import { SystemClock } from '@infrastructure/services/system-clock'
 import errorHandlerPlugin from '@infrastructure/plugins/error-handler.plugin'
+import originGuardPlugin from '@infrastructure/plugins/origin-guard.plugin'
 import databasePlugin from '@infrastructure/plugins/database.plugin'
 import authPlugin from '@infrastructure/plugins/auth.plugin'
 import swaggerPlugin from '@infrastructure/plugins/swagger.plugin'
@@ -126,6 +127,12 @@ export async function buildApp({
   await fastify.register(cors, {
     origin: env.CORS_ORIGIN,
     credentials: true,
+  })
+
+  // CORS keeps another site from reading an answer, not from sending a cookie-bearing request: the guard
+  // refuses every change of state and every WebSocket another site starts.
+  await fastify.register(originGuardPlugin, {
+    allowedOrigins: [env.CORS_ORIGIN, env.BETTER_AUTH_URL],
   })
 
   await fastify.register(helmet, {

@@ -22,6 +22,21 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ protocol: 'https', hostname: 'cdn.discordapp.com' }],
   },
+  // Another site may not frame the app: a framed page could trick a signed-in player into a click
+  // that joins, leaves or ends a Squad. The two framing headers cover old and new browsers alike.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ]
+  },
   // The Squad Board moved from /rooms. The redirect is permanent (308) and keeps the query string, so
   // shared links and sign-in callbacks to the old path still reach the board and its ?join= invite.
   async redirects() {

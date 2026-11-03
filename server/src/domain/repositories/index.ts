@@ -1,5 +1,0 @@
-export * from './user.repository'
-export * from './room.repository'
-export * from './room-member.repository'
-export * from './user-notification.repository'
-export * from './game.repository'
