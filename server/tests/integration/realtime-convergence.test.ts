@@ -54,8 +54,8 @@ describe('authoritative snapshots and ordered events', () => {
       [host.id, member.id].sort()
     )
     expect(repeated.payload.presence).toEqual([
-      { playerId: host.id, online: true },
-      { playerId: member.id, online: false },
+      { playerId: host.id, online: true, offlineSince: null },
+      { playerId: member.id, online: false, offlineSince: null },
     ])
     expect(await session.drain()).toEqual([])
     expect(subscriptionState(server).roomSockets(room.code)).toBe(1)
@@ -212,23 +212,33 @@ describe('Presence grace and heartbeat wiring', () => {
     const tab = await open(member)
     await joinRoomChannel(tab, room.code)
     expect((await observer.next()).type).toBe('presence_updated')
+    const closedAt = clock.now().toISOString()
     tab.client.close(1000)
     await tab.serverClosed
     clock.advance(10_000)
     const reconnect = await open(member)
     const snapshot = roomSnapshotMessageSchema.parse(await joinRoomChannel(reconnect, room.code))
-    expect(snapshot.payload.presence).toContainEqual({ playerId: member.id, online: true })
+    expect(snapshot.payload.presence).toContainEqual({
+      playerId: member.id,
+      online: true,
+      offlineSince: null,
+    })
     expect(await reconnect.drain()).toEqual([])
     expect(await observer.drain()).toEqual([
       {
         type: 'presence_updated',
         timestamp: clock.now().getTime(),
-        payload: { roomCode: room.code, playerId: member.id, online: false },
+        payload: {
+          roomCode: room.code,
+          playerId: member.id,
+          online: false,
+          offlineSince: closedAt,
+        },
       },
       {
         type: 'presence_updated',
         timestamp: clock.now().getTime(),
-        payload: { roomCode: room.code, playerId: member.id, online: true },
+        payload: { roomCode: room.code, playerId: member.id, online: true, offlineSince: null },
       },
     ])
   })
@@ -249,7 +259,11 @@ describe('Presence grace and heartbeat wiring', () => {
     const snapshot = roomSnapshotMessageSchema.parse(await joinRoomChannel(reconnect, room.code))
     clock.advance(1)
     await subscriptionState(server).sweepPresence()
-    expect(snapshot.payload.presence).toContainEqual({ playerId: member.id, online: true })
+    expect(snapshot.payload.presence).toContainEqual({
+      playerId: member.id,
+      online: true,
+      offlineSince: null,
+    })
     expect(await observer.drain()).toEqual([])
   })
 
@@ -290,7 +304,12 @@ describe('Presence grace and heartbeat wiring', () => {
       {
         type: 'presence_updated',
         timestamp: clock.now().getTime(),
-        payload: { roomCode: room.code, playerId: member.id, online: false },
+        payload: {
+          roomCode: room.code,
+          playerId: member.id,
+          online: false,
+          offlineSince: expect.any(String),
+        },
       },
     ])
     expect(subscriptionState(server).roomSockets(room.code)).toBe(1)

@@ -17,7 +17,7 @@ import {
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
 // CCC-34: public catalog/guest payloads never carry the Discord invite or the
-// roster; both are lobby details delivered only to authenticated members of the
+// full roster (CCC-104: only a preview of up to five members); both are lobby details delivered only to authenticated members of the
 // room. CCC-36 added the Ready Room access rules (404 for non-members, 60min
 // retention) and the user-targeted notification push.
 
@@ -88,7 +88,6 @@ describe('GET /api/rooms/:code', () => {
     for (const key of PRIVATE_ROOM_KEYS) expect(body.room).not.toHaveProperty(key)
     expect(body).not.toHaveProperty('players')
     expect(response.body).not.toContain(DISCORD_INVITE)
-    expect(response.body).not.toContain(host.name)
   })
 
   it('hides a Ready Room from non-members with 404 while its members keep the lobby', async () => {

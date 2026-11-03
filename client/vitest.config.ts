@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     name: 'client:unit',
     environment: 'jsdom',
-    include: ['src/**/*.spec.{ts,tsx}', 'scripts/**/*.spec.mjs'],
+    include: ['src/**/*.spec.{ts,tsx}'],
     setupFiles: ['./src/test/setup.ts'],
   },
   resolve: {

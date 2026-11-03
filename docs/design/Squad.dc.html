@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Sala do squad</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080A}
+a{color:#00FFA2}a:hover{color:#7CFFCF}
+/* Design system states: components keep inline styles, so hover and motion live here */
+.ds-btn{transition:background-color .2s,box-shadow .25s,color .2s,transform .15s}
+.ds-btn:active{transform:scale(.97)}
+.ds-btn-primary:hover{background-color:#5CFFC4 !important}
+.ds-btn-secondary:hover{background-color:#24252B !important}
+.ds-btn-ghost:hover{background-color:#1A1B20 !important}
+.ds-btn-link:hover{color:#7CFFCF !important}
+.ds-btn-danger:hover{background-color:rgba(239,68,68,0.18) !important}
+.ds-btn-discord:hover{background-color:#5D68F0 !important}
+.ds-btn-light:hover{box-shadow:0 0 0 5px rgba(255,255,255,0.18) !important}
+.ds-btn-dark:hover{background-color:#1A1B20 !important}
+.ds-btn-glass:hover{background-color:rgba(255,255,255,0.24) !important}
+.ds-btn-off:active{transform:none}
+.ds-chip{transition:background-color .15s}
+.ds-chip-removable:hover{background-color:#2A2B31 !important}
+.ds-chip-suggest:hover,.ds-chip-toggle[aria-pressed="false"]:hover{background-color:rgba(0,255,162,0.16) !important}
+.ds-chip-toggle[aria-pressed="true"]:hover{background-color:#5CFFC4 !important}
+.ds-seg{transition:background-color .15s,color .15s}
+.ds-seg[aria-pressed="false"]:hover{color:#F2F3F5 !important}
+.ds-pg{transition:background-color .15s}
+.ds-pg-idle:hover{background-color:#1F2026 !important}
+.ds-notif{transition:background-color .15s}
+.ds-notif:hover{background-color:#1F2026 !important}
+.ds-notif-row .ds-notif-x{opacity:0;transition:opacity .15s}
+.ds-notif-row:hover .ds-notif-x,.ds-notif-x:focus-visible{opacity:1}
+@keyframes ds-halo{0%{box-shadow:0 0 0 2px #00FFA2,0 0 0 2px rgba(0,255,162,0.45)}70%,100%{box-shadow:0 0 0 2px #00FFA2,0 0 0 9px rgba(0,255,162,0)}}
+.ds-in-room{animation:ds-halo 2.4s ease-out infinite}
+@keyframes ds-wait{0%,100%{opacity:.55}50%{opacity:1}}
+.ds-wait{animation:ds-wait 2.4s ease-in-out infinite}
+@keyframes ds-sheen{0%,55%{transform:translateX(-120%) skewX(-18deg)}85%,100%{transform:translateX(420%) skewX(-18deg)}}
+.ds-sheen{animation:ds-sheen 5s ease-in-out infinite}
+@keyframes ds-pop{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+.ds-pop{animation:ds-pop .5s cubic-bezier(.22,1,.36,1) both}
+input::placeholder{color:#5F626B}
+@media (prefers-reduced-motion:reduce){.ds-in-room,.ds-wait,.ds-sheen,.ds-pop{animation:none !important}}
+@keyframes live{0%,100%{opacity:1}50%{opacity:.35}}
+.live{animation:live 1.6s ease-in-out infinite}
+@media (max-width:760px){.m-grid{grid-template-columns:minmax(0,1fr) !important}}
+@media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1000px; background: #07080A; color: #F2F3F5; font-family: 'Plus Jakarta Sans', sans-serif">
+  <div style="flex: 1 1 260px; max-width: 100%; display: flex">
+    <dc-import name="Sidebar" active="{{room.code}}" hint-size="100%,1000px"></dc-import>
+  </div>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 26px 40px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+    <!-- Top bar -->
+    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+      <dc-import name="Button" variant="secondary" label="Explorar squads" icon="back" href="Board.dc.html" hint-size="170px,44px"></dc-import>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; color: #00FFA2; background: rgba(0,255,162,0.08); padding: 0 12px; min-height: 44px"><span class="live" style="width: 7px; height: 7px; border-radius: 50%; background: #00FFA2"></span>AO VIVO</span>
+        <dc-import name="Button" variant="secondary" label="Copiar link do squad" icon="link" hint-size="200px,44px"></dc-import>
+        <sc-if value="{{forming}}" hint-placeholder-val="{{ true }}">
+          <dc-import name="Button" variant="danger" label="Encerrar squad" icon="logout" hint-size="160px,44px"></dc-import>
+        </sc-if>
+        <sc-if value="{{complete}}" hint-placeholder-val="{{ false }}">
+          <span title="Não é possível sair de um squad completo" style="display: inline-flex; align-items: center; gap: 8px; background: #121317; color: #A9ABB3; font-size: 13px; font-weight: 700; padding: 0 14px; min-height: 44px">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="1"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+            Time fechado
+          </span>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- Poster + members, same height -->
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+      <section aria-label="Sobre o squad" style="flex: 1 1 320px; max-width: 380px; min-width: 0; position: relative">
+        <span aria-hidden="true" style="position: absolute; left: -10px; top: -10px; z-index: 2; width: 24px; height: 24px; border-left: 2px solid rgba(0,255,162,0.7); border-top: 2px solid rgba(0,255,162,0.7)"></span>
+        <span aria-hidden="true" style="position: absolute; right: -10px; bottom: -10px; z-index: 2; width: 24px; height: 24px; border-right: 2px solid rgba(0,255,162,0.7); border-bottom: 2px solid rgba(0,255,162,0.7)"></span>
+        <div style="position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: #1A1B20">
+          <img src="{{room.cover}}" alt="Capa de {{room.gameName}}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block">
+          <div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(7,8,10,0.55) 0%, rgba(7,8,10,0) 22%, rgba(7,8,10,0) 38%, rgba(7,8,10,0.92) 76%, #07080A 100%)"></div>
+
+          <div style="position: absolute; left: 18px; right: 18px; top: 16px; display: flex; align-items: center; gap: 10px">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: #F2F3F5; background: rgba(7,8,10,0.6); padding: 6px 9px">{{room.game}}</span>
+          </div>
+
+          <div style="position: absolute; left: 22px; right: 22px; bottom: 22px; display: flex; flex-direction: column; gap: 14px">
+            <h1 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 46px; line-height: 1.02; text-transform: uppercase">{{room.name}}</h1>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+              <dc-import name="Tag" variant="lang-light" size="md" label="Português (BR)" hint-size="130px,28px"></dc-import>
+              <sc-for list="{{room.tags}}" as="t" hint-placeholder-count="2">
+                <dc-import name="Tag" variant="glass" size="md" label="{{t}}" hint-size="80px,28px"></dc-import>
+              </sc-for>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: #A9ABB3">
+              <span style="display: inline-flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Criado {{room.created}}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="team-h" style="flex: 999 1 460px; min-width: 0; background: #0F1013; padding: 22px 22px 18px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+          <h2 id="team-h" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0">Membros</h2>
+          <span style="font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 56px; line-height: 0.9"><span style="color: {{countColor}}">{{countNow}}</span><span style="color: #2E2F36">/{{countMax}}</span></span>
+          <!-- Room code sits right above the slot meter -->
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px; padding-bottom: 2px">
+            <dc-import name="Button" variant="secondary" size="sm" mono="{{ true }}" label="#{{room.code}}" icon="copy" icon-pos="end" aria-label="Copiar código {{room.code}}" hint-size="110px,36px"></dc-import>
+            <dc-import name="SlotMeter" variant="blocks" filled="{{n}}" total="{{room.max}}" hint-size="216px,8px"></dc-import>
+          </div>
+        </div>
+
+        <div role="list" class="m-grid" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+          <sc-for list="{{tiles}}" as="m" hint-placeholder-count="8">
+            <dc-import name="MemberTile" member="{{m}}" hint-size="100%,64px"></dc-import>
+          </sc-for>
+        </div>
+
+        <div style="flex-grow: 1"></div>
+
+        <sc-if value="{{paged}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; justify-content: flex-end">
+            <dc-import name="Pagination" tone="light" size="sm" label="Páginas de membros" total="{{pageCount}}" current="{{pageNum}}" on-change="{{setPage}}" hint-size="176px,40px"></dc-import>
+          </div>
+        </sc-if>
+      </section>
+    </div>
+
+    <dc-import name="DiscordInvite" estado="{{inviteState}}" squad="{{invite}}" hint-size="100%,360px"></dc-import>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"estado":{"editor":"enum","options":["formando","completo"],"default":"formando"},"tamanho":{"editor":"enum","options":["5","10"],"default":"5"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { page: 0 };
+  }
+  renderVals() {
+    const complete = (this.props.estado ?? 'formando') === 'completo';
+    const big = String(this.props.tamanho ?? '5') === '10';
+    const PER_PAGE = 8;
+    const roster = [
+      { ini: 'CC', name: 'caiocezar', bg: '#0E4D3A', fg: '#B9FFE4', host: true, me: true, online: true },
+      { ini: 'MF', name: 'marinaFPS', bg: '#3A2A5C', fg: '#E7DBFF', online: true },
+      { ini: 'BR', name: 'Brunão', bg: '#5C3A1E', fg: '#FFE2C7', online: false, since: 'há 3 min' },
+      { ini: 'KZ', name: 'kz_dex', bg: '#1E3A5C', fg: '#CFE6FF', online: true },
+      { ini: 'LU', name: 'luhzinha', bg: '#5C1E3A', fg: '#FFD1E6', online: true },
+      { ini: 'TA', name: 'tatá_gg', bg: '#4A4A1E', fg: '#F4F4C2', online: true },
+      { ini: 'JP', name: 'jpzin', bg: '#1E4A4A', fg: '#C6F4F4', online: false, since: 'há 9 min' },
+      { ini: 'RA', name: 'rafa.exe', bg: '#2E3A1E', fg: '#E2F4C6', online: true },
+      { ini: 'NA', name: 'nandaBR', bg: '#3A1E4A', fg: '#F0D6FF', online: true },
+      { ini: 'OT', name: 'otaviocraft', bg: '#4A2E1E', fg: '#FFDCC2', online: true }
+    ];
+    const room = big
+      ? { code: 'MCX10', game: 'MINECRAFT', gameName: 'Minecraft', name: 'SMP survival hardcore', cover: '/_blob/27f1b58c3da08be4ee09f50b803963d5', tags: ['survival', 'smp'], created: 'há 40 min', max: 10, invite: 'discord.gg/smp-hardcore', forming: 8 }
+      : { code: 'VLR77', game: 'VALORANT', gameName: 'Valorant', name: 'Premier quinta à noite', cover: '/_blob/48d569e7ccecf944cc19cb2d19ae7720', tags: ['premier', 'mic'], created: 'há 12 min', max: 5, invite: 'discord.gg/premier-qui', forming: 4 };
+    const n = complete ? room.max : room.forming;
+    const members = roster.slice(0, n);
+    const slots = members.concat(Array.from({ length: room.max - n }, () => ({ open: true })));
+    const pageCount = Math.ceil(room.max / PER_PAGE);
+    const page = Math.min(this.state.page, pageCount - 1);
+    const start = page * PER_PAGE;
+    const pad = (x) => (x < 10 ? '0' : '') + x;
+    const inRoom = members.filter((m) => m.online).length;
+    return {
+      room,
+      n,
+      complete,
+      forming: !complete,
+      tiles: slots.slice(start, start + PER_PAGE),
+      paged: pageCount > 1,
+      pageCount,
+      pageNum: page + 1,
+      setPage: (k) => this.setState({ page: k - 1 }),
+      countNow: pad(n),
+      countMax: pad(room.max),
+      countColor: complete ? '#00FFA2' : '#F2F3F5',
+      inviteState: complete ? 'liberado' : 'bloqueado',
+      invite: { name: room.name, cover: room.cover, invite: room.invite, members: n, inRoom }
+    };
+  }
+}
+</script>
+</body>
+</html>

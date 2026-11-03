@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Avatar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<span style="position: relative; display: block; flex-shrink: 0; width: {{px}}; height: {{px}}">
+  <span class="{{cls}}" style="position: absolute; inset: 0; border-radius: 50%; background: {{bg}}; color: {{fg}}; font-family: 'Plus Jakarta Sans', sans-serif; font-size: {{fs}}; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: {{ring}}; filter: {{filter}}; opacity: {{opacity}}; outline: {{outline}}; outline-offset: 2px">
+    {{ini}}
+    <sc-if value="{{isOpen}}" hint-placeholder-val="{{ false }}">
+      <svg aria-hidden="true" width="{{plus}}" height="{{plus}}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+    </sc-if>
+  </span>
+  <sc-if value="{{host}}" hint-placeholder-val="{{ false }}">
+    <span title="Dono do squad" style="position: absolute; left: 50%; top: {{crownTop}}; transform: translateX(-50%); width: {{crown}}; height: {{crown}}; border-radius: 50%; background: #FFB547; color: #2A1A00; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px {{crownRing}}">
+      <svg role="img" aria-label="Dono do squad" width="{{crownIcon}}" height="{{crownIcon}}" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5L3 7z"></path></svg>
+    </span>
+  </sc-if>
+</span>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"ini":{"editor":"text","default":"CC"},"bg":{"editor":"color","default":"#0E4D3A"},"fg":{"editor":"color","default":"#B9FFE4"},"status":{"editor":"enum","options":["none","online","away","open","vacant"],"default":"online"},"host":{"editor":"boolean","default":false},"size":{"editor":"enum","options":["xs","sm","md","lg"],"default":"lg"},"pulse":{"editor":"boolean","default":true},"cutout":{"editor":null},"crownRing":{"editor":null},"$preview":{"width":44,"height":44}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    // [circle, initials, crown, crown icon] in px
+    const SIZES = { xs: [28, 10, 14, 8], sm: [34, 11.5, 16, 9], md: [36, 12, 18, 10], lg: [44, 14, 20, 11] };
+    const z = SIZES[p.size] || SIZES.lg;
+    const status = p.status ?? 'none';
+    let bg = p.bg ?? '#0E4D3A';
+    let fg = p.fg ?? '#B9FFE4';
+    let ini = p.ini ?? 'CC';
+    let ring = '';
+    let cls = '';
+    let filter = 'none';
+    let opacity = '1';
+    let outline = 'none';
+    // online: in the room now · away: joined, out of the room · open: slot waiting for a player · vacant: empty slot in a rail
+    if (status === 'online') { ring = '0 0 0 2px #00FFA2'; cls = (p.pulse ?? true) ? 'ds-in-room' : ''; }
+    if (status === 'away') { filter = 'grayscale(0.85)'; opacity = '0.5'; outline = '2px dashed #4A4C54'; }
+    if (status === 'open') { bg = '#1A1B20'; fg = '#80838C'; ring = 'inset 0 0 0 1.5px #34353C'; cls = 'ds-wait'; ini = ''; }
+    if (status === 'vacant') { bg = '#2A2B31'; fg = '#2A2B31'; ring = 'inset 0 0 0 1px #3A3B42'; ini = ''; }
+    const shadows = [p.cutout ? '0 0 0 2.5px ' + p.cutout : '', ring].filter(Boolean);
+    return {
+      px: z[0] + 'px',
+      fs: z[1] + 'px',
+      crown: z[2] + 'px',
+      crownIcon: z[3] + 'px',
+      crownTop: -Math.round(z[2] / 2) + 'px',
+      crownRing: p.crownRing ?? '#0F1013',
+      plus: Math.round(z[0] * 0.36) + 'px',
+      bg,
+      fg,
+      ini,
+      cls,
+      ring: shadows.length ? shadows.join(', ') : 'none',
+      filter,
+      opacity,
+      outline,
+      isOpen: status === 'open',
+      host: !!p.host
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -33,28 +33,66 @@ describe('next.config startup validation', () => {
     await expect(loadConfig(undefined)).resolves.toHaveProperty('default')
   })
 
-  it('redirects /rooms/my to /squads/my permanently before the Lobby redirect', async () => {
+  it('redirects /rooms/:code to the Lobby permanently', async () => {
     const config = (await loadConfig('http://squadzr-api:3000')).default
     const redirects = (await config.redirects?.()) ?? []
 
-    expect(redirects[0]).toMatchObject({
-      source: '/rooms/my',
-      destination: '/squads/my',
+    expect(redirects).toContainEqual({
+      source: '/rooms/:code',
+      destination: '/squads/:code',
       permanent: true,
     })
-
-    const mySquadsIndex = redirects.findIndex((redirect) => redirect.source === '/rooms/my')
-    const lobbyIndex = redirects.findIndex((redirect) => redirect.destination === '/squads/:code')
-    expect(mySquadsIndex).toBeGreaterThanOrEqual(0)
-    expect(lobbyIndex).toBeGreaterThan(mySquadsIndex)
   })
 
-  it('keeps the Lobby redirect excluding My Squads', async () => {
+  it('no longer redirects /rooms/my to a My Squads page, so both /rooms/my and /squads/my end in the Lobby route', async () => {
     const config = (await loadConfig('http://squadzr-api:3000')).default
     const redirects = (await config.redirects?.()) ?? []
 
-    expect(redirects).toContainEqual(
-      expect.objectContaining({ source: '/rooms/:code((?![Mm][Yy]$)[^/]+)', permanent: true })
+    expect(redirects.map((redirect) => redirect.source)).not.toContain('/rooms/my')
+    expect(redirects.map((redirect) => redirect.destination)).not.toContain('/squads/my')
+    expect(redirects.map((redirect) => redirect.source)).toEqual(['/rooms', '/rooms/:code'])
+  })
+
+  it('keeps every page out of another site’s frame and sends the baseline security headers', async () => {
+    const config = (await loadConfig('http://squadzr-api:3000')).default
+    const rules = (await config.headers?.()) ?? []
+
+    const everyPage = rules.find((rule) => rule.source === '/:path*')
+    expect(everyPage?.headers).toEqual(
+      expect.arrayContaining([
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+      ])
     )
+  })
+
+  it('lets scripts load only from the app, and no plugin, base or foreign form target', async () => {
+    const config = (await loadConfig('http://squadzr-api:3000')).default
+    const rules = (await config.headers?.()) ?? []
+
+    const policy = rules
+      .find((rule) => rule.source === '/:path*')
+      ?.headers.find((header) => header.key === 'Content-Security-Policy')?.value
+    expect(policy?.split('; ')).toEqual([
+      "script-src 'self' 'unsafe-inline'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ])
+  })
+
+  it('also allows eval in development, where the dev server needs it', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    const config = (await loadConfig('http://squadzr-api:3000')).default
+    const rules = (await config.headers?.()) ?? []
+    vi.unstubAllEnvs()
+
+    const policy = rules
+      .find((rule) => rule.source === '/:path*')
+      ?.headers.find((header) => header.key === 'Content-Security-Policy')?.value
+    expect(policy).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'")
   })
 })

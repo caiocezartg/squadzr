@@ -10,6 +10,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { SESSION_ENDED_CLOSE_CODE } from '@squadzr/schemas/ws'
 import { WebSocketClient } from './ws-client'
 import { MockWebSocket, latestWebSocket } from '@/test/ws-mock'
 
@@ -181,6 +182,30 @@ describe('reconnection', () => {
     expect(MockWebSocket.instances).toHaveLength(3)
   })
 
+  it('reports a session that ended, and still reconnects as a visitor', () => {
+    const onSessionEnded = vi.fn()
+    const { client } = createClient({ onSessionEnded })
+    client.connect()
+    latestWebSocket().open()
+
+    latestWebSocket().close(SESSION_ENDED_CLOSE_CODE)
+    vi.advanceTimersByTime(3000)
+
+    expect(onSessionEnded).toHaveBeenCalledTimes(1)
+    expect(MockWebSocket.instances).toHaveLength(2)
+  })
+
+  it('does not report a session end for any other close', () => {
+    const onSessionEnded = vi.fn()
+    const { client } = createClient({ onSessionEnded })
+    client.connect()
+    latestWebSocket().open()
+
+    latestWebSocket().close(DROPPED)
+
+    expect(onSessionEnded).not.toHaveBeenCalled()
+  })
+
   it('cancels a pending reconnection on disconnect()', () => {
     const { client } = createClient()
     client.connect()
@@ -299,7 +324,7 @@ describe('protocol handshake', () => {
     client.connect()
     latestWebSocket().open()
 
-    latestWebSocket().serverSend({ type: 'protocol', payload: { version: 2 } })
+    latestWebSocket().serverSend({ type: 'protocol', payload: { version: 3 } })
 
     expect(onProtocolFailure).not.toHaveBeenCalled()
     expect(client.status).toBe('open')

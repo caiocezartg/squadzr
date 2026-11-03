@@ -16,10 +16,12 @@
  * through the mock socket (./ws-mock). No test touches private hook state.
  */
 
-import { screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderSquadsFlow } from './harness'
+import { expectLockedInvite } from './locked-invite'
 import { httpError, httpOk, onHttp } from './http-router'
+import { mockMediaQuery } from './media-query'
 import { settleNavigation } from './navigation'
 import {
   boardSquads,
@@ -55,8 +57,23 @@ function registerLobbyRoutes(): void {
     }
     return httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
   })
+  onHttp('GET', '/api/rooms/:code/discord-preview', () => httpOk({ preview: null }))
   onHttp('POST', '/api/rooms/:code/join', () => httpOk({ ok: true }))
   onHttp('POST', '/api/rooms/:code/leave', () => httpOk({ ok: true }))
+}
+
+/** The number of a count in the Ready panel's server card, by what it counts. */
+function statValue(panel: HTMLElement, label: string): HTMLElement {
+  const value = within(panel).getByText(label).closest('dt')?.nextElementSibling
+  if (!(value instanceof HTMLElement)) throw new Error(`${label} has no value`)
+  return value
+}
+
+/** The tile of a member, by the name it shows. */
+function tileOf(name: string): HTMLElement {
+  const tile = screen.getByText(name).closest('li')
+  if (!tile) throw new Error(`${name} has no member tile`)
+  return tile
 }
 
 beforeEach(() => {
@@ -70,8 +87,8 @@ describe('squad lobby — snapshot handshake', () => {
     expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
     // HTTP alone does not seed the live roster: it is empty until the snapshot.
     expect(screen.getByText('0/3 players')).toBeInTheDocument()
-    expect(screen.getAllByText('Waiting for player...')).toHaveLength(3)
-    expect(screen.getByRole('button', { name: 'Leave squad' })).toBeInTheDocument()
+    expect(screen.getAllByText('Open slot')).toHaveLength(3)
+    expect(screen.getByRole('button', { name: 'End squad' })).toBeInTheDocument()
 
     openLatestWebSocket()
 
@@ -117,7 +134,7 @@ describe('squad lobby — snapshot handshake', () => {
       type: 'room_snapshot',
       payload: lobbySnapshot({
         players: [hostPlayer],
-        presence: [{ playerId: hostPlayer.id, online: true }],
+        presence: [{ playerId: hostPlayer.id, online: true, offlineSince: null }],
       }),
     })
     await waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument())
@@ -132,51 +149,88 @@ describe('squad lobby — snapshot handshake', () => {
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     expect(await screen.findByText('Ana')).toBeInTheDocument()
 
-    // Presence never relies on color alone: each member has an accessible
-    // Online/Offline tooltip and the overall connection state has its own.
-    expect(screen.getAllByRole('tooltip')).toHaveLength(3)
-    expect(screen.getAllByText('Online')).toHaveLength(1)
-    expect(screen.getAllByText('Offline')).toHaveLength(1)
+    // Presence never relies on color alone: each tile says it in words, and the overall connection
+    // state has its own text.
+    expect(screen.getAllByText('In the room now')).toHaveLength(1)
+    expect(screen.getAllByText('Out of the room')).toHaveLength(1)
     expect(screen.getAllByText('Connected')).toHaveLength(1)
-
-    // The indicators are keyboard stops whose tooltips are the accessible
-    // descriptions, exercised end to end through the `/squads/$code` flow.
-    const presenceOnline = screen.getByText('Online').closest('[tabindex="0"]')
-    const presenceOffline = screen.getByText('Offline').closest('[tabindex="0"]')
-    const connection = screen.getByText('Connected').closest('[tabindex="0"]')
-    expect(presenceOnline).toHaveAccessibleDescription('Online')
-    expect(presenceOffline).toHaveAccessibleDescription('Offline')
-    expect(connection).toHaveAccessibleDescription('Connected')
+    expect(tileOf('Caio')).toHaveAttribute('title', 'In the room now')
+    expect(tileOf('Ana')).toHaveAttribute('title', 'Out of the room')
 
     sendFromServer({
       type: 'presence_updated',
-      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true },
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true, offlineSince: null },
     })
-    await waitFor(() => expect(screen.getAllByText('Online')).toHaveLength(2))
+    await waitFor(() => expect(screen.getAllByText('In the room now')).toHaveLength(2))
 
-    // The server owns the aggregation (multiple sessions, grace window): the
-    // client applies the boolean it receives in both directions.
+    // The server owns the aggregation (multiple sessions, grace window): the client applies the
+    // online flag and offlineSince it receives in both directions.
     sendFromServer({
       type: 'presence_updated',
-      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false },
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false, offlineSince: null },
     })
-    await waitFor(() => expect(screen.getAllByText('Offline')).toHaveLength(1))
-    expect(screen.getAllByText('Online')).toHaveLength(1)
+    await waitFor(() => expect(screen.getAllByText('Out of the room')).toHaveLength(1))
+    expect(screen.getAllByText('In the room now')).toHaveLength(1)
 
-    // A duplicate transition and a transition for a non-member are both
-    // idempotent: Presence never adds or removes a Membership.
+    // A duplicate transition and a transition for a non-member are both idempotent: Presence never
+    // adds or removes a Membership.
     sendFromServer({
       type: 'presence_updated',
-      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false },
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false, offlineSince: null },
     })
     sendFromServer({
       type: 'presence_updated',
-      payload: { roomCode: 'LOBBY1', playerId: 'user-ghost', online: true },
+      payload: { roomCode: 'LOBBY1', playerId: 'user-ghost', online: true, offlineSince: null },
     })
-    expect(screen.getAllByText('Offline')).toHaveLength(1)
-    expect(screen.getAllByText('Online')).toHaveLength(1)
+    expect(screen.getAllByText('Out of the room')).toHaveLength(1)
+    expect(screen.getAllByText('In the room now')).toHaveLength(1)
     expect(screen.getByText('2/3 players')).toBeInTheDocument()
     expect(screen.getAllByText('Ana')).toHaveLength(1)
+  })
+
+  it('tells how long a member has been away and falls back to plain "Out of the room" without a known time', async () => {
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    const minutesAgo = (minutes: number) =>
+      new Date(Date.now() - minutes * 60_000 - 10_000).toISOString()
+
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({
+        presence: [
+          { playerId: hostPlayer.id, online: true, offlineSince: null },
+          { playerId: guestPlayer.id, online: false, offlineSince: minutesAgo(3) },
+        ],
+      }),
+    })
+    expect(await screen.findByText('Out of the room · 3m ago')).toBeInTheDocument()
+    expect(screen.queryByText('Out of the room')).not.toBeInTheDocument()
+
+    // presence_updated carries the time too, and a member who returns reads in the room again.
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true, offlineSince: null },
+    })
+    await waitFor(() => expect(screen.queryByText(/^Out of the room/)).not.toBeInTheDocument())
+    sendFromServer({
+      type: 'presence_updated',
+      payload: {
+        roomCode: 'LOBBY1',
+        playerId: guestPlayer.id,
+        online: false,
+        offlineSince: minutesAgo(5),
+      },
+    })
+    expect(await screen.findByText('Out of the room · 5m ago')).toBeInTheDocument()
+
+    // A member the server has no time for reads plain "Out of the room"; the client never invents one.
+    sendFromServer({
+      type: 'presence_updated',
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: false, offlineSince: null },
+    })
+    expect(await screen.findByText('Out of the room')).toBeInTheDocument()
+    expect(screen.queryByText(/Out of the room ·/)).not.toBeInTheDocument()
   })
 
   it('shows the overall connection state with accessible text', async () => {
@@ -199,18 +253,139 @@ describe('squad lobby — readiness from the snapshot', () => {
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     await screen.findByText('Ana')
 
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Leave squad' })).toBeEnabled()
+    // Forming: the invite is locked and its link is nowhere on the page.
+    expect(screen.getByText('Discord invite')).toBeInTheDocument()
+    expectLockedInvite()
+    expect(screen.queryByRole('heading', { name: "Let's go to Discord" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('discord.gg/lobby')
+    expect(screen.getByRole('button', { name: 'End squad' })).toBeEnabled()
 
     sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
 
-    expect(await screen.findByText('Your squad is ready!')).toBeInTheDocument()
-    const joinLink = screen.getByRole('link', { name: 'Join Discord' })
-    expect(joinLink).toHaveAttribute('href', 'https://discord.gg/lobby')
+    expect(await screen.findByRole('heading', { name: "Let's go to Discord" })).toBeInTheDocument()
+    expect(screen.queryByText('SQUAD CLOSED')).not.toBeInTheDocument()
+    expect(screen.queryByText('Unlocked when the squad completes')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open in Discord' })).toHaveAttribute(
+      'href',
+      'https://discord.gg/lobby'
+    )
 
-    const leaveButton = screen.getByRole('button', { name: 'Squad locked' })
+    const leaveButton = screen.getByRole('button', { name: 'Team closed' })
     expect(leaveButton).toBeDisabled()
+  })
+
+  it('names the locked invite bar as a region, like the Ready panel', async () => {
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+
+    // The bar is a region named by its heading, with its lock, its wait and its masked link.
+    expectLockedInvite()
+  })
+
+  it('builds the server card of the Ready panel from the Squad when Discord has no preview: name, cover, who is in the room, players', async () => {
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: readyLobbySnapshot({
+        presence: [
+          { playerId: hostPlayer.id, online: true, offlineSince: null },
+          { playerId: guestPlayer.id, online: false, offlineSince: null },
+        ],
+      }),
+    })
+
+    const panel = (await screen.findByRole('heading', { name: "Let's go to Discord" })).closest(
+      'section'
+    )
+    if (!panel) throw new Error('The Ready panel is not a section')
+    const inPanel = within(panel)
+    expect(inPanel.getByText('SERVER INVITE')).toBeInTheDocument()
+    // The card holds a skeleton until the preview read settles, and then falls back to the Squad.
+    expect(await inPanel.findByText('Squad ready check')).toBeInTheDocument()
+    expect(inPanel.getByText('in the room now')).toBeInTheDocument()
+    expect(statValue(panel, 'in the room now')).toHaveTextContent('1')
+    expect(statValue(panel, 'players')).toHaveTextContent('2')
+    expect(panel.querySelector('img')).toHaveAttribute('src', lobbySquad.game.coverUrl)
+    expect(inPanel.getByText('discord.gg/')).toBeInTheDocument()
+  })
+
+  it('enters the panel for a viewer who watched the Squad complete, and not for one who opens it Ready', async () => {
+    const { unmount } = renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    await screen.findByText('Ana')
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    const watched = (await screen.findByRole('heading', { name: "Let's go to Discord" })).closest(
+      'section'
+    )
+    expect(watched).toHaveClass('motion-safe:animate-invite-enter')
+    unmount()
+
+    // A cold open of the Squad that is already Ready is the room as it was: the panel is simply there.
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    const cold = (await screen.findByRole('heading', { name: "Let's go to Discord" })).closest(
+      'section'
+    )
+    expect(cold).not.toHaveClass('motion-safe:animate-invite-enter')
+    expect(cold).not.toHaveClass('motion-reduce:animate-invite-fade')
+  })
+
+  it('opens the invite in a new tab without handing the opener over', async () => {
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    const link = await screen.findByRole('link', { name: 'Open in Discord' })
+
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link.getAttribute('rel')).toContain('noopener')
+  })
+
+  it('copies the invite and says "Copied" until the confirmation runs out', async () => {
+    const { user } = renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    await user.click(await screen.findByRole('button', { name: 'Copy link' }))
+
+    expect(await navigator.clipboard.readText()).toBe('https://discord.gg/lobby')
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
+    await waitFor(
+      () => expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument(),
+      { timeout: 3_000 }
+    )
+  })
+
+  it('unlocks the invite for a viewer who prefers reduced motion, watching the Squad complete', async () => {
+    mockMediaQuery('(prefers-reduced-motion: reduce)', true)
+    renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    await screen.findByText('Ana')
+    expectLockedInvite()
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    // The panel is there, whole and usable, whether or not it moves in.
+    const panel = (await screen.findByRole('heading', { name: "Let's go to Discord" })).closest(
+      'section'
+    )
+    expect(panel).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Open in Discord' })).toBeVisible()
+    expect(screen.queryByText('Unlocked when the squad completes')).not.toBeInTheDocument()
   })
 
   it('never reveals the invite for an invalid Discord link', async () => {
@@ -225,9 +400,11 @@ describe('squad lobby — readiness from the snapshot', () => {
       }),
     })
 
-    expect(await screen.findByText('Squad locked')).toBeInTheDocument()
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Team closed' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: "Let's go to Discord" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Copy link' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('not-discord.example')
   })
 })
 
@@ -254,6 +431,37 @@ describe('squad lobby — leave flow', () => {
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
   })
 
+  it('opens the public view, not the member Lobby, when the viewer goes back to a Squad they left', async () => {
+    let left = false
+    const { discordLink: _discordLink, ...publicFields } = lobbySquad
+    onHttp('GET', '/api/rooms/:code', () =>
+      left
+        ? httpOk({ room: { ...publicFields, memberCount: 1, isMember: false } })
+        : httpOk(lobbySquadResponse)
+    )
+    onHttp('POST', '/api/rooms/:code/leave', () => {
+      left = true
+      return httpOk({ ok: true })
+    })
+    const { navigation, user } = renderSquadsFlow('/squads/LOBBY1', {
+      user: { id: 'user-2', name: 'Ana', email: 'ana@squadzr.test', image: null },
+    })
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    await user.click(screen.getByRole('button', { name: 'Leave squad' }))
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads'))
+
+    // Back within the minute the details stay fresh: they must already say the viewer left.
+    navigation.router.push('/squads/LOBBY1')
+    await settleNavigation()
+
+    expect(await screen.findByRole('button', { name: 'Join squad' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Leave squad' })).not.toBeInTheDocument()
+    expect(screen.queryByText('You are not a member of this squad.')).not.toBeInTheDocument()
+    openLatestWebSocket()
+    expect(latestWebSocket().sentFrames()).toEqual([])
+  })
+
   it('host leave takes the squad off the board', async () => {
     // The host leaving closes the squad: model the server state change so the
     // board refetch no longer returns it.
@@ -264,11 +472,11 @@ describe('squad lobby — leave flow', () => {
     })
     onHttp('GET', '/api/rooms', () => httpOk({ rooms: remainingSquads.rooms }))
 
-    const { navigation, user } = renderSquadsFlow('/squads/LOBBY1')
+    const { navigation, user } = renderSquadsFlow('/squads/LOBBY1', { shell: true })
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
 
-    await user.click(screen.getByRole('button', { name: 'Leave squad' }))
+    await user.click(screen.getByRole('button', { name: 'End squad' }))
 
     await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads'))
     expect(await screen.findByText('No squads yet')).toBeInTheDocument()
@@ -383,60 +591,76 @@ describe('squad lobby — server-driven errors and redirects', () => {
 })
 
 describe('squad lobby — failure and access gates', () => {
+  it('cuts a code longer than a Squad code in the not-found state', async () => {
+    renderSquadsFlow('/squads/ABCDEF1234567890')
+
+    expect(await screen.findByText('Squad not found')).toBeInTheDocument()
+    expect(screen.getByText('#ABCDEF')).toBeInTheDocument()
+    expect(screen.queryByText(/1234567890/)).not.toBeInTheDocument()
+  })
+
   it('shows the not-found state for an unknown squad code', async () => {
     renderSquadsFlow('/squads/ZZZZZZ')
 
     expect(await screen.findByText('Squad not found')).toBeInTheDocument()
-    expect(screen.getByText('ZZZZZZ')).toBeInTheDocument()
+    expect(screen.getByText('#ZZZZZZ')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
+    expect(screen.getByRole('link', { name: 'Create squad' })).toHaveAttribute(
+      'href',
+      '/squads?create=1'
+    )
   })
 
   it('gates the lobby behind sign-in for guests', async () => {
     renderSquadsFlow('/squads/LOBBY1', { user: null })
 
-    expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to view this squad' })
+    ).toBeInTheDocument()
+    expect(screen.getByText('#LOBBY1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign in with Discord' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
   })
 })
 
 describe('squad lobby — Ready Squad access gates', () => {
-  // A Ready Squad as the server answers a visitor or non-member: the public
-  // projection, with no roster, no invite and no readiness.
-  const { discordLink: _discordLink, ...publicLobbySquad } = lobbySquad
-  const publicReadySquadResponse = {
-    room: { ...publicLobbySquad, memberCount: lobbySquad.maxPlayers, isMember: false },
-  }
+  // The server answers a visitor or a non-member for a Ready Squad as it does for a missing one.
+  const notFoundBody = { message: 'Squad not found', error: 'ROOM_NOT_FOUND' }
 
-  it('never shows the roster or invite of a Ready Squad to a visitor', async () => {
-    onHttp('GET', '/api/rooms/:code', () => httpOk(publicReadySquadResponse))
+  it('never shows a Ready Squad to a visitor', async () => {
+    onHttp('GET', '/api/rooms/:code', () => httpError(404, notFoundBody))
     renderSquadsFlow('/squads/LOBBY1', { user: null })
 
-    expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to view this squad' })
+    ).toBeInTheDocument()
 
     // A visitor never joins the squad channel, so no snapshot can ever arrive.
     openLatestWebSocket()
     expect(latestWebSocket().sentFrames()).toEqual([])
 
     expect(screen.queryByText('Caio')).not.toBeInTheDocument()
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: "Let's go to Discord" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('discord.gg/lobby')
   })
 
-  it('never shows the roster or invite of a Ready Squad to a non-member', async () => {
-    onHttp('GET', '/api/rooms/:code', () => httpOk(publicReadySquadResponse))
+  it('never shows a Ready Squad to a non-member', async () => {
+    onHttp('GET', '/api/rooms/:code', () => httpError(404, notFoundBody))
     renderSquadsFlow('/squads/LOBBY1', {
       user: { id: 'user-7', name: 'Outsider', email: 'outsider@squadzr.test', image: null },
     })
-    expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
 
+    expect(await screen.findByText('Squad not found')).toBeInTheDocument()
+
+    // The read said the Squad is not the viewer's to see, so the page never joins its squad channel.
     openLatestWebSocket()
-    sendFromServer({
-      type: 'error',
-      payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
-    })
+    expect(latestWebSocket().sentFrames()).toEqual([])
 
-    expect(await screen.findByText('You are not a member of this squad.')).toBeInTheDocument()
     expect(screen.queryByText('Caio')).not.toBeInTheDocument()
-    expect(screen.queryByText('Your squad is ready!')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Join Discord' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: "Let's go to Discord" })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('discord.gg/lobby')
   })
 })
 
@@ -477,16 +701,232 @@ describe('squad lobby — full reload of a full squad', () => {
         room: { ...lobbySquad, memberCount: fullRoster.length, isMember: true },
         players: fullRoster,
         readyAt: new Date().toISOString(),
-        presence: fullRoster.map((player) => ({ playerId: player.id, online: true })),
+        presence: fullRoster.map((player) => ({
+          playerId: player.id,
+          online: true,
+          offlineSince: null,
+        })),
       }),
     })
 
     expect(await screen.findByText('3/3 players')).toBeInTheDocument()
-    expect(screen.getByText('Your squad is ready!')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Join Discord' })).toHaveAttribute(
+    expect(screen.getByRole('heading', { name: "Let's go to Discord" })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open in Discord' })).toHaveAttribute(
       'href',
       'https://discord.gg/lobby'
     )
-    expect(screen.getByRole('button', { name: 'Squad locked' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Team closed' })).toBeDisabled()
+  })
+})
+
+describe('squad lobby — the member Lobby', () => {
+  const thirdPlayer = { id: 'user-3', name: 'Bruno', image: null, isHost: false }
+
+  // The reduced-motion case spies on matchMedia; the cases after it run under full motion again.
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  /** A squad of ten with `count` members, the host first, as the server orders them. */
+  function bigSquadSnapshot(count: number) {
+    const players = [
+      hostPlayer,
+      ...Array.from({ length: count - 1 }, (_, index) => ({
+        id: `user-m${index}`,
+        name: `Member ${index + 1}`,
+        image: null,
+        isHost: false,
+      })),
+    ]
+    return lobbySnapshot({
+      room: { ...lobbySquad, maxPlayers: 10, memberCount: count, isMember: true },
+      players,
+      presence: players.map((player) => ({
+        playerId: player.id,
+        online: true,
+        offlineSince: null,
+      })),
+    })
+  }
+
+  async function renderLobbyWithSnapshot(snapshot = lobbySnapshot()) {
+    const flow = renderSquadsFlow('/squads/LOBBY1')
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: snapshot })
+    await screen.findByText(snapshot.players[0]?.name ?? '')
+    return flow
+  }
+
+  it('shows the cover panel and the header actions', async () => {
+    await renderLobbyWithSnapshot()
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Squad ready check' })).toBeInTheDocument()
+    expect(screen.getByText('League of Legends')).toBeInTheDocument()
+    expect(screen.getByText('EN-US')).toBeInTheDocument()
+    expect(screen.getByText('#squad')).toBeInTheDocument()
+    expect(screen.getByText(/^Created /)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
+    expect(screen.getByText('LIVE')).toBeInTheDocument()
+  })
+
+  it('counts the members as 02/03 and swaps the count when a snapshot changes it', async () => {
+    await renderLobbyWithSnapshot()
+
+    expect(screen.getByText('2/3 players').parentElement).toHaveTextContent('02/03')
+
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({ players: [hostPlayer, guestPlayer, thirdPlayer], presence: [] }),
+    })
+
+    await waitFor(() =>
+      expect(screen.getByText('3/3 players').parentElement).toHaveTextContent('03/03')
+    )
+  })
+
+  it('lists the members in the server order, marks the viewer, and fills the rest with open slots', async () => {
+    await renderLobbyWithSnapshot()
+
+    const tiles = screen.getAllByRole('listitem')
+    expect(tiles).toHaveLength(3)
+    expect(tiles[0]).toHaveTextContent('Caio')
+    expect(within(tileOf('Caio')).getByText('you')).toBeInTheDocument()
+    expect(tiles[1]).toHaveTextContent('Ana')
+    expect(within(tileOf('Ana')).queryByText('you')).not.toBeInTheDocument()
+    expect(tiles[2]).toHaveTextContent('Open slot')
+    // Blank cells, hidden from assistive tech, keep the page as tall as a full one of six.
+    expect(tiles[0]?.parentElement?.querySelectorAll('li[aria-hidden="true"]')).toHaveLength(3)
+  })
+
+  it('reads online and away members in words, with the time away when it is known', async () => {
+    const away = new Date(Date.now() - 7 * 60_000 - 10_000).toISOString()
+    await renderLobbyWithSnapshot(
+      lobbySnapshot({
+        presence: [
+          { playerId: hostPlayer.id, online: true, offlineSince: null },
+          { playerId: guestPlayer.id, online: false, offlineSince: away },
+        ],
+      })
+    )
+
+    expect(tileOf('Caio')).toHaveTextContent('In the room now')
+    expect(tileOf('Ana')).toHaveTextContent('Out of the room · 7m ago')
+  })
+
+  it('pages the members six to a page, the open slots after the last member', async () => {
+    const { user } = await renderLobbyWithSnapshot(bigSquadSnapshot(7))
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(6)
+    expect(screen.getByText('Member 5')).toBeInTheDocument()
+    expect(screen.queryByText('Member 6')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }))
+
+    const tiles = screen.getAllByRole('listitem')
+    expect(tiles).toHaveLength(4)
+    expect(tiles[0]).toHaveTextContent('Member 6')
+    expect(tiles[1]).toHaveTextContent('Open slot')
+  })
+
+  it('does not animate the first snapshot, and enters a member of a later one from opacity 0 and scale 0.9', async () => {
+    await renderLobbyWithSnapshot()
+
+    // The first snapshot renders its tiles in their final state: nothing starts from the entrance state.
+    expect(tileOf('Ana').style.opacity).toBe('1')
+
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({ players: [hostPlayer, guestPlayer, thirdPlayer] }),
+    })
+    await screen.findByText('Bruno')
+
+    // The entrance has started: the tile is on its way from opacity 0 and scale(0.9).
+    expect(Number(tileOf('Bruno').style.opacity)).toBeLessThan(0.5)
+    expect(tileOf('Bruno').style.transform).toMatch(/^scale\(0\.9/)
+    expect(tileOf('Ana').style.opacity).toBe('1')
+    await waitFor(() => expect(tileOf('Bruno').style.opacity).toBe('1'))
+  })
+
+  it('does not replay an entrance when the viewer pages away and back', async () => {
+    const { user } = await renderLobbyWithSnapshot(bigSquadSnapshot(5))
+
+    sendFromServer({ type: 'room_snapshot', payload: bigSquadSnapshot(6) })
+    await screen.findByText('Member 5')
+    await waitFor(() => expect(tileOf('Member 5').style.opacity).toBe('1'))
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }))
+    await user.click(screen.getByRole('button', { name: 'Page 1' }))
+
+    // Back on page 1 the tile is already in its final state: it does not start from opacity 0 again.
+    expect(tileOf('Member 5').style.opacity).toBe('1')
+  })
+
+  it('enters a new member with the fade alone under reduced motion, ending in the final state', async () => {
+    mockMediaQuery('(prefers-reduced-motion: reduce)', true)
+    await renderLobbyWithSnapshot()
+
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({ players: [hostPlayer, guestPlayer, thirdPlayer] }),
+    })
+    await screen.findByText('Bruno')
+
+    expect(tileOf('Bruno').style.transform).toBe('')
+    await waitFor(() => expect(tileOf('Bruno').style.opacity).toBe('1'))
+    expect(tileOf('Bruno')).toBeVisible()
+  })
+
+  it('turns the code button into "Copied" after copying the code, then back', async () => {
+    const { user } = await renderLobbyWithSnapshot()
+
+    await user.click(screen.getByRole('button', { name: 'Copy code LOBBY1' }))
+
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
+    expect(await navigator.clipboard.readText()).toBe('LOBBY1')
+    await waitFor(
+      () => expect(screen.getByRole('button', { name: 'Copy code LOBBY1' })).toBeInTheDocument(),
+      { timeout: 3_000 }
+    )
+  })
+
+  it('copies the squad link from the header', async () => {
+    const { user } = await renderLobbyWithSnapshot()
+
+    await user.click(screen.getByRole('button', { name: 'Copy squad link' }))
+
+    expect(await screen.findByRole('button', { name: 'Link copied' })).toBeInTheDocument()
+    expect(await navigator.clipboard.readText()).toBe(`${window.location.origin}/squads/LOBBY1`)
+  })
+
+  it('offers the host "End squad", and closes it once the Squad is Ready', async () => {
+    await renderLobbyWithSnapshot()
+
+    expect(screen.getByRole('button', { name: 'End squad' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Leave squad' })).not.toBeInTheDocument()
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    expect(await screen.findByRole('button', { name: 'Team closed' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'End squad' })).not.toBeInTheDocument()
+  })
+
+  it('keeps Presence frozen while the connection is down', async () => {
+    const away = new Date(Date.now() - 3 * 60_000 - 10_000).toISOString()
+    await renderLobbyWithSnapshot(
+      lobbySnapshot({
+        presence: [
+          { playerId: hostPlayer.id, online: true, offlineSince: null },
+          { playerId: guestPlayer.id, online: false, offlineSince: away },
+        ],
+      })
+    )
+
+    act(() => latestWebSocket().close(1006))
+
+    expect(await screen.findByText('Reconnecting…')).toBeInTheDocument()
+    expect(tileOf('Caio')).toHaveTextContent('In the room now')
+    expect(tileOf('Ana')).toHaveTextContent('Out of the room · 3m ago')
   })
 })

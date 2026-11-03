@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Medidor de vagas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<span aria-hidden="true" style="display: flex; gap: {{gap}}; width: {{width}}">
+  <sc-for list="{{segs}}" as="s" hint-placeholder-count="5">
+    <span style="flex: {{flex}}; width: {{segW}}; height: {{segH}}; background: {{s}}"></span>
+  </sc-for>
+</span>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"filled":{"editor":"int","default":4,"min":0,"max":20},"total":{"editor":"int","default":5,"min":1,"max":20},"variant":{"editor":"enum","options":["blocks","line","pips"],"default":"blocks"},"tone":{"editor":"enum","options":["mint","discord","amber"],"default":"mint"},"empty":{"editor":null},"$preview":{"width":220,"height":40}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const total = Math.max(1, Number(p.total ?? 5));
+    const filled = Math.min(total, Math.max(0, Number(p.filled ?? 4)));
+    const variant = p.variant ?? 'blocks';
+    const TONES = { mint: '#00FFA2', discord: '#8B93F5', amber: '#FFB547' };
+    const on = TONES[p.tone] || TONES.mint;
+    const empty = p.empty ?? '#24252B';
+    // Big squads cap at 10 segments; each one then stands for several slots.
+    const n = Math.min(total, 10);
+    const lit = Math.round(filled / (total / n));
+    const line = variant === 'line';
+    const pips = variant === 'pips';
+    return {
+      segs: Array.from({ length: n }, (_, i) => (i < lit ? on : empty)),
+      width: line ? '100%' : 'auto',
+      gap: line || pips ? '2px' : '4px',
+      flex: line ? '1' : 'none',
+      segW: line ? 'auto' : pips ? '10px' : total > 5 ? '18px' : '40px',
+      segH: line ? '4px' : pips ? '5px' : '8px'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import 'server-only'
 import { myRoomsResponseSchema, type MyRoomsResponse } from '@squadzr/schemas'
-import { ApiClientError, ApiContractError } from '@/lib/api-contract'
+import { isUnauthorized } from '@/lib/api-contract'
 import { serverApi } from './api'
 import type { RequestViewer } from './viewer'
 
@@ -22,7 +22,6 @@ export async function loadMySquads(viewer: RequestViewer): Promise<MyRoomsRespon
         credentials: 'viewer',
         caching: 'uncached',
         cookie: viewer.cookie,
-        forwardedFor: viewer.forwardedFor,
       },
       { timeoutMs: MY_SQUADS_TIMEOUT_MS }
     )
@@ -30,11 +29,4 @@ export async function loadMySquads(viewer: RequestViewer): Promise<MyRoomsRespon
     if (isUnauthorized(error)) return null
     throw error
   }
-}
-
-/** A 401, whatever body it carried, is the API saying the viewer has no session. */
-function isUnauthorized(error: unknown): boolean {
-  return (
-    (error instanceof ApiClientError || error instanceof ApiContractError) && error.status === 401
-  )
 }

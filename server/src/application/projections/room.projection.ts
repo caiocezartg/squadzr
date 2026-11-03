@@ -6,7 +6,8 @@ import { toGameSummaryDto } from './game.projection'
 /**
  * Public projection of a room, for the catalog and guest realtime events.
  * Fields are listed one by one so the Discord invite and any future private
- * field stay out unless they are added here on purpose.
+ * field stay out unless they are added here on purpose. The member preview is
+ * the most it says about the roster: never the full roster or the invite.
  */
 export function toPublicRoom(room: Room): PublicRoomDto {
   return {
@@ -20,6 +21,7 @@ export function toPublicRoom(room: Room): PublicRoomDto {
     tags: room.tags,
     language: room.language,
     ...(room.memberCount !== undefined && { memberCount: room.memberCount }),
+    memberPreview: room.memberPreview.map(({ id, name, image }) => ({ id, name, image })),
     ...(room.isMember !== undefined && { isMember: room.isMember }),
     createdAt: room.createdAt.toISOString(),
     updatedAt: room.updatedAt.toISOString(),

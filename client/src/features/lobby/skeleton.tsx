@@ -7,12 +7,14 @@
  */
 export function LobbySkeleton() {
   return (
-    <div data-testid="lobby-skeleton" className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="card h-48 animate-pulse mb-6" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="card h-16 animate-pulse" />
-        ))}
+    <div
+      data-testid="lobby-skeleton"
+      className="flex flex-col gap-5 px-4 pt-6.5 pb-12 sm:px-6 lg:px-10"
+    >
+      <div className="bg-card h-11 w-44 animate-pulse" />
+      <div className="flex flex-col gap-5 lg:flex-row">
+        <div className="bg-card aspect-video animate-pulse lg:aspect-3/4 lg:w-72 xl:w-95" />
+        <div className="bg-panel h-80 flex-1 animate-pulse" />
       </div>
     </div>
   )

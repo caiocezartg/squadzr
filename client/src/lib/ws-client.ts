@@ -1,6 +1,7 @@
 import { describeContractIssues } from '@squadzr/schemas'
 import {
   REALTIME_PROTOCOL_VERSION,
+  SESSION_ENDED_CLOSE_CODE,
   protocolAnnouncementSchema,
   wsIncomingMessageSchema,
   wsServerEnvelopeSchema,
@@ -52,6 +53,8 @@ export interface WebSocketClientOptions {
   onStatusChange?: (status: RealtimeStatus) => void
   /** A frame that cannot be parsed or a mismatched announcement; the app reloads. */
   onProtocolFailure?: (reason: ProtocolFailureReason) => void
+  /** The server closed the socket because the viewer's session ended (signed out or expired). */
+  onSessionEnded?: () => void
 }
 
 /** The capped exponential delay is reduced by up to this fraction at random. */
@@ -96,6 +99,7 @@ export class WebSocketClient {
   private readonly subscriptions: SubscriptionEntry[] = []
 
   private readonly onProtocolFailureCallback?: (reason: ProtocolFailureReason) => void
+  private readonly onSessionEndedCallback?: () => void
 
   constructor(options: WebSocketClientOptions) {
     this.url = options.url
@@ -104,6 +108,7 @@ export class WebSocketClient {
     this.maxReconnectAttempts = options.maxReconnectAttempts ?? 5
     this.random = options.random ?? Math.random
     this.onProtocolFailureCallback = options.onProtocolFailure
+    this.onSessionEndedCallback = options.onSessionEnded
     if (options.onStatusChange) this.statusHandlers.add(options.onStatusChange)
   }
 
@@ -231,6 +236,7 @@ export class WebSocketClient {
 
     socket.onclose = (event: CloseEvent) => {
       if (this.isIntentionalClose) return
+      if (event.code === SESSION_ENDED_CLOSE_CODE) this.onSessionEndedCallback?.()
       this.scheduleReconnect(event.code)
     }
 

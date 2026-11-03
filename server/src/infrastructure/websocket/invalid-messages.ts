@@ -1,6 +1,6 @@
 import type { Clock } from '@domain/services/clock.interface'
 
-export const INVALID_MESSAGE_WINDOW_MS = 60_000
+const INVALID_MESSAGE_WINDOW_MS = 60_000
 export const INVALID_MESSAGE_LIMIT = 3
 
 export class InvalidMessages {

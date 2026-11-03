@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { errorMessageSchema, roomSnapshotMessageSchema } from '@squadzr/schemas/ws'
 import { buildApp } from '@/app'
 import type { WsRoomBroadcaster } from '@infrastructure/websocket/room-broadcaster.service'
+import { MESSAGE_RATE_LIMIT } from '@infrastructure/websocket/message-rate'
 import { SOCKET_OPERATION_LIMIT } from '@infrastructure/websocket/ws.plugin'
 import { signInMany } from '@test/harness/auth'
 import { FakeClock } from '@test/harness/clock'
@@ -14,7 +15,12 @@ import {
   type RealtimeSession,
 } from '@test/harness/realtime'
 import { createRoom, insertGame, joinAll, roomAction } from '@test/harness/rooms'
-import { buildTestServer, createTestEnv, type TestServer } from '@test/harness/test-server'
+import {
+  KNOWN_INVITES,
+  buildTestServer,
+  createTestEnv,
+  type TestServer,
+} from '@test/harness/test-server'
 
 const LATENCY_BOUND_MS = 500
 let database: TestServer
@@ -63,6 +69,7 @@ async function setup() {
   const app = await buildApp({
     env: createTestEnv({ DATABASE_URL: database.databaseUrl }),
     logger: capture.logger,
+    discordPreviews: KNOWN_INVITES,
     clock,
   })
   await app.ready()
@@ -114,7 +121,9 @@ describe('realtime isolation under subscription load', () => {
         return snapshot
       })
       try {
-        const requests = SOCKET_OPERATION_LIMIT * 8
+        // As many as the message rate allows, so only the in-flight limit refuses them.
+        const requests = MESSAGE_RATE_LIMIT
+        expect(requests).toBeGreaterThan(SOCKET_OPERATION_LIMIT * 4)
         for (let i = 0; i < requests; i++)
           attacker.send({ type: 'join_room', payload: { roomCode: room.code } })
         await started.promise
@@ -368,7 +377,11 @@ describe('realtime isolation under subscription load', () => {
       const snapshot = roomSnapshotMessageSchema.parse(
         await withinBound(joinRoomChannel(newcomer, room.code))
       )
-      expect(snapshot.payload.presence).toContainEqual({ playerId: member.id, online: true })
+      expect(snapshot.payload.presence).toContainEqual({
+        playerId: member.id,
+        online: true,
+        offlineSince: null,
+      })
       expect(broadcaster['presence'].isOnline(room.code, member.id)).toBe(true)
     } finally {
       gate.resolve()
@@ -379,6 +392,7 @@ describe('realtime isolation under subscription load', () => {
     expect(roomSnapshotMessageSchema.parse(published[1]).payload.presence).toContainEqual({
       playerId: member.id,
       online: true,
+      offlineSince: null,
     })
     expect(broadcaster['presence'].isOnline(room.code, member.id)).toBe(true)
   })

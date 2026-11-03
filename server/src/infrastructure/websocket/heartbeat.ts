@@ -1,8 +1,8 @@
 import type { WebSocket } from '@fastify/websocket'
 import type { Clock } from '@domain/services/clock.interface'
 
-export const HEARTBEAT_INTERVAL_MS = 20_000
-export const HEARTBEAT_TIMEOUT_MS = 40_000
+const HEARTBEAT_INTERVAL_MS = 20_000
+const HEARTBEAT_TIMEOUT_MS = 40_000
 
 export class Heartbeat {
   private readonly connections = new Map<WebSocket, { pongAt: number; pingAt: number }>()

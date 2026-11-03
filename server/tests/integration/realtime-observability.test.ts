@@ -10,7 +10,12 @@ import {
   subscriptionState,
   type RealtimeSession,
 } from '@test/harness/realtime'
-import { buildTestServer, createTestEnv, type TestServer } from '@test/harness/test-server'
+import {
+  KNOWN_INVITES,
+  buildTestServer,
+  createTestEnv,
+  type TestServer,
+} from '@test/harness/test-server'
 
 let database: TestServer
 let server: TestServer
@@ -32,6 +37,7 @@ it('logs counts, Membership, Presence, invalid messages and heartbeat timeouts w
   const app = await buildApp({
     env: createTestEnv({ DATABASE_URL: database.databaseUrl }),
     logger: capture.logger,
+    discordPreviews: KNOWN_INVITES,
     clock,
   })
   await app.ready()

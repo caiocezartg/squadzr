@@ -18,7 +18,12 @@ import {
 } from '@test/harness/rooms'
 import { connect, type RealtimeSession } from '@test/harness/realtime'
 import { createLogCapture, type LogCapture } from '@test/harness/logging'
-import { buildTestServer, createTestEnv, type TestServer } from '@test/harness/test-server'
+import {
+  KNOWN_INVITES,
+  buildTestServer,
+  createTestEnv,
+  type TestServer,
+} from '@test/harness/test-server'
 
 // CCC-34: a client frame that breaks the realtime contract gets a typed error
 // reply, and the server log describes it by code and issue location only. The
@@ -45,6 +50,7 @@ async function buildLoggedServer(): Promise<TestServer> {
   const app: FastifyInstance = await buildApp({
     env: createTestEnv({ DATABASE_URL: database.databaseUrl }),
     logger: capture.logger,
+    discordPreviews: KNOWN_INVITES,
   })
   await app.ready()
   return { app, databaseUrl: database.databaseUrl, close: () => app.close() }

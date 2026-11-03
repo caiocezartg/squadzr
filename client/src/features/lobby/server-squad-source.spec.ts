@@ -8,7 +8,7 @@ import { readSquadDetails, squadQueryKey } from './squad-details'
 
 type RecordedInit = RequestInit & { next?: { revalidate?: number } }
 
-const viewer = { cookie: 'better-auth.session_token=abc', forwardedFor: '203.0.113.7' }
+const viewer = { cookie: 'better-auth.session_token=abc' }
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -38,14 +38,14 @@ afterEach(() => {
 })
 
 describe('the Lobby loader for a viewer', () => {
-  it("forwards the viewer's cookie and address on the Squad read", async () => {
+  it("forwards the viewer's cookie on the Squad read, and not their address", async () => {
     const fetchMock = stubRead(jsonResponse(lobbySquadResponse))
 
     await readSquadDetails(viewerSquadSource(viewer), lobbySquad.code)
 
     const headers = new Headers(sentInit(fetchMock, 0).headers)
     expect(headers.get('cookie')).toBe(viewer.cookie)
-    expect(headers.get('x-forwarded-for')).toBe(viewer.forwardedFor)
+    expect(headers.get('x-forwarded-for')).toBeNull()
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 

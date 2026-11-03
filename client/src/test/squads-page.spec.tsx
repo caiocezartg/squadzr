@@ -1,7 +1,7 @@
 /**
  * The Squad Board on the App Router (CCC-79, round 2).
  *
- * These tests render the route's own server component, `app/squads/page.tsx`, inside the providers the
+ * These tests render the route's own server component, `app/(app)/squads/page.tsx`, inside the providers the
  * root layout gives it, with no TanStack router and no app shell. The flow harness renders the board
  * without checking that a dialog is visible, and it never mounts the App Router page, so it cannot show
  * a dialog that the App Router renders without its animation features.
@@ -9,10 +9,11 @@
 
 import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import SquadsPage from '@/app/squads/page'
+import SquadsPage from '@/app/(app)/squads/page'
+import { CreateSquadLauncher } from '@/components/layout/create-squad-launcher'
 import { getQueryClient } from '@/lib/query-client'
 import { boardSquads, openSquad } from './fixtures'
 import { createTestQueryClient } from './harness'
@@ -31,7 +32,7 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
 
 // The viewer's cookies and address come from a request, which the suite does not have.
 vi.mock('@/lib/server/viewer', () => ({
-  getRequestViewer: async () => ({ cookie: null, forwardedFor: null }),
+  getRequestViewer: async () => ({ cookie: null }),
 }))
 
 /** A promise the test settles by hand, for a read the test holds back. */
@@ -52,7 +53,9 @@ async function renderSquadsRoute(queryClient: QueryClient = createTestQueryClien
 
   return render(
     <EnglishIntlProvider session={fakeSession()}>
-      <QueryClientProvider client={queryClient}>{page}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <CreateSquadLauncher>{page}</CreateSquadLauncher>
+      </QueryClientProvider>
     </EnglishIntlProvider>
   )
 }
@@ -85,7 +88,7 @@ describe('squad board on the App Router', () => {
 
     expect(await screen.findByTestId('squad-board-skeleton')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Explore squads' })).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Search by game or squad name...')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Search by game or squad name…')).toBeInTheDocument()
 
     squadsRead.resolve(httpOk(boardSquads))
 
@@ -119,19 +122,16 @@ describe('squad board on the App Router', () => {
   it('opens the create dialog on the App Router page, and the dialog is visible', async () => {
     signInAsFakeUser()
     createHarnessNavigation('/squads')
-    registerBoardReads(() => httpOk(boardSquads))
+    registerBoardReads(() => httpOk({ rooms: [] }))
 
     await renderSquadsRoute()
     const user = userEvent.setup({ delay: null })
-    // The button's text is in two spans (wide and narrow screens), so the test finds the text.
-    await user.click(await screen.findByText('Create new squad'))
+    // The empty board offers the create action; the shell's launcher opens the dialog.
+    await user.click(await screen.findByRole('button', { name: 'Create squad' }))
 
-    // The dialog's card animates in from opacity 0. Without the route's animation features it stays
-    // there, so the dialog shows nothing.
-    const title = await screen.findByText('Create a Squad', {}, { timeout: 5000 })
-    const card = title.closest('.max-w-2xl')
-    expect(card).not.toBeNull()
-    await waitFor(() => expect(card).toHaveStyle({ opacity: '1' }))
+    // The shared dialog fades in with CSS, so it needs no route animation features to show.
+    const dialog = await screen.findByRole('dialog', { name: 'Choose the game' }, { timeout: 5000 })
+    expect(dialog).toBeVisible()
   })
 
   it('opens the sign-in prompt for a guest on the App Router page, and the prompt is visible', async () => {
@@ -143,11 +143,13 @@ describe('squad board on the App Router', () => {
     const user = userEvent.setup({ delay: null })
     await user.click(await screen.findByText('Ranked grind'))
 
-    // The prompt's card animates in like the create dialog's, so it must reach full opacity too.
-    const title = await screen.findByText('Sign in required', {}, { timeout: 5000 })
-    const card = title.closest('.max-w-xl')
-    expect(card).not.toBeNull()
-    await waitFor(() => expect(card).toHaveStyle({ opacity: '1' }))
+    // The prompt is the design system's dialog, so it is open and visible from the first frame.
+    const prompt = await screen.findByRole(
+      'dialog',
+      { name: 'Sign in required' },
+      { timeout: 5000 }
+    )
+    expect(prompt).toBeVisible()
   })
 
   it('reads the board again in the browser when the server read fails', async () => {
@@ -205,7 +207,7 @@ describe('squad board on the App Router', () => {
       await user.click(screen.getByRole('button', { name: 'Try again' }))
 
       expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
-      expect(screen.getByText('3 squads available')).toBeInTheDocument()
+      expect(screen.getByText('3 open squads')).toBeInTheDocument()
       expect(screen.queryByText(loadError)).not.toBeInTheDocument()
     })
   })

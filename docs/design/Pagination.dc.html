@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Paginação</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<nav aria-label="{{label}}" style="display: flex; align-items: center; gap: 4px">
+  <button type="button" class="ds-pg {{prevCls}}" onClick="{{prev}}" disabled="{{atStart}}" aria-label="Página anterior" style="width: {{px}}; height: {{px}}; border: 0; cursor: {{prevCursor}}; background: #17181D; color: {{prevFg}}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+  <sc-for list="{{pages}}" as="p" hint-placeholder-count="4">
+    <button type="button" class="ds-pg {{p.cls}}" onClick="{{p.go}}" aria-current="{{p.current}}" aria-label="Página {{p.n}}" style="width: {{px}}; height: {{px}}; border: 0; cursor: pointer; background: {{p.bg}}; color: {{p.fg}}; font: 800 {{fs}} 'JetBrains Mono', monospace">{{p.n}}</button>
+  </sc-for>
+  <button type="button" class="ds-pg {{nextCls}}" onClick="{{next}}" disabled="{{atEnd}}" aria-label="Próxima página" style="width: {{px}}; height: {{px}}; border: 0; cursor: {{nextCursor}}; background: #17181D; color: {{nextFg}}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></button>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"total":{"editor":"int","default":4,"min":1,"max":9},"current":{"editor":"int","default":1,"min":1,"max":9},"tone":{"editor":"enum","options":["mint","light"],"default":"mint"},"size":{"editor":"enum","options":["sm","md"],"default":"md"},"label":{"editor":null},"onChange":{"editor":null},"$preview":{"width":300,"height":44}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { page: Number(props.current ?? 1) };
+  }
+  renderVals() {
+    const p = this.props;
+    const total = Math.max(1, Number(p.total ?? 4));
+    // With onChange the parent owns the page; without it the component keeps its own.
+    const controlled = typeof p.onChange === 'function';
+    const cur = Math.min(total, Math.max(1, controlled ? Number(p.current ?? 1) : this.state.page));
+    const go = (n) => () => {
+      const k = Math.min(total, Math.max(1, n));
+      if (controlled) p.onChange(k);
+      else this.setState({ page: k });
+    };
+    const light = p.tone === 'light';
+    const sm = p.size === 'sm';
+    return {
+      label: p.label ?? 'Paginação',
+      px: sm ? '40px' : '44px',
+      fs: sm ? '13px' : '14px',
+      prev: go(cur - 1),
+      next: go(cur + 1),
+      atStart: cur === 1,
+      atEnd: cur === total,
+      prevCls: cur === 1 ? '' : 'ds-pg-idle',
+      nextCls: cur === total ? '' : 'ds-pg-idle',
+      prevFg: cur === 1 ? '#4A4C54' : '#F2F3F5',
+      nextFg: cur === total ? '#4A4C54' : '#F2F3F5',
+      prevCursor: cur === 1 ? 'default' : 'pointer',
+      nextCursor: cur === total ? 'default' : 'pointer',
+      pages: Array.from({ length: total }, (_, i) => {
+        const yes = i + 1 === cur;
+        return {
+          n: i + 1,
+          current: yes ? 'page' : 'false',
+          cls: yes ? '' : 'ds-pg-idle',
+          bg: yes ? (light ? '#F2F3F5' : '#00FFA2') : '#17181D',
+          fg: yes ? (light ? '#07080A' : '#03140D') : '#C9CBD1',
+          go: go(i + 1)
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Biblioteca de componentes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080A}
+a{color:#00FFA2}a:hover{color:#7CFFCF}
+/* Design system states: components keep inline styles, so hover and motion live here */
+.ds-btn{transition:background-color .2s,box-shadow .25s,color .2s,transform .15s}
+.ds-btn:active{transform:scale(.97)}
+.ds-btn-primary:hover{background-color:#5CFFC4 !important}
+.ds-btn-secondary:hover{background-color:#24252B !important}
+.ds-btn-ghost:hover{background-color:#1A1B20 !important}
+.ds-btn-link:hover{color:#7CFFCF !important}
+.ds-btn-danger:hover{background-color:rgba(239,68,68,0.18) !important}
+.ds-btn-discord:hover{background-color:#5D68F0 !important}
+.ds-btn-light:hover{box-shadow:0 0 0 5px rgba(255,255,255,0.18) !important}
+.ds-btn-dark:hover{background-color:#1A1B20 !important}
+.ds-btn-glass:hover{background-color:rgba(255,255,255,0.24) !important}
+.ds-btn-off:active{transform:none}
+.ds-chip{transition:background-color .15s}
+.ds-chip-removable:hover{background-color:#2A2B31 !important}
+.ds-chip-suggest:hover,.ds-chip-toggle[aria-pressed="false"]:hover{background-color:rgba(0,255,162,0.16) !important}
+.ds-chip-toggle[aria-pressed="true"]:hover{background-color:#5CFFC4 !important}
+.ds-seg{transition:background-color .15s,color .15s}
+.ds-seg[aria-pressed="false"]:hover{color:#F2F3F5 !important}
+.ds-pg{transition:background-color .15s}
+.ds-pg-idle:hover{background-color:#1F2026 !important}
+.ds-notif{transition:background-color .15s}
+.ds-notif:hover{background-color:#1F2026 !important}
+.ds-notif-row .ds-notif-x{opacity:0;transition:opacity .15s}
+.ds-notif-row:hover .ds-notif-x,.ds-notif-x:focus-visible{opacity:1}
+@keyframes ds-halo{0%{box-shadow:0 0 0 2px #00FFA2,0 0 0 2px rgba(0,255,162,0.45)}70%,100%{box-shadow:0 0 0 2px #00FFA2,0 0 0 9px rgba(0,255,162,0)}}
+.ds-in-room{animation:ds-halo 2.4s ease-out infinite}
+@keyframes ds-wait{0%,100%{opacity:.55}50%{opacity:1}}
+.ds-wait{animation:ds-wait 2.4s ease-in-out infinite}
+@keyframes ds-sheen{0%,55%{transform:translateX(-120%) skewX(-18deg)}85%,100%{transform:translateX(420%) skewX(-18deg)}}
+.ds-sheen{animation:ds-sheen 5s ease-in-out infinite}
+@keyframes ds-pop{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+.ds-pop{animation:ds-pop .5s cubic-bezier(.22,1,.36,1) both}
+input::placeholder{color:#5F626B}
+@media (prefers-reduced-motion:reduce){.ds-in-room,.ds-wait,.ds-sheen,.ds-pop{animation:none !important}}
+</style>
+</helmet>
+<div style="width: 1440px; min-height: 3200px; box-sizing: border-box; padding: 56px 64px 72px; background: #07080A; color: #F2F3F5; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-direction: column; gap: 56px">
+  <header style="display: flex; flex-direction: column; gap: 10px">
+    <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: #00FFA2">SQUADZR · DESIGN SYSTEM</span>
+    <h1 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 96px; line-height: 1; text-transform: uppercase">Biblioteca</h1>
+  </header>
+
+  <!-- Cores -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Cores</h2>
+    <sc-for list="{{palette}}" as="g" hint-placeholder-count="3">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #80838C">{{g.group}}</span>
+        <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px">
+          <sc-for list="{{g.items}}" as="w" hint-placeholder-count="6">
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <span style="height: 56px; background: {{w.hex}}; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08)"></span>
+              <span style="display: flex; flex-direction: column; gap: 2px; font-family: 'JetBrains Mono', monospace; font-size: 11px">
+                <span style="color: #F2F3F5; font-weight: 700">{{w.name}}</span>
+                <span style="color: #80838C">{{w.hex}}</span>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+
+  <!-- Tipografia -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Tipografia</h2>
+    <div style="display: flex; flex-direction: column; background: #0F1013">
+      <div style="display: grid; grid-template-columns: 240px minmax(0, 1fr); align-items: center; gap: 24px; padding: 18px 22px; box-shadow: inset 0 -1px 0 #17181D">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #80838C; line-height: 1.6">DISPLAY<br>Big Shoulders 900 · 96/1</span>
+        <span style="font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 96px; line-height: 1; text-transform: uppercase">Falta só você</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 240px minmax(0, 1fr); align-items: center; gap: 24px; padding: 18px 22px; box-shadow: inset 0 -1px 0 #17181D">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #80838C; line-height: 1.6">TÍTULO<br>Big Shoulders 900 · 40/1</span>
+        <span style="font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 40px; line-height: 1; text-transform: uppercase">Detalhes do squad</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 240px minmax(0, 1fr); align-items: center; gap: 24px; padding: 18px 22px; box-shadow: inset 0 -1px 0 #17181D">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #80838C; line-height: 1.6">NOME DO SQUAD<br>Big Shoulders 800 · 30/1.1</span>
+        <span style="font-family: 'Big Shoulders', sans-serif; font-weight: 800; font-size: 30px; line-height: 1.1">Premier quinta à noite</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 240px minmax(0, 1fr); align-items: center; gap: 24px; padding: 18px 22px; box-shadow: inset 0 -1px 0 #17181D">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #80838C; line-height: 1.6">CORPO<br>Plus Jakarta Sans 500 · 15/1.6</span>
+        <span style="font-size: 15px; line-height: 1.6; color: #A9ABB3">Quando a última vaga fecha, o convite do Discord chega pro time inteiro.</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 240px minmax(0, 1fr); align-items: center; gap: 24px; padding: 18px 22px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #80838C; line-height: 1.6">RÓTULO E CÓDIGO<br>JetBrains Mono 700 · 11 · 0.14em</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #A9ABB3">MEUS SQUADS · #VLR77</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Botões -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Botões</h2>
+    <div style="display: flex; flex-direction: column; gap: 18px; background: #0F1013; padding: 24px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+        <dc-import name="Button" variant="primary" label="Criar squad" icon="plus" hint-size="140px,44px"></dc-import>
+        <dc-import name="Button" variant="secondary" label="Copiar link do squad" icon="link" hint-size="200px,44px"></dc-import>
+        <dc-import name="Button" variant="ghost" label="Voltar" icon="back" hint-size="100px,44px"></dc-import>
+        <dc-import name="Button" variant="link" label="Limpar" icon="none" hint-size="60px,44px"></dc-import>
+        <dc-import name="Button" variant="danger" label="Encerrar squad" icon="logout" hint-size="160px,44px"></dc-import>
+        <dc-import name="Button" variant="discord" label="Entrar com Discord" icon="discord" hint-size="190px,44px"></dc-import>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: #4E5AE8; padding: 18px">
+          <dc-import name="Button" variant="light" label="Abrir no Discord" icon="external" icon-pos="end" hint-size="180px,44px"></dc-import>
+          <dc-import name="Button" variant="glass" label="Copiar link" icon="copy" hint-size="140px,44px"></dc-import>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; background: #00FFA2; padding: 18px">
+          <dc-import name="Button" variant="dark" label="Explorar squads" icon="arrow" icon-pos="end" hint-size="170px,44px"></dc-import>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+        <dc-import name="Button" variant="primary" size="sm" label="Pequeno" icon="none" hint-size="80px,36px"></dc-import>
+        <dc-import name="Button" variant="primary" size="md" label="Médio" icon="none" hint-size="80px,44px"></dc-import>
+        <dc-import name="Button" variant="primary" size="lg" label="Grande" icon="arrow" icon-pos="end" hint-size="130px,56px"></dc-import>
+        <span aria-hidden="true" style="width: 1px; height: 32px; background: #24252B; margin: 0 6px"></span>
+        <dc-import name="Button" variant="primary" size="lg" label="Continuar" icon="arrow" icon-pos="end" disabled="{{ true }}" hint-size="160px,56px"></dc-import>
+        <dc-import name="Button" variant="secondary" label="" icon="close" aria-label="Fechar" hint-size="44px,44px"></dc-import>
+        <dc-import name="Button" variant="secondary" size="sm" mono="{{ true }}" label="#VLR77" icon="copy" icon-pos="end" aria-label="Copiar código VLR77" hint-size="110px,36px"></dc-import>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tags + Avatares -->
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px">
+    <section style="display: flex; flex-direction: column; gap: 20px">
+      <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Tags</h2>
+      <div style="display: flex; flex-direction: column; gap: 16px; background: #0F1013; padding: 24px; flex: 1">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+          <dc-import name="Tag" variant="lang" label="PT-BR" hint-size="64px,22px"></dc-import>
+          <dc-import name="Tag" variant="tag" label="ranked" hint-size="70px,24px"></dc-import>
+          <dc-import name="Tag" variant="tag" size="md" label="premier" hint-size="80px,28px"></dc-import>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #2A2B31; padding: 14px">
+          <dc-import name="Tag" variant="lang-light" size="md" label="Português (BR)" hint-size="130px,28px"></dc-import>
+          <dc-import name="Tag" variant="glass" size="md" label="mic" hint-size="60px,28px"></dc-import>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+          <dc-import name="Tag" variant="toggle" label="ranked" on="{{ true }}" hint-size="80px,32px"></dc-import>
+          <dc-import name="Tag" variant="toggle" label="casual" hint-size="80px,32px"></dc-import>
+          <dc-import name="Tag" variant="suggest" label="chill" hint-size="70px,30px"></dc-import>
+          <dc-import name="Tag" variant="removable" label="#premier" hint-size="96px,34px"></dc-import>
+        </div>
+      </div>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 20px">
+      <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Avatares</h2>
+      <div style="display: flex; flex-direction: column; gap: 22px; background: #0F1013; padding: 30px 24px 24px; flex: 1">
+        <div style="display: flex; flex-wrap: wrap; gap: 28px">
+          <sc-for list="{{avatars}}" as="a" hint-placeholder-count="5">
+            <span style="display: flex; flex-direction: column; align-items: center; gap: 10px">
+              <dc-import name="Avatar" ini="{{a.ini}}" bg="{{a.bg}}" fg="{{a.fg}}" status="{{a.status}}" host="{{a.host}}" size="lg" hint-size="44px,44px"></dc-import>
+              <span style="font-size: 12px; color: #A9ABB3">{{a.label}}</span>
+            </span>
+          </sc-for>
+        </div>
+        <div style="display: flex; align-items: flex-end; gap: 16px">
+          <sc-for list="{{sizes}}" as="z" hint-placeholder-count="4">
+            <span style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+              <dc-import name="Avatar" ini="MF" bg="#3A2A5C" fg="#E7DBFF" status="none" size="{{z.size}}" hint-size="44px,44px"></dc-import>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #80838C">{{z.label}}</span>
+            </span>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Membros -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Membros da sala</h2>
+    <div role="list" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; background: #0F1013; padding: 24px">
+      <sc-for list="{{members}}" as="m" hint-placeholder-count="3">
+        <dc-import name="MemberTile" member="{{m}}" hint-size="100%,64px"></dc-import>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- Controles + Campos -->
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px">
+    <section style="display: flex; flex-direction: column; gap: 20px">
+      <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Controles</h2>
+      <div style="display: flex; flex-direction: column; gap: 20px; background: #0F1013; padding: 24px; flex: 1">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+          <dc-import name="Segmented" size="sm" label="Idioma" options="{{shortLangs}}" value="pt" hint-size="76px,32px"></dc-import>
+          <dc-import name="Segmented" label="Idioma do squad" options="{{langs}}" value="pt" hint-size="190px,48px"></dc-import>
+        </div>
+        <dc-import name="Segmented" fluid="{{ true }}" label="Ordenar por" options="{{sorts}}" value="new" hint-size="100%,48px"></dc-import>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+          <dc-import name="Pagination" total="4" current="1" hint-size="284px,44px"></dc-import>
+          <dc-import name="Pagination" tone="light" size="sm" total="2" current="1" hint-size="176px,40px"></dc-import>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 24px">
+            <dc-import name="SlotMeter" variant="blocks" filled="4" total="5" hint-size="216px,8px"></dc-import>
+            <dc-import name="SlotMeter" variant="blocks" filled="8" total="10" hint-size="216px,8px"></dc-import>
+            <dc-import name="SlotMeter" variant="pips" filled="2" total="5" empty="#34353C" hint-size="58px,5px"></dc-import>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px">
+            <dc-import name="SlotMeter" variant="line" filled="4" total="5" hint-size="100%,4px"></dc-import>
+            <dc-import name="SlotMeter" variant="line" filled="5" total="5" tone="discord" hint-size="100%,4px"></dc-import>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 20px">
+      <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Campos e etapas</h2>
+      <div style="display: flex; flex-direction: column; gap: 16px; background: #0F1013; padding: 24px; flex: 1">
+        <dc-import name="SearchField" variant="field" input-id="lib-search-a" label="Buscar jogo" placeholder="Buscar no catálogo de jogos…" hint-size="100%,54px"></dc-import>
+        <dc-import name="SearchField" variant="field" input-id="lib-search-b" label="Buscar jogo" value="le" on-change="{{noop}}" on-clear="{{noop}}" hint-size="100%,54px"></dc-import>
+        <div style="background: #121317; padding: 6px">
+          <dc-import name="SearchField" variant="bare" input-id="lib-search-c" label="Buscar squads" placeholder="Buscar por jogo ou nome do squad…" hint-size="100%,46px"></dc-import>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 8px">
+          <dc-import name="Steps" current="1" hint-size="100%,26px"></dc-import>
+          <dc-import name="Steps" current="3" hint-size="100%,26px"></dc-import>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Notificações + Card -->
+  <div style="display: grid; grid-template-columns: 440px minmax(0, 1fr); gap: 24px">
+    <section style="display: flex; flex-direction: column; gap: 20px">
+      <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Notificação</h2>
+      <div role="list" style="display: flex; flex-direction: column; gap: 2px; background: #17181D; padding: 8px; flex: 1">
+        <sc-for list="{{notifs}}" as="n" hint-placeholder-count="2">
+          <dc-import name="NotificationItem" notif="{{n}}" hint-size="100%,70px"></dc-import>
+        </sc-for>
+      </div>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 20px">
+      <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Card de squad</h2>
+      <div style="display: grid; grid-template-columns: 380px minmax(0, 1fr); align-items: start; gap: 16px">
+        <dc-import name="SquadCard" squad="{{card}}" hint-size="100%,176px"></dc-import>
+        <dc-import name="SquadCard" squad="{{card}}" size="lg" hint-size="100%,214px"></dc-import>
+      </div>
+    </section>
+  </div>
+
+  <!-- Discord -->
+  <section style="display: flex; flex-direction: column; gap: 20px">
+    <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; text-transform: uppercase">Convite do Discord</h2>
+    <dc-import name="DiscordInvite" estado="bloqueado" hint-size="100%,82px"></dc-import>
+    <dc-import name="DiscordInvite" estado="liberado" hint-size="100%,360px"></dc-import>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":3200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const sw = (name, hex) => ({ name, hex });
+    return {
+      noop: () => {},
+      palette: [
+        { group: 'SUPERFÍCIES', items: [sw('fundo', '#07080A'), sw('menu', '#0B0C0F'), sw('painel', '#0F1013'), sw('card', '#121317'), sw('elevado', '#17181D'), sw('elevado 2', '#1A1B20'), sw('borda', '#1F2026'), sw('trilho', '#24252B')] },
+        { group: 'TEXTO', items: [sw('texto', '#F2F3F5'), sw('texto 2', '#C9CBD1'), sw('texto 3', '#A9ABB3'), sw('apoio', '#80838C'), sw('apagado', '#5F626B')] },
+        { group: 'ACENTOS', items: [sw('mint', '#00FFA2'), sw('mint tinta', '#03140D'), sw('âmbar · dono', '#FFB547'), sw('discord', '#4E5AE8'), sw('discord claro', '#8B93F5'), sw('perigo', '#FF8A8A')] }
+      ],
+      avatars: [
+        { ini: 'MF', bg: '#3A2A5C', fg: '#E7DBFF', status: 'online', host: false, label: 'Na sala' },
+        { ini: 'BR', bg: '#5C3A1E', fg: '#FFE2C7', status: 'away', host: false, label: 'Fora da sala' },
+        { ini: 'CC', bg: '#0E4D3A', fg: '#B9FFE4', status: 'online', host: true, label: 'Dono' },
+        { ini: '', bg: '', fg: '', status: 'open', host: false, label: 'Vaga aberta' },
+        { ini: '', bg: '', fg: '', status: 'vacant', host: false, label: 'Vaga no card' }
+      ],
+      sizes: [{ size: 'xs', label: '28' }, { size: 'sm', label: '34' }, { size: 'md', label: '36' }, { size: 'lg', label: '44' }],
+      members: [
+        { ini: 'CC', name: 'caiocezar', bg: '#0E4D3A', fg: '#B9FFE4', host: true, me: true, online: true },
+        { ini: 'BR', name: 'Brunão', bg: '#5C3A1E', fg: '#FFE2C7', online: false, since: 'há 3 min' },
+        { open: true }
+      ],
+      shortLangs: [{ value: 'pt', label: 'PT' }, { value: 'en', label: 'EN' }],
+      langs: [{ value: 'pt', label: 'PT-BR' }, { value: 'en', label: 'EN-US' }],
+      sorts: [{ value: 'new', label: 'Mais recentes' }, { value: 'old', label: 'Mais antigos' }],
+      notifs: [
+        { room: 'Comp role queue — Diamond+', game: 'Overwatch', cover: '/_blob/828fcf6511c34f6726bd1bd2e3b4f956', ago: 'há 2 min', unread: true },
+        { room: '2v2 ranked até Champion', game: 'Rocket League', cover: '/_blob/3da18b4f80fcb7241cfffd5337ec7c83', ago: 'ontem', unread: false }
+      ],
+      card: { name: 'Premier quinta à noite', game: 'Valorant', cover: '/_blob/48d569e7ccecf944cc19cb2d19ae7720', tags: ['premier', 'mic', 'ranked'], lang: 'PT-BR', code: 'VLR77', members: 4, max: 5, state: 'open' }
+    };
+  }
+}
+</script>
+</body>
+</html>

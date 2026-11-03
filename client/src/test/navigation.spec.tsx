@@ -15,8 +15,8 @@ function NavigationProbe() {
 
   return (
     <>
-      <button type="button" onClick={() => router.push('/squads/my')}>
-        Push my squads
+      <button type="button" onClick={() => router.push('/squads/OTHER1')}>
+        Push other lobby
       </button>
       <button type="button" onClick={() => router.replace('/squads/LOBBY1')}>
         Replace with lobby
@@ -41,13 +41,13 @@ describe('harness navigation', () => {
     const user = userEvent.setup({ delay: null })
     render(<NavigationProbe />)
 
-    await user.click(screen.getByRole('button', { name: 'Push my squads' }))
-    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/my'))
+    await user.click(screen.getByRole('button', { name: 'Push other lobby' }))
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/OTHER1'))
 
     await user.click(screen.getByRole('link', { name: 'Open lobby' }))
     await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/LOBBY1'))
     expect(navigation.calls).toEqual([
-      { method: 'push', href: '/squads/my' },
+      { method: 'push', href: '/squads/OTHER1' },
       { method: 'push', href: '/squads/LOBBY1' },
     ])
   })
@@ -57,7 +57,7 @@ describe('harness navigation', () => {
     const user = userEvent.setup({ delay: null })
     render(<NavigationProbe />)
 
-    await user.click(screen.getByRole('button', { name: 'Push my squads' }))
+    await user.click(screen.getByRole('button', { name: 'Push other lobby' }))
     await user.click(screen.getByRole('button', { name: 'Replace with lobby' }))
     await user.click(screen.getByRole('button', { name: 'Go back' }))
     await user.click(screen.getByRole('button', { name: 'Go forward' }))

@@ -1,5 +1,12 @@
 import type { GameSummary } from './game.entity'
 
+/** One member of a Squad's preview: enough to show who joined, never the roster. */
+export interface MemberPreview {
+  readonly id: string
+  readonly name: string
+  readonly image: string | null
+}
+
 export interface Room {
   readonly id: string
   readonly code: string
@@ -17,6 +24,8 @@ export interface Room {
   /** Advanced only by durable membership changes; feeds open-room expiration. */
   readonly lastActivityAt: Date
   readonly memberCount?: number
+  /** Up to five members, host first, then by join time. Read with the Squad. */
+  readonly memberPreview: readonly MemberPreview[]
   readonly isMember?: boolean
   readonly createdAt: Date
   readonly updatedAt: Date

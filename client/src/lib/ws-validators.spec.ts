@@ -95,7 +95,7 @@ describe('typed server events', () => {
     unsubscribe()
     socket.serverSend({
       type: 'presence_updated',
-      payload: { roomCode: openSquad.code, playerId: 'user-2', online: true },
+      payload: { roomCode: openSquad.code, playerId: 'user-2', online: true, offlineSince: null },
     })
 
     expect(handler).not.toHaveBeenCalled()
@@ -119,7 +119,7 @@ describe('diagnostics', () => {
     expect(handler).not.toHaveBeenCalled()
     expect(vi.mocked(console.error).mock.calls).toEqual([
       ['Invalid WebSocket message:', { issues: [{ path: '', code: 'invalid_json' }] }],
-      ['Realtime protocol failure:', { reason: 'unparseable_frame', expectedVersion: 2 }],
+      ['Realtime protocol failure:', { reason: 'unparseable_frame', expectedVersion: 3 }],
     ])
     // A frame that cannot be parsed is a protocol failure: the connection
     // closes so the app can reload into the matching build.
@@ -134,7 +134,12 @@ describe('diagnostics', () => {
 
     socket.serverSend({
       type: 'presence_updated',
-      payload: { roomCode: openSquad.code, playerId: SECRET_INVITE, online: true },
+      payload: {
+        roomCode: openSquad.code,
+        playerId: SECRET_INVITE,
+        online: true,
+        offlineSince: null,
+      },
     })
 
     expect(vi.mocked(console.error).mock.calls).toEqual([
@@ -182,7 +187,7 @@ describe('diagnostics', () => {
     })
     expect(console.error).toHaveBeenCalledWith('Realtime protocol failure:', {
       reason: 'unparseable_frame',
-      expectedVersion: 2,
+      expectedVersion: 3,
     })
     expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(SECRET_INVITE)
   })

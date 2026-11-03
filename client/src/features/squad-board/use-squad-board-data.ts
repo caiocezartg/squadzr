@@ -1,9 +1,8 @@
 import { useCallback, useState } from 'react'
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
-import { roomsResponseSchema } from '@squadzr/schemas'
-import { api } from '@/lib/api'
+import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import type { PublicSquad } from '@/types'
 import { discardFailedBoardReads, squadBoardQueryKey } from './squad-board-cache'
+import { readSquadBoard } from './squad-board-read'
 
 /**
  * Clears the board's failed reads once, before the board's first render, and returns the command that
@@ -20,8 +19,9 @@ export function useDiscardFailedBoardReads(): () => void {
 }
 
 /**
- * The list's update count when the board mounted. The view takes it once and passes it to every part of
- * the board, so the count survives a part that suspends on the list and mounts again when the list lands.
+ * The list's update count when the board mounted. The view takes it once and passes it to each part
+ * of the board that reads the list with suspense, so the count survives a part that suspends on the
+ * list and mounts again when the list lands.
  */
 export function useSquadBoardBaseline(): number {
   const queryClient = useQueryClient()
@@ -47,10 +47,22 @@ export function useSquadBoardBaseline(): number {
 export function useSquadBoardSquads(baseline: number): PublicSquad[] {
   const { data } = useSuspenseQuery({
     queryKey: squadBoardQueryKey,
-    queryFn: () => api.get('/api/rooms', roomsResponseSchema),
+    queryFn: readSquadBoard,
     refetchOnMount: (query) => (query.state.dataUpdateCount === baseline ? 'always' : false),
     refetchOnWindowFocus: true,
   })
 
   return data.rooms
+}
+
+/**
+ * The board's squads when the cache holds them, and `undefined` while they load or after a failed read.
+ * It never suspends and never throws, so a part of the page that can work without the list (the
+ * filters panel) renders at once and fills in when the list lands. It reads the same entry as
+ * `useSquadBoardSquads`, so the two agree.
+ */
+export function useLoadedBoardSquads(): PublicSquad[] | undefined {
+  const { data } = useQuery({ queryKey: squadBoardQueryKey, queryFn: readSquadBoard })
+
+  return data?.rooms
 }

@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { isRoomLobbyResponse } from '@squadzr/schemas'
+import { useMySquadsCommands } from '@/features/my-squads'
 import { useSquadBoardCommands } from '@/features/squad-board'
 import { useSession } from '@/hooks/use-session'
 import { useAppNavigation } from '@/lib/navigation'
@@ -7,21 +8,25 @@ import type { RealtimeStatus } from '@/lib/ws-client'
 import type { Player, PublicSquad } from '@/types'
 import { rosterFromSnapshot, type PresenceState } from './squad-snapshot'
 import { useSquadChannel, type SquadChannel } from './use-squad-channel'
-import { useSquadData } from './use-squad-data'
+import { useSquadAccess, useSquadData } from './use-squad-data'
 import { useSquadMembership } from './use-squad-membership'
 
 export interface LobbyView {
   /** The Squad is not there for this viewer (missing, expired or Ready to a non-member). */
   squadMissing: boolean
+  /** The viewer is in the Squad: its details are the member view, or a snapshot has arrived. */
+  isMember: boolean
   membershipRevoked: boolean
   squad: PublicSquad | null
   /** The game summary the rendered Squad carries, before and after a realtime snapshot. */
   game: PublicSquad['game'] | null
   players: Player[]
   maxPlayers: number
-  emptySlots: number
   presence: PresenceState
+  /** The invite, which only a snapshot carries: a Squad's HTTP read never decides what the invite shows. */
   discordLink: string | null
+  /** A snapshot has arrived, so the roster, Presence and readiness are the server's and not placeholders. */
+  hasSnapshot: boolean
   isReady: boolean
   connectionStatus: RealtimeStatus
   /** The code of the latest realtime error, translated by the page; null when none shows. */
@@ -33,23 +38,31 @@ export interface LobbyView {
 /**
  * The Lobby's realtime side, held by the page above the Squad's read: the socket, the squad channel and the
  * snapshot. The channel joins while the read is still pending, so the snapshot is never held back by HTTP.
- * Only a signed-in viewer joins the squad channel.
+ * Only a signed-in viewer joins the squad channel, and not one the cache already knows is outside the Squad:
+ * a non-member has no live channel, no snapshot and no Presence.
  */
 export function useLobbyChannel(squadCode: string): SquadChannel {
   const session = useSession()
   const navigateApp = useAppNavigation()
   const board = useSquadBoardCommands()
+  const { refreshMySquads } = useMySquadsCommands()
   const userId = session?.user?.id
+  const access = useSquadAccess(squadCode)
 
   const handleSquadRemoved = useCallback(
     (squadId: string) => {
       board.removeSquad(squadId)
+      void refreshMySquads()
       navigateApp('/squads')
     },
-    [board, navigateApp]
+    [board, refreshMySquads, navigateApp]
   )
 
-  return useSquadChannel({ squadCode, enabled: !!userId, onSquadRemoved: handleSquadRemoved })
+  return useSquadChannel({
+    squadCode,
+    enabled: !!userId && access !== 'non-member',
+    onSquadRemoved: handleSquadRemoved,
+  })
 }
 
 /**
@@ -65,7 +78,6 @@ export function useLobbyView(squadCode: string, channel: SquadChannel): LobbyVie
   // The snapshot is the live source of Squad metadata; HTTP only supplies it before the first snapshot
   // arrives. Both carry the game summary, so the game survives the snapshot replacing the Squad.
   const squad = channel.snapshot?.room ?? details?.room ?? null
-  const lobbyDetails = details && isRoomLobbyResponse(details) ? details : null
 
   const { leaveSquad } = useSquadMembership({
     squadCode,
@@ -82,18 +94,19 @@ export function useLobbyView(squadCode: string, channel: SquadChannel): LobbyVie
     [channel.snapshot]
   )
   const maxPlayers = squad?.maxPlayers ?? 5
-  const discordLink = channel.snapshot?.room.discordLink ?? lobbyDetails?.room.discordLink ?? null
+  const discordLink = channel.snapshot?.room.discordLink ?? null
 
   return {
     squadMissing: details === null,
+    isMember: channel.snapshot !== null || (details !== null && isRoomLobbyResponse(details)),
     membershipRevoked: channel.membershipRevoked,
     squad,
     game: squad?.game ?? null,
     players,
     maxPlayers,
-    emptySlots: Math.max(0, maxPlayers - players.length),
     presence: channel.presence,
     discordLink,
+    hasSnapshot: channel.snapshot !== null,
     isReady: channel.snapshot?.readyAt != null,
     connectionStatus: channel.status,
     errorCode: channel.errorCode,

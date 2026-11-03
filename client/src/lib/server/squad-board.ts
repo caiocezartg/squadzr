@@ -19,7 +19,6 @@ export function loadSquadBoard(viewer: RequestViewer): Promise<RoomsResponse> {
       credentials: 'viewer',
       caching: 'uncached',
       cookie: viewer.cookie,
-      forwardedFor: viewer.forwardedFor,
     },
     { timeoutMs: SQUAD_BOARD_TIMEOUT_MS }
   )

@@ -1,6 +1,8 @@
 // `zod/mini` keeps the same contracts as the classic build while letting the
 // bundler drop every schema the route validation does not use.
 import * as z from 'zod/mini'
+import { SQUAD_CODE_PATTERN } from '@/lib/squad-links'
+import { normalizeTags } from './squad-tags'
 
 const filterSchema = z.enum(['all', 'has-space', 'almost-full'])
 const sortSchema = z.enum(['newest', 'oldest'])
@@ -19,7 +21,16 @@ function lenient<T extends z.ZodMiniType>(schema: T) {
  * A squad code as the contract writes it: six letters or digits. The server reads a code without
  * regard to case, so a lowercase invite still joins. Anything else never reaches a request path.
  */
-const squadCodeSchema = z.string().check(z.regex(/^[A-Za-z0-9]{6}$/))
+const squadCodeSchema = z.string().check(z.regex(SQUAD_CODE_PATTERN))
+
+/**
+ * The selected tags: one `tag` value or several, as `?tag=x` and `?tag=x&tag=y` read. They come out
+ * normalized (no `#`, lowercase, no blanks or repeats), so the same selection is always the same list.
+ */
+const tagsSchema = z.pipe(
+  z.union([z.string(), z.array(z.string())]),
+  z.transform((tag) => normalizeTags(typeof tag === 'string' ? [tag] : tag))
+)
 
 /**
  * The URL search contract of the squad lists. Every parameter is parsed on its
@@ -32,7 +43,7 @@ export const squadsSearchSchema = z.catch(
     filter: lenient(filterSchema),
     sort: lenient(sortSchema),
     language: lenient(languageSchema),
-    tag: lenient(z.string()),
+    tag: lenient(tagsSchema),
     page: lenient(z.coerce.number().check(z.int(), z.gte(1))),
     join: lenient(squadCodeSchema),
   }),
@@ -50,7 +61,7 @@ export const SQUADS_SEARCH_DEFAULTS: ResolvedSquadsSearch = {
   filter: 'all',
   sort: 'newest',
   language: 'all',
-  tag: '',
+  tag: [],
   page: 1,
 }
 
@@ -69,10 +80,22 @@ export function resolveSquadsSearch(search: SquadsSearch): ResolvedSquadsSearch 
 export function squadsSearchQuery(search: SquadsSearch): string {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(search)) {
-    if (value !== undefined) params.set(key, String(value))
+    if (Array.isArray(value)) {
+      for (const item of value) params.append(key, item)
+    } else if (value !== undefined) {
+      params.set(key, String(value))
+    }
   }
   const query = params.toString()
   return query ? `?${query}` : ''
+}
+
+/**
+ * The raw search of a URL, ready for `squadsSearchSchema`. A parameter that repeats keeps its last
+ * value, except `tag`, which keeps all of them in order.
+ */
+export function squadsSearchFromParams(params: URLSearchParams): Record<string, unknown> {
+  return { ...Object.fromEntries(params), ...(params.has('tag') && { tag: params.getAll('tag') }) }
 }
 
 function parseValue<T extends z.ZodMiniType>(schema: T, value: unknown): z.output<T> | undefined {

@@ -5,6 +5,7 @@ import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import { findRoomPlayers } from './helpers/find-room-players'
 import { resolveAccessibleRoom } from './helpers/resolve-accessible-room'
+import { withRosterPreview } from './helpers/with-roster-preview'
 
 export interface RoomPlayer {
   readonly id: string
@@ -51,10 +52,7 @@ export class GetRoomByCodeUseCase implements IGetRoomByCodeUseCase {
       return { room, isMember: false, players: [] }
     }
 
-    return {
-      room,
-      isMember: true,
-      players: await findRoomPlayers(room, this.roomMemberRepository, this.userRepository),
-    }
+    const players = await findRoomPlayers(room, this.roomMemberRepository, this.userRepository)
+    return { room: withRosterPreview(room, players), isMember: true, players }
   }
 }

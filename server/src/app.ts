@@ -6,19 +6,25 @@ import Fastify, {
 } from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
+import rateLimit from '@fastify/rate-limit'
 import websocket from '@fastify/websocket'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
 import { WS_MAX_PAYLOAD_BYTES } from '@squadzr/schemas/ws'
 import type { Env } from '@config/env'
 import type { Clock } from '@domain/services/clock.interface'
+import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
+import { RateLimitedError } from '@application/errors'
 import { SystemClock } from '@infrastructure/services/system-clock'
 import errorHandlerPlugin from '@infrastructure/plugins/error-handler.plugin'
+import originGuardPlugin from '@infrastructure/plugins/origin-guard.plugin'
 import databasePlugin from '@infrastructure/plugins/database.plugin'
 import authPlugin from '@infrastructure/plugins/auth.plugin'
 import swaggerPlugin from '@infrastructure/plugins/swagger.plugin'
 import wsPlugin from '@infrastructure/websocket/ws.plugin'
 import roomCleanupPlugin from '@infrastructure/plugins/room-cleanup.plugin'
+import type { DiscordInviteRateLimit } from '@interface/routes/discord.routes'
 import { registerRoutes } from '@interface/routes'
+import { createDiscordInvitePreviews } from '@interface/factories/discord-preview.factory'
 import { createRealtime } from '@interface/factories/realtime.factory'
 import { createRoomCleanupUseCase } from '@interface/factories/room-cleanup.factory'
 
@@ -26,6 +32,8 @@ declare module 'fastify' {
   interface FastifyInstance {
     /** Injected lifecycle clock: every expiration/limit decision reads it. */
     clock: Clock
+    /** The cached source of the Discord server behind a Ready Squad's invite. */
+    discordPreviews: DiscordInvitePreviewProvider
   }
 }
 
@@ -35,6 +43,10 @@ export interface BuildAppOptions {
   logger?: FastifyServerOptions['logger']
   /** Overrides the system clock; tests inject a fixed clock for exact instants. */
   clock?: Clock
+  /** Replaces Discord's public invite endpoint; tests inject a stub so none of them reaches the network. */
+  discordPreviews?: DiscordInvitePreviewProvider
+  /** Replaces the limit on the Discord invite check; tests shrink its window so none of them waits a minute. */
+  discordInviteRateLimit?: DiscordInviteRateLimit
 }
 
 /**
@@ -91,13 +103,20 @@ export function defaultLogger(env: Env): FastifyLoggerOptions {
  * Every instance owns its database pool, WebSocket server and timers, and
  * releases all of them on `app.close()`.
  */
-export async function buildApp({ env, logger, clock }: BuildAppOptions): Promise<FastifyInstance> {
+export async function buildApp({
+  env,
+  logger,
+  clock,
+  discordPreviews,
+  discordInviteRateLimit,
+}: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
-    trustProxy: true,
+    trustProxy: env.TRUST_PROXY_HOPS === 0 ? false : env.TRUST_PROXY_HOPS,
     logger: logger ?? defaultLogger(env),
   })
 
   fastify.decorate('clock', clock ?? new SystemClock())
+  fastify.decorate('discordPreviews', discordPreviews ?? createDiscordInvitePreviews(fastify.clock))
 
   // Route schemas validate and serialize all HTTP input and output: set them before any route.
   fastify.setValidatorCompiler(validatorCompiler)
@@ -110,8 +129,23 @@ export async function buildApp({ env, logger, clock }: BuildAppOptions): Promise
     credentials: true,
   })
 
+  // CORS keeps another site from reading an answer, not from sending a cookie-bearing request: the guard
+  // refuses every change of state and every WebSocket another site starts.
+  await fastify.register(originGuardPlugin, {
+    allowedOrigins: [env.CORS_ORIGIN, env.BETTER_AUTH_URL],
+  })
+
   await fastify.register(helmet, {
     contentSecurityPolicy: env.NODE_ENV === 'production',
+  })
+
+  // Opt-in per route (`config.rateLimit`). It runs in `preHandler`, after a route's authentication, so a
+  // limited route can key on the signed-in user and an anonymous request never spends anyone's quota.
+  // The error handler shapes the 429 like every other error.
+  await fastify.register(rateLimit, {
+    global: false,
+    hook: 'preHandler',
+    errorResponseBuilder: () => new RateLimitedError(),
   })
 
   await fastify.register(websocket, {
@@ -120,7 +154,8 @@ export async function buildApp({ env, logger, clock }: BuildAppOptions): Promise
     },
   })
 
-  await fastify.register(swaggerPlugin)
+  // The API reference maps every route and schema: served while developing, never in production.
+  if (env.NODE_ENV !== 'production') await fastify.register(swaggerPlugin)
   await fastify.register(databasePlugin, { connectionString: env.DATABASE_URL })
   await fastify.register(authPlugin, { config: env })
   await fastify.register(wsPlugin, {
@@ -129,7 +164,7 @@ export async function buildApp({ env, logger, clock }: BuildAppOptions): Promise
   await fastify.register(roomCleanupPlugin, {
     deleteExpiredRoomsUseCase: createRoomCleanupUseCase(fastify.db, fastify.clock),
   })
-  await registerRoutes(fastify)
+  await registerRoutes(fastify, { discord: { rateLimit: discordInviteRateLimit } })
 
   return fastify
 }

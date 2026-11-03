@@ -38,8 +38,10 @@ const TEST_FILE_PATTERN = /\.(spec|test)\.[^.]+$/
 /** Path inside a capability that counts as its public interface. */
 // `skeleton` is the light entry point the loading states render, so the page is
 // never pulled into a loading chunk. `page` is the page's own entry point; the
-// barrel exports only commands, so the page is never reached through it.
-const PUBLIC_ENTRY_POINTS = new Set(['', 'index', 'skeleton', 'page'])
+// barrel exports only commands, so the page is never reached through it. `server` is the entry of a
+// layout that reads a capability's data without rendering its client view (the shell's squad count). `join` is
+// the joining capability's light entry: the join request without its sign-in prompt, for the Lobby's bundle.
+const PUBLIC_ENTRY_POINTS = new Set(['', 'index', 'skeleton', 'page', 'server', 'join'])
 
 function toPosix(path: string): string {
   return path.split(sep).join('/')
@@ -242,5 +244,12 @@ describe('capability boundaries', () => {
     }
 
     expect(violations).toEqual([])
+  })
+
+  it('keeps the Squad Board server entry server-only', () => {
+    // `server` is a public entry for layouts; a client module that imported it must fail the build.
+    const source = readFileSync(join(FEATURES_DIR, 'squad-board', 'server.ts'), 'utf8')
+
+    expect(importSpecifiers(source)).toContain('server-only')
   })
 })

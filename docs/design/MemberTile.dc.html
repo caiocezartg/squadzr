@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Membro do squad</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div role="listitem" title="{{presence}}" style="display: flex; align-items: center; gap: 14px; box-sizing: border-box; min-height: 64px; padding: 10px 14px 10px 12px; background: {{rowBg}}; box-shadow: {{edge}}; color: #F2F3F5; font-family: 'Plus Jakarta Sans', sans-serif">
+  <dc-import name="Avatar" ini="{{m.ini}}" bg="{{m.bg}}" fg="{{m.fg}}" status="{{status}}" host="{{host}}" size="lg" crown-ring="{{rowBg}}" hint-size="44px,44px"></dc-import>
+  <span style="flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px">
+    <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{nameFg}}">{{label}}</span>
+    <sc-if value="{{me}}" hint-placeholder-val="{{ false }}"><span style="flex-shrink: 0; font-size: 12px; color: #80838C">você</span></sc-if>
+    <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">{{presence}}</span>
+  </span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"member":{"editor":null},"$preview":{"width":360,"height":64}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const DEMO = { ini: 'CC', name: 'caiocezar', bg: '#0E4D3A', fg: '#B9FFE4', host: true, me: true, online: true };
+    const m = this.props.member || DEMO;
+    const open = !!m.open;
+    const online = !open && !!m.online;
+    return {
+      m,
+      status: open ? 'open' : online ? 'online' : 'away',
+      host: !open && !!m.host,
+      me: !open && !!m.me,
+      label: open ? 'Vaga aberta' : m.name,
+      rowBg: open ? '#0C0D10' : online ? '#15161A' : '#111215',
+      edge: open ? 'inset 0 0 0 1px #1A1B20' : 'none',
+      nameFg: open ? '#C9CBD1' : online ? '#F2F3F5' : '#A9ABB3',
+      presence: open ? 'Aguardando jogador' : online ? 'Na sala agora' : 'Fora da sala' + (m.since ? ' · ' + m.since : '')
+    };
+  }
+}
+</script>
+</body>
+</html>

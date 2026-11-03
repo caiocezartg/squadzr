@@ -19,7 +19,6 @@
     "typecheck": "tsc -p .railway/tsconfig.json && turbo typecheck",
     "test": "turbo test",
     "test:watch": "vitest",
-    "bundle:budget": "bun --cwd=client run bundle:budget",
     "lint": "eslint --no-ignore --max-warnings=0 .railway/railway.ts && turbo lint",
     "lint:fix": "turbo lint:fix",
     "format": "prettier --ignore-path .prettierignore --ignore-path .gitignore --write \"**/*.{ts,tsx,js,jsx,json}\"",

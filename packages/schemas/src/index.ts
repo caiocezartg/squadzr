@@ -4,6 +4,19 @@ export {
   type ContractIssue,
   type ErrorResponse,
 } from './error'
+export {
+  DISCORD_INVITE_PREFIXES,
+  discordInviteCheckResponseSchema,
+  discordInviteCode,
+  discordInviteCodeParamSchema,
+  discordPreviewResponseSchema,
+  discordServerPreviewSchema,
+  parseDiscordInvite,
+  type DiscordInviteCheckResponse,
+  type DiscordInviteLink,
+  type DiscordPreviewResponse,
+  type DiscordServerPreviewDto,
+} from './discord'
 export { healthResponseSchema, type HealthResponse } from './health'
 export { sessionResponseSchema, type SessionDto } from './session'
 export { userResponseSchema, type UserDto } from './user'
@@ -32,6 +45,8 @@ export {
   isRoomLobbyResponse,
   joinRoomResponseSchema,
   leaveRoomResponseSchema,
+  MEMBER_PREVIEW_LIMIT,
+  memberPreviewSchema,
   myRoomsResponseSchema,
   playerSchema,
   publicRoomSchema,
@@ -45,6 +60,7 @@ export {
   type CreateRoomInput,
   type CreateRoomResponse,
   type JoinRoomResponse,
+  type MemberPreviewDto,
   type MyRoomsResponse,
   type PlayerDto,
   type PublicRoomDto,

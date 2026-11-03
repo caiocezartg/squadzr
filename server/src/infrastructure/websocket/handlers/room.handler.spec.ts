@@ -20,6 +20,7 @@ function fakeSocket() {
 function joinRoom(manager: WsConnectionManager, socket: WebSocket, userId: string): void {
   manager.setClientData(socket, {
     userId,
+    sessionId: null,
     userName: userId,
     userImage: null,
     roomCode: ROOM_CODE,

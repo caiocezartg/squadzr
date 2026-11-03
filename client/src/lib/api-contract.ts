@@ -56,3 +56,10 @@ export function parseApiResponse<S extends z.ZodType>(
   console.error('Invalid API response:', { method, path: pathname, status, issues })
   throw new ApiContractError(method, pathname, status, issues)
 }
+
+/** A 401, whatever body it carried, is the API saying the viewer has no session. */
+export function isUnauthorized(error: unknown): boolean {
+  return (
+    (error instanceof ApiClientError || error instanceof ApiContractError) && error.status === 401
+  )
+}

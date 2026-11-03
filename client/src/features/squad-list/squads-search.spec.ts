@@ -5,6 +5,8 @@ import {
   parseSort,
   parseStatusFilter,
   resolveSquadsSearch,
+  squadsSearchFromParams,
+  squadsSearchQuery,
   squadsSearchSchema,
 } from './squads-search'
 
@@ -15,7 +17,7 @@ describe('squadsSearchSchema', () => {
       filter: 'almost-full',
       sort: 'oldest',
       language: 'pt-br',
-      tag: 'duo',
+      tag: ['duo'],
       page: 3,
       join: 'ABC123',
     }
@@ -43,7 +45,7 @@ describe('squadsSearchSchema', () => {
       filter: 'bogus',
       sort: 'sideways',
       language: 'fr',
-      tag: ['a'],
+      tag: [1],
       page: 0,
       join: 'ABC123',
     })
@@ -63,6 +65,45 @@ describe('squadsSearchSchema', () => {
   })
 })
 
+describe('tags in the search', () => {
+  it('reads a legacy single tag as one tag', () => {
+    expect(squadsSearchSchema.parse({ tag: 'ranked' }).tag).toEqual(['ranked'])
+  })
+
+  it('reads several tags, normalized and without repeats', () => {
+    expect(squadsSearchSchema.parse({ tag: ['#Ranked', 'mic', 'RANKED', ' '] }).tag).toEqual([
+      'ranked',
+      'mic',
+    ])
+  })
+
+  it('reads every tag value of a URL, and the last value of any other parameter', () => {
+    const params = new URLSearchParams('tag=ranked&tag=mic&sort=oldest&sort=newest')
+    expect(squadsSearchSchema.parse(squadsSearchFromParams(params))).toEqual({
+      tag: ['ranked', 'mic'],
+      sort: 'newest',
+    })
+    expect(
+      squadsSearchSchema.parse(squadsSearchFromParams(new URLSearchParams('tag=x'))).tag
+    ).toEqual(['x'])
+  })
+
+  it('writes one tag value per selected tag', () => {
+    expect(squadsSearchQuery({ tag: ['ranked', 'mic'], page: 2 })).toBe(
+      '?tag=ranked&tag=mic&page=2'
+    )
+    expect(squadsSearchQuery({ tag: [] })).toBe('')
+  })
+
+  it('round-trips through the URL', () => {
+    const search = { tag: ['ranked', 'mic'], search: 'a b' }
+    const query = squadsSearchQuery(search)
+    expect(
+      squadsSearchSchema.parse(squadsSearchFromParams(new URLSearchParams(query.slice(1))))
+    ).toEqual(search)
+  })
+})
+
 describe('resolveSquadsSearch', () => {
   it('fills every missing parameter with its default', () => {
     expect(resolveSquadsSearch({})).toEqual(SQUADS_SEARCH_DEFAULTS)
@@ -71,7 +112,7 @@ describe('resolveSquadsSearch', () => {
       filter: 'all',
       sort: 'newest',
       language: 'all',
-      tag: '',
+      tag: [],
       page: 1,
     })
   })

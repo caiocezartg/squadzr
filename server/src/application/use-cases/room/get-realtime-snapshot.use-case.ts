@@ -5,6 +5,7 @@ import type { Clock } from '@domain/services/clock.interface'
 import { findRoomPlayers } from './helpers/find-room-players'
 import { findUnexpiredRoomByCode } from './helpers/find-unexpired-room-by-code'
 import { buildRealtimeSnapshot, type RealtimeSnapshot } from './helpers/realtime-snapshot'
+import { withRosterPreview } from './helpers/with-roster-preview'
 
 export interface GetRealtimeSnapshotInput {
   readonly code: string
@@ -28,6 +29,7 @@ export class GetRealtimeSnapshotUseCase implements IGetRealtimeSnapshotUseCase {
   async execute(input: GetRealtimeSnapshotInput): Promise<GetRealtimeSnapshotOutput> {
     const room = await findUnexpiredRoomByCode(this.rooms, this.clock, input.code)
     if (!room) return null
-    return buildRealtimeSnapshot(room, await findRoomPlayers(room, this.members, this.users))
+    const players = await findRoomPlayers(room, this.members, this.users)
+    return buildRealtimeSnapshot(withRosterPreview(room, players), players)
   }
 }

@@ -35,6 +35,13 @@ export function createAuth(db: Database, config: AuthConfig) {
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // 1 day
     },
+    // Better Auth limits its routes per client address (the one the trusted proxy saw) in production, and
+    // sign-in hardest. The session read is left out: the Next server reads every visitor's session from
+    // its own few addresses, so a shared limit would sign visitors out under load.
+    rateLimit: {
+      enabled: config.NODE_ENV === 'production',
+      customRules: { '/get-session': false },
+    },
     advanced: cookieAdvancedOptions(config),
   })
 }

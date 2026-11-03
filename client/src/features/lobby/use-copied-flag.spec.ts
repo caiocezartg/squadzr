@@ -25,6 +25,17 @@ describe('useCopiedFlag', () => {
     expect(result.current[0]).toBe(false)
   })
 
+  it('shows the confirmation for the time the button asks for', () => {
+    const { result } = renderHook(() => useCopiedFlag(1_800))
+
+    act(() => result.current[1]())
+    act(() => vi.advanceTimersByTime(1_799))
+    expect(result.current[0]).toBe(true)
+
+    act(() => vi.advanceTimersByTime(1))
+    expect(result.current[0]).toBe(false)
+  })
+
   it('restarts the two seconds when a second copy lands while the confirmation shows', () => {
     const { result } = renderHook(() => useCopiedFlag())
 

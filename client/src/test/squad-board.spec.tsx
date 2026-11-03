@@ -35,8 +35,19 @@ import {
 import { authStore, toastStore } from './stubs'
 import { openLatestWebSocket, sendFromServer, serverSentFrames } from './ws-flows'
 import { MockWebSocket } from './ws-mock'
+import { mockMediaQuery } from './media-query'
+import { NARROW_QUERY } from '@/components/ds/use-media-query'
 import type { JoinRoomResponse } from '@squadzr/schemas'
 import type { RoomsResponse, Squad } from '@/types'
+
+/** The listed Squads' names in grid order, read from the cards' accessible names ("name — game, …"). */
+function listedSquadNames(): string[] {
+  const grid = document.getElementById('squads-grid')
+  if (!grid) throw new Error('The squad grid is not on the page')
+  return within(grid)
+    .getAllByLabelText(/ — /)
+    .map((card) => (card.getAttribute('aria-label') ?? '').split(' — ')[0] ?? '')
+}
 
 const joinSquadResponse: JoinRoomResponse = {
   message: 'Joined squad',
@@ -60,6 +71,7 @@ const extraSquad: Squad = {
   tags: [],
   language: 'en',
   memberCount: 1,
+  memberPreview: [{ id: 'user-9', name: 'Mia', image: null }],
   isMember: false,
   createdAt: new Date(Date.now() - 300_000).toISOString(),
   updatedAt: new Date(Date.now() - 300_000).toISOString(),
@@ -88,28 +100,50 @@ describe('squad board — rendering', () => {
   it('renders every squad with its game, member count and join state', async () => {
     renderSquadsFlow('/squads')
 
-    expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
-    expect(screen.getByText('Full lobby')).toBeInTheDocument()
-    expect(screen.getByText('Casual five stack')).toBeInTheDocument()
-    expect(screen.getAllByText('League of Legends')).toHaveLength(2)
-    expect(screen.getByText('Counter-Strike 2')).toBeInTheDocument()
-    for (const cover of screen.getAllByRole('img', { name: 'League of Legends' })) {
-      expect(cover).toHaveAttribute('src', openSquad.game.coverUrl)
-    }
-    expect(screen.getByRole('img', { name: 'Counter-Strike 2' })).toHaveAttribute(
+    const open = await screen.findByRole('button', {
+      name: 'Ranked grind — League of Legends, EN-US, 1 of 5 players',
+    })
+    expect(within(open).getByRole('img', { name: 'League of Legends' })).toHaveAttribute(
+      'src',
+      openSquad.game.coverUrl
+    )
+
+    const full = screen.getByRole('button', {
+      name: 'Full lobby — Counter-Strike 2, PT-BR, 4 of 4 players',
+    })
+    expect(full).toHaveAttribute('aria-disabled', 'true')
+    expect(within(full).getByRole('img', { name: 'Counter-Strike 2' })).toHaveAttribute(
       'src',
       fullSquad.game.coverUrl
     )
-    expect(screen.getByText('Joined')).toBeInTheDocument()
-    expect(screen.getByText('3 squads available')).toBeInTheDocument()
+
+    const joined = screen.getByRole('link', {
+      name: 'Casual five stack — League of Legends, PT-BR, 3 of 4 players',
+    })
+    expect(joined).toHaveAttribute('href', '/squads/MEM111')
+    expect(within(joined).getByText('Joined')).toBeInTheDocument()
+    expect(screen.getByText('3 open squads')).toBeInTheDocument()
   })
 
   it('shows the empty state without a create action for guests', async () => {
     onHttp('GET', '/api/rooms', () => httpOk({ rooms: [] }))
-    renderSquadsFlow('/squads', { user: null })
+    renderSquadsFlow('/squads', { user: null, shell: true })
+
+    // The shell's sidebar has its own "Create squad"; the empty state must not add one.
+    const emptyState = (await screen.findByText('No squads yet')).parentElement!
+    expect(
+      within(emptyState).queryByRole('button', { name: 'Create squad' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('offers a signed-in player a create action in the empty state', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: [] }))
+    const { user } = renderSquadsFlow('/squads', { shell: true })
 
     expect(await screen.findByText('No squads yet')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Create Squad' })).not.toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'Create squad' }).at(-1)!)
+
+    expect(await screen.findByText('Choose the game', {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
   it('shows the inline load error when the board request fails', async () => {
@@ -122,12 +156,25 @@ describe('squad board — rendering', () => {
   })
 })
 
+const SEARCH_PLACEHOLDER = 'Search by game or squad name…'
+
+/** Opens the filters panel from the bar's button and returns the panel. */
+async function openFilters(user: ReturnType<typeof renderSquadsFlow>['user']) {
+  await user.click(await screen.findByRole('button', { name: /^Filters/ }))
+  return screen.findByRole('dialog', { name: 'Filters' })
+}
+
+/** The URL's `tag` values, in order. */
+function urlTags(navigation: { history: { location: { search: string } } }): string[] {
+  return new URLSearchParams(navigation.history.location.search).getAll('tag')
+}
+
 describe('squad board — filters', () => {
   it('filters squads by debounced search term', async () => {
     const { user } = renderSquadsFlow('/squads')
     await screen.findByText('Ranked grind')
 
-    await user.type(screen.getByPlaceholderText('Search by game or squad name...'), 'Ranked')
+    await user.type(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), 'Ranked')
 
     await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
     expect(screen.getByText('Ranked grind')).toBeInTheDocument()
@@ -138,50 +185,208 @@ describe('squad board — filters', () => {
     const { user } = renderSquadsFlow('/squads')
     await screen.findByText('Ranked grind')
 
-    await user.type(screen.getByPlaceholderText('Search by game or squad name...'), 'Counter')
+    await user.type(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), 'Counter')
 
     await waitFor(() => expect(screen.queryByText('Ranked grind')).not.toBeInTheDocument())
     expect(screen.getByText('Full lobby')).toBeInTheDocument()
     expect(screen.queryByText('Casual five stack')).not.toBeInTheDocument()
   })
 
-  it('filters squads by status chips', async () => {
+  it('filters squads by availability, live, with a chip for each', async () => {
     const { user } = renderSquadsFlow('/squads')
     await screen.findByText('Ranked grind')
+    const panel = await openFilters(user)
 
-    await user.click(screen.getByRole('button', { name: 'HAS SPACE' }))
+    await user.click(within(panel).getByRole('button', { name: 'With space' }))
     await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
     expect(screen.getByText('Ranked grind')).toBeInTheDocument()
     expect(screen.getByText('Casual five stack')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove With space' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'ALMOST FULL' }))
+    await user.click(within(panel).getByRole('button', { name: 'Almost full' }))
     await waitFor(() => expect(screen.queryByText('Ranked grind')).not.toBeInTheDocument())
     expect(screen.getByText('Casual five stack')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Remove With space' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove Almost full' })).toBeInTheDocument()
   })
 
-  it('filters squads by language chips', async () => {
+  it('filters squads by language', async () => {
     const { user } = renderSquadsFlow('/squads')
     await screen.findByText('Ranked grind')
+    const panel = await openFilters(user)
 
-    await user.click(screen.getByRole('button', { name: 'EN-US' }))
+    await user.click(within(panel).getByRole('button', { name: 'EN-US' }))
 
     await waitFor(() => expect(screen.queryByText('Casual five stack')).not.toBeInTheDocument())
     expect(screen.getByText('Ranked grind')).toBeInTheDocument()
     expect(screen.queryByText('Full lobby')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove EN-US' })).toBeInTheDocument()
   })
 
-  it('sorts squads by creation date through the sort select', async () => {
+  it('sorts squads by creation date', async () => {
     const { user } = renderSquadsFlow('/squads')
     await screen.findByText('Ranked grind')
 
-    const titles = () =>
-      screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
-    expect(titles()).toEqual(['Ranked grind', 'Full lobby', 'Casual five stack'])
+    expect(listedSquadNames()).toEqual(['Ranked grind', 'Full lobby', 'Casual five stack'])
 
-    await user.selectOptions(screen.getByRole('combobox'), 'oldest')
+    const panel = await openFilters(user)
+    await user.click(within(panel).getByRole('button', { name: 'Oldest' }))
     await waitFor(() =>
-      expect(titles()).toEqual(['Casual five stack', 'Full lobby', 'Ranked grind'])
+      expect(listedSquadNames()).toEqual(['Casual five stack', 'Full lobby', 'Ranked grind'])
     )
+  })
+
+  it('lists the most used tags as toggles, and keeps a squad only when it has every selected tag', async () => {
+    const { user, navigation } = renderSquadsFlow('/squads')
+    await screen.findByText('Ranked grind')
+    const panel = await openFilters(user)
+    const toggles = within(within(panel).getByRole('group', { name: 'Tags' })).getAllByRole(
+      'button'
+    )
+    expect(toggles.map((toggle) => toggle.textContent)).toEqual(['#chill', '#ranked'])
+
+    await user.click(toggles[0]!)
+    await waitFor(() => expect(screen.queryByText('Full lobby')).not.toBeInTheDocument())
+    expect(screen.getByText('Ranked grind')).toBeInTheDocument()
+    expect(screen.getByText('Casual five stack')).toBeInTheDocument()
+
+    await user.click(toggles[1]!)
+    await waitFor(() => expect(screen.queryByText('Casual five stack')).not.toBeInTheDocument())
+    expect(screen.getByText('Ranked grind')).toBeInTheDocument()
+    expect(urlTags(navigation)).toEqual(['chill', 'ranked'])
+    expect(screen.getByRole('button', { name: 'Remove #chill' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove #ranked' })).toBeInTheDocument()
+  })
+
+  it('selects a typed tag, keeps it as a toggle and compares it exactly', async () => {
+    const { user, navigation } = renderSquadsFlow('/squads', { shell: true })
+    await screen.findByText('Ranked grind')
+    const panel = await openFilters(user)
+    const field = within(panel).getByRole('textbox', { name: 'Add a tag' })
+
+    await user.type(field, 'rank{Enter}')
+    await waitFor(() => expect(urlTags(navigation)).toEqual(['rank']))
+    expect(field).toHaveValue('')
+    expect(screen.getByText('No squads found')).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: '#rank', pressed: true })).toBeInTheDocument()
+
+    await user.type(field, '#Mic,')
+    await waitFor(() => expect(urlTags(navigation)).toEqual(['rank', 'mic']))
+  })
+
+  it('shows the live result count on the main button, which closes the panel', async () => {
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Ranked grind')
+    const panel = await openFilters(user)
+    expect(within(panel).getByRole('button', { name: 'Show 3 squads' })).toBeInTheDocument()
+
+    await user.click(within(panel).getByRole('button', { name: '#ranked' }))
+    await user.click(await within(panel).findByRole('button', { name: 'Show 1 squad' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(listedSquadNames()).toEqual(['Ranked grind'])
+  })
+
+  it('counts the active filters on the button, and inverts it while the panel is open', async () => {
+    const { user } = renderSquadsFlow('/squads?language=en&tag=chill')
+    const button = await screen.findByRole('button', { name: /^Filters/ })
+    expect(button).toHaveTextContent('2')
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    expect(button).toHaveClass('bg-raised-2')
+
+    await user.click(button)
+
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    expect(button).toHaveClass('bg-text')
+  })
+
+  it('removes a filter with its chip, and every filter with "Clear"', async () => {
+    const { user, navigation } = renderSquadsFlow('/squads?language=en&filter=has-space&tag=chill')
+    await screen.findByText('Ranked grind')
+    expect(listedSquadNames()).toEqual(['Ranked grind'])
+
+    await user.click(screen.getByRole('button', { name: 'Remove #chill' }))
+    expect(urlTags(navigation)).toEqual([])
+    expect(screen.queryByRole('button', { name: 'Remove #chill' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Remove EN-US' }))
+    await waitFor(() => expect(listedSquadNames()).toEqual(['Ranked grind', 'Casual five stack']))
+
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    await waitFor(() => expect(listedSquadNames()).toHaveLength(3))
+    expect(navigation.history.location.search).toBe('')
+    expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument()
+  })
+
+  it('puts every control back with "Clear all", and leaves the search as it is', async () => {
+    const { user, navigation } = renderSquadsFlow(
+      '/squads?search=a&language=pt-br&sort=oldest&tag=chill'
+    )
+    await screen.findByText('Casual five stack')
+    const panel = await openFilters(user)
+
+    await user.click(within(panel).getByRole('button', { name: 'Clear all' }))
+
+    await waitFor(() => expect(navigation.history.location.search).toBe('?search=a'))
+    expect(screen.getByPlaceholderText(SEARCH_PLACEHOLDER)).toHaveValue('a')
+  })
+
+  it('reads a legacy single ?tag=x as one tag, and several as a list', async () => {
+    const { navigation } = renderSquadsFlow('/squads?tag=chill')
+    await screen.findByText('Ranked grind')
+    expect(screen.getByRole('button', { name: 'Remove #chill' })).toBeInTheDocument()
+    expect(listedSquadNames()).toEqual(['Ranked grind', 'Casual five stack'])
+
+    act(() => navigation.history.push('/squads?tag=chill&tag=ranked'))
+
+    await waitFor(() => expect(listedSquadNames()).toEqual(['Ranked grind']))
+    expect(screen.getByRole('button', { name: 'Remove #ranked' })).toBeInTheDocument()
+  })
+
+  it.each([
+    ['while the list is loading', () => new Promise<MockHttpResponse>(() => {})],
+    [
+      'when the list failed to load',
+      () => httpError(500, { message: 'boom', error: 'INTERNAL_ERROR' }),
+    ],
+  ])('opens the panel with its controls %s', async (_when, answer) => {
+    onHttp('GET', '/api/rooms', answer)
+    const { user } = renderSquadsFlow('/squads')
+
+    const panel = await openFilters(user)
+
+    expect(within(panel).getByRole('button', { name: 'Show squads' })).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: 'Oldest' })).toBeInTheDocument()
+    expect(within(panel).getByRole('textbox', { name: 'Add a tag' })).toBeInTheDocument()
+  })
+
+  it('empties the typed tag text with "Clear all"', async () => {
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Ranked grind')
+    const panel = await openFilters(user)
+    const field = within(panel).getByRole('textbox', { name: 'Add a tag' })
+
+    await user.type(field, 'half')
+    await user.click(within(panel).getByRole('button', { name: 'Clear all' }))
+
+    expect(field).toHaveValue('')
+  })
+
+  it('opens the filters as a bottom sheet below 640px', async () => {
+    mockMediaQuery(NARROW_QUERY, true)
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Ranked grind')
+
+    const panel = await openFilters(user)
+
+    expect(panel.className).toContain('inset-x-0')
+    expect(panel.className).toContain('bottom-0')
+    // The sheet spans the screen: the popover's width applies from 640px up only.
+    expect(panel.className.split(' ')).not.toContain('w-105')
+    expect(panel.className).toContain('sm:w-105')
+    expect(within(panel).getByRole('button', { name: 'Close' })).toBeInTheDocument()
+    await user.click(within(panel).getByRole('button', { name: 'Show 3 squads' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 })
 
@@ -193,10 +398,65 @@ describe('squad board — pagination', () => {
     expect(await screen.findByText('Page squad 1')).toBeInTheDocument()
     expect(screen.queryByText('Page squad 7')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Go to page 2' }))
+    await user.click(screen.getByRole('button', { name: 'Page 2' }))
 
     expect(await screen.findByText('Page squad 7')).toBeInTheDocument()
     expect(screen.queryByText('Page squad 1')).not.toBeInTheDocument()
+  })
+})
+
+describe('squad board — page changes and grid', () => {
+  it('scrolls the new page to the start of the list, smoothly', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk(squadsForPagination()))
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Page squad 1')
+    scroll.mockClear()
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }))
+
+    await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1))
+    expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+    expect(scroll.mock.contexts[0]).toBe(document.getElementById('squads-grid'))
+    expect(screen.getByText('Page squad 7')).toBeInTheDocument()
+  })
+
+  it('scrolls at once when the viewer prefers reduced motion', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk(squadsForPagination()))
+    mockMediaQuery('(prefers-reduced-motion: reduce)', true)
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Page squad 1')
+    scroll.mockClear()
+
+    await user.click(screen.getByRole('button', { name: 'Page 2' }))
+
+    await waitFor(() => expect(scroll).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' }))
+  })
+
+  it('does not scroll when the viewer stays on the current page', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk(squadsForPagination()))
+    const scroll = vi.mocked(Element.prototype.scrollIntoView)
+    const { user } = renderSquadsFlow('/squads')
+    await screen.findByText('Page squad 1')
+    scroll.mockClear()
+
+    await user.click(screen.getByRole('button', { name: 'Page 1' }))
+
+    expect(scroll).not.toHaveBeenCalled()
+  })
+
+  it('lays two cards in a row only when the grid itself is wide enough for them', async () => {
+    renderSquadsFlow('/squads')
+    await screen.findByText('Ranked grind')
+
+    const list = document.getElementById('squads-grid')!
+    expect(list).toHaveClass('@container')
+    const columns = list.firstElementChild!
+    expect(columns).toHaveClass('grid-cols-1', 'lg:@4xl:grid-cols-2')
+    // Two columns need the sidebar (lg) as well as the room: no window-only rule, no room-only rule.
+    expect(columns.className).not.toMatch(/(^| )(sm|md|lg|xl):grid-cols-2/)
+    expect(columns.className).not.toMatch(/(^| )@4xl:grid-cols-2/)
   })
 })
 
@@ -744,36 +1004,23 @@ describe('squad board — join flows', () => {
     )
   })
 
-  it('auto-joins a squad from a shared ?join link and returns to the board', async () => {
-    // The search-clear write in useAutoJoin lands on the board's URL while the lobby navigation is
-    // still in flight, so the navigation is discarded and the user stays on the board even though the
-    // join POST succeeded.
+  it('opens the Lobby from a shared ?join link and leaves joining to the player', async () => {
+    // Any site can send a signed-in player to the link, so it never joins by itself.
     registerLobbyRoutes()
     const { navigation } = renderSquadsFlow('/squads?join=ABC123')
 
-    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1))
-
-    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads'))
-    expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(1)
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/ABC123'))
+    expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(0)
   })
 
-  it('opens a board URL with invalid parameters: they fall back, the valid ones and the auto-join stay', async () => {
-    // The join stays pending so the URL still carries every parameter it was opened with.
-    onHttp('POST', '/api/rooms/:code/join', () => new Promise<MockHttpResponse>(() => {}))
+  it('opens a board URL with invalid parameters: the invite link still opens its Lobby', async () => {
+    registerLobbyRoutes()
     const { navigation } = renderSquadsFlow(
       '/squads?filter=bogus&sort=sideways&page=0&language=pt-br&join=ABC123'
     )
 
-    // The valid join is kept: the auto-join fires once for its code.
-    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms/ABC123/join')).toBe(1))
-    const params = new URLSearchParams(navigation.history.location.search)
-    expect(params.get('language')).toBe('pt-br')
-    expect(params.get('join')).toBe('ABC123')
-
-    // The valid language filters the board; the invalid filter, sort and page use their defaults.
-    const titles = () =>
-      screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
-    await waitFor(() => expect(titles()).toEqual(['Full lobby', 'Casual five stack']))
+    await waitFor(() => expect(navigation.history.location.pathname).toBe('/squads/ABC123'))
+    expect(countHttpCalls('POST', '/api/rooms/:code/join')).toBe(0)
   })
 
   it('opens the lobby directly for squads the user already belongs to', async () => {
@@ -832,9 +1079,6 @@ function locationParams(navigation: { history: { location: { search: string } } 
   return new URLSearchParams(navigation.history.location.search)
 }
 
-const SEARCH_PLACEHOLDER = 'Search by game or squad name...'
-const TAG_PLACEHOLDER = 'filter by tag...'
-
 describe('squad board — URL state', () => {
   // The refetch on mount answers with the same squads the seeded client holds, so the page does not move.
   beforeEach(() => {
@@ -851,7 +1095,7 @@ describe('squad board — URL state', () => {
       queryClient: seededClient(squadsForPagination()),
     })
 
-    await user.click(await screen.findByRole('button', { name: 'Go to page 2' }))
+    await user.click(await screen.findByRole('button', { name: 'Page 2' }))
     expect(await screen.findByText('Page squad 7')).toBeInTheDocument()
 
     vi.useFakeTimers()
@@ -862,6 +1106,7 @@ describe('squad board — URL state', () => {
 
   it('preserves the page from a shared URL with matching input values', async () => {
     const { navigation } = renderSquadsFlow('/squads?page=2&search=Ranked&tag=duo', {
+      shell: true,
       queryClient: seededClient(squadsForPagination()),
     })
     await screen.findByPlaceholderText(SEARCH_PLACEHOLDER)
@@ -872,31 +1117,27 @@ describe('squad board — URL state', () => {
     expect(locationParams(navigation).get('search')).toBe('Ranked')
   })
 
-  it.each([
-    ['search', SEARCH_PLACEHOLDER],
-    ['tag', TAG_PLACEHOLDER],
-  ] as const)(
-    'debounces an edited %s and resets the page only once',
-    async (field, placeholder) => {
-      const { navigation } = renderSquadsFlow('/squads?page=2', {
-        queryClient: seededClient(squadsForPagination()),
-      })
-      const input = await screen.findByPlaceholderText(placeholder)
+  it('debounces an edited search and resets the page only once', async () => {
+    const { navigation } = renderSquadsFlow('/squads?page=2', {
+      shell: true,
+      queryClient: seededClient(squadsForPagination()),
+    })
+    const input = await screen.findByPlaceholderText(SEARCH_PLACEHOLDER)
 
-      vi.useFakeTimers()
-      fireEvent.change(input, { target: { value: 'Ranked' } })
-      act(() => vi.advanceTimersByTime(299))
-      expect(locationParams(navigation).get(field)).toBeNull()
-      expect(locationParams(navigation).get('page')).toBe('2')
+    vi.useFakeTimers()
+    fireEvent.change(input, { target: { value: 'Ranked' } })
+    act(() => vi.advanceTimersByTime(299))
+    expect(locationParams(navigation).get('search')).toBeNull()
+    expect(locationParams(navigation).get('page')).toBe('2')
 
-      act(() => vi.advanceTimersByTime(1))
-      expect(locationParams(navigation).get(field)).toBe('Ranked')
-      expect(locationParams(navigation).get('page')).toBeNull()
-    }
-  )
+    act(() => vi.advanceTimersByTime(1))
+    expect(locationParams(navigation).get('search')).toBe('Ranked')
+    expect(locationParams(navigation).get('page')).toBeNull()
+  })
 
-  it('syncs URL navigation to both inputs without resetting its page', async () => {
+  it('syncs URL navigation to the search and the tag chips without resetting its page', async () => {
     const { navigation } = renderSquadsFlow('/squads', {
+      shell: true,
       queryClient: seededClient(squadsForPagination()),
     })
     const search = await screen.findByPlaceholderText(SEARCH_PLACEHOLDER)
@@ -906,7 +1147,7 @@ describe('squad board — URL state', () => {
       navigation.history.push('/squads?search=Ranked&tag=duo&page=3')
     })
     expect(search).toHaveValue('Ranked')
-    expect(screen.getByPlaceholderText(TAG_PLACEHOLDER)).toHaveValue('duo')
+    expect(screen.getByRole('button', { name: 'Remove #duo' })).toBeInTheDocument()
 
     act(() => vi.advanceTimersByTime(300))
     expect(locationParams(navigation).get('page')).toBe('3')
@@ -917,7 +1158,7 @@ describe('squad board — URL state', () => {
     const { user, navigation } = renderSquadsFlow('/squads', {
       queryClient: seededClient(squadsForPagination()),
     })
-    await user.click(await screen.findByRole('button', { name: 'Go to page 2' }))
+    await user.click(await screen.findByRole('button', { name: 'Page 2' }))
     expect(await screen.findByText('Page squad 7')).toBeInTheDocument()
     const fetchesBeforeWrites = countHttpCalls('GET', '/api/rooms')
     expect(writeUrl).toHaveBeenLastCalledWith(null, '', '/squads?page=2')
@@ -936,7 +1177,7 @@ describe('squad board — URL state', () => {
 })
 
 describe('squad board — invite links', () => {
-  it('does not auto-join a join value that is not a squad code', async () => {
+  it('does not open or join a join value that is not a squad code', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     renderSquadsFlow('/squads?join=..%2F..%2Fadmin', { queryClient: seededClient(boardSquads) })
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
@@ -985,15 +1226,12 @@ describe('squad board — seeded server page', () => {
 })
 
 describe('squad board — warm cache across surfaces', () => {
-  it('navigates from the board to My Squads and to a Lobby with no loading state', async () => {
+  it('navigates from the board to a Lobby with no loading state', async () => {
     onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
     onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
-    // Registered last, so it wins over the `/api/rooms/:code` route above for this path.
-    onHttp('GET', '/api/rooms/my', () => httpOk({ hosted: [memberSquad], joined: [] }))
     const queryClient = createTestQueryClient()
-    // What the three routes' server reads have already dehydrated on a warm navigation.
+    // What the two routes' server reads have already dehydrated on a warm navigation.
     queryClient.setQueryData(['squads'], boardSquads)
-    queryClient.setQueryData(['my-squads'], { hosted: [memberSquad], joined: [] })
     queryClient.setQueryData(squadQueryKey(lobbySquad.code), lobbySquadResponse)
 
     const { navigation } = renderSquadsFlow('/squads', { queryClient })
@@ -1001,13 +1239,8 @@ describe('squad board — warm cache across surfaces', () => {
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()
     expect(screen.queryByTestId('squad-board-skeleton')).not.toBeInTheDocument()
 
-    act(() => navigation.history.push('/squads/my'))
-    // The push commits synchronously, so a fallback would be in the DOM here if the cache missed.
-    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
-    expect(await screen.findByText('Casual five stack')).toBeInTheDocument()
-    expect(screen.queryByTestId('my-squads-skeleton')).not.toBeInTheDocument()
-
     act(() => navigation.history.push(`/squads/${lobbySquad.code}`))
+    // The push commits synchronously, so a fallback would be in the DOM here if the cache missed.
     expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
     expect(screen.queryByTestId('lobby-skeleton')).not.toBeInTheDocument()

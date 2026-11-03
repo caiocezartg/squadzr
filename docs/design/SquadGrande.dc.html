@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Sala do squad — 10 jogadores</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080A}
+/* Design system states: components keep inline styles, so hover and motion live here */
+.ds-btn{transition:background-color .2s,box-shadow .25s,color .2s,transform .15s}
+.ds-btn:active{transform:scale(.97)}
+.ds-btn-primary:hover{background-color:#5CFFC4 !important}
+.ds-btn-secondary:hover{background-color:#24252B !important}
+.ds-btn-ghost:hover{background-color:#1A1B20 !important}
+.ds-btn-link:hover{color:#7CFFCF !important}
+.ds-btn-danger:hover{background-color:rgba(239,68,68,0.18) !important}
+.ds-btn-discord:hover{background-color:#5D68F0 !important}
+.ds-btn-light:hover{box-shadow:0 0 0 5px rgba(255,255,255,0.18) !important}
+.ds-btn-dark:hover{background-color:#1A1B20 !important}
+.ds-btn-glass:hover{background-color:rgba(255,255,255,0.24) !important}
+.ds-btn-off:active{transform:none}
+.ds-chip{transition:background-color .15s}
+.ds-chip-removable:hover{background-color:#2A2B31 !important}
+.ds-chip-suggest:hover,.ds-chip-toggle[aria-pressed="false"]:hover{background-color:rgba(0,255,162,0.16) !important}
+.ds-chip-toggle[aria-pressed="true"]:hover{background-color:#5CFFC4 !important}
+.ds-seg{transition:background-color .15s,color .15s}
+.ds-seg[aria-pressed="false"]:hover{color:#F2F3F5 !important}
+.ds-pg{transition:background-color .15s}
+.ds-pg-idle:hover{background-color:#1F2026 !important}
+.ds-notif{transition:background-color .15s}
+.ds-notif:hover{background-color:#1F2026 !important}
+.ds-notif-row .ds-notif-x{opacity:0;transition:opacity .15s}
+.ds-notif-row:hover .ds-notif-x,.ds-notif-x:focus-visible{opacity:1}
+@keyframes ds-halo{0%{box-shadow:0 0 0 2px #00FFA2,0 0 0 2px rgba(0,255,162,0.45)}70%,100%{box-shadow:0 0 0 2px #00FFA2,0 0 0 9px rgba(0,255,162,0)}}
+.ds-in-room{animation:ds-halo 2.4s ease-out infinite}
+@keyframes ds-wait{0%,100%{opacity:.55}50%{opacity:1}}
+.ds-wait{animation:ds-wait 2.4s ease-in-out infinite}
+@keyframes ds-sheen{0%,55%{transform:translateX(-120%) skewX(-18deg)}85%,100%{transform:translateX(420%) skewX(-18deg)}}
+.ds-sheen{animation:ds-sheen 5s ease-in-out infinite}
+@keyframes ds-pop{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+.ds-pop{animation:ds-pop .5s cubic-bezier(.22,1,.36,1) both}
+input::placeholder{color:#5F626B}
+@media (prefers-reduced-motion:reduce){.ds-in-room,.ds-wait,.ds-sheen,.ds-pop{animation:none !important}}
+</style>
+</helmet>
+<div style="min-height: 1000px; background: #07080A; color: #F2F3F5; font-family: 'Plus Jakarta Sans', sans-serif">
+  <dc-import name="Squad" estado="formando" tamanho="10" hint-size="100%,1000px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

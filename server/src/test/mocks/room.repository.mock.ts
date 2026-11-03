@@ -16,6 +16,7 @@ export function createMockRoom(overrides?: Partial<Room>): Room {
     discordLink: null,
     tags: [],
     language: 'pt-br' as const,
+    memberPreview: [],
     readyAt: null,
     lastActivityAt: new Date('2024-01-01'),
     createdAt: new Date('2024-01-01'),

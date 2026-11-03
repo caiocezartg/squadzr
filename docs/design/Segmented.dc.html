@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Seletor segmentado</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<span role="group" aria-label="{{label}}" style="display: {{display}}; box-sizing: border-box; width: {{width}}; background: {{trackBg}}; padding: {{trackPad}}; box-shadow: {{trackRing}}">
+  <sc-for list="{{opts}}" as="o" hint-placeholder-count="2">
+    <button type="button" class="ds-seg" onClick="{{o.pick}}" aria-pressed="{{o.on}}" style="flex: {{o.flex}}; border: 0; cursor: pointer; background: {{o.bg}}; color: {{o.fg}}; font: {{font}}; padding: {{btnPad}}; min-height: {{btnH}}">{{o.label}}</button>
+  </sc-for>
+</span>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["sm","md"],"default":"md"},"fluid":{"editor":"boolean","default":false},"options":{"editor":null},"value":{"editor":null},"label":{"editor":null},"onChange":{"editor":null},"$preview":{"width":240,"height":48}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { value: props.value };
+  }
+  renderVals() {
+    const p = this.props;
+    const options = p.options || [{ value: 'pt', label: 'PT-BR' }, { value: 'en', label: 'EN-US' }];
+    // With onChange the parent owns the value; without it the component keeps its own.
+    const controlled = typeof p.onChange === 'function';
+    const value = controlled ? p.value : (this.state.value ?? options[0].value);
+    const sm = p.size === 'sm';
+    const fluid = !!p.fluid;
+    return {
+      label: p.label,
+      display: fluid ? 'flex' : 'inline-flex',
+      width: fluid ? '100%' : 'auto',
+      trackBg: sm ? '#121317' : '#0C0D10',
+      trackPad: sm ? '3px' : '4px',
+      trackRing: sm ? 'none' : 'inset 0 0 0 1px #1F2026',
+      font: sm ? "700 11px 'JetBrains Mono', monospace" : "700 13px 'Plus Jakarta Sans', sans-serif",
+      btnPad: sm ? '7px 9px' : '0 16px',
+      btnH: sm ? '0' : '40px',
+      opts: options.map((o) => {
+        const yes = o.value === value;
+        return {
+          label: o.label,
+          on: yes ? 'true' : 'false',
+          bg: yes ? '#00FFA2' : 'transparent',
+          fg: yes ? '#03140D' : '#A9ABB3',
+          flex: fluid ? '1' : 'none',
+          pick: () => {
+            if (controlled) p.onChange(o.value);
+            else this.setState({ value: o.value });
+          }
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -3,6 +3,7 @@ import { ZodError, type z } from 'zod'
 import type { CreateRoomInput, roomCodeParamSchema } from '@squadzr/schemas'
 import type { ICreateRoomUseCase } from '@application/use-cases/room/create-room.use-case'
 import type { IGetAvailableRoomsUseCase } from '@application/use-cases/room/get-available-rooms.use-case'
+import type { IGetDiscordPreviewUseCase } from '@application/use-cases/room/get-discord-preview.use-case'
 import type { IGetRoomByCodeUseCase } from '@application/use-cases/room/get-room-by-code.use-case'
 import type { IJoinRoomUseCase } from '@application/use-cases/room/join-room.use-case'
 import type { ILeaveRoomUseCase } from '@application/use-cases/room/leave-room.use-case'
@@ -17,6 +18,7 @@ export interface RoomControllerDeps {
   readonly createRoomUseCase: ICreateRoomUseCase
   readonly getAvailableRoomsUseCase: IGetAvailableRoomsUseCase
   readonly getRoomByCodeUseCase: IGetRoomByCodeUseCase
+  readonly getDiscordPreviewUseCase: IGetDiscordPreviewUseCase
   readonly joinRoomUseCase: IJoinRoomUseCase
   readonly leaveRoomUseCase: ILeaveRoomUseCase
   readonly getMyRoomsUseCase: IGetMyRoomsUseCase
@@ -50,6 +52,18 @@ export class RoomController {
     }
 
     await reply.send({ room: toMemberRoom(result.room), players: result.players })
+  }
+
+  async getDiscordPreview(
+    request: FastifyRequest<{ Params: RoomCodeParams }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    const result = await this.deps.getDiscordPreviewUseCase.execute({
+      code: request.params.code,
+      viewerId: request.userId,
+    })
+
+    await reply.send(result)
   }
 
   async create(

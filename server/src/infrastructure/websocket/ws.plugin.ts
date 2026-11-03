@@ -5,6 +5,7 @@ import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interfa
 import { AppError } from '@application/errors'
 import { parseIncomingMessage } from './incoming-message'
 import { InvalidMessages, INVALID_MESSAGE_LIMIT } from './invalid-messages'
+import { MessageRate, PING_RATE_LIMIT } from './message-rate'
 import type { Realtime, WsClient } from './types'
 import {
   handleJoinRoom,
@@ -50,6 +51,7 @@ async function wsPlugin(
   fastify.get('/ws', { websocket: true }, (socket, request) => {
     const client: WsClient = {
       userId: request.session?.user?.id ?? null,
+      sessionId: request.session?.session?.id ?? null,
       userName: null,
       userImage: null,
       roomCode: null,
@@ -69,6 +71,11 @@ async function wsPlugin(
       payload: { version: REALTIME_PROTOCOL_VERSION },
     })
     const invalid = new InvalidMessages(fastify.clock)
+    const rate = new MessageRate(fastify.clock)
+    const pingRate = new MessageRate(fastify.clock, PING_RATE_LIMIT)
+    // A socket that keeps sending past its rate is looping, not lagging: it is closed like one that keeps
+    // sending invalid frames.
+    const refused = new InvalidMessages(fastify.clock)
     let inFlight = 0
 
     function dispatch(message: WsIncomingMessage): void | Promise<void> {
@@ -111,7 +118,24 @@ async function wsPlugin(
         return
       }
       if (parsed.message.type === 'ping') {
-        dispatch(parsed.message)
+        // A ping past its rate gets no pong, so a flood cannot double itself into outbound frames.
+        if (pingRate.allow()) dispatch(parsed.message)
+        else if (refused.record() >= INVALID_MESSAGE_LIMIT) socket.close(1008, 'Too many messages')
+        return
+      }
+      if (!rate.allow()) {
+        fastify.log.warn(
+          {
+            category: 'transport',
+            event: 'message_rate_limit',
+            code: 'TOO_MANY_REQUESTS',
+            connectionId: request.id,
+            messageType: parsed.message.type,
+          },
+          'WebSocket message rate exceeded'
+        )
+        sendError(socket, 'TOO_MANY_REQUESTS', 'Too many messages', manager, fastify.clock)
+        if (refused.record() >= INVALID_MESSAGE_LIMIT) socket.close(1008, 'Too many messages')
         return
       }
       if (inFlight >= SOCKET_OPERATION_LIMIT) {

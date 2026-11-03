@@ -6,118 +6,326 @@
     "daysAgo": "há {count}d"
   },
   "common": {
-    "signIn": "Entrar",
     "signOut": "Sair",
-    "createSquad": "Criar novo squad",
-    "createNewSquad": "Criar novo squad",
-    "loading": "Carregando…",
+    "createSquad": "Criar squad",
     "language": "Idioma",
     "close": "Fechar"
   },
-  "nav": {
-    "allSquads": "TODOS OS SQUADS",
-    "mySquads": "MEUS SQUADS",
-    "closeMenu": "Fechar menu",
-    "openMenu": "Abrir menu"
-  },
-  "footer": {
-    "line": "© {year} Squadzr — Encontre seu time gamer",
-    "gameDataByIgdb": "dados de jogos por IGDB"
-  },
-  "hero": {
-    "badge": "{count} JOGOS DISPONÍVEIS",
-    "titleLine1": "PARE DE JOGAR",
-    "titleLine2": "TUDO",
-    "titleAccent": "SOZINHO",
-    "subtitle": "<bold>Crie</bold> ou <bold>entre em squads</bold>, complete seu time e receba um convite do Discord assim que o time estiver cheio.",
-    "exploreSquads": "Explorar squads",
-    "signInWithDiscord": "Entrar com Discord"
-  },
-  "faq": {
-    "label": "FAQ",
-    "title": "Perguntas Frequentes",
-    "subtitle": "Tudo que você precisa saber antes de montar seu time.",
-    "items": [
-      {
-        "id": "free",
-        "question": "O Squadzr é gratuito?",
-        "answer": "Sim, 100% gratuito. Sem cartão de crédito, sem planos premium. Basta entrar com sua conta do Discord e começar a jogar."
-      },
-      {
-        "id": "account",
-        "question": "Preciso criar uma conta?",
-        "answer": "Você entra com sua conta do Discord com um clique — sem formulários, sem senhas extras. Seu avatar e nome de usuário do Discord são sua identidade no Squadzr."
-      },
-      {
-        "id": "squad-limit",
-        "question": "Quantos squads posso criar?",
-        "answer": "Sem limite. Você pode criar quantos squads quiser, para qualquer jogo disponível na plataforma."
-      },
-      {
-        "id": "discord-link",
-        "question": "Quando o link do Discord é compartilhado?",
-        "answer": "O convite do servidor Discord é compartilhado assim que o squad atinge o número máximo de jogadores. Quando a última vaga é preenchida, todos os membros recebem acesso ao link."
-      },
-      {
-        "id": "host-leaves",
-        "question": "O que acontece se o dono sair?",
-        "answer": "Se o criador do squad sair, o squad é encerrado e todos os membros são removidos. Membros comuns podem sair sem afetar o squad."
-      },
-      {
-        "id": "player-count",
-        "question": "Posso escolher o número de jogadores?",
-        "answer": "Sim. Por padrão, o número de jogadores corresponde ao máximo do jogo selecionado, mas você pode personalizar entre 2 e 20 ao criar um squad."
-      },
-      {
-        "id": "supported-games",
-        "question": "Quais jogos são suportados?",
-        "answer": "O Squadzr oferece um catálogo crescente de jogos multiplayer populares, e a lista é constantemente atualizada."
-      },
-      {
-        "id": "join-by-code",
-        "question": "Posso entrar em um squad por código?",
-        "answer": "Sim. Cada squad tem um código único de 6 caracteres que pode ser compartilhado. Basta digitar o código para entrar no squad diretamente."
+  "ds": {
+    "tag": {
+      "remove": "Remover {label}"
+    },
+    "avatar": {
+      "host": "Dono do squad"
+    },
+    "member": {
+      "you": "você",
+      "openSlot": "Vaga aberta",
+      "presence": {
+        "online": "Na sala agora",
+        "away": "Fora da sala",
+        "awaySince": "Fora da sala · {time}",
+        "open": "Aguardando jogador"
       }
-    ]
+    },
+    "lobby": {
+      "live": "AO VIVO",
+      "exploreSquads": "Explorar squads",
+      "copyLink": "Copiar link do squad",
+      "linkCopied": "Link copiado",
+      "copyCode": "Copiar código {code}",
+      "copied": "Copiado",
+      "endSquad": "Encerrar squad",
+      "leaveSquad": "Sair do squad",
+      "teamClosed": "Time fechado",
+      "aboutSquad": "Sobre o squad",
+      "coverAlt": "Capa de {game}",
+      "created": "Criado {time}",
+      "members": "Membros",
+      "playerCount": "{current}/{max} jogadores",
+      "joinSquad": "Entrar no squad"
+    },
+    "invite": {
+      "lockedTitle": "Convite do Discord",
+      "lockedBody": "Liberado quando o squad completar",
+      "title": "Bora pro Discord",
+      "serverInvite": "CONVITE DO SERVIDOR",
+      "open": "Abrir no Discord",
+      "copyLink": "Copiar link",
+      "copied": "Copiado",
+      "slotsLeft": "{count, plural, one {Falta # vaga} other {Faltam # vagas}}",
+      "statOnline": "online",
+      "statMembers": "{count, plural, one {membro} other {membros}}",
+      "statInRoom": "na sala agora",
+      "statPlayers": "{count, plural, one {jogador} other {jogadores}}"
+    },
+    "close": "Fechar",
+    "pagination": {
+      "label": "Paginação",
+      "previous": "Página anterior",
+      "next": "Próxima página",
+      "page": "Página {page}"
+    },
+    "searchField": {
+      "clear": "Limpar busca"
+    },
+    "steps": {
+      "done": "Concluída"
+    },
+    "board": {
+      "openCount": "{count, plural, one {{count} squad aberto} other {{count} squads abertos}}",
+      "searchLabel": "Buscar squads",
+      "searchPlaceholder": "Buscar por jogo ou nome do squad…",
+      "filters": "Filtros",
+      "activeFilters": "{count, plural, one {{count} ativo} other {{count} ativos}}",
+      "panelTitle": "Filtros",
+      "clearAll": "Limpar tudo",
+      "clear": "Limpar",
+      "chipsLabel": "Filtros ativos",
+      "availability": "Disponibilidade",
+      "availabilityAll": "Todos",
+      "availabilityHasSpace": "Com vaga",
+      "availabilityAlmostFull": "Quase cheio",
+      "language": "Idioma",
+      "languageAll": "Todos",
+      "tags": "Tags",
+      "tagLabel": "Adicionar uma tag",
+      "tagPlaceholder": "digite uma tag…",
+      "sort": "Ordenar por",
+      "sortNewest": "Mais recentes",
+      "sortOldest": "Mais antigos",
+      "show": "{count, plural, one {Mostrar {count} squad} other {Mostrar {count} squads}}",
+      "showUnknown": "Mostrar squads"
+    },
+    "sidebarSquad": {
+      "host": "Você é o dono",
+      "inviteUnlocked": "Convite liberado"
+    },
+    "createSquad": {
+      "progress": "Progresso da criação do squad",
+      "stepLabels": {
+        "game": "01 · JOGO",
+        "details": "02 · DETALHES",
+        "discord": "03 · DISCORD"
+      },
+      "titles": {
+        "game": "Escolha o jogo",
+        "details": "Detalhes do squad",
+        "discord": "Convite do Discord"
+      },
+      "cancel": "Cancelar",
+      "back": "Voltar",
+      "continue": "Continuar",
+      "gameQuestion": "Qual jogo vocês vão jogar?",
+      "searchPlaceholder": "Buscar no catálogo de jogos…",
+      "popular": "Populares agora",
+      "results": "Jogos encontrados",
+      "gameOption": "{name}, {detail}",
+      "gameDetail": "{genre} · {min}–{max} jogadores",
+      "gameDetailNoGenre": "{min}–{max} jogadores",
+      "emptyTitle": "Nenhum jogo encontrado para “{term}”",
+      "emptyBody": "Confira a grafia ou procure pelo nome curto (ex: “CS”, “LoL”).",
+      "changeGame": "Trocar jogo",
+      "nameLabel": "Nome do squad",
+      "namePlaceholder": "ex: Ranked à noite, sem tilt",
+      "playersLabel": "Jogadores",
+      "playersFewer": "Menos um jogador",
+      "playersMore": "Mais um jogador",
+      "languageLabel": "Idioma do squad",
+      "tagsLabel": "Tags",
+      "optional": "(opcional)",
+      "tagPlaceholder": "adicionar tag…",
+      "addTag": "Adicionar",
+      "suggestedTags": "Tags sugeridas",
+      "discordLabel": "Link de convite do Discord",
+      "discordPlaceholder": "https://discord.gg/seu-convite",
+      "discordValid": "VÁLIDO",
+      "discordValidAnnouncement": "Convite do Discord válido",
+      "discordChecking": "VERIFICANDO",
+      "discordCheckingAnnouncement": "Verificando o convite do Discord",
+      "discordServerAnnouncement": "Convite do Discord válido: {name}",
+      "discordServerMembers": "{count, plural, one {# membro} other {# membros}}",
+      "discordExpires": "Esse convite expira. Crie um convite sem expiração para o squad não perder o link.",
+      "discordUnknown": "Não deu pra verificar o convite com o Discord agora.",
+      "discordHint": "Só aparece pros membros quando o squad completar. Use um convite sem expiração.",
+      "preview": "Prévia",
+      "previewNameFallback": "Nome do squad",
+      "creating": "Criando…",
+      "submit": "Criar squad"
+    },
+    "shell": {
+      "menu": "Menu",
+      "openMenu": "Abrir menu",
+      "closeMenu": "Fechar menu",
+      "home": "Squadzr — início",
+      "createSquad": "Criar squad",
+      "codeLabel": "Entrar por código",
+      "codePlaceholder": "CÓDIGO",
+      "codeSubmit": "Entrar no squad com este código",
+      "codeInvalid": "O código de um squad tem 6 letras ou números.",
+      "squads": "Squads",
+      "allSquads": "Todos os squads",
+      "mySquads": "Meus squads",
+      "mySquadsSignIn": "Entre para ver os squads que você criou ou entrou.",
+      "mySquadsSignInAction": "Entrar",
+      "signIn": "Entrar com Discord",
+      "account": "Menu da conta",
+      "createSignIn": "Você pode explorar os squads como visitante, mas criar um squad exige entrar com o Discord."
+    },
+    "notifications": {
+      "bell": "Notificações",
+      "bellUnread": "Notificações, {count} {count, plural, one {não lida} other {não lidas}}",
+      "title": "Notificações",
+      "markAllRead": "Marcar todas como lidas",
+      "message": "Convite do Discord liberado",
+      "unread": "Não lida",
+      "dismiss": "Dispensar notificação de {squad}",
+      "emptyTitle": "Tudo em dia",
+      "emptyHint": "Quando um squad seu completar, o convite chega aqui."
+    },
+    "notice": {
+      "emptySlots": "Ninguém por aqui"
+    }
   },
-  "howItWorks": {
-    "label": "Como Funciona",
-    "title": "Do login ao time completo em menos de um minuto.",
-    "signInButton": "Entrar",
-    "discordLinkReady": "Link do Discord pronto",
-    "steps": [
-      {
-        "title": "Entre com o Discord",
-        "description": "Um clique. Sem formulários, sem senhas. Seu avatar do Discord é sua identidade."
-      },
-      {
-        "title": "Encontre ou Crie um Squad",
-        "description": "Navegue pelos squads por jogo ou crie o seu com um link de convite do Discord."
-      },
-      {
-        "title": "Monte o Time & Jogue",
-        "description": "O squad enche, o link do Discord é liberado. Entre na call de voz e dominem juntos."
+  "landing": {
+    "nav": {
+      "label": "Principal",
+      "explore": "Squads",
+      "games": "Jogos",
+      "howItWorks": "Como funciona",
+      "faq": "FAQ",
+      "board": "Ir pro board",
+      "signIn": "Entrar com Discord"
+    },
+    "hero": {
+      "titleLine1": "Monte seu squad",
+      "titleLine2": "Jogue hoje",
+      "subtitle": "Chega de jogar com random. Ache quem falta pro seu time e caia na partida agora.",
+      "exploreSquads": "Explorar squads",
+      "createSquad": "Criar squad",
+      "trustDiscord": "Login com Discord",
+      "trustPlayers": "2 a 40 jogadores",
+      "trustFree": "Grátis"
+    },
+    "showcase": {
+      "label": "Squads se formando agora",
+      "roleDescription": "carrossel",
+      "slide": "squad",
+      "squadLabel": "{name}, squad de {game}: {count} de {total} jogadores",
+      "goTo": "Ver {name} ({game})",
+      "pause": "Pausar o carrossel",
+      "play": "Retomar o carrossel",
+      "full": "Fechou"
+    },
+    "games": {
+      "label": "Jogos disponíveis",
+      "title": "Do 2v2 ao raid de 40.",
+      "subtitle": "Jogos multiplayer, cada um com o tamanho de squad certo. Escolha um pra ver os squads se formando nele.",
+      "listLabel": "Jogos populares",
+      "tower": "{name}, {genre}: ver os squads",
+      "towerNoGenre": "{name}: ver os squads"
+    },
+    "howItWorks": {
+      "label": "Como funciona",
+      "title": "Do login ao time fechado em 1 minuto.",
+      "steps": [
+        {
+          "title": "Entre com o Discord",
+          "description": "Um clique, sem formulário nem senha. Seu avatar e nome do Discord viram sua identidade no Squadzr."
+        },
+        {
+          "title": "Encontre ou crie um squad",
+          "description": "Busque por jogo, idioma ou tag. Não achou? Crie o seu com o link de convite do seu servidor."
+        },
+        {
+          "title": "Feche o time e jogue",
+          "description": "Na última vaga, o link do Discord é liberado pra todo mundo. É só entrar na call e começar a partida."
+        }
+      ],
+      "mockup": {
+        "signIn": "Entrar com Discord",
+        "signInTitle": "Entre e monte seu squad",
+        "signInHint": "Sem formulário e sem senha.",
+        "connecting": "Conectando ao Discord…",
+        "connected": "Conectado com Discord",
+        "explore": "Explorar squads",
+        "searchPlaceholder": "Busque um jogo ou tag",
+        "filters": "Filtros",
+        "join": "Entrar",
+        "joined": "Você entrou",
+        "members": "Membros",
+        "complete": "Squad completo"
       }
-    ]
-  },
-  "cta": {
-    "title": "Pronto para encontrar seu <accent>squad</accent>?",
-    "subtitle": "Junte-se a centenas de jogadores que já usam o Squadzr para montar o time perfeito.",
-    "browseSquads": "Explorar Squads",
-    "createAccount": "Criar Conta"
-  },
-  "popularGames": {
-    "label": "Jogos Disponíveis",
-    "title": "Jogue o que você ama",
-    "subtitle": "Encontre companheiros nos títulos multiplayer mais populares.",
-    "playerRange": "{min}-{max} jogadores",
-    "openSquads": "{count, plural, =0 {Nenhum squad aberto} one {# squad aberto} other {# squads abertos}}",
-    "moreGames": "E muitos outros jogos!"
+    },
+    "faq": {
+      "label": "FAQ",
+      "title": "Perguntas frequentes",
+      "subtitle": "Tudo o que você precisa saber antes de montar o seu time.",
+      "items": [
+        {
+          "id": "free",
+          "question": "O Squadzr é gratuito?",
+          "answer": "Sim, 100% gratuito. Sem cartão de crédito, sem planos premium. Basta entrar com sua conta do Discord e começar a jogar."
+        },
+        {
+          "id": "account",
+          "question": "Preciso criar uma conta?",
+          "answer": "Você entra com sua conta do Discord com um clique — sem formulários, sem senhas extras. Seu avatar e nome de usuário do Discord são sua identidade no Squadzr."
+        },
+        {
+          "id": "squad-limit",
+          "question": "Quantos squads posso criar?",
+          "answer": "Sem limite. Você pode criar quantos squads quiser, para qualquer jogo disponível na plataforma."
+        },
+        {
+          "id": "discord-link",
+          "question": "Quando o link do Discord é compartilhado?",
+          "answer": "O convite do servidor Discord é compartilhado assim que o squad atinge o número máximo de jogadores. Quando a última vaga é preenchida, todos os membros recebem acesso ao link."
+        },
+        {
+          "id": "host-leaves",
+          "question": "O que acontece se o dono sair?",
+          "answer": "Se o criador do squad sair, o squad é encerrado e todos os membros são removidos. Membros comuns podem sair sem afetar o squad."
+        },
+        {
+          "id": "player-count",
+          "question": "Posso escolher o número de jogadores?",
+          "answer": "Sim. Por padrão, o número de jogadores corresponde ao máximo do jogo selecionado, mas você pode personalizar de 2 a 40 ao criar um squad."
+        },
+        {
+          "id": "supported-games",
+          "question": "Quais jogos são suportados?",
+          "answer": "O Squadzr oferece um catálogo crescente de jogos multiplayer populares, e a lista é constantemente atualizada."
+        },
+        {
+          "id": "join-by-code",
+          "question": "Posso entrar em um squad por código?",
+          "answer": "Sim. Cada squad tem um código único de 6 caracteres que pode ser compartilhado. Basta digitar o código para entrar no squad diretamente."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Tem vaga <em>te esperando.</em>",
+      "subtitle": "Entre com o Discord e ache o seu squad agora <line>ou abra o seu e deixa o time vir até você.</line>",
+      "exploreSquads": "Explorar squads"
+    },
+    "footer": {
+      "tagline": "Encontre seu time gamer. Squads em tempo real pra LoL, CS2, Valorant e muito mais.",
+      "label": "Rodapé",
+      "product": "PRODUTO",
+      "help": "AJUDA",
+      "exploreSquads": "Explorar squads",
+      "createSquad": "Criar squad",
+      "howItWorks": "Como funciona",
+      "faq": "Perguntas frequentes",
+      "games": "Jogos disponíveis",
+      "copyright": "© {year} Squadzr — Encontre seu time gamer",
+      "gameDataByIgdb": "dados de jogos por IGDB"
+    }
   },
   "squads": {
     "page": {
       "title": "Explorar squads",
-      "subtitle": "{count, plural, one {{count} squad disponível} other {{count} squads disponíveis}}",
       "retry": "Tentar novamente",
       "loadError": "Falha ao carregar squads. Por favor, atualize a página.",
       "emptyTitle": "Nenhum squad ainda",
@@ -127,22 +335,10 @@
     },
     "card": {
       "joined": "Entrou",
-      "seeSquad": "VER SQUAD",
-      "joinSquad": "ENTRAR",
-      "full": "Cheio"
-    },
-    "filters": {
-      "searchPlaceholder": "Buscar por jogo ou nome do squad...",
-      "tagPlaceholder": "filtrar por tag...",
-      "lang": "Idioma",
-      "statusAll": "TODOS",
-      "statusHasSpace": "COM VAGA",
-      "statusAlmostFull": "QUASE CHEIO",
-      "sortNewest": "MAIS RECENTES",
-      "sortOldest": "MAIS ANTIGOS",
-      "langAll": "TODOS OS IDIOMAS",
-      "langPtBr": "PT-BR",
-      "langEn": "EN-US"
+      "openRoom": "Abrir sala",
+      "enter": "Entrar",
+      "full": "Cheio",
+      "label": "{name} — {game}, {language}, {members} de {max} jogadores"
     },
     "authModal": {
       "title": "Login necessário",
@@ -152,93 +348,39 @@
       "continueWithDiscord": "Continuar com Discord"
     },
     "createModal": {
-      "title": "Criar um Squad",
-      "squadName": "Nome do Squad",
-      "squadNamePlaceholder": "ex: Grind ranked hoje à noite",
-      "game": "Jogo",
-      "selectGame": "Selecione um jogo",
-      "gameWithPlayers": "{name} ({min}-{max} jogadores)",
-      "playerLimit": "Jogadores",
-      "optional": "(opcional)",
-      "playerLimitHelperWithGame": "Deixe vazio para usar {maxPlayers} jogadores (padrão do {gameName}).",
-      "playerLimitHelper": "Deixe vazio para usar o máximo do jogo selecionado.",
-      "discordLink": "Link de Convite do Discord",
-      "discordLinkHelper": "Compartilhado com todos os jogadores quando o squad estiver cheio.",
-      "tags": "Tags",
-      "tagsHelper": "Pressione Enter ou vírgula para adicionar - máx. 5 tags",
-      "tagsPlaceholder": "Digite uma tag...",
-      "tagsPlaceholderMore": "Adicionar mais...",
-      "removeTag": "Remover tag {tag}",
-      "addTag": "Adicionar tag",
       "tagsMax": "Máximo de 5 tags",
-      "tagTooLong": "Tag muito longa",
-      "language": "Idioma",
-      "creating": "Criando...",
-      "submit": "Criar Squad",
-      "selectGameError": "Por favor, selecione um jogo",
+      "tagTooLong": "A tag pode ter no máximo 12 caracteres.",
+      "tagOneWord": "Tag é uma palavra só: letras, números e hífen.",
       "nameRequired": "Nome do squad é obrigatório",
       "nameTooLong": "Nome do squad muito longo (máx. 30 caracteres)",
       "discordLinkInvalid": "Por favor, insira uma URL válida",
       "discordLinkNotValid": "Deve ser um convite válido do Discord (discord.gg ou discord.com/invite)",
-      "maxPlayersTooFew": "Mínimo de 2 jogadores",
-      "maxPlayersTooMany": "Máximo de 40 jogadores",
       "searchingGames": "Buscando jogos…",
       "noGamesFound": "Nenhum jogo encontrado. Tente outro nome.",
-      "gamesFound": "{count, plural, one {# jogo encontrado} other {# jogos encontrados}}",
-      "showGameList": "Mostrar jogos",
-      "hideGameList": "Ocultar jogos"
+      "gamesFound": "{count, plural, one {# jogo encontrado} other {# jogos encontrados}}"
     }
-  },
-  "mySquads": {
-    "title": "Meus squads",
-    "subtitle": "Squads que você criou ou entrou",
-    "loadError": "Falha ao carregar seus squads. Por favor, atualize a página.",
-    "tabCreated": "Criados ({count})",
-    "tabJoined": "Participando ({count})",
-    "noSquadsYet": "Nenhum squad aqui ainda.",
-    "noSquadsFiltered": "Nenhum squad corresponde aos seus filtros."
   },
   "squadNotFound": {
     "title": "Squad não encontrado",
     "description": "Este squad não existe mais ou o código é inválido. Verifique o código e tente novamente.",
-    "codeLabel": "Código informado:",
-    "backToSquads": "Voltar para Squads",
-    "createSquad": "Criar squad"
+    "createSquad": "Criar squad",
+    "exploreSquads": "Explorar squads"
   },
   "lobby": {
     "backToSquads": "Voltar aos squads",
-    "leaveSquad": "Sair do squad",
-    "squadLocked": "Time fechado",
     "cannotLeave": "Não é possível sair de um squad cheio",
-    "pleaseSignIn": "Por favor, entre com sua conta para ver este squad.",
-    "playerCount": "{current}/{max} jogadores",
-    "players": "Jogadores ({current}/{max})",
-    "copied": "Copiado!",
-    "waitingForPlayer": "Aguardando jogador...",
-    "host": "Anfitrião"
-  },
-  "discordCard": {
-    "title": "Seu time está pronto!",
-    "description": "Entre no servidor do Discord para começar a jogar juntos.",
-    "copied": "Copiado!",
-    "copyLink": "Copiar link",
-    "joinDiscord": "Entrar no Discord"
+    "signInPrompt": {
+      "title": "Entre para ver este squad",
+      "description": "Você pode explorar os squads como visitante, mas ver um squad exige entrar com o Discord.",
+      "signIn": "Entrar com Discord",
+      "exploreSquads": "Explorar squads"
+    }
   },
   "notFound": {
     "title": "Página não encontrada",
     "description": "Parece que você saiu do mapa. A página que você procura não existe ou foi movida.",
-    "backToHome": "Voltar ao Início",
-    "exploreSquads": "Explorar Squads"
-  },
-  "notifications": {
-    "title": "Notificações",
-    "bellLabel": "Notificações",
-    "markAllRead": "Marcar todas como lidas",
-    "empty": "Nenhuma notificação ainda",
-    "emptySubtitle": "Você será notificado quando seu time estiver pronto",
-    "squadReady": "Seu time está pronto — convite do Discord disponível",
-    "dismiss": "Dispensar",
-    "showing": "{count, plural, one {Mostrando última {count} notificação} other {Mostrando últimas {count} notificações}}"
+    "backToHome": "Voltar ao início",
+    "exploreSquads": "Explorar squads"
   },
   "realtime": {
     "updating": "Uma nova versão está disponível. Recarregando…",
@@ -247,23 +389,16 @@
     "connected": "Conectado",
     "connecting": "Conectando…",
     "reconnecting": "Reconectando…",
-    "disconnected": "Desconectado",
-    "online": "Online",
-    "offline": "Offline"
+    "disconnected": "Desconectado"
   },
   "languages": {
     "ptBr": "PT-BR",
     "enUs": "EN-US"
   },
-  "pagination": {
-    "label": "Paginação",
-    "previous": "Ir para a página anterior",
-    "next": "Ir para a próxima página",
-    "page": "Ir para a página {page}"
-  },
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",
     "INVALID_GAME": "Este jogo não está mais disponível. Por favor, escolha outro jogo.",
+    "INVALID_DISCORD_INVITE": "Esse convite do Discord não existe mais. Confira o link ou crie um convite novo.",
     "ROOM_NOT_FOUND": "Este squad não existe mais ou o código é inválido.",
     "ROOM_FULL": "Este squad já está cheio.",
     "ROOM_READY": "Este squad está pronto — membros não podem sair.",

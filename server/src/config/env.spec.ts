@@ -8,6 +8,22 @@ const REQUIRED_ENV = {
   DISCORD_CLIENT_SECRET: 'env-spec-client-secret',
 }
 
+describe('TRUST_PROXY_HOPS', () => {
+  it('trusts one edge proxy by default', () => {
+    expect(parseEnv(REQUIRED_ENV).TRUST_PROXY_HOPS).toBe(1)
+  })
+
+  it('reads a hop count, zero included', () => {
+    expect(parseEnv({ ...REQUIRED_ENV, TRUST_PROXY_HOPS: '2' }).TRUST_PROXY_HOPS).toBe(2)
+    expect(parseEnv({ ...REQUIRED_ENV, TRUST_PROXY_HOPS: '0' }).TRUST_PROXY_HOPS).toBe(0)
+  })
+
+  it.each(['-1', '1.5', 'true', ''])('refuses %j', (value) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => parseEnv({ ...REQUIRED_ENV, TRUST_PROXY_HOPS: value })).toThrow()
+  })
+})
+
 describe('BETTER_AUTH_COOKIE_DOMAIN', () => {
   it('is unset by default', () => {
     expect(parseEnv(REQUIRED_ENV).BETTER_AUTH_COOKIE_DOMAIN).toBeUndefined()

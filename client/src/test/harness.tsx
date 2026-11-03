@@ -1,12 +1,13 @@
 /**
  * Render harness for the squad flows.
  *
- * Renders the real App Router page component for the harness location: the Squad Board at `/squads`,
- * My Squads at `/squads/my` and the Lobby at `/squads/<code>`. The location is the harness navigation,
+ * Renders the real App Router page component for the harness location: the Squad Board at `/squads`
+ * and the Lobby at `/squads/<code>`. The location is the harness navigation,
  * which `next/navigation` and `next/link` share (see ./navigation), so a navigation swaps the page as
  * the App Router would. The tree renders with next-intl and the real English messages, inside a fresh
  * TanStack Query client so cache updates are observable through public query APIs. The realtime update
- * notice is mounted beside it, as the root layout mounts it beside the app.
+ * notice is mounted beside it, as the root layout mounts it beside the app. With `shell` the page renders
+ * inside the app shell, as the `(app)` layout renders it.
  */
 
 import { StrictMode } from 'react'
@@ -15,9 +16,10 @@ import { usePathname } from 'next/navigation'
 import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { UserEvent } from '@testing-library/user-event'
+import { AppShell } from '@/components/layout/app-shell'
+import { DocumentTitle } from '@/components/layout/document-title'
 import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice'
-import { LobbyPage } from '@/features/lobby'
-import { MySquadsPage } from '@/features/my-squads/page'
+import { LobbyPage } from '@/features/lobby/page'
 import { SquadBoardPage } from '@/features/squad-board/page'
 import { EnglishIntlProvider } from './intl'
 import { createHarnessNavigation } from './navigation'
@@ -43,7 +45,6 @@ function SquadsScene() {
   const pathname = usePathname()
 
   if (pathname === '/squads') return <SquadBoardPage />
-  if (pathname === '/squads/my') return <MySquadsPage />
 
   const code = /^\/squads\/([^/]+)$/.exec(pathname)?.[1]
   if (code) return <LobbyPage squadCode={decodeURIComponent(code)} />
@@ -67,6 +68,8 @@ export interface RenderSquadsFlowOptions {
   queryClient?: QueryClient
   /** Mirrors the app entry, which mounts the tree inside React.StrictMode. */
   strictMode?: boolean
+  /** Renders the page inside the app shell: the sidebar, the top bar and the drawer. */
+  shell?: boolean
 }
 
 export function renderSquadsFlow(url: string, options: RenderSquadsFlowOptions = {}): SquadsFlow {
@@ -83,8 +86,15 @@ export function renderSquadsFlow(url: string, options: RenderSquadsFlowOptions =
   const tree = (
     <EnglishIntlProvider session={fakeSession()}>
       <QueryClientProvider client={queryClient}>
-        <SquadsScene />
+        {options.shell ? (
+          <AppShell>
+            <SquadsScene />
+          </AppShell>
+        ) : (
+          <SquadsScene />
+        )}
         <RealtimeUpdateNotice />
+        {options.shell && <DocumentTitle />}
       </QueryClientProvider>
     </EnglishIntlProvider>
   )

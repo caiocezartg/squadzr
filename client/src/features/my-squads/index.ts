@@ -1,6 +1,9 @@
 /**
- * Public interface of the My Squads capability. The App Router page renders `MySquadsPage`, and the
- * route's `page` entry starts the server read. The query key, the loader wiring, the URL search and
- * the list composition stay internal.
+ * Public interface of the My Squads capability: the viewer's squads for the sidebar, the command that
+ * refreshes them after the viewer's own Membership change, and the realtime events that refresh them
+ * after anyone else's. The query key, the read and the list composition stay
+ * internal. The layout starts the server read through the `server` entry.
  */
-export { MySquadsView as MySquadsPage } from './my-squads-view'
+export { useMySquads } from './use-my-squads'
+export { useMySquadsCommands, type MySquadsCommands } from './my-squads-cache'
+export { useMySquadsEvents } from './use-my-squads-events'

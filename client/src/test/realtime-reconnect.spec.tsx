@@ -158,7 +158,7 @@ describe('squad channel subscription', () => {
       type: 'room_snapshot',
       payload: lobbySnapshot({
         players: [hostPlayer],
-        presence: [{ playerId: hostPlayer.id, online: true }],
+        presence: [{ playerId: hostPlayer.id, online: true, offlineSince: null }],
       }),
     })
     await vi.waitFor(() => expect(screen.queryByText('Ana')).not.toBeInTheDocument())
@@ -201,7 +201,7 @@ describe('squad channel subscription', () => {
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     sendFromServer({
       type: 'presence_updated',
-      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true },
+      payload: { roomCode: 'LOBBY1', playerId: guestPlayer.id, online: true, offlineSince: null },
     })
     expect(screen.queryByText('Ana')).not.toBeInTheDocument()
 

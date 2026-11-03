@@ -15,6 +15,13 @@ const envSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.url(),
   CORS_ORIGIN: z.url({ error: 'CORS_ORIGIN must be a valid URL' }).default('http://localhost:5173'),
+  // Proxies in front of the API whose x-forwarded-for entries are believed: one edge proxy by default. Only
+  // the entries those hops appended are trusted, so a client cannot pick its own address. 0 trusts none.
+  TRUST_PROXY_HOPS: z
+    .string()
+    .regex(/^\d+$/, 'TRUST_PROXY_HOPS must be a whole number of proxies')
+    .default('1')
+    .transform(Number),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   // Better Auth
