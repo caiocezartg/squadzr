@@ -23,8 +23,8 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 34     | 221   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 32     | 332   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 34     | 222   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 33     | 334   |
 | `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 903   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
@@ -39,14 +39,15 @@ Lobby's not-found state (1 test). `server:unit` (33 / 208) and `schemas:unit` (5
 `server:integration` (31 / 324) was not rerun, because this ticket touches no server code.
 
 The pre-merge security audit of the redesign (on `design-v2`, after CCC-119) adds an Origin guard to the
-server and framing headers to the client. `server:unit` gains `origin-guard.plugin.spec.ts` (+1 file / 13
+server and framing headers to the client. `server:unit` gains `origin-guard.plugin.spec.ts` (+1 file / 14
 tests: every state-changing method from another site refused, the app's origin and a request without an
 Origin accepted, safe methods let through, the WebSocket handshake from another site refused with and
-without a query string, a path that only starts like `/ws`, and the `null` origin), so it measures 34 files /
-221 tests. `server:integration` gains `cross-site-requests.test.ts` (+1 file / 8 tests: a cross-site
+without a query string and on any path that asks for an upgrade, a path that only starts like `/ws`, and the
+`null` origin), so it measures 34 files / 222 tests. `server:integration` gains `cross-site-requests.test.ts` (+1 file / 8 tests: a cross-site
 text/plain post that would end the host's Squad or join a visitor, a cross-site notification delete, the app's
 own origin, a request without an Origin, a cross-site read still served, and a WebSocket opened by another site
-and by the app), so it measures 32 files / 332 tests. `client:unit` gains one case in `next-config.spec.ts`
+and by the app) and `api-docs.test.ts` (+1 file / 2 tests: the API reference served outside production and
+not in production), so it measures 33 files / 334 tests. `client:unit` gains one case in `next-config.spec.ts`
 (the framing and baseline security headers on every page), so it measures 87 files / 903 tests.
 
 Suites are test files. The counts above are the current inventory, last recounted by CCC-118 on

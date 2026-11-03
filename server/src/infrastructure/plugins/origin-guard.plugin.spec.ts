@@ -3,8 +3,15 @@ import { isAllowedRequest } from './origin-guard.plugin'
 
 const ALLOWED = new Set(['https://squadzr.app', 'https://api.squadzr.app'])
 
-function request(method: string, url: string, origin?: string) {
-  return { method, url, headers: origin === undefined ? {} : { origin } }
+function request(method: string, url: string, origin?: string, upgrade?: string) {
+  return {
+    method,
+    url,
+    headers: {
+      ...(origin === undefined ? {} : { origin }),
+      ...(upgrade === undefined ? {} : { upgrade }),
+    },
+  }
 }
 
 describe('isAllowedRequest', () => {
@@ -37,6 +44,12 @@ describe('isAllowedRequest', () => {
 
   it('accepts a WebSocket handshake from the app', () => {
     expect(isAllowedRequest(request('GET', '/ws', 'https://squadzr.app'), ALLOWED)).toBe(true)
+  })
+
+  it('refuses any WebSocket handshake from another site, whatever its path', () => {
+    expect(
+      isAllowedRequest(request('GET', '/realtime', 'https://evil.example', 'WebSocket'), ALLOWED)
+    ).toBe(false)
   })
 
   it('does not mistake a path that only starts like the socket for it', () => {

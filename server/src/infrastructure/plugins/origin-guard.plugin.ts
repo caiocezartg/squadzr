@@ -22,12 +22,22 @@ export function isAllowedRequest(
   allowedOrigins: ReadonlySet<string>
 ): boolean {
   const opensWebSocket =
-    request.url === WEBSOCKET_PATH || request.url.startsWith(`${WEBSOCKET_PATH}?`)
+    asksForWebSocket(request.headers.upgrade) ||
+    request.url === WEBSOCKET_PATH ||
+    request.url.startsWith(`${WEBSOCKET_PATH}?`)
   if (SAFE_METHODS.has(request.method) && !opensWebSocket) return true
 
   const origin = request.headers.origin
   if (origin === undefined) return true
   return allowedOrigins.has(origin)
+}
+
+/**
+ * Whether the request asks to become a WebSocket. Read from the handshake itself as well as the path, so a
+ * socket route added later is guarded without anyone remembering to list it.
+ */
+function asksForWebSocket(upgrade: string | undefined): boolean {
+  return upgrade?.toLowerCase() === 'websocket'
 }
 
 /** The origin of a configured URL, as a browser writes it in the Origin header (no path, no trailing slash). */

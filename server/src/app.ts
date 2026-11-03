@@ -154,7 +154,8 @@ export async function buildApp({
     },
   })
 
-  await fastify.register(swaggerPlugin)
+  // The API reference maps every route and schema: served while developing, never in production.
+  if (env.NODE_ENV !== 'production') await fastify.register(swaggerPlugin)
   await fastify.register(databasePlugin, { connectionString: env.DATABASE_URL })
   await fastify.register(authPlugin, { config: env })
   await fastify.register(wsPlugin, {
