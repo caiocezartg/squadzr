@@ -591,6 +591,14 @@ describe('squad lobby — server-driven errors and redirects', () => {
 })
 
 describe('squad lobby — failure and access gates', () => {
+  it('cuts a code longer than a Squad code in the not-found state', async () => {
+    renderSquadsFlow('/squads/ABCDEF1234567890')
+
+    expect(await screen.findByText('Squad not found')).toBeInTheDocument()
+    expect(screen.getByText('#ABCDEF…')).toBeInTheDocument()
+    expect(screen.queryByText(/1234567890/)).not.toBeInTheDocument()
+  })
+
   it('shows the not-found state for an unknown squad code', async () => {
     renderSquadsFlow('/squads/ZZZZZZ')
 

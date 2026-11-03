@@ -25,16 +25,17 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 33     | 208   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 31     | 324   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 901   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 902   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 162   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
 CCC-118 removes the old design system and recounts every row on the merged `design-v2` tree after
-CCC-117: `client:unit` measures 87 files / 901 tests (89 / 909 before it; the table had drifted since
+CCC-117: `client:unit` measures 87 files / 902 tests (89 / 909 before it; the table had drifted since
 CCC-115). The unused `tooltip.spec.tsx` (4 tests) and `user-avatar.spec.tsx` (3 tests) leave with their
 components, and `reduced-motion.spec.ts` drops the `.animate-pulse-glow` loop case with the keyframe
 (1 test). The guest sign-in prompt case in `squads-page.spec.tsx` now finds the dialog by its role and
-name instead of a class. `server:unit` (33 / 208) and `schemas:unit` (5 / 162) rerun unchanged;
+name instead of a class, and `squad-lobby.spec.tsx` adds the case that cuts an over-long code in the
+Lobby's not-found state (1 test). `server:unit` (33 / 208) and `schemas:unit` (5 / 162) rerun unchanged;
 `server:integration` (31 / 324) was not rerun, because this ticket touches no server code.
 
 Suites are test files. The counts above are the current inventory, last recounted by CCC-118 on
