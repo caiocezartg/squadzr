@@ -11,6 +11,8 @@ import type { Heartbeat } from './heartbeat'
 // Server-specific: WebSocket client state (not shared with client)
 export interface WsClient {
   userId: string | null
+  /** The sign-in session the socket opened with; checked from time to time, so a sign-out ends the socket. */
+  sessionId: string | null
   userName: string | null
   userImage: string | null
   roomCode: string | null
@@ -41,6 +43,8 @@ export interface Realtime {
   /** Resolves once every queued realtime operation has settled. */
   drain: () => Promise<void>
   sweep: () => Promise<void>
+  /** Closes every socket whose sign-in session was signed out or expired. */
+  revalidateSessions: () => Promise<void>
   shutdown: () => Promise<void>
   isStopped: () => boolean
 }

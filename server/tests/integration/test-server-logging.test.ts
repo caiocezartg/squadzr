@@ -33,3 +33,22 @@ it('runs HTTP and injectWS requests through the production request serializer wi
   // The production serializer keeps only the path, for the HTTP request and the upgrade alike.
   expect(incoming.map((line) => line.req?.url)).toEqual(['/health', '/ws'])
 })
+
+// The edge proxy appends the address it saw to x-forwarded-for; anything to its left came from the
+// client and could be anything. Only the trusted hops are believed, so a client cannot pose as another.
+it('logs the address the trusted proxy saw, not one the client wrote in x-forwarded-for', async () => {
+  const capture = createLogCapture('info')
+  server = await buildTestServer({}, { logger: capture.logger })
+
+  await server.app.inject({
+    method: 'GET',
+    url: '/health',
+    remoteAddress: '10.0.0.2',
+    headers: { 'x-forwarded-for': '198.51.100.66, 203.0.113.9' },
+  })
+
+  const incoming = capture.lines
+    .map((line) => JSON.parse(line) as { msg?: string; req?: { remoteAddress?: string } })
+    .filter((line) => line.msg === 'incoming request')
+  expect(incoming.map((line) => line.req?.remoteAddress)).toEqual(['203.0.113.9'])
+})

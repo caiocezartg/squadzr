@@ -111,7 +111,7 @@ export async function buildApp({
   discordInviteRateLimit,
 }: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
-    trustProxy: true,
+    trustProxy: env.TRUST_PROXY_HOPS === 0 ? false : env.TRUST_PROXY_HOPS,
     logger: logger ?? defaultLogger(env),
   })
 

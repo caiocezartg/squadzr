@@ -60,11 +60,39 @@ describe('next.config startup validation', () => {
     const everyPage = rules.find((rule) => rule.source === '/:path*')
     expect(everyPage?.headers).toEqual(
       expect.arrayContaining([
-        { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
         { key: 'X-Frame-Options', value: 'DENY' },
         { key: 'X-Content-Type-Options', value: 'nosniff' },
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
       ])
     )
+  })
+
+  it('lets scripts load only from the app, and no plugin, base or foreign form target', async () => {
+    const config = (await loadConfig('http://squadzr-api:3000')).default
+    const rules = (await config.headers?.()) ?? []
+
+    const policy = rules
+      .find((rule) => rule.source === '/:path*')
+      ?.headers.find((header) => header.key === 'Content-Security-Policy')?.value
+    expect(policy?.split('; ')).toEqual([
+      "script-src 'self' 'unsafe-inline'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ])
+  })
+
+  it('also allows eval in development, where the dev server needs it', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    const config = (await loadConfig('http://squadzr-api:3000')).default
+    const rules = (await config.headers?.()) ?? []
+    vi.unstubAllEnvs()
+
+    const policy = rules
+      .find((rule) => rule.source === '/:path*')
+      ?.headers.find((header) => header.key === 'Content-Security-Policy')?.value
+    expect(policy).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'")
   })
 })

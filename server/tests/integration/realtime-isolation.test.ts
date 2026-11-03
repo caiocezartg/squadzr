@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { errorMessageSchema, roomSnapshotMessageSchema } from '@squadzr/schemas/ws'
 import { buildApp } from '@/app'
 import type { WsRoomBroadcaster } from '@infrastructure/websocket/room-broadcaster.service'
+import { MESSAGE_RATE_LIMIT } from '@infrastructure/websocket/message-rate'
 import { SOCKET_OPERATION_LIMIT } from '@infrastructure/websocket/ws.plugin'
 import { signInMany } from '@test/harness/auth'
 import { FakeClock } from '@test/harness/clock'
@@ -120,7 +121,9 @@ describe('realtime isolation under subscription load', () => {
         return snapshot
       })
       try {
-        const requests = SOCKET_OPERATION_LIMIT * 8
+        // As many as the message rate allows, so only the in-flight limit refuses them.
+        const requests = MESSAGE_RATE_LIMIT
+        expect(requests).toBeGreaterThan(SOCKET_OPERATION_LIMIT * 4)
         for (let i = 0; i < requests; i++)
           attacker.send({ type: 'join_room', payload: { roomCode: room.code } })
         await started.promise

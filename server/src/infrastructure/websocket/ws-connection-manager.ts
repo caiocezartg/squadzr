@@ -45,6 +45,16 @@ export class WsConnectionManager {
     return true
   }
 
+  /** Every connected socket whose session must stay live, with that session's id. */
+  sessionSockets(): Array<{ socket: WebSocket; sessionId: string }> {
+    const result: Array<{ socket: WebSocket; sessionId: string }> = []
+    for (const socket of this.sockets) {
+      const sessionId = this.clientData.get(socket)?.sessionId
+      if (sessionId) result.push({ socket, sessionId })
+    }
+    return result
+  }
+
   clear(): void {
     for (const socket of this.sockets) this.disconnect(socket)
   }
