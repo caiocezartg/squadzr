@@ -595,7 +595,7 @@ describe('squad lobby — failure and access gates', () => {
     renderSquadsFlow('/squads/ABCDEF1234567890')
 
     expect(await screen.findByText('Squad not found')).toBeInTheDocument()
-    expect(screen.getByText('#ABCDEF…')).toBeInTheDocument()
+    expect(screen.getByText('#ABCDEF')).toBeInTheDocument()
     expect(screen.queryByText(/1234567890/)).not.toBeInTheDocument()
   })
 
@@ -614,7 +614,12 @@ describe('squad lobby — failure and access gates', () => {
   it('gates the lobby behind sign-in for guests', async () => {
     renderSquadsFlow('/squads/LOBBY1', { user: null })
 
-    expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to view this squad' })
+    ).toBeInTheDocument()
+    expect(screen.getByText('#LOBBY1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign in with Discord' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
   })
 })
 
@@ -626,7 +631,9 @@ describe('squad lobby — Ready Squad access gates', () => {
     onHttp('GET', '/api/rooms/:code', () => httpError(404, notFoundBody))
     renderSquadsFlow('/squads/LOBBY1', { user: null })
 
-    expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to view this squad' })
+    ).toBeInTheDocument()
 
     // A visitor never joins the squad channel, so no snapshot can ever arrive.
     openLatestWebSocket()

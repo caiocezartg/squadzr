@@ -369,7 +369,12 @@
   "lobby": {
     "backToSquads": "Voltar aos squads",
     "cannotLeave": "Não é possível sair de um squad cheio",
-    "pleaseSignIn": "Por favor, entre com sua conta para ver este squad."
+    "signInPrompt": {
+      "title": "Entre para ver este squad",
+      "description": "Você pode explorar os squads como visitante, mas ver um squad exige entrar com o Discord.",
+      "signIn": "Entrar com Discord",
+      "exploreSquads": "Explorar squads"
+    }
   },
   "notFound": {
     "title": "Página não encontrada",

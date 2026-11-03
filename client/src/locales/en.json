@@ -369,7 +369,12 @@
   "lobby": {
     "backToSquads": "Back to squads",
     "cannotLeave": "Cannot leave a full squad",
-    "pleaseSignIn": "Please sign in to view this squad."
+    "signInPrompt": {
+      "title": "Sign in to view this squad",
+      "description": "You can browse squads as a guest, but viewing a squad requires signing in with Discord.",
+      "signIn": "Sign in with Discord",
+      "exploreSquads": "Explore squads"
+    }
   },
   "notFound": {
     "title": "Page not found",

@@ -85,7 +85,9 @@ describe('the Lobby on the App Router', () => {
 
     await renderLobbyRoute(lobbySquad.code)
 
-    expect(await screen.findByText('Please sign in to view this squad.')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to view this squad' })
+    ).toBeInTheDocument()
     expect(screen.queryByText('Squad not found')).not.toBeInTheDocument()
   })
 
