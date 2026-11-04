@@ -24,7 +24,11 @@ changes never deploy or run the import. Railway runs cron schedules in UTC.
 Besides the games pages, each run calls IGDB's `popularity_primitives` endpoint once per batch of
 250 candidates to read the Playing and Steam Peak signals behind the stored popularity: about 7
 extra requests at the current catalog size (each batch is paged, so a batch past 500 rows costs one
-more), through the same pacer (4 requests per second) and retry as the games pages. The run still uses one Twitch token and no new variable.
+more), through the same pacer (4 requests per second) and retry as the games pages. The run still
+uses one Twitch token and no new variable.
+
+The popularity formula does not change, but the stored values shift a little when the candidate list
+grows or shrinks, because each game's percentile is computed among the candidates of that run.
 
 It uses Railway Infrastructure as Code rather than the older Config as Code (`railway.json` with a
 per-service config path): Railway deprecated Config as Code, new services cannot opt in, and the
@@ -92,8 +96,8 @@ owner's credentials; check the key names in the Variables tab when a run fails t
 `IGDB_POPULARITY_THRESHOLD`, `IGDB_HYPE_THRESHOLD` and `CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK` stay
 unset, so the import uses its defaults (rating threshold 50, hype threshold 50, fraction check on).
 `IGDB_HYPE_THRESHOLD` is the minimum IGDB `hypes` that lets a game released in the last 180 days
-enter the catalog before it reaches the rating threshold; `0` means no hype floor, so every release
-of the window that passes the other filters enters. A game that is still under the rating threshold
+enter the catalog before it reaches the rating threshold; `0` means no hype floor among the games
+that have `hypes`, and a release without `hypes` enters only through the rating count. A game that is still under the rating threshold
 180 days after its release leaves the catalog on the next run, as any delisted game does. The
 credentials live only in Railway: rotate them in the Twitch developer console and update the two
 variables; never commit them. Railway's own platform variables are injected by the platform and are

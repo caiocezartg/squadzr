@@ -282,7 +282,7 @@ describe('IgdbGameCatalogSource', () => {
     expect(candidates.map((candidate) => candidate.igdbId)).toEqual([1036])
   })
 
-  it('sends a hype threshold of 0 as the floor of the window, admitting every recent release', async () => {
+  it('sends a hype threshold of 0 as the floor of the window, admitting every recent release that has hypes', async () => {
     const harness = createHarness(
       (request) => (request.url === TOKEN_URL ? tokenResponse() : Response.json([])),
       { hypeThreshold: 0 }

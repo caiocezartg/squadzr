@@ -45,7 +45,8 @@ export interface IgdbGameCatalogSourceOptions {
   readonly popularityThreshold: number
   /**
    * Minimum `hypes` for a non-curated game released in the last 180 days to enter
-   * without reaching `popularityThreshold`; 0 admits every release of the window.
+   * without reaching `popularityThreshold`; 0 is no floor among the games that have
+   * `hypes`, and a release without `hypes` enters only through the rating count.
    */
   readonly hypeThreshold: number
   /** Curated games fetched by id even when they miss both thresholds. */
