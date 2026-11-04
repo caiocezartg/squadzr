@@ -27,6 +27,47 @@ const SEARCH_SIMILARITY_THRESHOLD = 0.5
 /** Shorter terms match by text only: with 1 or 2 letters similarity matches almost everything. */
 const MIN_SIMILARITY_TERM_LENGTH = 3
 
+/** Counts characters, not UTF-16 units: an emoji or a rare ideograph is one letter. */
+function usesSimilarity(term: string): boolean {
+  return [...term].length >= MIN_SIMILARITY_TERM_LENGTH
+}
+
+/**
+ * The Listed Games matching a normalized `term`, ranked by how it matched. With
+ * `withSimilarity` the caller has set `pg_trgm.word_similarity_threshold` on this
+ * connection, which `<%` reads.
+ */
+async function selectGamesByTerm(
+  executor: DatabaseExecutor,
+  term: string,
+  limit: number,
+  withSimilarity: boolean
+): Promise<Game[]> {
+  const contains = sql`${games.searchText} LIKE ${`%${term}%`}`
+  const similarity = sql`word_similarity(${term}, ${games.searchText})`
+  const matches = withSimilarity ? sql`(${contains} OR ${term} <% ${games.searchText})` : contains
+
+  const result = await executor
+    .select()
+    .from(games)
+    .where(and(eq(games.listed, true), matches))
+    .orderBy(
+      sql`CASE
+        WHEN ${term} = split_part(${games.searchText}, ${SEARCH_TEXT_SEPARATOR}, 1) OR ${term} = ANY(${games.aliases}) THEN 0
+        WHEN starts_with(${games.searchText}, ${term}) THEN 1
+        WHEN ${contains} THEN 2
+        ELSE 3
+      END`,
+      sql`CASE WHEN ${contains} THEN 0 ELSE ${similarity} END DESC`,
+      desc(games.popularity),
+      asc(games.name),
+      asc(games.id)
+    )
+    .limit(limit)
+
+  return result.map(mapRowToEntity)
+}
+
 /**
  * The statements the repository issues, shared by the root connection and a
  * transaction handle so one import can bind every write to the same connection.
@@ -124,32 +165,18 @@ export class DrizzleGameRepository implements IGameRepository {
    * of it is similar enough. Results are ranked by how the term matched.
    */
   private async searchByTerm(term: string, limit: number): Promise<Game[]> {
-    const contains = sql`${games.searchText} LIKE ${`%${term}%`}`
-    const similarity = sql`word_similarity(${term}, ${games.searchText})`
-    const matches =
-      term.length >= MIN_SIMILARITY_TERM_LENGTH
-        ? sql`(${contains} OR ${similarity} >= ${SEARCH_SIMILARITY_THRESHOLD})`
-        : contains
+    if (!usesSimilarity(term)) return selectGamesByTerm(this.executor, term, limit, false)
 
-    const result = await this.executor
-      .select()
-      .from(games)
-      .where(and(eq(games.listed, true), matches))
-      .orderBy(
-        sql`CASE
-          WHEN ${term} = split_part(${games.searchText}, ${SEARCH_TEXT_SEPARATOR}, 1) OR ${term} = ANY(${games.aliases}) THEN 0
-          WHEN starts_with(${games.searchText}, ${term}) THEN 1
-          WHEN ${contains} THEN 2
-          ELSE 3
-        END`,
-        sql`CASE WHEN ${contains} THEN 0 ELSE ${similarity} END DESC`,
-        desc(games.popularity),
-        asc(games.name),
-        asc(games.id)
+    // `<%` is the indexable form of `word_similarity(...) >= threshold` and reads its
+    // threshold from a setting. `set_config(..., true)` is `SET LOCAL` with a bound
+    // value: the setting lasts for this transaction only, so it never leaks into the
+    // next user of the pooled connection.
+    return this.db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT set_config('pg_trgm.word_similarity_threshold', ${String(SEARCH_SIMILARITY_THRESHOLD)}, true)`
       )
-      .limit(limit)
-
-    return result.map(mapRowToEntity)
+      return selectGamesByTerm(tx, term, limit, true)
+    })
   }
 
   async findPopular({ limit, now }: FindPopularGamesInput): Promise<PopularGames> {

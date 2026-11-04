@@ -154,7 +154,7 @@ export class CatalogImportUseCase implements ICatalogImportUseCase {
     private readonly gameRepository: IGameRepository,
     private readonly curatedGames: readonly CuratedGame[],
     private readonly safety: CatalogImportSafety,
-    private readonly manualAliases: GameAliases = new Map()
+    private readonly manualAliases: GameAliases
   ) {}
 
   async execute(input: CatalogImportInput = {}): Promise<CatalogImportSummary> {

@@ -5,9 +5,6 @@ import type { GameAliases } from '@application/use-cases/game/catalog-import.use
  * id. They are merged with the alternative names IGDB returns and normalized by
  * the repository on write. Kept apart from `CURATED_GAMES`: an alias changes
  * neither the squad size nor the featured slots.
- *
- * Call of Duty: Modern Warfare 4 ("mw4") is not here yet: its IGDB id still has to be
- * confirmed against `POST /v4/games` (#100).
  */
 export const GAME_ALIASES: GameAliases = new Map<number, readonly string[]>([
   [115, ['lol']], // League of Legends
@@ -21,4 +18,5 @@ export const GAME_ALIASES: GameAliases = new Map<number, readonly string[]>([
   [134710, ['gta', 'gta online']], // Grand Theft Auto Online
   [353848, ['fc', 'fifa']], // EA Sports FC
   [18866, ['dbd']], // Dead by Daylight
+  [403310, ['mw4']], // Call of Duty: Modern Warfare 4
 ])

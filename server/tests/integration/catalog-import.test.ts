@@ -54,7 +54,7 @@ function buildUseCase(
     new DrizzleGameRepository(server.app.db, server.app.clock),
     options.curated ?? [],
     options.safety ?? SMALL_CATALOG_SAFETY,
-    options.aliases
+    options.aliases ?? new Map()
   )
 }
 
@@ -406,7 +406,8 @@ describe('CatalogImportUseCase', () => {
         release,
       }),
       [],
-      safety
+      safety,
+      new Map()
     )
     const firstRun = first.execute()
     await locked
@@ -418,7 +419,8 @@ describe('CatalogImportUseCase', () => {
       secondSource,
       new DrizzleGameRepository(server.app.db, server.app.clock),
       [],
-      safety
+      safety,
+      new Map()
     )
     const secondResult = second.execute().catch((error: unknown) => error)
 
@@ -554,7 +556,8 @@ describe('CatalogImportUseCase', () => {
       source,
       failAtRelist(new DrizzleGameRepository(server.app.db, server.app.clock)),
       [],
-      SMALL_CATALOG_SAFETY
+      SMALL_CATALOG_SAFETY,
+      new Map()
     )
 
     await expect(useCase.execute()).rejects.toThrow('relist failed after delist')

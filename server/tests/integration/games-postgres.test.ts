@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Platform } from '@squadzr/schemas'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { games } from '@infrastructure/database/schema'
 import { DrizzleGameRepository } from '@infrastructure/repositories/drizzle-game.repository'
 import { FakeClock } from '@test/harness/clock'
@@ -184,5 +184,26 @@ describe('DrizzleGameRepository listing actions', () => {
 
     const legacy = (await repository.findAll()).find((game) => game.igdbId === null)
     expect(legacy?.listed).toBe(true)
+  })
+})
+
+// #100: the similarity search reads its threshold from a setting; it must stay inside the search's
+// transaction, because the connection goes back to the pool for the next request.
+describe('DrizzleGameRepository.search', () => {
+  it('leaves the pg_trgm threshold of the pooled connection untouched', async () => {
+    await repository.upsertByIgdbId({ ...LOL, name: 'Valorant', igdbId: 126_459 })
+    const readThreshold = async () =>
+      (
+        await server.app.db.execute<{ pg_trgm_threshold: string }>(
+          sql`SHOW pg_trgm.word_similarity_threshold`
+        )
+      ).rows[0]?.pg_trgm_threshold
+    const before = await readThreshold()
+
+    expect((await repository.search({ search: 'valorat', limit: 5 })).map((g) => g.name)).toEqual([
+      'Valorant',
+    ])
+
+    expect(await readThreshold()).toBe(before)
   })
 })

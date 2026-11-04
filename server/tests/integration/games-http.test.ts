@@ -184,6 +184,9 @@ describe('GET /api/games', () => {
     expect(await searchGames('?search=valorat')).toEqual(['Valorat Quest', 'Valorant'])
   })
 
+  // A defensive guard: "vl" is far below the threshold for "valorant" anyway, so this passes
+  // even without the length guard today. It fails if the guard is removed and the threshold drops
+  // enough for a one or two letter term to match unrelated names.
   it('does not use similarity for a term of one or two letters', async () => {
     await insertGame(server, { name: 'Dota 2' })
     await insertGame(server, { name: 'Valorant' })
@@ -202,6 +205,8 @@ describe('GET /api/games', () => {
 
     expect((await searchGames('?search=100%25')).sort()).toEqual(['100 Cups', '100% Cup'])
     expect((await searchGames('?search=half_life'))[0]).toBe('half_life')
+    // Only the first element: the backslash is punctuation, so "back slash" matches "back\slash" by
+    // text, while "backslash" may follow it by similarity. What matters is that the exact name ranks first.
     expect((await searchGames('?search=back%5Cslash'))[0]).toBe('back\\slash')
   })
 

@@ -3,8 +3,9 @@ import { normalizeSearchText } from '@domain/services/search-text'
 import { CURATED_GAMES } from './curated-games'
 import { GAME_ALIASES } from './game-aliases'
 
-// The IGDB names that differ from the curated (seed-era) names; the import stores the IGDB one,
-// so an alias must differ from it, not from the curated name.
+// A snapshot of the IGDB names that differ from the curated (seed-era) names, taken from
+// `POST /v4/games` on 2026-11-04; the import stores the IGDB one, so an alias must differ from it,
+// not from the curated name. IGDB can rename a game later, so refresh this when a name changes.
 const IGDB_NAMES: ReadonlyMap<number, string> = new Map([
   [134710, 'Grand Theft Auto Online'],
   [353848, 'EA Sports FC 26'],
@@ -42,10 +43,18 @@ describe('GAME_ALIASES', () => {
   })
 
   it('maps the main acronyms to the curated games', () => {
-    const byName = (name: string) => CURATED_GAMES.find((game) => game.name === name)?.igdbId
+    const igdbIdOf = (name: string): number => {
+      const game = CURATED_GAMES.find((curated) => curated.name === name)
+      if (!game) throw new Error(`"${name}" is no longer in CURATED_GAMES; update this test`)
+      return game.igdbId
+    }
 
-    expect(GAME_ALIASES.get(byName('League of Legends')!)).toEqual(['lol'])
-    expect(GAME_ALIASES.get(byName('Counter-Strike 2')!)).toEqual(['cs2', 'cs'])
-    expect(GAME_ALIASES.get(byName('Rainbow Six Siege')!)).toEqual(['r6', 'r6s'])
+    expect(GAME_ALIASES.get(igdbIdOf('League of Legends'))).toEqual(['lol'])
+    expect(GAME_ALIASES.get(igdbIdOf('Counter-Strike 2'))).toEqual(['cs2', 'cs'])
+    expect(GAME_ALIASES.get(igdbIdOf('Rainbow Six Siege'))).toEqual(['r6', 'r6s'])
+  })
+
+  it('maps "mw4" to Call of Duty: Modern Warfare 4, which only the hype import adds (#101)', () => {
+    expect(GAME_ALIASES.get(403310)).toEqual(['mw4'])
   })
 })
