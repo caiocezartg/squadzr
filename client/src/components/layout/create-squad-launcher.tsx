@@ -41,9 +41,10 @@ export function useCreateSquadLauncher(): CreateSquadLauncher {
  * Owns the one create-Squad dialog of the shell, so it opens the same way on the board and in the
  * Lobby. The dialog never shows a loading state: it is fetched when the page is idle, and a request
  * that comes sooner waits for it before it opens. Both dialogs are mounted while they are shown and
- * leave the tree after their exit transition, so each open starts from a fresh dialog. A visitor gets a sign-in prompt instead, which
- * returns to the same page with `?create=1`, and a signed-in viewer who arrives with `?create=1` gets
- * the dialog once, with the parameter dropped.
+ * leave the tree after their exit transition, so each open starts from a fresh dialog.
+ *
+ * A visitor gets a sign-in prompt instead, which returns to the same page with `?create=1`. A
+ * signed-in viewer who arrives with `?create=1` gets the dialog once, with the parameter dropped.
  */
 export function CreateSquadLauncher({ children }: { readonly children: ReactNode }) {
   const session = useSession()

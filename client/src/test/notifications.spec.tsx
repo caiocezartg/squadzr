@@ -62,9 +62,13 @@ function renderShell(): UserEvent {
   return userEvent.setup({ delay: null })
 }
 
-/** Opens the bell once its unread count shows; the count is part of the bell's accessible name. */
+/**
+ * Opens the bell once its unread count shows; the count is part of the bell's accessible name. The panel
+ * opens one render after its code arrives, so it waits for the dialog before the test reads it.
+ */
 async function openNotifications(user: UserEvent, unread: number): Promise<void> {
   await user.click(await screen.findByRole('button', { name: `Notifications, ${unread} unread` }))
+  await screen.findByRole('dialog', { name: 'Notifications' })
 }
 
 /** The row link of one squad; its dismiss button sits next to it in the same list item. */

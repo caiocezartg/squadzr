@@ -6,11 +6,14 @@ import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import type { FloatingPanelProps } from './floating-types'
 import { useInstantDismiss } from './use-instant-dismiss'
+import { useMounted } from './use-mounted'
 
 /**
  * A panel that rises from the bottom edge. It takes the same props as a popover, so a popover can
  * stand in for it on narrow screens. It is modal: focus stays inside, Escape and the backdrop close
- * it, and focus returns to the trigger. Reduced motion swaps the slide for a fade.
+ * it, and focus returns to the trigger. Reduced motion swaps the slide for a fade. A sheet a parent
+ * mounts already open (a popover that crossed 640px while open) is first rendered closed and opened
+ * right after, so it still slides in.
  */
 export function BottomSheet({
   trigger,
@@ -25,9 +28,14 @@ export function BottomSheet({
   const t = useTranslations('ds')
   const { instant, handleOpenChange } = useInstantDismiss(onOpenChange)
   const instantAttribute = instant ? '' : undefined
+  const mounted = useMounted()
 
   return (
-    <Dialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={handleOpenChange}>
+    <Dialog.Root
+      open={open === undefined ? undefined : open && mounted}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+    >
       <Dialog.Trigger render={trigger} />
       <Dialog.Portal>
         <Dialog.Backdrop

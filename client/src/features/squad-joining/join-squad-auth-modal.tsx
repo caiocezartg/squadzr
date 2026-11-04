@@ -5,7 +5,7 @@ import { DiscordIcon } from '@/components/ui/icons'
 
 interface JoinSquadAuthModalProps {
   open: boolean
-  squadCode: string | null
+  squadCode: string
   onOpenChange: (open: boolean) => void
   /** Called when the exit transition has finished, so the caller can unmount the modal. */
   onOpenChangeComplete: (open: boolean) => void
@@ -36,12 +36,10 @@ export function JoinSquadAuthModal({
       <div className="flex flex-col gap-6 p-6">
         <div className="flex flex-col gap-3">
           <p className="type-body text-text-3">{t('squads.authModal.description')}</p>
-          {squadCode && (
-            <p className="type-body text-text-3">
-              {t('squads.authModal.squadCode')}{' '}
-              <span className="type-code text-text text-[13px]">{squadCode}</span>
-            </p>
-          )}
+          <p className="type-body text-text-3">
+            {t('squads.authModal.squadCode')}{' '}
+            <span className="type-code text-text text-[13px]">{squadCode}</span>
+          </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row-reverse">
           <Button

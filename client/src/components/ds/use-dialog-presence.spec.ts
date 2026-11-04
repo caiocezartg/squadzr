@@ -40,7 +40,17 @@ describe('useDialogPresence', () => {
     expect(result.current).toMatchObject({ mounted: true, open: true })
   })
 
-  it('hands out a new key on every show, so a dialog shown again starts fresh', () => {
+  it('keeps the key when shown again while it is already open, so a double click does not reset it', () => {
+    const { result } = renderHook(() => useDialogPresence())
+    act(() => result.current.show())
+    const first = result.current.key
+
+    act(() => result.current.show())
+
+    expect(result.current).toMatchObject({ mounted: true, open: true, key: first })
+  })
+
+  it('hands out a new key on a show after a hide, so a dialog shown again starts fresh', () => {
     const { result } = renderHook(() => useDialogPresence())
     act(() => result.current.show())
     const first = result.current.key

@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import { Dialog as BaseDialog } from '@base-ui-components/react/dialog'
 import { X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { useInstantDismiss } from './use-instant-dismiss'
+import { useMounted } from './use-mounted'
 
 type OpenChangeDetails = BaseDialog.Root.ChangeEventDetails
 
@@ -101,11 +102,4 @@ export function Dialog({
       </BaseDialog.Portal>
     </BaseDialog.Root>
   )
-}
-
-/** False for the first render and true from the first effect on, so `open` can turn true after mounting. */
-function useMounted(): boolean {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  return mounted
 }

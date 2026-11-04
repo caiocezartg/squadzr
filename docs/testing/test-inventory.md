@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 302   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 381   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 91     | 1026  |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 91     | 1030  |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 187   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -88,6 +88,14 @@ stubbed `getAnimations` keeps the dialog mounted with `data-ending-style` until 
 `create-squad.spec.tsx` adds the fresh form on the next open, and `squad-board.spec.tsx` the guest prompt closed
 with "Maybe later" and shown again. jsdom runs no transitions, so the 280ms enter and the 180ms exit themselves
 were checked in the browser, not in these tests.
+
+The review of that change makes a popover or bottom sheet that a parent mounts already open play its enter too, and
+keeps a second `show` of `useDialogPresence` from resetting an open dialog. `client:unit` goes from 91 files / 1026
+tests to 91 / 1030, with no file added. `use-dialog-presence.spec.ts` adds the case where a `show` while open keeps the
+key (+1). `popover.spec.tsx` adds three cases for the enter of a panel the parent mounts open: a popover on a wide
+screen, a sheet below 640px, and the sheet an open popover becomes when the screen narrows (+3). The "shows it again for
+the next squad" case in `squad-board.spec.tsx` now opens a different squad and expects its own code. The bell cases
+in `notifications.spec.tsx` wait for the panel to open, which now comes one render after its code arrives.
 
 Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
 `client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.
