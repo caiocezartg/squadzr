@@ -23,11 +23,24 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 37     | 264   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 35     | 362   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 292   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 35     | 375   |
 | `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 88     | 953   |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 168   |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 169   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
+
+Issue #100 (Game Search by acronym and nickname) adds two server unit files, `search-text.spec.ts` and
+`game-aliases.spec.ts`, and extends the IGDB adapter suite, so `server:unit` goes from 37 files / 264 tests
+to 39 / 292. `search-text.spec.ts` covers `normalizeSearchText` (accents, case, punctuation, repeated spaces,
+text made only of punctuation, idempotence), `normalizeAliases` and `buildSearchText`; `game-aliases.spec.ts`
+pins the manual alias map (unique ids, non-empty and already normalized aliases, none equal to the game's
+name); the adapter suite adds `alternative_names` asked for, present, empty, absent, blank and malformed.
+`server:integration` goes from 362 to 375 tests in the same 35 files: `games-http` is rewritten for the
+folded search (accents and punctuation, aliases first, similarity after text, no similarity under three
+letters, the LIKE wildcards as punctuation, suggestions for a term made only of punctuation, 400 above 100
+characters), `games-postgres` covers the stored `aliases` and `search_text`, `catalog-import` covers the IGDB
+and manual aliases written together, and migration 0007 raises the migration count to 8.
+`schemas:unit` goes from 168 to 169 tests with the 100-character limit of the search.
 
 Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
 `client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.

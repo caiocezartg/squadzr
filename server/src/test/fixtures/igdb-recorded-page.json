@@ -40,7 +40,8 @@
     ],
     "name": "Baldur's Gate II: Shadows of Amn",
     "slug": "baldurs-gate-ii-shadows-of-amn",
-    "total_rating_count": 567
+    "total_rating_count": 567,
+    "alternative_names": []
   },
   {
     "id": 12,
@@ -146,7 +147,17 @@
     "first_release_date": 1416268800,
     "name": "Grand Theft Auto Online",
     "slug": "grand-theft-auto-online",
-    "total_rating_count": 72
+    "total_rating_count": 72,
+    "alternative_names": [
+      {
+        "id": 90001,
+        "name": "GTAO"
+      },
+      {
+        "id": 90002,
+        "name": "GTA Online"
+      }
+    ]
   },
   {
     "id": 135400,

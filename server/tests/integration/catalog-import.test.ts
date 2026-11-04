@@ -8,6 +8,7 @@ import {
   CatalogImportUseCase,
   type CatalogImportSafety,
   type CuratedGame,
+  type GameAliases,
 } from '@application/use-cases/game/catalog-import.use-case'
 import { GAME_CATALOG_IMPORT } from '@config/constants'
 import { createCatalogImportUseCase } from '@interface/factories/catalog-import.factory'
@@ -45,13 +46,15 @@ function buildUseCase(
   options: {
     curated?: readonly CuratedGame[]
     safety?: CatalogImportSafety
+    aliases?: GameAliases
   } = {}
 ): CatalogImportUseCase {
   return new CatalogImportUseCase(
     source,
     new DrizzleGameRepository(server.app.db, server.app.clock),
     options.curated ?? [],
-    options.safety ?? SMALL_CATALOG_SAFETY
+    options.safety ?? SMALL_CATALOG_SAFETY,
+    options.aliases
   )
 }
 
@@ -66,6 +69,7 @@ async function seedListedGames(count: number): Promise<void> {
       igdbId,
       name: `Seeded ${igdbId}`,
       slug: `seeded-${igdbId}`,
+      searchText: `seeded ${igdbId}`,
       coverUrl: `https://cdn.squadzr.test/seeded-${igdbId}.webp`,
       thumbnailUrl: `https://cdn.squadzr.test/seeded-${igdbId}.webp`,
       listed: true,
@@ -233,6 +237,46 @@ describe('CatalogImportUseCase', () => {
     expect(second.find((row) => row.igdbId === 1101)?.platforms).toEqual(['pc'])
     expect(second.find((row) => row.igdbId === 1102)?.platforms).toEqual(['mobile', 'switch-2'])
     expect(second.find((row) => row.igdbId === 1103)?.platforms).toEqual(['ps4'])
+  })
+
+  it('stores the IGDB aliases and the manual ones together, normalized and without repeats or the name', async () => {
+    source.withCandidates([
+      createCandidate({
+        igdbId: 1201,
+        name: 'Counter-Strike 2',
+        slug: 'cs2',
+        aliases: ['CS2', 'Counter Strike 2', 'Counter-Strike: Source 2'],
+      }),
+      createCandidate({ igdbId: 1202, name: 'Pokémon UNITE', slug: 'unite', aliases: [] }),
+      createCandidate({ igdbId: 1203, name: 'Valorant', slug: 'valorant', aliases: ['VALORANT'] }),
+    ])
+    const manual: GameAliases = new Map([
+      [1201, ['cs2', 'cs']],
+      [1202, ['Unite', 'pkmn unite']],
+    ])
+    await buildUseCase({ aliases: manual }).execute()
+
+    const rows = await catalog()
+    const row = (igdbId: number) => rows.find((game) => game.igdbId === igdbId)
+    expect(row(1201)).toMatchObject({
+      aliases: ['cs2', 'counter strike source 2', 'cs'],
+      searchText: 'counter strike 2 | cs2 | counter strike source 2 | cs',
+    })
+    expect(row(1202)).toMatchObject({
+      aliases: ['unite', 'pkmn unite'],
+      searchText: 'pokemon unite | unite | pkmn unite',
+    })
+    expect(row(1203)).toMatchObject({ aliases: [], searchText: 'valorant' })
+  })
+
+  it('rewrites the aliases on a re-run, dropping the ones the sources no longer list', async () => {
+    source.withCandidates([createCandidate({ igdbId: 1301, name: 'Dota 2', aliases: ['Dota'] })])
+    await buildUseCase().execute()
+
+    source.withCandidates([createCandidate({ igdbId: 1301, name: 'Dota 2', aliases: [] })])
+    await buildUseCase().execute()
+
+    expect((await catalog())[0]).toMatchObject({ aliases: [], searchText: 'dota 2' })
   })
 
   it('is idempotent on a re-run: every candidate is updated in place, none is duplicated', async () => {
@@ -456,6 +500,7 @@ describe('CatalogImportUseCase', () => {
       .values({
         name: 'Legacy game',
         slug: 'legacy-game',
+        searchText: 'legacy game',
         coverUrl: 'https://cdn.squadzr.test/legacy.webp',
         thumbnailUrl: 'https://cdn.squadzr.test/legacy-thumb.webp',
         popularity: 7,
@@ -582,5 +627,10 @@ describe('CatalogImportUseCase', () => {
       maxPlayers: 40,
     })
     expect(rows.filter((row) => row.featuredRank !== null)).toHaveLength(6)
+    // The manual alias map is wired in too: "lol" is not a name or an IGDB alias.
+    expect(rows.find((row) => row.igdbId === 115)).toMatchObject({
+      aliases: ['lol'],
+      searchText: 'league of legends | lol',
+    })
   })
 })

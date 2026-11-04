@@ -138,6 +138,7 @@ describe('IgdbGameCatalogSource', () => {
         slug: 'game-2000',
         genres: [{ slug: 'role-playing-rpg', name: 'Role-playing (RPG)' }],
         platforms: [],
+        aliases: [],
         coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/cover-2000.jpg',
         thumbnailUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_small_2x/cover-2000.jpg',
         multiplayer: { onlineCoopMax: 4, onlineMax: 8 },
@@ -282,6 +283,7 @@ describe('IgdbGameCatalogSource', () => {
       slug: 'baldur-s-gate',
       genres: [{ slug: 'role-playing-rpg', name: 'Role-playing (RPG)' }],
       platforms: [],
+      aliases: [],
       coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co20gb.jpg',
       thumbnailUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_small_2x/co20gb.jpg',
       multiplayer: { onlineCoopMax: null, onlineMax: null },
@@ -301,6 +303,67 @@ describe('IgdbGameCatalogSource', () => {
       popularitySignals: { playing: null, steamPeakPlayers: null },
     })
     expect(result.invalid).toBe(3)
+  })
+
+  it('reads the alternative names of a recorded page: present, empty and absent', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL ? tokenResponse() : Response.json(recordedPage)
+    )
+
+    const { candidates } = await harness.source.fetchCandidates()
+
+    const aliasesOf = (igdbId: number) =>
+      candidates.find((candidate) => candidate.igdbId === igdbId)?.aliases
+    expect(aliasesOf(134710)).toEqual(['GTAO', 'GTA Online'])
+    expect(aliasesOf(6)).toEqual([])
+    expect(aliasesOf(5)).toEqual([])
+  })
+
+  it('asks IGDB for the alternative names of every game', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL ? tokenResponse() : Response.json([game()])
+    )
+
+    await harness.source.fetchCandidates()
+
+    expect(bodyOf(gamesRequests(harness.requests)[0]!)).toContain(',alternative_names.name,')
+  })
+
+  it('keeps the trimmed alternative names and drops the blank and null ones', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL
+        ? tokenResponse()
+        : Response.json([
+            game({
+              id: 91,
+              alternative_names: [
+                { id: 1, name: '  LoL ' },
+                { id: 2, name: '   ' },
+                { id: 3, name: null },
+                { id: 4 },
+                { id: 5, name: 'Legends' },
+              ],
+            }),
+            game({ id: 92, name: 'Game 92', slug: 'game-92', alternative_names: null }),
+          ])
+    )
+
+    const { candidates } = await harness.source.fetchCandidates()
+
+    expect(candidates.map((candidate) => [candidate.igdbId, candidate.aliases])).toEqual([
+      [91, ['LoL', 'Legends']],
+      [92, []],
+    ])
+  })
+
+  it('fails the run when a games page carries a malformed alternative_names list', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL
+        ? tokenResponse()
+        : Response.json([game({ id: 93, alternative_names: ['CS2'] })])
+    )
+
+    await expect(harness.source.fetchCandidates()).rejects.toThrow('Invalid IGDB games page')
   })
 
   it('asks IGDB for the platform ids of every game', async () => {

@@ -59,6 +59,8 @@ export interface UpsertGameInput {
   readonly slug: string
   readonly genres: readonly GameGenre[]
   readonly platforms: readonly Platform[]
+  /** Nicknames and acronyms Game Search also matches; raw, the repository normalizes them. */
+  readonly aliases: readonly string[]
   readonly coverUrl: string
   readonly thumbnailUrl: string
   readonly popularity: number

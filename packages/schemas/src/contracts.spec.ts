@@ -186,6 +186,12 @@ describe('gamesQuerySchema', () => {
     expect(gamesQuerySchema.parse({ search: '   ' })).toEqual({ search: '', limit: 20 })
   })
 
+  it('accepts a search of up to 100 characters after the trim and rejects a longer one', () => {
+    expect(gamesQuerySchema.safeParse({ search: 'a'.repeat(100) }).success).toBe(true)
+    expect(gamesQuerySchema.safeParse({ search: `  ${'a'.repeat(100)}  ` }).success).toBe(true)
+    expect(gamesQuerySchema.safeParse({ search: 'a'.repeat(101) }).success).toBe(false)
+  })
+
   it('reads the limit from the query string and bounds it from 1 to 50', () => {
     expect(gamesQuerySchema.parse({ limit: '1' }).limit).toBe(1)
     expect(gamesQuerySchema.parse({ limit: '50' }).limit).toBe(50)

@@ -22,6 +22,10 @@ const igdbGenreSchema = z.object({
   slug: z.string().min(1),
 })
 
+const igdbAlternativeNameSchema = z.object({
+  name: z.string().nullable().optional(),
+})
+
 const igdbMultiplayerModeSchema = z.object({
   onlinecoopmax: z.number().int().nonnegative().nullable().optional(),
   onlinemax: z.number().int().nonnegative().nullable().optional(),
@@ -40,6 +44,8 @@ export const igdbGameSchema = z.object({
   genres: z.array(igdbGenreSchema).nullable().optional(),
   // Platform ids (not expanded): the adapter keeps the ones the Platform enum maps.
   platforms: z.array(z.number().int().positive()).nullable().optional(),
+  // Acronyms, abbreviations and regional titles; the adapter keeps the non-blank names.
+  alternative_names: z.array(igdbAlternativeNameSchema).nullable().optional(),
   multiplayer_modes: z.array(igdbMultiplayerModeSchema).nullable().optional(),
   first_release_date: z.number().int().nullable().optional(),
   total_rating_count: z.number().int().nonnegative().nullable().optional(),

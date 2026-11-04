@@ -21,6 +21,9 @@ export interface CuratedGame {
   readonly featuredRank: number | null
 }
 
+/** Hand-written aliases for the acronyms IGDB lacks, keyed by IGDB id. */
+export type GameAliases = ReadonlyMap<number, readonly string[]>
+
 /** Safety limits of one run, injected by the factory so tests can pin them. */
 export interface CatalogImportSafety {
   /** Minimum share of today's Listed Games the candidates must reach. */
@@ -119,7 +122,8 @@ function resolveSquadSize(
 function toUpsertInput(
   candidate: GameCatalogCandidate,
   popularity: number,
-  curated: CuratedGame | undefined
+  curated: CuratedGame | undefined,
+  manualAliases: readonly string[] | undefined
 ): UpsertGameInput {
   const squadSize = resolveSquadSize(candidate, curated)
 
@@ -129,6 +133,7 @@ function toUpsertInput(
     slug: candidate.slug,
     genres: candidate.genres,
     platforms: candidate.platforms,
+    aliases: [...candidate.aliases, ...(manualAliases ?? [])],
     coverUrl: candidate.coverUrl,
     thumbnailUrl: candidate.thumbnailUrl,
     popularity,
@@ -148,7 +153,8 @@ export class CatalogImportUseCase implements ICatalogImportUseCase {
     private readonly source: IGameCatalogSource,
     private readonly gameRepository: IGameRepository,
     private readonly curatedGames: readonly CuratedGame[],
-    private readonly safety: CatalogImportSafety
+    private readonly safety: CatalogImportSafety,
+    private readonly manualAliases: GameAliases = new Map()
   ) {}
 
   async execute(input: CatalogImportInput = {}): Promise<CatalogImportSummary> {
@@ -180,7 +186,12 @@ export class CatalogImportUseCase implements ICatalogImportUseCase {
       let updated = 0
       for (const [index, candidate] of candidates.entries()) {
         await repository.upsertByIgdbId(
-          toUpsertInput(candidate, scores[index] ?? 0, curatedByIgdbId.get(candidate.igdbId))
+          toUpsertInput(
+            candidate,
+            scores[index] ?? 0,
+            curatedByIgdbId.get(candidate.igdbId),
+            this.manualAliases.get(candidate.igdbId)
+          )
         )
         if (existingByIgdbId.has(candidate.igdbId)) updated += 1
         else created += 1

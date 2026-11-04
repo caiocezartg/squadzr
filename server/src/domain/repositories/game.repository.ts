@@ -1,7 +1,7 @@
 import type { Game, PopularGames, UpsertGameInput } from '@domain/entities/game.entity'
 
 export interface SearchGamesInput {
-  /** The player's text; empty or absent lists the Featured Games first, then by popularity. */
+  /** The player's text; empty, absent or only punctuation lists the Featured Games first, then by popularity. */
   readonly search?: string
   /** The maximum number of games to return. */
   readonly limit: number
@@ -18,8 +18,12 @@ export interface IGameRepository {
   findById(id: string): Promise<Game | null>
   findAll(): Promise<Game[]>
   /**
-   * Listed Games only. With `search`: name contains it, prefix matches first,
-   * then popularity. Without it: featured rank (unranked last), then popularity.
+   * Listed Games only. With `search`: the term, the names and the aliases are
+   * folded (no case, accents or punctuation); a Game matches when its text
+   * contains the term or, from three letters on, is similar to it. Ranked exact
+   * name or alias, name prefix, contains, similarity only, then popularity, name
+   * and id. Without a term (absent, blank or only punctuation): featured rank
+   * (unranked last), then popularity.
    */
   search(input: SearchGamesInput): Promise<Game[]>
   /**

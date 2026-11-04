@@ -46,7 +46,7 @@ export const gameIdParamSchema = z.object({ id: z.string().uuid() })
 // Game search query: a trimmed term and a page of Listed Games. An empty
 // `search` behaves like no search; Fastify delivers query values as strings.
 export const gamesQuerySchema = z.object({
-  search: z.string().trim().optional(),
+  search: z.string().trim().max(100).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 })
 

@@ -88,6 +88,13 @@ function toMultiplayerCapacity(game: IgdbGame): GameMultiplayerCapacity {
   }
 }
 
+/** The non-blank alternative names IGDB lists for a game; empty when the field is absent. */
+function toAliases(game: IgdbGame): string[] {
+  return (game.alternative_names ?? [])
+    .map((alternative) => alternative.name?.trim() ?? '')
+    .filter((name) => name !== '')
+}
+
 /** A candidate before the popularity signals are fetched for it. */
 type CandidateWithoutSignals = Omit<GameCatalogCandidate, 'popularitySignals'>
 
@@ -305,6 +312,7 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
       slug,
       genres: (game.genres ?? []).map((genre) => ({ slug: genre.slug, name: genre.name })),
       platforms: platformsFromIgdbIds(game.platforms ?? []),
+      aliases: toAliases(game),
       coverUrl: imageUrl(imageId, 'cover_big_2x'),
       thumbnailUrl: imageUrl(imageId, 'cover_small_2x'),
       multiplayer: toMultiplayerCapacity(game),

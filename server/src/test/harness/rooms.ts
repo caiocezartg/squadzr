@@ -9,6 +9,7 @@ import {
   type Platform,
   type RoomDto,
 } from '@squadzr/schemas'
+import { buildSearchText, normalizeAliases } from '@domain/services/search-text'
 import { games, roomMembers, rooms } from '@infrastructure/database/schema'
 import type { TestUser } from './auth'
 import type { TestServer } from './test-server'
@@ -22,6 +23,8 @@ export interface InsertGameOptions {
   thumbnailUrl?: string
   genres?: GameDto['genres']
   platforms?: Platform[]
+  /** Raw aliases; the fixture normalizes them like the repository does. */
+  aliases?: string[]
   popularity?: number
   listed?: boolean
   featuredRank?: number | null
@@ -48,11 +51,15 @@ export async function insertGameFixture(
 ): Promise<InsertedGame> {
   const slug = options.slug ?? `game-${randomUUID().slice(0, 8)}`
   const coverUrl = options.coverUrl ?? `https://cdn.squadzr.test/${slug}.webp`
+  const name = options.name ?? `Game ${slug}`
+  const aliases = normalizeAliases(name, options.aliases ?? [])
   const [game] = await server.app.db
     .insert(games)
     .values({
-      name: options.name ?? `Game ${slug}`,
+      name,
       slug,
+      aliases,
+      searchText: buildSearchText(name, aliases),
       igdbId: options.igdbId ?? null,
       genres: options.genres ?? [],
       platforms: options.platforms ?? [],

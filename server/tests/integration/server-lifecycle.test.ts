@@ -27,6 +27,7 @@ async function insertGame(server: TestServer, slug: string): Promise<void> {
   await server.app.db.insert(games).values({
     name: slug,
     slug,
+    searchText: slug,
     coverUrl: `https://example.com/${slug}.webp`,
     thumbnailUrl: `https://example.com/${slug}.webp`,
     minPlayers: 2,
@@ -98,8 +99,8 @@ describe('PostgreSQL 16 harness', () => {
 
     expect(Math.floor(Number(version.rows[0]?.server_version_num) / 10_000)).toBe(16)
     // CCC-89 adds 0005 (slug is no longer the game identity), on top of CCC-88's 0004;
-    // #98 adds 0006 (platforms).
-    expect(Number(migrations.rows[0]?.total)).toBe(7)
+    // #98 adds 0006 (platforms); #100 adds 0007 (aliases and search text).
+    expect(Number(migrations.rows[0]?.total)).toBe(8)
     expect(gameCount?.total).toBe(0)
   })
 

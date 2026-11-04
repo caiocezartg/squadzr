@@ -38,7 +38,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       tags: ['Games'],
       summary: 'Search games',
       description:
-        'Returns Listed Games whose name contains the search text, name-prefix matches first, then by popularity. Without a search it returns the Featured Games in featured order, then the other Listed Games by popularity.',
+        'Returns Listed Games whose name or alias matches the search text, ignoring case, accents and punctuation, and tolerating an incomplete term or a wrong letter from three letters on. An exact name or alias comes first, then a name that starts with the text, one that contains it and the similar ones, ties by popularity. Without a usable search (absent, blank or only punctuation) it returns the Featured Games in featured order, then the other Listed Games by popularity. A search is at most 100 characters.',
       querystring: gamesQuerySchema,
       response: {
         200: gamesResponseSchema,

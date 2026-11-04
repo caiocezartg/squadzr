@@ -5,8 +5,9 @@ import { get, insertGame } from '@test/harness/rooms'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
 // CCC-63: the games routes answer through use cases; an unknown game is 404 GAME_NOT_FOUND.
-// CCC-93: GET /api/games searches Listed Games, ranks prefix matches first and
-// escapes the LIKE wildcards; GET /api/games/:id still answers for a delisted Game.
+// CCC-93: GET /api/games searches Listed Games; GET /api/games/:id still answers for a delisted Game.
+// #100: the search ignores case, accents and punctuation, matches aliases and
+// tolerates a typo; a term made only of punctuation lists the suggestions.
 
 let server: TestServer
 
@@ -110,15 +111,15 @@ describe('GET /api/games', () => {
     expect(await searchGames('?search=')).toEqual(['Popular Game', 'Quiet Game'])
   })
 
-  it('ranks name-prefix matches first, then popularity, name and id', async () => {
+  it('ranks an exact name, then a name prefix, then a contained term, then popularity, name and id', async () => {
     await insertGame(server, { name: 'Pro League', popularity: 100 })
     await insertGame(server, { name: 'League of Legends', popularity: 10 })
     await insertGame(server, { name: 'League', popularity: 1 })
     await insertGame(server, { name: 'Arena League', popularity: 5 })
 
     expect(await searchGames('?search=league')).toEqual([
-      'League of Legends',
       'League',
+      'League of Legends',
       'Pro League',
       'Arena League',
     ])
@@ -131,7 +132,67 @@ describe('GET /api/games', () => {
     expect(await searchGames('?search=legends')).toEqual(['Alpha Legends', 'Zeta Legends'])
   })
 
-  it('matches %, _ and the escape character literally', async () => {
+  it('ignores punctuation in the name and in the term', async () => {
+    await insertGame(server, { name: 'Counter-Strike 2' })
+    await insertGame(server, { name: 'Call of Duty: Modern Warfare' })
+
+    expect(await searchGames('?search=counter%20strike')).toEqual(['Counter-Strike 2'])
+    expect(await searchGames('?search=COUNTER-STRIKE')).toEqual(['Counter-Strike 2'])
+    expect(await searchGames('?search=duty%20modern%20%20warfare')).toEqual([
+      'Call of Duty: Modern Warfare',
+    ])
+  })
+
+  it('ignores accents in the name and in the term', async () => {
+    await insertGame(server, { name: 'Pokémon UNITE' })
+
+    expect(await searchGames('?search=pokemon')).toEqual(['Pokémon UNITE'])
+    expect(await searchGames('?search=Pok%C3%A9mon')).toEqual(['Pokémon UNITE'])
+  })
+
+  it('finds a game by its alias and ranks the alias match first', async () => {
+    await insertGame(server, { name: 'Lollipop Chainsaw', popularity: 500 })
+    await insertGame(server, { name: 'Game of Lolz', popularity: 400 })
+    await insertGame(server, { name: 'League of Legends', popularity: 1, aliases: ['LoL'] })
+
+    expect(await searchGames('?search=lol')).toEqual([
+      'League of Legends',
+      'Lollipop Chainsaw',
+      'Game of Lolz',
+    ])
+    expect(await searchGames('?search=LOL')).toEqual([
+      'League of Legends',
+      'Lollipop Chainsaw',
+      'Game of Lolz',
+    ])
+  })
+
+  it('finds a game by an alias with digits and by a multi-word alias', async () => {
+    await insertGame(server, { name: 'Counter-Strike 2', aliases: ['cs2', 'cs'] })
+    await insertGame(server, { name: 'Grand Theft Auto Online', aliases: ['gta online'] })
+
+    expect(await searchGames('?search=cs2')).toEqual(['Counter-Strike 2'])
+    expect(await searchGames('?search=cs')).toEqual(['Counter-Strike 2'])
+    expect(await searchGames('?search=GTA-Online')).toEqual(['Grand Theft Auto Online'])
+  })
+
+  it('tolerates an incomplete term by similarity, after the games that match by text', async () => {
+    await insertGame(server, { name: 'Valorant', popularity: 1000 })
+    await insertGame(server, { name: 'Valorat Quest', popularity: 1 })
+    await insertGame(server, { name: 'Dota 2', popularity: 5000 })
+
+    expect(await searchGames('?search=valorat')).toEqual(['Valorat Quest', 'Valorant'])
+  })
+
+  it('does not use similarity for a term of one or two letters', async () => {
+    await insertGame(server, { name: 'Dota 2' })
+    await insertGame(server, { name: 'Valorant' })
+
+    expect(await searchGames('?search=do')).toEqual(['Dota 2'])
+    expect(await searchGames('?search=vl')).toEqual([])
+  })
+
+  it('treats %, _ and the escape character as punctuation, never as wildcards', async () => {
     await insertGame(server, { name: '100% Cup' })
     await insertGame(server, { name: '100 Cups' })
     await insertGame(server, { name: 'half_life' })
@@ -139,12 +200,21 @@ describe('GET /api/games', () => {
     await insertGame(server, { name: 'back\\slash' })
     await insertGame(server, { name: 'backslash' })
 
-    expect(await searchGames('?search=100%25')).toEqual(['100% Cup'])
-    expect(await searchGames('?search=half_life')).toEqual(['half_life'])
-    expect(await searchGames('?search=back%5Cslash')).toEqual(['back\\slash'])
-    // A bare wildcard must not match every game.
-    expect(await searchGames('?search=%25')).toEqual(['100% Cup'])
-    expect(await searchGames('?search=_')).toEqual(['half_life'])
+    expect((await searchGames('?search=100%25')).sort()).toEqual(['100 Cups', '100% Cup'])
+    expect((await searchGames('?search=half_life'))[0]).toBe('half_life')
+    expect((await searchGames('?search=back%5Cslash'))[0]).toBe('back\\slash')
+  })
+
+  it('answers the suggestions for a term made only of punctuation', async () => {
+    await insertGame(server, { name: 'Popular Game', popularity: 10 })
+    await insertGame(server, { name: 'Featured Game', popularity: 0, featuredRank: 1 })
+    await insertGame(server, { name: 'Quiet Game', popularity: 1 })
+    const suggestions = ['Featured Game', 'Popular Game', 'Quiet Game']
+
+    expect(await searchGames('')).toEqual(suggestions)
+    expect(await searchGames('?search=%25')).toEqual(suggestions)
+    expect(await searchGames('?search=_')).toEqual(suggestions)
+    expect(await searchGames('?search=%25_%5C')).toEqual(suggestions)
   })
 
   it('returns only Listed Games', async () => {
@@ -167,6 +237,15 @@ describe('GET /api/games', () => {
 
     const fifty = await searchGames('?limit=50')
     expect(fifty).toHaveLength(22)
+  })
+
+  it('rejects a search longer than 100 characters after the trim with 400 VALIDATION_ERROR', async () => {
+    const response = await get(server, `/api/games?search=%20${'a'.repeat(101)}%20`)
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'VALIDATION_ERROR', message: expect.any(String) })
+
+    expect((await get(server, `/api/games?search=${'a'.repeat(100)}`)).statusCode).toBe(200)
   })
 
   it.each(['limit=0', 'limit=51', 'limit=1.5', 'limit=many'])(
