@@ -58,6 +58,13 @@ pages that share one window although the clock moves between them; the import en
 falling back to the default, negative and fractional values refused for both variables and `0` accepted for the
 hype threshold. The other workspaces keep the counts below.
 
+Issue #109 (one search normalization in `@squadzr/schemas`) moves `normalizeSearchText` and its spec out of the
+server and the client. `schemas:unit` gains `search-text.spec.ts` (+1 file / +16 tests: the folding examples,
+the text made only of punctuation and idempotence), `server:unit` loses the same 16 cases from
+`search-text.spec.ts` (`normalizeAliases` and `buildSearchText` stay) and `client:unit` loses its 16 copies,
+while its `foldWithOrigins` case ties `foldWithOrigins(x).text` to the shared function for 21 texts instead
+of 10 (+11), so the client nets −5. File counts of `server:unit` and `client:unit` stay.
+
 Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
 `client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.
 `schemas:unit` (5 / 168) covers the platform list, its labels, the IGDB id map and its mapping helper, the

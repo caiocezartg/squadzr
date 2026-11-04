@@ -1,5 +1,5 @@
+import { normalizeSearchText } from '@squadzr/schemas'
 import { describe, expect, it } from 'vitest'
-import { normalizeSearchText } from '@domain/services/search-text'
 import { CURATED_GAMES } from './curated-games'
 import { GAME_ALIASES } from './game-aliases'
 
