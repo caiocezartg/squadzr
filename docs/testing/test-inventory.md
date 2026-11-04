@@ -23,7 +23,7 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 293   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 312   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 379   |
 | `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 88     | 953   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 169   |
@@ -31,10 +31,10 @@ inventory (see the equivalence proof below).
 
 Issue #100 (Game Search by acronym and nickname) adds two server unit files, `search-text.spec.ts` and
 `game-aliases.spec.ts`, and extends the IGDB adapter suite, so `server:unit` goes from 37 files / 264 tests
-to 39 / 293. `search-text.spec.ts` covers `normalizeSearchText` (accents, case, punctuation, repeated spaces,
+to 39 / 312. `search-text.spec.ts` covers `normalizeSearchText` (accents, case, punctuation, repeated spaces,
 text made only of punctuation, idempotence), `normalizeAliases` and `buildSearchText`; `game-aliases.spec.ts`
 pins the manual alias map (unique ids, non-empty and already normalized aliases, none equal to the game's
-name, and "mw4" mapped to Modern Warfare 4); the adapter suite adds `alternative_names` asked for, present, empty, absent, blank and malformed.
+name, and "mw4" mapped to Modern Warfare 4); the adapter suite adds `alternative_names` asked for, present, empty, absent, blank and malformed, and (#106) drops the executable names and paths (`isSearchableAlternativeName`, 18 cases plus the four examples of the issue read through the adapter).
 `server:integration` goes from 362 to 379 tests and from 35 to 36 files: `games-http` is rewritten for the
 folded search (accents and punctuation, aliases first, similarity after text, no similarity under three
 letters, the 0.7 bar for three or four letters against 0.5 from five (#104), the LIKE wildcards as punctuation, suggestions for a term made only of punctuation, 400 above 100

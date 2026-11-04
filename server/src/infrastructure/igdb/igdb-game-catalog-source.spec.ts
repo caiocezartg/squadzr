@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FakeClock } from '@test/harness/clock'
 import recordedPage from '@test/fixtures/igdb-recorded-page.json'
-import { IgdbGameCatalogSource, IgdbRequestError } from './igdb-game-catalog-source'
+import {
+  IgdbGameCatalogSource,
+  IgdbRequestError,
+  isSearchableAlternativeName,
+} from './igdb-game-catalog-source'
 
 // CCC-90: the IGDB adapter is the only code that talks to IGDB. These tests stub
 // `fetch` (as the Discord sign-in suite does) and inject a clock, so neither the
@@ -356,6 +360,32 @@ describe('IgdbGameCatalogSource', () => {
     ])
   })
 
+  it('drops executable names and paths from the alternative names, and keeps the acronyms', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL
+        ? tokenResponse()
+        : Response.json([
+            game({
+              id: 94,
+              alternative_names: [
+                { id: 1, name: 'CS2' },
+                { id: 2, name: 'cs2.exe' },
+                { id: 3, name: 'RainbowSix.exe' },
+                { id: 4, name: 'R6S' },
+                { id: 5, name: 'DeadByDaylight.exe' },
+                { id: 6, name: 'DBD' },
+                { id: 7, name: 'TslGame\\Binaries\\Win64\\ExecPubg.exe' },
+                { id: 8, name: ' Steam/Linux.sh ' },
+              ],
+            }),
+          ])
+    )
+
+    const { candidates } = await harness.source.fetchCandidates()
+
+    expect(candidates[0]?.aliases).toEqual(['CS2', 'R6S', 'DBD'])
+  })
+
   it('fails the run when a games page carries a malformed alternative_names list', async () => {
     const harness = createHarness((request) =>
       request.url === TOKEN_URL
@@ -625,5 +655,32 @@ describe('IgdbGameCatalogSource', () => {
     )
 
     await expect(harness.source.fetchCandidates()).rejects.toThrow('Invalid IGDB games page')
+  })
+})
+
+// #106: IGDB lists executable names and paths as alternative names; they are not aliases a
+// player types.
+describe('isSearchableAlternativeName', () => {
+  it.each(['CS2', 'R6S', 'DBD', 'GTA Online', 'Half-Life 2: Episode 1', 'Mac.App Store', 'sh'])(
+    'keeps %s',
+    (name) => {
+      expect(isSearchableAlternativeName(name)).toBe(true)
+    }
+  )
+
+  it.each([
+    'cs2.exe',
+    'RainbowSix.exe',
+    'DeadByDaylight.exe',
+    'TslGame\\Binaries\\Win64\\ExecPubg.exe',
+    'GAME.EXE',
+    'Game.App',
+    'installer.bin',
+    'launch.sh',
+    'Fate/Grand Order',
+    'C:\\Games\\Foo',
+    'bin/foo',
+  ])('drops %s', (name) => {
+    expect(isSearchableAlternativeName(name)).toBe(false)
   })
 })

@@ -88,11 +88,26 @@ function toMultiplayerCapacity(game: IgdbGame): GameMultiplayerCapacity {
   }
 }
 
-/** The non-blank alternative names IGDB lists for a game; empty when the field is absent. */
+const EXECUTABLE_NAME = /\.(?:exe|app|bin|sh)$/i
+const PATH_SEPARATOR = /[\\/]/
+
+/**
+ * Whether an IGDB alternative name is something a player would type. IGDB also
+ * lists executable names ("cs2.exe") and paths ("TslGame\Binaries\Win64\ExecPubg.exe"),
+ * which would only bloat a Game's search text.
+ */
+export function isSearchableAlternativeName(name: string): boolean {
+  return !EXECUTABLE_NAME.test(name) && !PATH_SEPARATOR.test(name)
+}
+
+/**
+ * The non-blank alternative names IGDB lists for a game, trimmed and without the
+ * executable names and paths; empty when the field is absent.
+ */
 function toAliases(game: IgdbGame): string[] {
   return (game.alternative_names ?? [])
     .map((alternative) => alternative.name?.trim() ?? '')
-    .filter((name) => name !== '')
+    .filter((name) => name !== '' && isSearchableAlternativeName(name))
 }
 
 /** A candidate before the popularity signals are fetched for it. */

@@ -37,7 +37,7 @@ The public data Discord holds for the invite of a Ready Squad: its server's name
 _Avoid_: Server info, invite metadata, Discord card
 
 **Game**:
-A multiplayer title in the Game Catalog that a Squad can be formed for. Its squad size and featured placement follow the Catalog Import's curated rules, not the raw source data, and its Platforms are the supported ones the source lists for it. It also carries aliases, the nicknames and acronyms (IGDB's alternative names plus a manual list) that Game Search matches next to its name.
+A multiplayer title in the Game Catalog that a Squad can be formed for. Its squad size and featured placement follow the Catalog Import's curated rules, not the raw source data, and its Platforms are the supported ones the source lists for it. It also carries aliases, the nicknames and acronyms (IGDB's alternative names, without the executable names and paths it also lists, plus a manual list) that Game Search matches next to its name.
 _Avoid_: Title, product, game entry
 
 **Game Catalog**:
