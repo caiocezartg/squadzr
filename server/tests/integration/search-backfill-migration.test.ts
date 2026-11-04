@@ -112,4 +112,26 @@ describe('search text backfill (#100)', () => {
     )
     expect(rows).toEqual([{ search_text: 'pokemon go', aliases: [] }])
   })
+
+  it('leaves search_text without a default and indexes it with gin_trgm_ops', async () => {
+    const files = migrationFiles()
+    for (const file of files.slice(0, files.indexOf(SEARCH_MIGRATION) + 1)) {
+      await applyMigration(client, file)
+    }
+
+    // The default only fed the backfill; a new row must say its search text.
+    const column = await client.query<{ column_default: string | null; is_nullable: string }>(
+      `SELECT column_default, is_nullable FROM information_schema.columns
+       WHERE table_name = 'games' AND column_name = 'search_text'`
+    )
+    expect(column.rows).toEqual([{ column_default: null, is_nullable: 'NO' }])
+
+    const index = await client.query<{ indexdef: string }>(
+      `SELECT indexdef FROM pg_indexes
+       WHERE tablename = 'games' AND indexname = 'games_search_text_trgm_idx'`
+    )
+    expect(index.rows).toHaveLength(1)
+    expect(index.rows[0]?.indexdef).toContain('USING gin')
+    expect(index.rows[0]?.indexdef).toContain('gin_trgm_ops')
+  })
 })

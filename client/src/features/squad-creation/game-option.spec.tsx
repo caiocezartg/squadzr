@@ -61,6 +61,13 @@ describe('game option highlight', () => {
     expect(highlighted(renderOption(gameLol, 'lol'))).toBeNull()
   })
 
+  it('highlights nothing in "Valorant" for "valorat", which matched by similarity', () => {
+    const option = renderOption({ ...gameLol, name: 'Valorant' }, 'valorat')
+
+    expect(option).toHaveTextContent('Valorant')
+    expect(highlighted(option)).toBeNull()
+  })
+
   it('highlights nothing without a term', () => {
     expect(highlighted(renderOption(gameLol, ''))).toBeNull()
   })

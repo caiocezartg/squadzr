@@ -39,8 +39,8 @@ const LONG_TERM_LENGTH = 5
 
 /**
  * The `word_similarity` threshold for a normalized term, or `null` when the term
- * matches by text only. It counts characters, not UTF-16 units: an emoji or a
- * rare ideograph is one letter.
+ * matches by text only. It counts characters, not UTF-16 units: a rare ideograph
+ * outside the Basic Multilingual Plane (an astral character, such as 𠀀) is one letter.
  */
 function similarityThresholdFor(term: string): number | null {
   const length = [...term].length

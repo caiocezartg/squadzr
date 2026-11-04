@@ -51,7 +51,7 @@ function decompose(original: string): Piece[] {
  * Folds like {@link normalizeSearchText} and remembers where each character came from. Lowercasing
  * runs on the whole text, as on the server, because a few letters depend on their neighbours.
  */
-function foldWithOrigins(original: string): FoldedText {
+export function foldWithOrigins(original: string): FoldedText {
   const pieces = decompose(original)
   const lowered = [
     ...pieces

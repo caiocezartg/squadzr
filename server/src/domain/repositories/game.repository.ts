@@ -20,9 +20,10 @@ export interface IGameRepository {
   /**
    * Listed Games only. With `search`: the term, the names and the aliases are
    * folded (no case, accents or punctuation); a Game matches when its text
-   * contains the term or, from three letters on, is similar to it. Ranked exact
-   * name or alias, name prefix, contains, similarity only, then popularity, name
-   * and id. Without a term (absent, blank or only punctuation): featured rank
+   * contains the term or is similar to it: 1 to 2 characters never use
+   * similarity, 3 to 4 need a `word_similarity` of 0.7, 5 or more need 0.5.
+   * Ranked exact name or alias, name prefix, contains, similarity only, then
+   * popularity, name and id. Without a term (absent, blank or only punctuation): featured rank
    * (unranked last), then popularity.
    */
   search(input: SearchGamesInput): Promise<Game[]>

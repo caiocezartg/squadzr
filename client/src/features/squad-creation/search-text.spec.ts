@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findMatchRange, normalizeSearchText } from './search-text'
+import { findMatchRange, foldWithOrigins, normalizeSearchText } from './search-text'
 
 // #105: the client folds a game name and the typed term like the server's Game Search does, to
 // highlight the part of the name that answers the term. The folding examples are the server's
@@ -38,6 +38,23 @@ function matched(name: string, term: string): string | null {
   return range ? name.slice(range[0], range[1]) : null
 }
 
+describe('foldWithOrigins', () => {
+  it.each([
+    'Counter-Strike 2',
+    'Pokémon UNITE',
+    '  League   of \t Legends  ',
+    'Fﬁnal Fantasy',
+    '𠀀 Valorant',
+    '𝐀rena',
+    'ＬＯＬ Arena',
+    '--half_life!!',
+    '%_\\',
+    '',
+  ])('folds %j to the same text as normalizeSearchText', (input) => {
+    expect(foldWithOrigins(input).text).toBe(normalizeSearchText(input))
+  })
+})
+
 describe('findMatchRange', () => {
   it.each([
     ['Pokémon Go', 'pokemon', 'Pokémon'],
@@ -52,6 +69,9 @@ describe('findMatchRange', () => {
     ['Ünïcödé Ñandú', 'unicode', 'Ünïcödé'],
     ['ＬＯＬ Arena', 'lol', 'ＬＯＬ'],
     ['Dota 2', '2', '2'],
+    ['Fﬁnal Fantasy', 'final', 'ﬁnal'],
+    ['𠀀 Valorant', 'valorant', 'Valorant'],
+    ['𝐀rena', 'rena', 'rena'],
   ])('marks %j for %j as %j', (name, term, expected) => {
     expect(matched(name, term)).toBe(expected)
   })
