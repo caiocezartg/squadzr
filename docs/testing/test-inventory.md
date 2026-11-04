@@ -23,7 +23,7 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 312   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 317   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 380   |
 | `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 90     | 1011  |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 169   |
@@ -48,6 +48,15 @@ pooled connection as it found it (on a one-connection pool, after the session wa
 server's folding examples, `foldWithOrigins(x).text` tied to `normalizeSearchText(x)` for ten texts, and the part of a name a term matches, with offsets into the original name, including a ligature and astral characters),
 `game-option.spec.tsx` ("pokemon" highlights "Pokémon", "counter strike" highlights "Counter-Strike", "lol" highlights
 nothing in "League of Legends" or in "Valorant" found by similarity) and `create-squad.spec.tsx` (the search field's `maxlength`).
+
+Issue #101 (recent releases enter on hype) adds no file, so every file count stays. `server:unit` goes from 312 to
+317 tests: the IGDB adapter suite (`igdb-game-catalog-source.spec.ts`, +2) checks the `(total_rating_count … |
+(first_release_date … & hypes …))` group with the window start computed by the `FakeClock` (180 days before
+`NOW`) and the injected hype threshold, the threshold `0`, the curated query without the new filters and two
+pages that share one window although the clock moves between them; the import environment suite
+(`catalog-import-env.spec.ts`, +3) checks the default of each threshold, the explicit values, an empty value
+falling back to the default, negative and fractional values refused for both variables and `0` accepted for the
+hype threshold. The other workspaces keep the counts below.
 
 Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
 `client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.

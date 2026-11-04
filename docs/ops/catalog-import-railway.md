@@ -24,7 +24,8 @@ changes never deploy or run the import. Railway runs cron schedules in UTC.
 Besides the games pages, each run calls IGDB's `popularity_primitives` endpoint once per batch of
 250 candidates to read the Playing and Steam Peak signals behind the stored popularity: about 7
 extra requests at the current catalog size (each batch is paged, so a batch past 500 rows costs one
-more), through the same pacer (4 requests per second) and retry as the games pages. The run still uses one Twitch token and no new variable.
+more), through the same pacer (4 requests per second) and retry as the games pages. The run still
+uses one Twitch token and no new variable.
 
 It uses Railway Infrastructure as Code rather than the older Config as Code (`railway.json` with a
 per-service config path): Railway deprecated Config as Code, new services cannot opt in, and the
@@ -89,10 +90,17 @@ a key entered as ` IGDB_CLIENT_ID` (leading space) is a different variable, so t
 variables … expected string, received undefined`. That mistake happened once while setting the
 owner's credentials; check the key names in the Variables tab when a run fails that way.
 
-`IGDB_POPULARITY_THRESHOLD` and `CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK` stay unset, so the import
-uses its defaults (threshold 50, fraction check on). The credentials live only in Railway: rotate
-them in the Twitch developer console and update the two variables; never commit them. Railway's own
-platform variables are injected by the platform and are not user configuration.
+`IGDB_POPULARITY_THRESHOLD`, `IGDB_HYPE_THRESHOLD` and `CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK` stay
+unset, so the import uses its defaults (rating threshold 50, hype threshold 50, fraction check on).
+`IGDB_HYPE_THRESHOLD` is the minimum IGDB `hypes` that lets a game released in the last 180 days
+enter the catalog before it reaches the rating threshold; `0` means no hype floor among the games
+that have `hypes`, and a release without `hypes` enters only through the rating count. A game that
+is still under the rating threshold 180 days after its release leaves the catalog on the next run,
+as any delisted game does. The popularity formula does not change, but the stored values shift a
+little when the candidate list grows or shrinks, because each game's percentile is computed among
+the candidates of that run. The credentials live only in Railway: rotate them in the Twitch
+developer console and update the two variables; never commit them. Railway's own platform
+variables are injected by the platform and are not user configuration.
 
 The Postgres service's `POSTGRES_PASSWORD` is `preserve()`d by the authoring file: the owner sets it
 once in Railway and no secret enters the repository.
@@ -147,13 +155,18 @@ completed run, which is the cleanest way to read one run without the neighbourin
 ## Narrow the catalog on purpose
 
 The default run refuses to shrink the catalog below half of today's Listed Games, and always refuses
-fewer than 10 candidates. To deliberately narrow it, raise the threshold and bypass only the fraction
-check for that run. Set both keys in one call so Railway redeploys once with both values:
+fewer than 10 candidates. To deliberately narrow it, raise `IGDB_POPULARITY_THRESHOLD` and bypass
+only the fraction check for that run. Set both keys in one call so Railway redeploys once with both
+values:
 
 ```sh
 railway variable set IGDB_POPULARITY_THRESHOLD=120 CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK=true \
   --service games-import
 ```
+
+Raising only `IGDB_POPULARITY_THRESHOLD` still lets in the games released in the last 180 days that
+pass `IGDB_HYPE_THRESHOLD`. To cut those too, raise `IGDB_HYPE_THRESHOLD` as well (for example to
+100) in the same call.
 
 Wait for the redeploy that the change triggers before starting a run:
 
@@ -182,7 +195,7 @@ and `delete` calls and finish with a single `railway redeploy --service games-im
 that deployment the same way.
 
 The override never bypasses the absolute floor, and the import is idempotent: re-running with the
-previous threshold brings the dropped games back as `relisted`.
+previous thresholds brings the dropped games back as `relisted`.
 
 ## Backups (known limitation: not enabled)
 
@@ -207,6 +220,11 @@ entry must be listed for the backup requirement to hold.
 The pre-deploy command applies the checked-in migrations with the runtime entry point
 (`server/src/interface/scripts/migrate.ts`, no `drizzle-kit`) before the import container starts. It
 runs against the same `DATABASE_URL` and is safe to run repeatedly.
+
+After a deploy whose migration touches Game Search, such as `0007` (issue #100), run the import with
+`railway cron run` or wait for the day's run. The migration backfills `search_text` with
+`[:alnum:]`, which does not cover multibyte letters under the `C` locale, so games with Cyrillic or
+CJK names stay unsearchable until the import rewrites their rows with `normalizeSearchText`.
 
 When the API is hosted on Railway, the migrations move to the API service's pre-deploy command and
 the `preDeployCommand` entry leaves this authoring file: exactly one service owns schema changes.

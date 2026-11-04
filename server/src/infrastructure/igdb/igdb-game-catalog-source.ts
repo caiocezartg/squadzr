@@ -23,6 +23,7 @@ import {
   IGDB_POPULARITY_BATCH_SIZE,
   IGDB_POPULARITY_TYPE_PLAYING,
   IGDB_POPULARITY_TYPE_STEAM_PEAK,
+  recentReleaseWindowStart,
 } from '@infrastructure/igdb/igdb-queries'
 import { RequestPacer, defaultSleep, type Sleep } from '@infrastructure/igdb/request-pacer'
 
@@ -42,7 +43,13 @@ export interface IgdbGameCatalogSourceOptions {
   readonly clientSecret: string
   /** Minimum `total_rating_count` for a non-curated game. */
   readonly popularityThreshold: number
-  /** Curated games fetched by id even when they miss the threshold. */
+  /**
+   * Minimum `hypes` for a non-curated game released in the last 180 days to enter
+   * without reaching `popularityThreshold`; 0 is no floor among the games that have
+   * `hypes`, and a release without `hypes` enters only through the rating count.
+   */
+  readonly hypeThreshold: number
+  /** Curated games fetched by id even when they miss both thresholds. */
   readonly curatedIgdbIds: readonly number[]
   readonly clock: Clock
   readonly fetch?: typeof globalThis.fetch
@@ -167,7 +174,8 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
   async fetchCandidates(): Promise<GameCatalogFetchResult> {
     this.invalidCandidates = 0
     const accessToken = await this.requestAccessToken()
-    const filtered = await this.fetchFilteredGames(accessToken)
+    const releasedBefore = this.options.clock.now()
+    const filtered = await this.fetchFilteredGames(accessToken, releasedBefore)
     const curated = await this.fetchCuratedGames(accessToken)
 
     const byIgdbId = new Map<number, CandidateWithoutSignals>()
@@ -207,14 +215,20 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
     return parsed.data.access_token
   }
 
-  /** Walks the candidate query in pages of 500 until a short page. */
-  private async fetchFilteredGames(accessToken: string): Promise<IgdbGame[]> {
+  /**
+   * Walks the candidate query in pages of 500 until a short page. The run's single
+   * `releasedBefore` fixes the recent-release window, so every page filters alike.
+   */
+  private async fetchFilteredGames(accessToken: string, releasedBefore: Date): Promise<IgdbGame[]> {
     const games: IgdbGame[] = []
+    const recentReleaseSince = recentReleaseWindowStart(releasedBefore)
 
     for (let offset = 0; ; offset += IGDB_PAGE_SIZE) {
       const query = buildGamesPageQuery({
-        threshold: this.options.popularityThreshold,
-        releasedBefore: this.options.clock.now(),
+        popularityThreshold: this.options.popularityThreshold,
+        hypeThreshold: this.options.hypeThreshold,
+        recentReleaseSince,
+        releasedBefore,
         offset,
       })
       const page = await this.requestGamesPage(accessToken, query)
@@ -223,7 +237,7 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
     }
   }
 
-  /** The curated ids in one explicit query, bypassing the threshold. */
+  /** The curated ids in one explicit query, bypassing the thresholds. */
   private async fetchCuratedGames(accessToken: string): Promise<IgdbGame[]> {
     if (this.options.curatedIgdbIds.length === 0) return []
     const query = buildCuratedGamesQuery(this.options.curatedIgdbIds)

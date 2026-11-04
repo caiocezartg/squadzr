@@ -13,6 +13,9 @@ import {
 
 const NOW = new Date('2026-10-23T12:00:00.000Z')
 const RELEASED_BEFORE_SECONDS = Math.floor(NOW.getTime() / 1000)
+const DAY_MS = 24 * 60 * 60 * 1000
+// #101: the recent-release window opens 180 days before the run's `NOW`.
+const RECENT_RELEASE_SINCE_SECONDS = Math.floor((NOW.getTime() - 180 * DAY_MS) / 1000)
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
 const GAMES_URL = 'https://api.igdb.com/v4/games'
 const PRIMITIVES_URL = 'https://api.igdb.com/v4/popularity_primitives'
@@ -28,7 +31,8 @@ type Responder = (request: RecordedRequest, index: number) => Response | Promise
 
 interface HarnessOptions {
   readonly curatedIgdbIds?: readonly number[]
-  readonly threshold?: number
+  readonly popularityThreshold?: number
+  readonly hypeThreshold?: number
   /** Answers the popularity primitives requests; no signals by default. */
   readonly primitives?: Responder
 }
@@ -75,7 +79,8 @@ function createHarness(respond: Responder, options: HarnessOptions = {}) {
   const source = new IgdbGameCatalogSource({
     clientId: 'test-client-id',
     clientSecret: 'test-client-secret',
-    popularityThreshold: options.threshold ?? 42,
+    popularityThreshold: options.popularityThreshold ?? 42,
+    hypeThreshold: options.hypeThreshold ?? 30,
     curatedIgdbIds: options.curatedIgdbIds ?? [],
     clock,
     sleep: async (ms) => {
@@ -243,7 +248,7 @@ describe('IgdbGameCatalogSource', () => {
     expect(attempts).toBe(1)
   })
 
-  it('sends the filter, the threshold and the curated ids in the IGDB query', async () => {
+  it('sends the filter, the thresholds and the curated ids in the IGDB query', async () => {
     const harness = createHarness(
       (request) => {
         if (request.url === TOKEN_URL) return tokenResponse()
@@ -251,7 +256,7 @@ describe('IgdbGameCatalogSource', () => {
           ? Response.json([game({ id: 1036, name: 'Curated Game', slug: 'curated-game' })])
           : Response.json([])
       },
-      { threshold: 42, curatedIgdbIds: [1036, 235_288] }
+      { popularityThreshold: 42, hypeThreshold: 30, curatedIgdbIds: [1036, 235_288] }
     )
 
     const { candidates } = await harness.source.fetchCandidates()
@@ -263,14 +268,55 @@ describe('IgdbGameCatalogSource', () => {
     expect(bodyOf(filtered!)).toContain('cover != null')
     expect(bodyOf(filtered!)).toContain('slug != null')
     expect(bodyOf(filtered!)).toContain(`first_release_date < ${RELEASED_BEFORE_SECONDS}`)
-    expect(bodyOf(filtered!)).toContain('total_rating_count >= 42')
+    expect(bodyOf(filtered!)).toContain(
+      `(total_rating_count >= 42 | (first_release_date >= ${RECENT_RELEASE_SINCE_SECONDS} & hypes >= 30))`
+    )
     expect(bodyOf(filtered!)).toContain('limit 500;')
     expect(bodyOf(filtered!)).toContain('sort id asc;')
 
     expect(bodyOf(curated!)).toContain('where id = (1036,235288);')
     expect(bodyOf(curated!)).not.toContain('total_rating_count >=')
+    expect(bodyOf(curated!)).not.toContain('hypes')
+    expect(bodyOf(curated!)).not.toContain('first_release_date >=')
 
     expect(candidates.map((candidate) => candidate.igdbId)).toEqual([1036])
+  })
+
+  it('sends a hype threshold of 0 as the floor of the window, admitting every recent release that has hypes', async () => {
+    const harness = createHarness(
+      (request) => (request.url === TOKEN_URL ? tokenResponse() : Response.json([])),
+      { hypeThreshold: 0 }
+    )
+
+    await harness.source.fetchCandidates()
+
+    expect(bodyOf(gamesRequests(harness.requests)[0]!)).toContain(
+      `(first_release_date >= ${RECENT_RELEASE_SINCE_SECONDS} & hypes >= 0)`
+    )
+  })
+
+  it('reads the clock once per run, so every page filters on the same window', async () => {
+    const firstPage = Array.from({ length: PAGE_SIZE }, (_, index) =>
+      game({ id: 6000 + index, name: `Game ${6000 + index}`, slug: `game-${6000 + index}` })
+    )
+    const harness = createHarness((request) => {
+      if (request.url === TOKEN_URL) return tokenResponse()
+      const isFirstPage = bodyOf(request).includes('offset 0;')
+      // Time moves on between the pages; the second one must not see it.
+      if (isFirstPage) harness.clock.advance(2 * DAY_MS)
+      return isFirstPage ? Response.json(firstPage) : Response.json([game({ id: 9998 })])
+    })
+
+    await harness.source.fetchCandidates()
+
+    const pages = gamesRequests(harness.requests)
+    expect(pages).toHaveLength(2)
+    for (const page of pages) {
+      expect(bodyOf(page)).toContain(`first_release_date < ${RELEASED_BEFORE_SECONDS} &`)
+      expect(bodyOf(page)).toContain(
+        `(first_release_date >= ${RECENT_RELEASE_SINCE_SECONDS} & hypes >= 30)`
+      )
+    }
   })
 
   it('maps a recorded page and counts the candidates missing their name, slug or cover', async () => {
