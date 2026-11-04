@@ -94,9 +94,10 @@ unset, so the import uses its defaults (rating threshold 50, hype threshold 50, 
 `IGDB_HYPE_THRESHOLD` is the minimum IGDB `hypes` that lets a game released in the last 180 days
 enter the catalog before it reaches the rating threshold; `0` means no hype floor, so every release
 of the window that passes the other filters enters. A game that is still under the rating threshold
-180 days after its release leaves the catalog on the next run, as any delisted game does. The credentials live only in Railway: rotate
-them in the Twitch developer console and update the two variables; never commit them. Railway's own
-platform variables are injected by the platform and are not user configuration.
+180 days after its release leaves the catalog on the next run, as any delisted game does. The
+credentials live only in Railway: rotate them in the Twitch developer console and update the two
+variables; never commit them. Railway's own platform variables are injected by the platform and are
+not user configuration.
 
 The Postgres service's `POSTGRES_PASSWORD` is `preserve()`d by the authoring file: the owner sets it
 once in Railway and no secret enters the repository.
@@ -151,13 +152,18 @@ completed run, which is the cleanest way to read one run without the neighbourin
 ## Narrow the catalog on purpose
 
 The default run refuses to shrink the catalog below half of today's Listed Games, and always refuses
-fewer than 10 candidates. To deliberately narrow it, raise the threshold and bypass only the fraction
-check for that run. Set both keys in one call so Railway redeploys once with both values:
+fewer than 10 candidates. To deliberately narrow it, raise `IGDB_POPULARITY_THRESHOLD` and bypass
+only the fraction check for that run. Set both keys in one call so Railway redeploys once with both
+values:
 
 ```sh
 railway variable set IGDB_POPULARITY_THRESHOLD=120 CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK=true \
   --service games-import
 ```
+
+Raising only `IGDB_POPULARITY_THRESHOLD` still lets in the games released in the last 180 days that
+pass `IGDB_HYPE_THRESHOLD`. To cut those too, raise `IGDB_HYPE_THRESHOLD` as well (for example to
+100) in the same call.
 
 Wait for the redeploy that the change triggers before starting a run:
 
@@ -186,7 +192,7 @@ and `delete` calls and finish with a single `railway redeploy --service games-im
 that deployment the same way.
 
 The override never bypasses the absolute floor, and the import is idempotent: re-running with the
-previous threshold brings the dropped games back as `relisted`.
+previous thresholds brings the dropped games back as `relisted`.
 
 ## Backups (known limitation: not enabled)
 

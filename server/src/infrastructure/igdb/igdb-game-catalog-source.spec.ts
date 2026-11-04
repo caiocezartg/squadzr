@@ -31,7 +31,7 @@ type Responder = (request: RecordedRequest, index: number) => Response | Promise
 
 interface HarnessOptions {
   readonly curatedIgdbIds?: readonly number[]
-  readonly threshold?: number
+  readonly popularityThreshold?: number
   readonly hypeThreshold?: number
   /** Answers the popularity primitives requests; no signals by default. */
   readonly primitives?: Responder
@@ -79,7 +79,7 @@ function createHarness(respond: Responder, options: HarnessOptions = {}) {
   const source = new IgdbGameCatalogSource({
     clientId: 'test-client-id',
     clientSecret: 'test-client-secret',
-    popularityThreshold: options.threshold ?? 42,
+    popularityThreshold: options.popularityThreshold ?? 42,
     hypeThreshold: options.hypeThreshold ?? 30,
     curatedIgdbIds: options.curatedIgdbIds ?? [],
     clock,
@@ -256,7 +256,7 @@ describe('IgdbGameCatalogSource', () => {
           ? Response.json([game({ id: 1036, name: 'Curated Game', slug: 'curated-game' })])
           : Response.json([])
       },
-      { threshold: 42, hypeThreshold: 30, curatedIgdbIds: [1036, 235_288] }
+      { popularityThreshold: 42, hypeThreshold: 30, curatedIgdbIds: [1036, 235_288] }
     )
 
     const { candidates } = await harness.source.fetchCandidates()

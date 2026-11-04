@@ -19,7 +19,7 @@ export const DEFAULT_IGDB_POPULARITY_THRESHOLD = 50
  */
 export const DEFAULT_IGDB_HYPE_THRESHOLD = 50
 
-function optionalThreshold(defaultValue: number) {
+function optionalThresholdSchema(defaultValue: number) {
   return z.preprocess(
     (value) => (value === '' ? undefined : value),
     z.coerce.number().int().min(0).default(defaultValue)
@@ -40,9 +40,9 @@ const catalogImportEnvSchema = z.object({
   DATABASE_URL: z.url(),
   IGDB_CLIENT_ID: z.string().min(1, 'IGDB_CLIENT_ID is required'),
   IGDB_CLIENT_SECRET: z.string().min(1, 'IGDB_CLIENT_SECRET is required'),
-  IGDB_POPULARITY_THRESHOLD: optionalThreshold(DEFAULT_IGDB_POPULARITY_THRESHOLD),
+  IGDB_POPULARITY_THRESHOLD: optionalThresholdSchema(DEFAULT_IGDB_POPULARITY_THRESHOLD),
   /** 0 means no hype floor: every release of the window that passes the other filters enters. */
-  IGDB_HYPE_THRESHOLD: optionalThreshold(DEFAULT_IGDB_HYPE_THRESHOLD),
+  IGDB_HYPE_THRESHOLD: optionalThresholdSchema(DEFAULT_IGDB_HYPE_THRESHOLD),
   CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK: optionalOverride,
 })
 
