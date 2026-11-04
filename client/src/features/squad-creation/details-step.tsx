@@ -83,6 +83,8 @@ export function DetailsStep({ selectedGame, onChangeGame }: DetailsStepProps) {
             render={({ field }) => (
               <ChoiceChips
                 labelledBy={ids.platform}
+                invalid={Boolean(errors.platform)}
+                describedBy={errors.platform ? ids.platformError : undefined}
                 options={selectedGame.platforms.map((platform) => ({
                   value: platform,
                   label: tPlatforms(platform),

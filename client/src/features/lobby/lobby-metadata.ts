@@ -1,6 +1,6 @@
 import 'server-only'
 import type { Metadata } from 'next'
-import type { PublicRoomDto } from '@squadzr/schemas'
+import { PLATFORM_LABELS, type PublicRoomDto } from '@squadzr/schemas'
 import messages from '@/locales/en.json'
 import { publicSquadSource } from './server-squad-source'
 import { readSquadDetails } from './squad-details'
@@ -39,10 +39,11 @@ function invitePreview(squad: PublicRoomDto): Metadata {
   }
 }
 
-/** The Squad's size, language and tags, in the order a visitor reads them. */
+/** The Squad's size, language, platform and tags, in the order a visitor reads them. */
 function describeSquad(squad: PublicRoomDto): string {
   const language = squad.language === 'pt-br' ? messages.languages.ptBr : messages.languages.enUs
   const parts = [`Up to ${squad.maxPlayers} players`, language]
+  if (squad.platform) parts.push(PLATFORM_LABELS[squad.platform])
   if (squad.tags.length > 0) parts.push(squad.tags.map((tag) => `#${tag}`).join(' '))
 
   return parts.join(' · ')

@@ -25,12 +25,12 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 37     | 264   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 35     | 362   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 87     | 945   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 88     | 949   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 168   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
-Issue #98 (a Squad's platform) recounts every row on the merged tree after #96 and adds no test file, so
-every file count stays and the test counts are the ones measured on `development` plus this change.
+Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
+`client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.
 `schemas:unit` (5 / 168) covers the platform list, its labels, the IGDB id map and its mapping helper, the
 `platforms` list of a Game, the nullable `platform` of both Squad projections, the optional `platform` of
 the create input and protocol version 4. `server:unit` (37 / 264) covers the IGDB adapter (the `platforms`
@@ -40,11 +40,11 @@ one of them or when the Game has none) and the Squad projection. `server:integra
 the import writing and refreshing `games.platforms`, `games-postgres` upserting it, `rooms-http` (the
 `platform` of every read, the 400 `INVALID_PLATFORM` cases and the database check constraint),
 `games-http`, the `room_created` and `room_snapshot` payloads in `realtime-payloads` and migration 0006 in
-the migration-count and schema suites. `client:unit` (87 / 945) covers the `platform` and
+the migration-count and schema suites. `client:unit` (88 / 949) covers the choice chips (Home and End, the invalid group pointing at its error), the `platform` and
 `platform-light` Tag variants and the single-choice `toggle`, the create form (only the game's platforms,
 the only one preselected, the field hidden without platforms, Continue blocked, the choice cleared on a
 game change, the payload and the preview), the card and Lobby chips, the board filter (`?platform=`, the
-panel, the chip, the count, "Clear all", an invalid value), the query and URL contracts and the
+panel, the chip, the count, "Clear all", an invalid value), the platform in the invite preview, the query and URL contracts and the
 `platforms` messages.
 
 CCC-118 removes the old design system and recounts every row on the merged `design-v2` tree after

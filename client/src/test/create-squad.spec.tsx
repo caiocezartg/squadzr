@@ -1623,9 +1623,12 @@ describe('create squad — platform', () => {
 
     expect(await screen.findByText('Choose a platform to continue.')).toBeInTheDocument()
     expect(screen.queryByLabelText('Discord invite link')).not.toBeInTheDocument()
+    expect(platformGroup()).toHaveAttribute('aria-invalid', 'true')
+    expect(platformGroup()).toHaveAccessibleDescription('Choose a platform to continue.')
 
     await user.click(within(platformGroup()).getByRole('radio', { name: 'Xbox Series' }))
     expect(screen.queryByText('Choose a platform to continue.')).not.toBeInTheDocument()
+    expect(platformGroup()).not.toHaveAttribute('aria-invalid')
     await continueStep(user)
 
     expect(await screen.findByLabelText('Discord invite link')).toBeInTheDocument()
