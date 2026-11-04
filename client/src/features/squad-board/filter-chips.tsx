@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
+import { PlatformIcon } from '@/components/ds/platform-icon'
 import { Tag } from '@/components/ds/tag'
 import { languageBadgeKey } from '@/lib/language-badge'
 import type { UseSquadFiltersReturn } from '@/features/squad-list'
@@ -34,6 +35,7 @@ export function FilterChips({ filters }: { readonly filters: UseSquadFiltersRetu
         <Tag
           variant="removable"
           label={t(`platforms.${platform}`)}
+          icon={<PlatformIcon platform={platform} className="size-3" />}
           onClick={() => filters.setPlatform('all')}
         />
       )}

@@ -1,12 +1,14 @@
 'use client'
 
-import { useRef, type KeyboardEvent } from 'react'
+import { useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { Tag } from '@/components/ds/tag'
 import { cn } from '@/lib/utils'
 
 export interface ChoiceChipOption<T extends string> {
   readonly value: T
   readonly label: string
+  /** A decorative mark before the label. */
+  readonly icon?: ReactNode
 }
 
 interface ChoiceChipsProps<T extends string> {
@@ -83,6 +85,7 @@ export function ChoiceChips<T extends string>({
           variant="toggle"
           choice
           label={option.label}
+          icon={option.icon}
           pressed={option.value === value}
           tabIndex={option.value === tabStop ? 0 : -1}
           onClick={() => onChange(option.value)}

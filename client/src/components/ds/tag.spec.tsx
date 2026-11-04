@@ -58,15 +58,35 @@ describe('Tag', () => {
   })
 
   it.each([
-    ['pc', 'lucide-monitor'],
-    ['ps5', 'lucide-gamepad-2'],
-    ['xbox-one', 'lucide-gamepad-2'],
-    ['switch-2', 'lucide-gamepad-2'],
-    ['mobile', 'lucide-smartphone'],
-  ] as const)('draws the %s platform with %s', (platform, icon) => {
+    ['pc', 'windows'],
+    ['ps5', 'playstation'],
+    ['ps4', 'playstation'],
+    ['xbox-series', 'xbox'],
+    ['xbox-one', 'xbox'],
+    ['switch-2', 'nintendo-switch'],
+    ['switch', 'nintendo-switch'],
+    ['mobile', 'phone'],
+  ] as const)('draws the %s platform with the %s mark', (platform, mark) => {
     const { container } = render(<Tag variant="platform" platform={platform} label={platform} />)
 
-    expect(container.querySelector('svg')).toHaveClass(icon)
+    expect(container.querySelector('svg')).toHaveAttribute('data-mark', mark)
+  })
+
+  it('puts a decorative mark before the label of a toggle and a removable chip', () => {
+    const mark = <svg data-testid="mark" aria-hidden="true" />
+    render(
+      <>
+        <Tag variant="toggle" choice label="PS5" pressed={false} onClick={vi.fn()} icon={mark} />
+        <Tag variant="removable" label="Xbox One" onClick={vi.fn()} icon={mark} />
+      </>
+    )
+
+    expect(screen.getByRole('radio', { name: 'PS5' })).toContainElement(
+      screen.getAllByTestId('mark')[0] ?? null
+    )
+    expect(screen.getByRole('button', { name: /Xbox One/ })).toContainElement(
+      screen.getAllByTestId('mark')[1] ?? null
+    )
   })
 
   it('exposes a single-choice toggle as a radio without the #', async () => {

@@ -5,6 +5,7 @@ import { Controller, useFormContext, useWatch } from 'react-hook-form'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
 import { ChoiceChips } from '@/components/ds/choice-chips'
+import { PlatformIcon } from '@/components/ds/platform-icon'
 import { Segmented } from '@/components/ds/segmented'
 import { languageBadgeKey } from '@/lib/language-badge'
 import { cn } from '@/lib/utils'
@@ -88,6 +89,7 @@ export function DetailsStep({ selectedGame, onChangeGame }: DetailsStepProps) {
                 options={selectedGame.platforms.map((platform) => ({
                   value: platform,
                   label: tPlatforms(platform),
+                  icon: <PlatformIcon platform={platform} className="size-3" />,
                 }))}
                 value={field.value ?? null}
                 onChange={(platform) => {

@@ -1,7 +1,9 @@
-import { Gamepad2, Globe, Monitor, Smartphone, X, type LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { Globe, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { Platform } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
+import { PlatformIcon } from './platform-icon'
 
 type StaticTagVariant = 'tag' | 'glass' | 'lang' | 'lang-light'
 
@@ -36,6 +38,8 @@ interface ToggleTagProps {
   readonly choice?: boolean
   /** The roving tab stop of a radiogroup. */
   readonly tabIndex?: number
+  /** A decorative mark before the label, such as a Platform's. */
+  readonly icon?: ReactNode
 }
 
 interface SuggestTagProps {
@@ -48,6 +52,8 @@ interface RemovableTagProps {
   readonly variant: 'removable'
   readonly label: string
   readonly onClick: () => void
+  /** A decorative mark before the label, such as a Platform's. */
+  readonly icon?: ReactNode
 }
 
 export type TagProps =
@@ -67,17 +73,6 @@ const STATIC_STYLES: Record<StaticTagVariant, StaticTagStyle> = {
   glass: { classes: 'bg-white/8 text-text-2 font-semibold', hashed: true },
   lang: { classes: 'bg-line text-text font-bold', hashed: false },
   'lang-light': { classes: 'bg-text text-bg font-bold', hashed: false },
-}
-
-const PLATFORM_ICONS: Record<Platform, LucideIcon> = {
-  pc: Monitor,
-  ps5: Gamepad2,
-  ps4: Gamepad2,
-  'xbox-series': Gamepad2,
-  'xbox-one': Gamepad2,
-  'switch-2': Gamepad2,
-  switch: Gamepad2,
-  mobile: Smartphone,
 }
 
 const STATIC_SIZES = {
@@ -142,7 +137,6 @@ function StaticTag({ variant = 'tag', size = 'sm', label }: StaticTagProps) {
 function PlatformTag({ variant, size = 'sm', platform, label }: PlatformTagProps) {
   const style = STATIC_STYLES[variant === 'platform' ? 'lang' : 'lang-light']
   const sizes = STATIC_SIZES[size]
-  const Icon = PLATFORM_ICONS[platform]
 
   return (
     <span
@@ -153,13 +147,13 @@ function PlatformTag({ variant, size = 'sm', platform, label }: PlatformTagProps
         sizes.lang
       )}
     >
-      <Icon aria-hidden="true" className={cn('shrink-0', sizes.globe)} />
+      <PlatformIcon platform={platform} className={sizes.globe} />
       {label}
     </span>
   )
 }
 
-function ToggleTag({ label, pressed, onClick, choice = false, tabIndex }: ToggleTagProps) {
+function ToggleTag({ label, pressed, onClick, choice = false, tabIndex, icon }: ToggleTagProps) {
   return (
     <button
       type="button"
@@ -174,6 +168,7 @@ function ToggleTag({ label, pressed, onClick, choice = false, tabIndex }: Toggle
           : 'bg-mint/8 text-mint hover-fine:bg-mint/16'
       )}
     >
+      {icon}
       {choice ? label : `#${label}`}
     </button>
   )
@@ -194,7 +189,7 @@ function SuggestTag({ label, onClick }: SuggestTagProps) {
   )
 }
 
-function RemovableTag({ label, onClick }: RemovableTagProps) {
+function RemovableTag({ label, onClick, icon }: RemovableTagProps) {
   const t = useTranslations('ds.tag')
 
   return (
@@ -207,6 +202,7 @@ function RemovableTag({ label, onClick }: RemovableTagProps) {
         'min-h-8.5 bg-line pr-2.25 pl-2.75 text-[12.5px] text-text hover-fine:bg-[#2a2b31]'
       )}
     >
+      {icon}
       {label}
       <X aria-hidden="true" className="size-2.75 shrink-0 text-text-3 stroke-[2.8]" />
     </button>

@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl'
 import { PLATFORMS } from '@squadzr/schemas'
 import { Button } from '@/components/ds/button'
 import { ChoiceChips } from '@/components/ds/choice-chips'
+import { PlatformIcon } from '@/components/ds/platform-icon'
 import { Segmented } from '@/components/ds/segmented'
 import { querySquadList, rankTagOptions, type UseSquadFiltersReturn } from '@/features/squad-list'
 import { AvailabilityOptions } from './availability-options'
@@ -70,7 +71,11 @@ export function FiltersPanel({ filters, onClose }: FiltersPanelProps) {
           labelledBy={platformLabelId}
           options={[
             { value: 'all', label: t('platformAll') },
-            ...PLATFORMS.map((platform) => ({ value: platform, label: tPlatforms(platform) })),
+            ...PLATFORMS.map((platform) => ({
+              value: platform,
+              label: tPlatforms(platform),
+              icon: <PlatformIcon platform={platform} className="size-3" />,
+            })),
           ]}
           value={filters.platform}
           onChange={filters.setPlatform}
