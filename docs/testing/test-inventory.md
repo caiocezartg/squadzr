@@ -24,7 +24,7 @@ inventory (see the equivalence proof below).
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 293   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 377   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 379   |
 | `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 88     | 953   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 169   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
@@ -35,9 +35,9 @@ to 39 / 293. `search-text.spec.ts` covers `normalizeSearchText` (accents, case, 
 text made only of punctuation, idempotence), `normalizeAliases` and `buildSearchText`; `game-aliases.spec.ts`
 pins the manual alias map (unique ids, non-empty and already normalized aliases, none equal to the game's
 name, and "mw4" mapped to Modern Warfare 4); the adapter suite adds `alternative_names` asked for, present, empty, absent, blank and malformed.
-`server:integration` goes from 362 to 377 tests and from 35 to 36 files: `games-http` is rewritten for the
+`server:integration` goes from 362 to 379 tests and from 35 to 36 files: `games-http` is rewritten for the
 folded search (accents and punctuation, aliases first, similarity after text, no similarity under three
-letters, the LIKE wildcards as punctuation, suggestions for a term made only of punctuation, 400 above 100
+letters, the 0.7 bar for three or four letters against 0.5 from five (#104), the LIKE wildcards as punctuation, suggestions for a term made only of punctuation, 400 above 100
 characters), `games-postgres` covers the stored `aliases` and `search_text`, `catalog-import` covers the IGDB
 and manual aliases written together, migration 0007 raises the migration count to 8, the new `search-backfill-migration` suite applies the migrations
 up to 0006, stores games (including a "Pokémon") and applies 0007 to confirm that "pokemon" finds the game before

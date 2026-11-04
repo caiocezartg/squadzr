@@ -184,6 +184,28 @@ describe('GET /api/games', () => {
     expect(await searchGames('?search=valorat')).toEqual(['Valorat Quest', 'Valorant'])
   })
 
+  it('asks more similarity of a term of three or four letters than of a longer one', async () => {
+    await insertGame(server, { name: 'Lost Ark' })
+    await insertGame(server, { name: 'Dota 2' })
+    await insertGame(server, { name: 'Counter-Strike' })
+    await insertGame(server, { name: 'Valorant' })
+
+    // word_similarity('lol', 'lost ark') is 0.5 and ('dotq', 'dota 2') is 0.6: both pass 0.5, not 0.7.
+    expect(await searchGames('?search=lol')).toEqual([])
+    expect(await searchGames('?search=dotq')).toEqual([])
+    // From five letters on 0.5 is enough: ('counetr', 'counter strike') is exactly 0.5, ('vlorant', 'valorant') 0.625.
+    expect(await searchGames('?search=counetr')).toEqual(['Counter-Strike'])
+    expect(await searchGames('?search=vlorant')).toEqual(['Valorant'])
+  })
+
+  it('still finds a game by an alias of three letters, without the games that only start alike', async () => {
+    await insertGame(server, { name: 'League of Legends', aliases: ['lol'] })
+    await insertGame(server, { name: 'Lost Ark' })
+    await insertGame(server, { name: 'Hell Let Loose' })
+
+    expect(await searchGames('?search=lol')).toEqual(['League of Legends'])
+  })
+
   // A defensive guard: "vl" is far below the threshold for "valorant" anyway, so this passes
   // even without the length guard today. It fails if the guard is removed and the threshold drops
   // enough for a one or two letter term to match unrelated names.

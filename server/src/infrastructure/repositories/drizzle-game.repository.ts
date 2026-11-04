@@ -18,18 +18,34 @@ import { rooms } from '@infrastructure/database/schema/rooms'
 import { validOpenRoomCondition } from './open-room-rules'
 
 /**
- * The minimum `word_similarity` between the term and a Game's search text for a
- * typo-tolerant match. 0.5 accepts an incomplete term ("valorat") and a wrong
- * letter in a long word ("counetr"), not a transposition in a short one.
+ * The minimum `word_similarity` between a term of five letters or more and a Game's
+ * search text for a typo-tolerant match. 0.5 accepts an incomplete term ("valorat")
+ * and a wrong letter in a long word ("counetr"), not a transposition in a short one.
  */
 const SEARCH_SIMILARITY_THRESHOLD = 0.5
+
+/**
+ * The stricter minimum for a term of three or four letters. With 0.5 such a term
+ * matches every word that merely starts alike: `word_similarity('lol', 'lost ark')`
+ * is 0.5, so "lol" would list Lost Ark next to League of Legends.
+ */
+const SHORT_TERM_SIMILARITY_THRESHOLD = 0.7
 
 /** Shorter terms match by text only: with 1 or 2 letters similarity matches almost everything. */
 const MIN_SIMILARITY_TERM_LENGTH = 3
 
-/** Counts characters, not UTF-16 units: an emoji or a rare ideograph is one letter. */
-function usesSimilarity(term: string): boolean {
-  return [...term].length >= MIN_SIMILARITY_TERM_LENGTH
+/** From this length on a term is "long" and uses {@link SEARCH_SIMILARITY_THRESHOLD}. */
+const LONG_TERM_LENGTH = 5
+
+/**
+ * The `word_similarity` threshold for a normalized term, or `null` when the term
+ * matches by text only. It counts characters, not UTF-16 units: an emoji or a
+ * rare ideograph is one letter.
+ */
+function similarityThresholdFor(term: string): number | null {
+  const length = [...term].length
+  if (length < MIN_SIMILARITY_TERM_LENGTH) return null
+  return length < LONG_TERM_LENGTH ? SHORT_TERM_SIMILARITY_THRESHOLD : SEARCH_SIMILARITY_THRESHOLD
 }
 
 /**
@@ -162,10 +178,12 @@ export class DrizzleGameRepository implements IGameRepository {
   /**
    * `term` is already normalized, so it holds no LIKE wildcard. A Game matches
    * when its search text contains the term or, from three letters on, when a word
-   * of it is similar enough. Results are ranked by how the term matched.
+   * of it is similar enough: 0.7 for three or four letters, 0.5 from five. Results
+   * are ranked by how the term matched.
    */
   private async searchByTerm(term: string, limit: number): Promise<Game[]> {
-    if (!usesSimilarity(term)) return selectGamesByTerm(this.executor, term, limit, false)
+    const threshold = similarityThresholdFor(term)
+    if (threshold === null) return selectGamesByTerm(this.executor, term, limit, false)
 
     // `<%` is the indexable form of `word_similarity(...) >= threshold` and reads its
     // threshold from a setting. `set_config(..., true)` is `SET LOCAL` with a bound
@@ -173,7 +191,7 @@ export class DrizzleGameRepository implements IGameRepository {
     // next user of the pooled connection.
     return this.db.transaction(async (tx) => {
       await tx.execute(
-        sql`SELECT set_config('pg_trgm.word_similarity_threshold', ${String(SEARCH_SIMILARITY_THRESHOLD)}, true)`
+        sql`SELECT set_config('pg_trgm.word_similarity_threshold', ${String(threshold)}, true)`
       )
       return selectGamesByTerm(tx, term, limit, true)
     })
