@@ -23,10 +23,10 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 317   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 301   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 380   |
 | `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 90     | 1011  |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 169   |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 185   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
 Issue #100 (Game Search by acronym and nickname) adds two server unit files, `search-text.spec.ts` and
@@ -59,11 +59,11 @@ falling back to the default, negative and fractional values refused for both var
 hype threshold. The other workspaces keep the counts below.
 
 Issue #109 (one search normalization in `@squadzr/schemas`) moves `normalizeSearchText` and its spec out of the
-server and the client. `schemas:unit` gains `search-text.spec.ts` (+1 file / +16 tests: the folding examples,
-the text made only of punctuation and idempotence), `server:unit` loses the same 16 cases from
+server and the client. `schemas:unit` gains `search-text.spec.ts` and goes from 5 files / 169 tests to 6 / 185 (the folding examples,
+the text made only of punctuation and idempotence), `server:unit` goes from 317 to 301 tests, losing the same 16 cases from
 `search-text.spec.ts` (`normalizeAliases` and `buildSearchText` stay) and `client:unit` loses its 16 copies,
 while its `foldWithOrigins` case ties `foldWithOrigins(x).text` to the shared function for 21 texts instead
-of 10 (+11), so the client nets −5. File counts of `server:unit` and `client:unit` stay.
+of 10 (+11), so the client nets −5 (1011 to 1006, back to 1011 with #108). File counts of `server:unit` and `client:unit` stay.
 
 Issue #108 (board search with the same normalization) adds 5 cases to `squad-list-query.spec.ts` in `client:unit`
 ("pokemon" finds "Pokémon Go", "counter strike" finds "Counter-Strike 2", case still ignored, a squad name with
