@@ -27,9 +27,6 @@ extra requests at the current catalog size (each batch is paged, so a batch past
 more), through the same pacer (4 requests per second) and retry as the games pages. The run still
 uses one Twitch token and no new variable.
 
-The popularity formula does not change, but the stored values shift a little when the candidate list
-grows or shrinks, because each game's percentile is computed among the candidates of that run.
-
 It uses Railway Infrastructure as Code rather than the older Config as Code (`railway.json` with a
 per-service config path): Railway deprecated Config as Code, new services cannot opt in, and the
 files stop being read on 2026-12-01. Infrastructure as Code is the supported replacement and keeps
@@ -97,11 +94,13 @@ owner's credentials; check the key names in the Variables tab when a run fails t
 unset, so the import uses its defaults (rating threshold 50, hype threshold 50, fraction check on).
 `IGDB_HYPE_THRESHOLD` is the minimum IGDB `hypes` that lets a game released in the last 180 days
 enter the catalog before it reaches the rating threshold; `0` means no hype floor among the games
-that have `hypes`, and a release without `hypes` enters only through the rating count. A game that is still under the rating threshold
-180 days after its release leaves the catalog on the next run, as any delisted game does. The
-credentials live only in Railway: rotate them in the Twitch developer console and update the two
-variables; never commit them. Railway's own platform variables are injected by the platform and are
-not user configuration.
+that have `hypes`, and a release without `hypes` enters only through the rating count. A game that
+is still under the rating threshold 180 days after its release leaves the catalog on the next run,
+as any delisted game does. The popularity formula does not change, but the stored values shift a
+little when the candidate list grows or shrinks, because each game's percentile is computed among
+the candidates of that run. The credentials live only in Railway: rotate them in the Twitch
+developer console and update the two variables; never commit them. Railway's own platform
+variables are injected by the platform and are not user configuration.
 
 The Postgres service's `POSTGRES_PASSWORD` is `preserve()`d by the authoring file: the owner sets it
 once in Railway and no secret enters the repository.
