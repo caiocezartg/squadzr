@@ -8,10 +8,23 @@ import { z } from 'zod'
  */
 export const DEFAULT_IGDB_POPULARITY_THRESHOLD = 50
 
-const optionalThreshold = z.preprocess(
-  (value) => (value === '' ? undefined : value),
-  z.coerce.number().int().min(0).default(DEFAULT_IGDB_POPULARITY_THRESHOLD)
-)
+/**
+ * Fallback hype threshold for games released in the last 180 days, calibrated
+ * against the live IGDB catalog in #101 on 2026-11-04. It is the largest N that
+ * still admits Call of Duty: Modern Warfare 4 (`hypes` 61), released on
+ * 2026-10-23 with 26 ratings. N = 50 adds 10 games the window would otherwise
+ * miss and leaves 1,686 filtered candidates, against 1,673 on 2026-10-23, before
+ * the curated games. For the same window N = 10 adds 60 games, N = 25 adds 26
+ * and N = 100 adds 2 and misses Modern Warfare 4.
+ */
+export const DEFAULT_IGDB_HYPE_THRESHOLD = 50
+
+function optionalThreshold(defaultValue: number) {
+  return z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.coerce.number().int().min(0).default(defaultValue)
+  )
+}
 
 const optionalOverride = z.preprocess(
   (value) => (value === '' ? undefined : value),
@@ -27,7 +40,9 @@ const catalogImportEnvSchema = z.object({
   DATABASE_URL: z.url(),
   IGDB_CLIENT_ID: z.string().min(1, 'IGDB_CLIENT_ID is required'),
   IGDB_CLIENT_SECRET: z.string().min(1, 'IGDB_CLIENT_SECRET is required'),
-  IGDB_POPULARITY_THRESHOLD: optionalThreshold,
+  IGDB_POPULARITY_THRESHOLD: optionalThreshold(DEFAULT_IGDB_POPULARITY_THRESHOLD),
+  /** 0 means no hype floor: every release of the window that passes the other filters enters. */
+  IGDB_HYPE_THRESHOLD: optionalThreshold(DEFAULT_IGDB_HYPE_THRESHOLD),
   CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK: optionalOverride,
 })
 

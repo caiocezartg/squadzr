@@ -16,6 +16,7 @@ async function main(): Promise<void> {
       clientId: env.IGDB_CLIENT_ID,
       clientSecret: env.IGDB_CLIENT_SECRET,
       popularityThreshold: env.IGDB_POPULARITY_THRESHOLD,
+      hypeThreshold: env.IGDB_HYPE_THRESHOLD,
     },
     new SystemClock()
   )

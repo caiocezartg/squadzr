@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  DEFAULT_IGDB_HYPE_THRESHOLD,
   DEFAULT_IGDB_POPULARITY_THRESHOLD,
   loadCatalogImportEnv,
   parseCatalogImportEnv,
@@ -12,8 +13,8 @@ const REQUIRED_ENV = {
 }
 
 // CCC-90: the import owns a small environment schema. It must not require the
-// API's auth or Discord variables, and the threshold and narrowing override are
-// optional.
+// API's auth or Discord variables, and the thresholds and narrowing override are
+// optional. #101 adds the hype threshold, with a default of its own.
 describe('parseCatalogImportEnv', () => {
   it('accepts the database URL and the IGDB credentials alone', () => {
     expect(parseCatalogImportEnv(REQUIRED_ENV)).toEqual({
@@ -21,18 +22,28 @@ describe('parseCatalogImportEnv', () => {
       IGDB_CLIENT_ID: REQUIRED_ENV.IGDB_CLIENT_ID,
       IGDB_CLIENT_SECRET: REQUIRED_ENV.IGDB_CLIENT_SECRET,
       IGDB_POPULARITY_THRESHOLD: DEFAULT_IGDB_POPULARITY_THRESHOLD,
+      IGDB_HYPE_THRESHOLD: DEFAULT_IGDB_HYPE_THRESHOLD,
       CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK: false,
     })
   })
 
-  it('reads an explicit threshold and the narrowing override', () => {
+  it('gives each threshold its own default', () => {
+    const env = parseCatalogImportEnv(REQUIRED_ENV)
+
+    expect(env.IGDB_POPULARITY_THRESHOLD).toBe(50)
+    expect(env.IGDB_HYPE_THRESHOLD).toBe(50)
+  })
+
+  it('reads explicit thresholds and the narrowing override', () => {
     const env = parseCatalogImportEnv({
       ...REQUIRED_ENV,
       IGDB_POPULARITY_THRESHOLD: '120',
+      IGDB_HYPE_THRESHOLD: '75',
       CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK: 'true',
     })
 
     expect(env.IGDB_POPULARITY_THRESHOLD).toBe(120)
+    expect(env.IGDB_HYPE_THRESHOLD).toBe(75)
     expect(env.CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK).toBe(true)
   })
 
@@ -40,10 +51,12 @@ describe('parseCatalogImportEnv', () => {
     const env = parseCatalogImportEnv({
       ...REQUIRED_ENV,
       IGDB_POPULARITY_THRESHOLD: '',
+      IGDB_HYPE_THRESHOLD: '',
       CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK: '',
     })
 
     expect(env.IGDB_POPULARITY_THRESHOLD).toBe(DEFAULT_IGDB_POPULARITY_THRESHOLD)
+    expect(env.IGDB_HYPE_THRESHOLD).toBe(DEFAULT_IGDB_HYPE_THRESHOLD)
     expect(env.CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK).toBe(false)
   })
 
@@ -59,10 +72,22 @@ describe('parseCatalogImportEnv', () => {
     }
   )
 
-  it('rejects a threshold that is not a non-negative integer', () => {
-    expect(() =>
-      parseCatalogImportEnv({ ...REQUIRED_ENV, IGDB_POPULARITY_THRESHOLD: '-1' })
-    ).toThrow('Invalid catalog import environment variables')
+  it.each(['IGDB_POPULARITY_THRESHOLD', 'IGDB_HYPE_THRESHOLD'] as const)(
+    'rejects a %s that is not a non-negative integer',
+    (key) => {
+      expect(() => parseCatalogImportEnv({ ...REQUIRED_ENV, [key]: '-1' })).toThrow(
+        'Invalid catalog import environment variables'
+      )
+      expect(() => parseCatalogImportEnv({ ...REQUIRED_ENV, [key]: '1.5' })).toThrow(
+        'Invalid catalog import environment variables'
+      )
+    }
+  )
+
+  it('accepts 0 as the hype threshold, meaning no hype floor', () => {
+    expect(parseCatalogImportEnv({ ...REQUIRED_ENV, IGDB_HYPE_THRESHOLD: '0' })).toMatchObject({
+      IGDB_HYPE_THRESHOLD: 0,
+    })
   })
 
   it('rejects an override that is not a boolean', () => {

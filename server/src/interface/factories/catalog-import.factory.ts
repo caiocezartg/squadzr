@@ -35,6 +35,7 @@ export interface IgdbGameCatalogSourceConfig {
   readonly clientId: string
   readonly clientSecret: string
   readonly popularityThreshold: number
+  readonly hypeThreshold: number
 }
 
 /**

@@ -89,8 +89,12 @@ a key entered as ` IGDB_CLIENT_ID` (leading space) is a different variable, so t
 variables … expected string, received undefined`. That mistake happened once while setting the
 owner's credentials; check the key names in the Variables tab when a run fails that way.
 
-`IGDB_POPULARITY_THRESHOLD` and `CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK` stay unset, so the import
-uses its defaults (threshold 50, fraction check on). The credentials live only in Railway: rotate
+`IGDB_POPULARITY_THRESHOLD`, `IGDB_HYPE_THRESHOLD` and `CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK` stay
+unset, so the import uses its defaults (rating threshold 50, hype threshold 50, fraction check on).
+`IGDB_HYPE_THRESHOLD` is the minimum IGDB `hypes` that lets a game released in the last 180 days
+enter the catalog before it reaches the rating threshold; `0` means no hype floor, so every release
+of the window that passes the other filters enters. A game that is still under the rating threshold
+180 days after its release leaves the catalog on the next run, as any delisted game does. The credentials live only in Railway: rotate
 them in the Twitch developer console and update the two variables; never commit them. Railway's own
 platform variables are injected by the platform and are not user configuration.
 
