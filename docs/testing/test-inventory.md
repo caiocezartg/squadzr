@@ -23,10 +23,10 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 301   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 380   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 90     | 1011  |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 185   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 302   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 381   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 90     | 1016  |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 187   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
 Issue #100 (Game Search by acronym and nickname) adds two server unit files, `search-text.spec.ts` and
@@ -68,6 +68,16 @@ of 10 (+11), so the client nets −5 (1011 to 1006, back to 1011 with #108). Fil
 Issue #108 (board search with the same normalization) adds 5 cases to `squad-list-query.spec.ts` in `client:unit`
 ("pokemon" finds "Pokémon Go", "counter strike" finds "Counter-Strike 2", case still ignored, a squad name with
 accents, and a term made only of punctuation keeps every squad). No file is added.
+
+The board finds squads by game alias (a Squad's Game summary now carries the Game's `aliases`; no file is added).
+`schemas:unit` goes from 185 to 187 tests (`contracts.spec.ts`: the `aliases` array, empty for a Game without any,
+and the summary refused without it). `server:unit` goes from 301 to 302 (`room.projection.spec.ts`: the aliases
+copied from the Game into the Squad's summary, empty for a Game without any). `server:integration` goes from 380
+to 381: `games-http` checks that the catalog's Game never carries `aliases`, and `squad-game-summary` now stores
+raw aliases and expects the folded ones on the create response, the list, My Squads, the Lobby, `room_created` and
+`room_snapshot`. `client:unit` goes from 1011 to 1016: `squad-list-query.spec.ts` adds 5 cases ("lol" finds League
+of Legends, "cs2" finds Counter-Strike 2, a partial and punctuated alias, an alias of another game does not match,
+a game without aliases still matches by name). File counts stay.
 
 Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
 `client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.

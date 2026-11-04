@@ -127,6 +127,7 @@ function mapRowToEntity(row: GameRow): Game {
     slug: row.slug,
     igdbId: row.igdbId,
     genres: row.genres,
+    aliases: row.aliases,
     platforms: row.platforms,
     coverUrl: row.coverUrl,
     thumbnailUrl: row.thumbnailUrl,

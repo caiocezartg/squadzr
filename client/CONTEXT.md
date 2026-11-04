@@ -5,7 +5,7 @@ The web app where players find Squads, join them and follow them live. It presen
 ## Language
 
 **Squad Board**:
-The public board of Open Squads that a player can browse and join.
+The public board of Open Squads that a player can browse and join. Its search field filters the Squads already loaded, folding the term like Game Search does, and matches a Squad by its name, its Game's name or one of its Game's aliases ("lol" finds League of Legends).
 _Avoid_: Catalog, lobby, room list, room browser
 
 **Lobby**:

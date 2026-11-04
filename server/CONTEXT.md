@@ -5,7 +5,7 @@ This context owns the concepts and rules used to form and coordinate Squads.
 ## Language
 
 **Squad**:
-A group being formed for a multiplayer match, with a fixed capacity, the Platform it plays on (when its Game has any), a code to join it and, once Ready, a Discord invite for its members.
+A group being formed for a multiplayer match, with a fixed capacity, the Platform it plays on (when its Game has any), a code to join it and, once Ready, a Discord invite for its members. Every Squad payload carries a summary of its Game, including the Game's aliases as stored, so the Squad Board can search by them without asking the catalog.
 _Avoid_: Room, party, premade, lobby
 
 **Platform**:

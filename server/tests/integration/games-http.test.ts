@@ -51,6 +51,15 @@ describe('GET /api/games', () => {
     expect(game.coverThumbUrl).toBe('https://cdn.squadzr.test/lol-thumb.webp')
   })
 
+  it('keeps the aliases out of the catalog Game: only a Squad summary carries them', async () => {
+    await insertGame(server, { name: 'League of Legends', aliases: ['LoL'] })
+
+    const body = (await get(server, '/api/games')).json<{ games: object[] }>()
+
+    expect(body.games).toHaveLength(1)
+    expect(body.games[0]).not.toHaveProperty('aliases')
+  })
+
   it('answers with the platforms of each game, in display order, and [] when it has none', async () => {
     const multi = await insertGame(server, { platforms: ['pc', 'ps5', 'switch', 'mobile'] })
     const none = await insertGame(server)

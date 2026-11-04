@@ -76,6 +76,7 @@ export const gameLolSummary = {
   name: gameLol.name,
   slug: gameLol.slug,
   genres: [{ slug: 'moba', name: 'MOBA' }],
+  aliases: ['lol'],
   coverUrl: gameLol.coverUrl,
   coverThumbUrl: 'https://cdn.squadzr.test/covers/lol-thumb.jpg',
 }
@@ -85,6 +86,7 @@ export const gameCs2Summary = {
   name: gameCs2.name,
   slug: gameCs2.slug,
   genres: [{ slug: 'shooter', name: 'Shooter' }],
+  aliases: ['cs2'],
   coverUrl: gameCs2.coverUrl,
   coverThumbUrl: 'https://cdn.squadzr.test/covers/cs2-thumb.jpg',
 }

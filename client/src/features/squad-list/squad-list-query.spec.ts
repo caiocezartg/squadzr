@@ -8,6 +8,7 @@ const lol: PublicSquad['game'] = {
   name: 'League of Legends',
   slug: 'lol',
   genres: [],
+  aliases: ['lol', 'league'],
   coverUrl: 'https://cdn.squadzr.test/lol.jpg',
   coverThumbUrl: 'https://cdn.squadzr.test/lol-thumb.jpg',
 }
@@ -16,6 +17,7 @@ const pokemon: PublicSquad['game'] = {
   name: 'Pokémon Go',
   slug: 'pokemon-go',
   genres: [],
+  aliases: ['pogo'],
   coverUrl: 'https://cdn.squadzr.test/pokemon.jpg',
   coverThumbUrl: 'https://cdn.squadzr.test/pokemon-thumb.jpg',
 }
@@ -24,6 +26,7 @@ const cs2: PublicSquad['game'] = {
   name: 'Counter-Strike 2',
   slug: 'cs2',
   genres: [],
+  aliases: ['cs2', 'cs go'],
   coverUrl: 'https://cdn.squadzr.test/cs2.jpg',
   coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.jpg',
 }
@@ -123,6 +126,45 @@ describe('querySquadList — filters', () => {
 
     it('keeps every squad for a term made only of punctuation', () => {
       expect(querySquadList(board, query({ search: '!!!' })).matching).toHaveLength(board.length)
+    })
+  })
+
+  describe('game aliases', () => {
+    it('finds the squads of League of Legends by "lol"', () => {
+      expect(ids(querySquadList(all, query({ search: 'lol' })).matching).sort()).toEqual([
+        'almost',
+        'ranked',
+        'unknown',
+      ])
+    })
+
+    it('finds the squads of Counter-Strike 2 by "cs2"', () => {
+      expect(ids(querySquadList(all, query({ search: 'cs2' })).matching)).toEqual(['full'])
+    })
+
+    it('matches part of an alias and folds the term like the name', () => {
+      expect(ids(querySquadList(all, query({ search: 'CS-GO' })).matching)).toEqual(['full'])
+      expect(ids(querySquadList(all, query({ search: 'leag' })).matching).sort()).toEqual([
+        'almost',
+        'ranked',
+        'unknown',
+      ])
+    })
+
+    it('does not match an alias that belongs to another game', () => {
+      const pokemonSquad = squad({ id: 'pokemon', gameId: pokemon.id, game: pokemon })
+      const board = [...all, pokemonSquad]
+
+      expect(ids(querySquadList(board, query({ search: 'pogo' })).matching)).toEqual(['pokemon'])
+      expect(ids(querySquadList(board, query({ search: 'cs2' })).matching)).not.toContain('pokemon')
+      expect(ids(querySquadList(board, query({ search: 'lol' })).matching)).not.toContain('pokemon')
+    })
+
+    it('still finds a squad of a game without aliases by its names', () => {
+      const bare = squad({ id: 'bare', name: 'Plain squad', game: { ...lol, aliases: [] } })
+
+      expect(ids(querySquadList([bare], query({ search: 'lol' })).matching)).toEqual([])
+      expect(ids(querySquadList([bare], query({ search: 'legends' })).matching)).toEqual(['bare'])
     })
   })
 
