@@ -18,7 +18,7 @@ export function normalizeSearchText(text: string): string {
 }
 
 /** A folded text, with the span of the original text each of its UTF-16 units came from. */
-interface FoldedText {
+export interface FoldedText {
   readonly text: string
   /** `starts[i]` and `ends[i]` delimit, in the original text, what produced `text[i]`. */
   readonly starts: readonly number[]

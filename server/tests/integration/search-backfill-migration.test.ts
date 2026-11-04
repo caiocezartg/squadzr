@@ -115,7 +115,9 @@ describe('search text backfill (#100)', () => {
 
   it('leaves search_text without a default and indexes it with gin_trgm_ops', async () => {
     const files = migrationFiles()
-    for (const file of files.slice(0, files.indexOf(SEARCH_MIGRATION) + 1)) {
+    const migrationIndex = files.indexOf(SEARCH_MIGRATION)
+    expect(migrationIndex).toBeGreaterThanOrEqual(0)
+    for (const file of files.slice(0, migrationIndex + 1)) {
       await applyMigration(client, file)
     }
 

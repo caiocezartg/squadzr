@@ -201,6 +201,7 @@ describe('DrizzleGameRepository.search', () => {
   })
 
   afterEach(async () => {
+    // Runs before the outer teardown drops the database, which fails while a connection is open.
     await pool.end()
   })
 
