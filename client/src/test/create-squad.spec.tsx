@@ -14,6 +14,7 @@
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { GAME_SEARCH_MAX_LENGTH } from '@squadzr/schemas'
 import { renderSquadsFlow } from './harness'
 import { settleNavigation } from './navigation'
 import {
@@ -281,6 +282,20 @@ describe('create squad — client validation', () => {
 })
 
 describe('create squad — game search', () => {
+  it('limits the search field to the longest term the API accepts', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+
+    const input = screen.getByLabelText(GAME_LABEL)
+    expect(input).toHaveAttribute('maxlength', String(GAME_SEARCH_MAX_LENGTH))
+
+    await user.click(input)
+    await user.paste('a'.repeat(GAME_SEARCH_MAX_LENGTH + 50))
+
+    expect(input).toHaveValue('a'.repeat(GAME_SEARCH_MAX_LENGTH))
+    await waitFor(() => expect(hasSearched('a'.repeat(GAME_SEARCH_MAX_LENGTH))).toBe(true))
+  })
+
   it('lists the games that match what the player typed', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)

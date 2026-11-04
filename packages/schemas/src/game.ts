@@ -43,10 +43,14 @@ export type GameSummaryDto = z.infer<typeof gameSummarySchema>
 
 export const gameIdParamSchema = z.object({ id: z.string().uuid() })
 
+// The longest search term the API accepts, after the trim. The client limits its
+// search field to the same length, so a paste never reaches the API as a 400.
+export const GAME_SEARCH_MAX_LENGTH = 100
+
 // Game search query: a trimmed term and a page of Listed Games. An empty
 // `search` behaves like no search; Fastify delivers query values as strings.
 export const gamesQuerySchema = z.object({
-  search: z.string().trim().optional(),
+  search: z.string().trim().max(GAME_SEARCH_MAX_LENGTH).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 })
 

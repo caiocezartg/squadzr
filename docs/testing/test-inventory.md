@@ -23,11 +23,31 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 37     | 264   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 35     | 362   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 88     | 953   |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 168   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 312   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 380   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 90     | 1011  |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 169   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
+
+Issue #100 (Game Search by acronym and nickname) adds two server unit files, `search-text.spec.ts` and
+`game-aliases.spec.ts`, and extends the IGDB adapter suite, so `server:unit` goes from 37 files / 264 tests
+to 39 / 312. `search-text.spec.ts` covers `normalizeSearchText` (accents, case, punctuation, repeated spaces,
+text made only of punctuation, idempotence), `normalizeAliases` and `buildSearchText`; `game-aliases.spec.ts`
+pins the manual alias map (unique ids, non-empty and already normalized aliases, none equal to the game's
+name, and "mw4" mapped to Modern Warfare 4); the adapter suite adds `alternative_names` asked for, present, empty, absent, blank and malformed, and (#106) drops the executable names and paths (`isSearchableAlternativeName`, 18 cases plus the four examples of the issue read through the adapter).
+`server:integration` goes from 362 to 380 tests and from 35 to 36 files: `games-http` is rewritten for the
+folded search (accents and punctuation, aliases first, similarity after text, no similarity under three
+letters, the 0.7 bar for three or four letters against 0.5 from five (#104), the LIKE wildcards as punctuation, suggestions for a term made only of punctuation, 400 above 100
+characters), `games-postgres` covers the stored `aliases` and `search_text`, `catalog-import` covers the IGDB
+and manual aliases written together, migration 0007 raises the migration count to 8, the new `search-backfill-migration` suite applies the migrations
+up to 0006, stores games (including a "Pokémon") and applies 0007 to confirm that "pokemon" finds the game before
+any import, and `games-postgres` checks that a similarity search leaves `pg_trgm.word_similarity_threshold` of the
+pooled connection as it found it (on a one-connection pool, after the session was set to a value the search never uses, so a leak fails the test), and that `games.search_text` has no default and `games_search_text_trgm_idx` exists with `gin_trgm_ops`.
+`schemas:unit` goes from 168 to 169 tests with the 100-character limit of the search, which #105 exports as
+`GAME_SEARCH_MAX_LENGTH`. `client:unit` goes from 88 files / 953 tests to 90 / 1011: `search-text.spec.ts` (the
+server's folding examples, `foldWithOrigins(x).text` tied to `normalizeSearchText(x)` for ten texts, and the part of a name a term matches, with offsets into the original name, including a ligature and astral characters),
+`game-option.spec.tsx` ("pokemon" highlights "Pokémon", "counter strike" highlights "Counter-Strike", "lol" highlights
+nothing in "League of Legends" or in "Valorant" found by similarity) and `create-squad.spec.tsx` (the search field's `maxlength`).
 
 Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
 `client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.

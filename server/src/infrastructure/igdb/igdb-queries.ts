@@ -22,6 +22,7 @@ const GAME_FIELDS = [
   'cover.image_id',
   'genres.name',
   'genres.slug',
+  'alternative_names.name',
   'platforms',
   'multiplayer_modes.onlinecoopmax',
   'multiplayer_modes.onlinemax',

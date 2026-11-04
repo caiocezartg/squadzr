@@ -7,6 +7,7 @@ import { DrizzleGameRepository } from '@infrastructure/repositories/drizzle-game
 import { IgdbGameCatalogSource } from '@infrastructure/igdb/igdb-game-catalog-source'
 import { GAME_CATALOG_IMPORT } from '@config/constants'
 import { CURATED_GAMES } from '@interface/catalog/curated-games'
+import { GAME_ALIASES } from '@interface/catalog/game-aliases'
 
 /**
  * Composes one Catalog Import: the source is a production seam (IGDB in
@@ -18,10 +19,16 @@ export function createCatalogImportUseCase(
   clock: Clock,
   source: IGameCatalogSource
 ): ICatalogImportUseCase {
-  return new CatalogImportUseCase(source, new DrizzleGameRepository(db, clock), CURATED_GAMES, {
-    minimumRetainedFraction: GAME_CATALOG_IMPORT.MINIMUM_RETAINED_FRACTION,
-    minimumCandidates: GAME_CATALOG_IMPORT.MINIMUM_CANDIDATES,
-  })
+  return new CatalogImportUseCase(
+    source,
+    new DrizzleGameRepository(db, clock),
+    CURATED_GAMES,
+    {
+      minimumRetainedFraction: GAME_CATALOG_IMPORT.MINIMUM_RETAINED_FRACTION,
+      minimumCandidates: GAME_CATALOG_IMPORT.MINIMUM_CANDIDATES,
+    },
+    GAME_ALIASES
+  )
 }
 
 export interface IgdbGameCatalogSourceConfig {

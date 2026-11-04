@@ -1,4 +1,4 @@
-import { gamesResponseSchema } from '@squadzr/schemas'
+import { GAME_SEARCH_MAX_LENGTH, gamesResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import type { Game } from '@/types'
 
@@ -13,7 +13,8 @@ const GAME_SEARCH_LIMIT = 20
  */
 export function searchGames(term: string, signal?: AbortSignal): Promise<Game[]> {
   const query = new URLSearchParams({ limit: String(GAME_SEARCH_LIMIT) })
-  const search = term.trim()
+  // The field limits the term already; this keeps a longer one (a script, a test) from becoming a 400.
+  const search = term.trim().slice(0, GAME_SEARCH_MAX_LENGTH)
   if (search !== '') query.set('search', search)
 
   return api

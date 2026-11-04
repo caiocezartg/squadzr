@@ -3,12 +3,18 @@ import { Check } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import type { Game } from '@/types'
+import { findMatchRange } from './search-text'
 
-/** The name split around the first case-insensitive occurrence of the typed term. */
+/**
+ * The name split around the part the typed term matches once both are folded the way the
+ * server's search folds them, so accents, case and punctuation do not matter. A name with no
+ * such part (it was found by an alias or by similarity) comes back whole.
+ */
 function splitMatch(name: string, term: string): [string, string, string] {
-  const at = term === '' ? -1 : name.toLowerCase().indexOf(term.toLowerCase())
-  if (at < 0) return [name, '', '']
-  return [name.slice(0, at), name.slice(at, at + term.length), name.slice(at + term.length)]
+  const range = findMatchRange(name, term)
+  if (!range) return [name, '', '']
+  const [start, end] = range
+  return [name.slice(0, start), name.slice(start, end), name.slice(end)]
 }
 
 function initialsOf(name: string): string {

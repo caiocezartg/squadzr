@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { SearchField } from '@/components/ds/search-field'
+import { GAME_SEARCH_MAX_LENGTH } from '@squadzr/schemas'
 import type { Game } from '@/types'
 import { GameOption } from './game-option'
 import { searchGames } from './search-games'
@@ -156,6 +157,7 @@ export function GameStep({ selectedGame, onSelect, onEscapeOwnerChange }: GameSt
           value={query}
           onChange={handleQueryChange}
           combobox={{ expanded: open, controls: listboxId }}
+          maxLength={GAME_SEARCH_MAX_LENGTH}
           placeholder={t('ds.createSquad.searchPlaceholder')}
           aria-activedescendant={open && activeIndex >= 0 ? optionId(activeIndex) : undefined}
           onKeyDown={handleInputKeyDown}

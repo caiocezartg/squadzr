@@ -29,6 +29,8 @@ export interface GameCatalogCandidate {
   readonly genres: readonly GameGenre[]
   /** Supported platforms in display order; empty when the source lists none of them. */
   readonly platforms: readonly Platform[]
+  /** The source's alternative names (acronyms, regional titles); empty when it has none. */
+  readonly aliases: readonly string[]
   readonly coverUrl: string
   readonly thumbnailUrl: string
   readonly multiplayer: GameMultiplayerCapacity
