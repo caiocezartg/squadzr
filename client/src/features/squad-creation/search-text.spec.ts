@@ -8,7 +8,7 @@ function matched(name: string, term: string): string | null {
   return range ? name.slice(range[0], range[1]) : null
 }
 
-// Every example of the shared normalizeSearchText spec (packages/schemas/src/search-text.spec.ts),
+// The examples the shared normalizeSearchText spec (packages/schemas/src/search-text.spec.ts) covers today,
 // plus texts with ligatures and astral characters, which the highlight must fold the same way.
 describe('foldWithOrigins', () => {
   it.each([

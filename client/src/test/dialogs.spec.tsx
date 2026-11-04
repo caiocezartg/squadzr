@@ -4,6 +4,7 @@
  * dialog both the Squad Board and My Squads mount.
  */
 
+import { normalizeSearchText } from '@squadzr/schemas'
 import { screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { renderSquadsFlow } from './harness'
@@ -14,11 +15,11 @@ beforeEach(() => {
   onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
   // The create dialog's game search: a name filter and a limit, as the catalog contract answers.
   onHttp('GET', '/api/games', (request) => {
-    const search = request.query.get('search')?.trim().toLowerCase() ?? ''
+    const search = normalizeSearchText(request.query.get('search') ?? '')
     const limit = Number(request.query.get('limit') ?? boardGames.games.length)
     return httpOk({
       games: boardGames.games
-        .filter((game) => game.name.toLowerCase().includes(search))
+        .filter((game) => normalizeSearchText(game.name).includes(search))
         .slice(0, limit),
     })
   })

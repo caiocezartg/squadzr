@@ -14,7 +14,7 @@
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GAME_SEARCH_MAX_LENGTH } from '@squadzr/schemas'
+import { GAME_SEARCH_MAX_LENGTH, normalizeSearchText } from '@squadzr/schemas'
 import { renderSquadsFlow } from './harness'
 import { settleNavigation } from './navigation'
 import {
@@ -93,9 +93,9 @@ function registerBoardRoutes(): void {
   // The invite check of the Discord step: Discord knows every invite unless a test says otherwise.
   onHttp('GET', '/api/discord/invites/:code', () => httpOk(validInvite))
   onHttp('GET', '/api/games', (request) => {
-    const search = request.query.get('search')?.toLowerCase() ?? ''
+    const search = normalizeSearchText(request.query.get('search') ?? '')
     return httpOk({
-      games: boardGames.games.filter((game) => game.name.toLowerCase().includes(search)),
+      games: boardGames.games.filter((game) => normalizeSearchText(game.name).includes(search)),
     })
   })
 }
@@ -1398,9 +1398,9 @@ describe('create squad — values across steps', () => {
   it('starts the stepper over from a different game and keeps the rest', async () => {
     const bigGame = { ...gameCs2, maxPlayers: 8 }
     onHttp('GET', '/api/games', (request) => {
-      const search = request.query.get('search')?.toLowerCase() ?? ''
+      const search = normalizeSearchText(request.query.get('search') ?? '')
       return httpOk({
-        games: [gameLol, bigGame].filter((game) => game.name.toLowerCase().includes(search)),
+        games: [gameLol, bigGame].filter((game) => normalizeSearchText(game.name).includes(search)),
       })
     })
     const { user } = renderSquadsFlow('/squads', { shell: true })
