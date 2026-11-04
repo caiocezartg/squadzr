@@ -65,6 +65,10 @@ the text made only of punctuation and idempotence), `server:unit` loses the same
 while its `foldWithOrigins` case ties `foldWithOrigins(x).text` to the shared function for 21 texts instead
 of 10 (+11), so the client nets −5. File counts of `server:unit` and `client:unit` stay.
 
+Issue #108 (board search with the same normalization) adds 5 cases to `squad-list-query.spec.ts` in `client:unit`
+("pokemon" finds "Pokémon Go", "counter strike" finds "Counter-Strike 2", case still ignored, a squad name with
+accents, and a term made only of punctuation keeps every squad). No file is added.
+
 Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
 `client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.
 `schemas:unit` (5 / 168) covers the platform list, its labels, the IGDB id map and its mapping helper, the

@@ -11,6 +11,14 @@ const lol: PublicSquad['game'] = {
   coverUrl: 'https://cdn.squadzr.test/lol.jpg',
   coverThumbUrl: 'https://cdn.squadzr.test/lol-thumb.jpg',
 }
+const pokemon: PublicSquad['game'] = {
+  id: 'game-pokemon',
+  name: 'Pokémon Go',
+  slug: 'pokemon-go',
+  genres: [],
+  coverUrl: 'https://cdn.squadzr.test/pokemon.jpg',
+  coverThumbUrl: 'https://cdn.squadzr.test/pokemon-thumb.jpg',
+}
 const cs2: PublicSquad['game'] = {
   id: 'game-cs2',
   name: 'Counter-Strike 2',
@@ -83,6 +91,39 @@ describe('querySquadList — filters', () => {
 
   it('ignores a blank search term', () => {
     expect(querySquadList(all, query({ search: '   ' })).matching).toHaveLength(4)
+  })
+
+  describe('search folding', () => {
+    const pokemonSquad = squad({ id: 'pokemon', gameId: pokemon.id, game: pokemon })
+    const accented = squad({ id: 'accented', name: 'Café Ünïcode night' })
+    const board = [...all, pokemonSquad, accented]
+
+    it('finds a game name with an accent by its plain spelling', () => {
+      expect(ids(querySquadList(board, query({ search: 'pokemon' })).matching)).toEqual(['pokemon'])
+    })
+
+    it('finds a game name with punctuation when the term has a space instead', () => {
+      expect(ids(querySquadList(board, query({ search: 'counter strike' })).matching)).toEqual([
+        'full',
+      ])
+    })
+
+    it('still ignores case', () => {
+      expect(ids(querySquadList(board, query({ search: 'POKÉMON' })).matching)).toEqual(['pokemon'])
+      expect(ids(querySquadList(board, query({ search: 'COUNTER-STRIKE' })).matching)).toEqual([
+        'full',
+      ])
+    })
+
+    it('finds a squad name with accents by its plain spelling', () => {
+      expect(ids(querySquadList(board, query({ search: 'cafe unicode' })).matching)).toEqual([
+        'accented',
+      ])
+    })
+
+    it('keeps every squad for a term made only of punctuation', () => {
+      expect(querySquadList(board, query({ search: '!!!' })).matching).toHaveLength(board.length)
+    })
   })
 
   it('keeps only squads with a free slot for has-space', () => {

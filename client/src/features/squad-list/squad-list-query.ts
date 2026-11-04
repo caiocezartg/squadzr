@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '@squadzr/schemas'
 import type { PublicSquad } from '@/types'
 import { hasEveryTag } from './squad-tags'
 import type { ResolvedSquadsSearch } from './squads-search'
@@ -16,9 +17,18 @@ export interface SquadListResult {
   totalPages: number
 }
 
+/**
+ * Matches like Game Search: accents, case and punctuation do not matter, so "pokemon" finds
+ * "Pokémon Go" and "counter strike" finds "Counter-Strike 2". A term made only of punctuation
+ * folds to nothing and, like an empty field, keeps every squad.
+ */
 function matchesSearch(squad: PublicSquad, search: string): boolean {
-  const term = search.toLowerCase()
-  return squad.game.name.toLowerCase().includes(term) || squad.name.toLowerCase().includes(term)
+  const term = normalizeSearchText(search)
+  if (term === '') return true
+  return (
+    normalizeSearchText(squad.game.name).includes(term) ||
+    normalizeSearchText(squad.name).includes(term)
+  )
 }
 
 function matchesStatus(squad: PublicSquad, filter: SquadListQuery['filter']): boolean {
