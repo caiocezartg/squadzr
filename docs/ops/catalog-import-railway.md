@@ -221,5 +221,10 @@ The pre-deploy command applies the checked-in migrations with the runtime entry 
 (`server/src/interface/scripts/migrate.ts`, no `drizzle-kit`) before the import container starts. It
 runs against the same `DATABASE_URL` and is safe to run repeatedly.
 
+After a deploy whose migration touches Game Search, such as `0007` (issue #100), run the import with
+`railway cron run` or wait for the day's run. The migration backfills `search_text` with
+`[:alnum:]`, which does not cover multibyte letters under the `C` locale, so games with Cyrillic or
+CJK names stay unsearchable until the import rewrites their rows with `normalizeSearchText`.
+
 When the API is hosted on Railway, the migrations move to the API service's pre-deploy command and
 the `preDeployCommand` entry leaves this authoring file: exactly one service owns schema changes.
