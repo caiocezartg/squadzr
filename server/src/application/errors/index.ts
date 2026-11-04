@@ -1,5 +1,9 @@
 export { AppError } from './base.error'
-export { GameNotAvailableError, InvalidGameError } from './validation.error'
+export {
+  GameNotAvailableError,
+  InvalidGameError,
+  PlatformNotAvailableError,
+} from './validation.error'
 export { UnauthorizedError } from './unauthorized.error'
 export { ForbiddenOriginError } from './forbidden-origin.error'
 export { RateLimitedError } from './rate-limited.error'

@@ -8,7 +8,7 @@ import { availabilityLabelKey } from './availability-options'
 /** The active filters as removable chips, with a "Clear" link. The row keeps its height with no chips. */
 export function FilterChips({ filters }: { readonly filters: UseSquadFiltersReturn }) {
   const t = useTranslations()
-  const { filter, language, tags } = filters
+  const { filter, language, platform, tags } = filters
 
   return (
     <div
@@ -28,6 +28,13 @@ export function FilterChips({ filters }: { readonly filters: UseSquadFiltersRetu
           variant="removable"
           label={t(languageBadgeKey(language))}
           onClick={() => filters.setLanguage('all')}
+        />
+      )}
+      {platform !== 'all' && (
+        <Tag
+          variant="removable"
+          label={t(`platforms.${platform}`)}
+          onClick={() => filters.setPlatform('all')}
         />
       )}
       {tags.map((tag) => (

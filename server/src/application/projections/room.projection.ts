@@ -20,6 +20,7 @@ export function toPublicRoom(room: Room): PublicRoomDto {
     maxPlayers: room.maxPlayers,
     tags: room.tags,
     language: room.language,
+    platform: room.platform,
     ...(room.memberCount !== undefined && { memberCount: room.memberCount }),
     memberPreview: room.memberPreview.map(({ id, name, image }) => ({ id, name, image })),
     ...(room.isMember !== undefined && { isMember: room.isMember }),

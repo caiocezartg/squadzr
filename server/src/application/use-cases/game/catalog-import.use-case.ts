@@ -128,6 +128,7 @@ function toUpsertInput(
     name: candidate.name,
     slug: candidate.slug,
     genres: candidate.genres,
+    platforms: candidate.platforms,
     coverUrl: candidate.coverUrl,
     thumbnailUrl: candidate.thumbnailUrl,
     popularity,

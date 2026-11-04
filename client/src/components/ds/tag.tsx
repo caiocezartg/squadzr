@@ -1,5 +1,6 @@
-import { Globe, X } from 'lucide-react'
+import { Gamepad2, Globe, Monitor, Smartphone, X, type LucideIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import type { Platform } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
 
 type StaticTagVariant = 'tag' | 'glass' | 'lang' | 'lang-light'
@@ -13,11 +14,28 @@ interface StaticTagProps {
   readonly label: string
 }
 
+/** The read-only platform chip: an icon and the short label. `platform-light` is its twin for dark covers. */
+interface PlatformTagProps {
+  readonly variant: 'platform' | 'platform-light'
+  /** @default 'sm' */
+  readonly size?: 'sm' | 'md'
+  readonly platform: Platform
+  /** The short label, already translated. */
+  readonly label: string
+}
+
 interface ToggleTagProps {
   readonly variant: 'toggle'
   readonly label: string
   readonly pressed: boolean
   readonly onClick: () => void
+  /**
+   * One choice among several: the chip is a radio (the parent supplies the `radiogroup`) and its
+   * label carries no `#`.
+   */
+  readonly choice?: boolean
+  /** The roving tab stop of a radiogroup. */
+  readonly tabIndex?: number
 }
 
 interface SuggestTagProps {
@@ -32,7 +50,12 @@ interface RemovableTagProps {
   readonly onClick: () => void
 }
 
-export type TagProps = StaticTagProps | ToggleTagProps | SuggestTagProps | RemovableTagProps
+export type TagProps =
+  | StaticTagProps
+  | PlatformTagProps
+  | ToggleTagProps
+  | SuggestTagProps
+  | RemovableTagProps
 
 interface StaticTagStyle {
   readonly classes: string
@@ -44,6 +67,17 @@ const STATIC_STYLES: Record<StaticTagVariant, StaticTagStyle> = {
   glass: { classes: 'bg-white/8 text-text-2 font-semibold', hashed: true },
   lang: { classes: 'bg-line text-text font-bold', hashed: false },
   'lang-light': { classes: 'bg-text text-bg font-bold', hashed: false },
+}
+
+const PLATFORM_ICONS: Record<Platform, LucideIcon> = {
+  pc: Monitor,
+  ps5: Gamepad2,
+  ps4: Gamepad2,
+  'xbox-series': Gamepad2,
+  'xbox-one': Gamepad2,
+  'switch-2': Gamepad2,
+  switch: Gamepad2,
+  mobile: Smartphone,
 }
 
 const STATIC_SIZES = {
@@ -66,8 +100,8 @@ const BUTTON_BASE =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint'
 
 /**
- * The Redesign v2 tag (reference, Components). `tag`, `glass`, `lang` and `lang-light` are
- * read-only text; `toggle`, `suggest` and `removable` are buttons.
+ * The Redesign v2 tag (reference, Components). `tag`, `glass`, `lang`, `lang-light`, `platform` and
+ * `platform-light` are read-only text; `toggle`, `suggest` and `removable` are buttons.
  */
 export function Tag(props: TagProps) {
   switch (props.variant) {
@@ -77,6 +111,9 @@ export function Tag(props: TagProps) {
       return <SuggestTag {...props} />
     case 'removable':
       return <RemovableTag {...props} />
+    case 'platform':
+    case 'platform-light':
+      return <PlatformTag {...props} />
     default:
       return <StaticTag {...props} />
   }
@@ -101,11 +138,33 @@ function StaticTag({ variant = 'tag', size = 'sm', label }: StaticTagProps) {
   )
 }
 
-function ToggleTag({ label, pressed, onClick }: ToggleTagProps) {
+/** The platform chip wears the language chip's tokens: `lang` for `platform`, `lang-light` for its twin. */
+function PlatformTag({ variant, size = 'sm', platform, label }: PlatformTagProps) {
+  const style = STATIC_STYLES[variant === 'platform' ? 'lang' : 'lang-light']
+  const sizes = STATIC_SIZES[size]
+  const Icon = PLATFORM_ICONS[platform]
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.25 whitespace-nowrap leading-[1.3]',
+        style.classes,
+        sizes.text,
+        sizes.lang
+      )}
+    >
+      <Icon aria-hidden="true" className={cn('shrink-0', sizes.globe)} />
+      {label}
+    </span>
+  )
+}
+
+function ToggleTag({ label, pressed, onClick, choice = false, tabIndex }: ToggleTagProps) {
   return (
     <button
       type="button"
-      aria-pressed={pressed}
+      {...(choice ? { role: 'radio', 'aria-checked': pressed } : { 'aria-pressed': pressed })}
+      tabIndex={tabIndex}
       onClick={onClick}
       className={cn(
         BUTTON_BASE,
@@ -115,7 +174,7 @@ function ToggleTag({ label, pressed, onClick }: ToggleTagProps) {
           : 'bg-mint/8 text-mint hover-fine:bg-mint/16'
       )}
     >
-      #{label}
+      {choice ? label : `#${label}`}
     </button>
   )
 }

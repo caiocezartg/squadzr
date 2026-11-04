@@ -88,6 +88,8 @@
       "availabilityAlmostFull": "Quase cheio",
       "language": "Idioma",
       "languageAll": "Todos",
+      "platform": "Plataforma",
+      "platformAll": "Todas",
       "tags": "Tags",
       "tagLabel": "Adicionar uma tag",
       "tagPlaceholder": "digite uma tag…",
@@ -132,6 +134,8 @@
       "playersFewer": "Menos um jogador",
       "playersMore": "Mais um jogador",
       "languageLabel": "Idioma do squad",
+      "platformLabel": "Plataforma",
+      "platformRequired": "Escolha uma plataforma para continuar.",
       "tagsLabel": "Tags",
       "optional": "(opcional)",
       "tagPlaceholder": "adicionar tag…",
@@ -338,7 +342,8 @@
       "openRoom": "Abrir sala",
       "enter": "Entrar",
       "full": "Cheio",
-      "label": "{name} — {game}, {language}, {members} de {max} jogadores"
+      "label": "{name} — {game}, {language}, {members} de {max} jogadores",
+      "labelPlatform": "{name} — {game}, {language}, {platform}, {members} de {max} jogadores"
     },
     "authModal": {
       "title": "Login necessário",
@@ -391,6 +396,16 @@
     "reconnecting": "Reconectando…",
     "disconnected": "Desconectado"
   },
+  "platforms": {
+    "pc": "PC",
+    "ps5": "PS5",
+    "ps4": "PS4",
+    "xbox-series": "Xbox Series",
+    "xbox-one": "Xbox One",
+    "switch-2": "Switch 2",
+    "switch": "Switch",
+    "mobile": "Mobile"
+  },
   "languages": {
     "ptBr": "PT-BR",
     "enUs": "EN-US"
@@ -398,6 +413,7 @@
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",
     "INVALID_GAME": "Este jogo não está mais disponível. Por favor, escolha outro jogo.",
+    "INVALID_PLATFORM": "Essa plataforma não está disponível para este jogo. Escolha outra plataforma.",
     "INVALID_DISCORD_INVITE": "Esse convite do Discord não existe mais. Confira o link ou crie um convite novo.",
     "ROOM_NOT_FOUND": "Este squad não existe mais ou o código é inválido.",
     "ROOM_FULL": "Este squad já está cheio.",

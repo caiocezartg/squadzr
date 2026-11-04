@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { pgTable, uuid, varchar, timestamp, integer, text, check } from 'drizzle-orm/pg-core'
+import { PLATFORMS } from '@squadzr/schemas'
 import { user } from './auth'
 import { games } from './games'
 
@@ -27,6 +28,9 @@ export const rooms = pgTable(
       .notNull()
       .default(sql`ARRAY[]::text[]`),
     language: varchar('language', { length: 5 }).notNull().default('pt-br'),
+    // The platform the group plays on; null for a Squad whose Game has none and
+    // for Squads created before platforms existed.
+    platform: text('platform'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -41,6 +45,12 @@ export const rooms = pgTable(
     lastActivityAfterCreated: check(
       'rooms_last_activity_after_created',
       sql`${table.lastActivityAt} >= ${table.createdAt}`
+    ),
+    platformInEnum: check(
+      'rooms_platform_in_enum',
+      sql`${table.platform} IS NULL OR ${table.platform} IN (${sql.raw(
+        PLATFORMS.map((platform) => `'${platform}'`).join(', ')
+      )})`
     ),
     readyAfterLastActivity: check(
       'rooms_ready_after_last_activity',

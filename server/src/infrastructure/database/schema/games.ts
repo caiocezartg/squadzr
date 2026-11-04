@@ -9,6 +9,7 @@ import {
   jsonb,
   timestamp,
 } from 'drizzle-orm/pg-core'
+import type { Platform } from '@squadzr/schemas'
 import type { GameGenre } from '@domain/entities/game.entity'
 
 // The catalog can be imported from IGDB (CCC-86): `igdbId` is the external
@@ -26,6 +27,11 @@ export const games = pgTable('games', {
     .$type<GameGenre[]>()
     .notNull()
     .default(sql`'[]'::jsonb`),
+  platforms: text('platforms')
+    .array()
+    .$type<Platform[]>()
+    .notNull()
+    .default(sql`ARRAY[]::text[]`),
   coverUrl: text('cover_url').notNull(),
   thumbnailUrl: text('thumbnail_url').notNull(),
   popularity: integer('popularity').notNull().default(0),

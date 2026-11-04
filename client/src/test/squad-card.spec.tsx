@@ -112,6 +112,25 @@ describe('squad card — layout', () => {
     expect(within(card).getByText('/5')).toBeInTheDocument()
   })
 
+  it('shows the platform chip right after the language, and names it on the card', () => {
+    render(<SquadCard squad={{ ...openSquad, platform: 'ps5' }} />)
+
+    const card = screen.getByRole('button', {
+      name: 'Ranked grind — League of Legends, EN-US, PS5, 1 of 5 players',
+    })
+    const language = within(card).getByText('EN-US')
+    const platform = within(card).getByText('PS5')
+    expect(language.nextElementSibling).toBe(platform)
+    expect(platform.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('shows no platform chip for a squad without a platform', () => {
+    render(<SquadCard squad={openSquad} />)
+
+    const card = screen.getByRole('button', { name: OPEN_NAME })
+    expect(within(card).queryByText(/^(PC|PS5|PS4|Xbox|Switch|Mobile)/)).not.toBeInTheDocument()
+  })
+
   it('counts one member for a squad without a count', () => {
     const { memberCount: _count, ...withoutCount } = openSquad
     render(<SquadCard squad={withoutCount as Squad} />)

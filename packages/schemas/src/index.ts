@@ -17,6 +17,14 @@ export {
   type DiscordPreviewResponse,
   type DiscordServerPreviewDto,
 } from './discord'
+export {
+  IGDB_PLATFORM_IDS,
+  PLATFORMS,
+  PLATFORM_LABELS,
+  platformSchema,
+  platformsFromIgdbIds,
+  type Platform,
+} from './platform'
 export { healthResponseSchema, type HealthResponse } from './health'
 export { sessionResponseSchema, type SessionDto } from './session'
 export { userResponseSchema, type UserDto } from './user'

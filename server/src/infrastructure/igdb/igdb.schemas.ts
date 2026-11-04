@@ -38,6 +38,8 @@ export const igdbGameSchema = z.object({
   slug: z.string().nullable().optional(),
   cover: igdbCoverSchema.nullable().optional(),
   genres: z.array(igdbGenreSchema).nullable().optional(),
+  // Platform ids (not expanded): the adapter keeps the ones the Platform enum maps.
+  platforms: z.array(z.number().int().positive()).nullable().optional(),
   multiplayer_modes: z.array(igdbMultiplayerModeSchema).nullable().optional(),
   first_release_date: z.number().int().nullable().optional(),
   total_rating_count: z.number().int().nonnegative().nullable().optional(),

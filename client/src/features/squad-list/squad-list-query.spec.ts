@@ -30,6 +30,7 @@ function squad(overrides: Partial<PublicSquad> & { id: string }): PublicSquad {
     maxPlayers: 5,
     tags: [],
     language: 'en',
+    platform: null,
     memberCount: 1,
     memberPreview: [],
     isMember: false,
@@ -106,6 +107,33 @@ describe('querySquadList — filters', () => {
       'almost',
       'full',
     ])
+  })
+
+  it('keeps only the chosen platform, and drops the squads without one', () => {
+    const pc = squad({ id: 'pc', platform: 'pc' })
+    const ps5 = squad({ id: 'ps5', platform: 'ps5' })
+    const none = squad({ id: 'none', platform: null })
+    const platformSquads = [pc, ps5, none]
+
+    expect(ids(querySquadList(platformSquads, query({ platform: 'ps5' })).matching)).toEqual([
+      'ps5',
+    ])
+    expect(ids(querySquadList(platformSquads, query({ platform: 'mobile' })).matching)).toEqual([])
+    expect(ids(querySquadList(platformSquads, query({ platform: 'all' })).matching).sort()).toEqual(
+      ['none', 'pc', 'ps5']
+    )
+  })
+
+  it('combines the platform with the other filters', () => {
+    const match = squad({ id: 'match', platform: 'pc', language: 'pt-br' })
+    const wrongLanguage = squad({ id: 'wrong', platform: 'pc', language: 'en' })
+
+    expect(
+      ids(
+        querySquadList([match, wrongLanguage], query({ platform: 'pc', language: 'pt-br' }))
+          .matching
+      )
+    ).toEqual(['match'])
   })
 
   it('matches a tag exactly, not by part of it', () => {

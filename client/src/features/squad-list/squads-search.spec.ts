@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   SQUADS_SEARCH_DEFAULTS,
   parseLanguageFilter,
+  parsePlatformFilter,
   parseSort,
   parseStatusFilter,
   resolveSquadsSearch,
@@ -17,11 +18,24 @@ describe('squadsSearchSchema', () => {
       filter: 'almost-full',
       sort: 'oldest',
       language: 'pt-br',
+      platform: 'ps5',
       tag: ['duo'],
       page: 3,
       join: 'ABC123',
     }
     expect(squadsSearchSchema.parse(raw)).toEqual(raw)
+  })
+
+  it.each(['ps3', 'steam', 'PC', 42, ''])('drops an invalid platform: %s', (platform) => {
+    expect(squadsSearchSchema.parse({ platform, language: 'en' })).toEqual({ language: 'en' })
+  })
+
+  it('reads the platform of a URL, and "all" as the default it is', () => {
+    const params = new URLSearchParams('platform=switch-2&language=en')
+    expect(squadsSearchSchema.parse(squadsSearchFromParams(params)).platform).toBe('switch-2')
+    expect(resolveSquadsSearch(squadsSearchSchema.parse({ platform: 'bogus' })).platform).toBe(
+      'all'
+    )
   })
 
   it.each(['../../admin', 'ABC12', 'ABC1234', 'ABC 12', '%2F%2E%2E'])(
@@ -112,6 +126,7 @@ describe('resolveSquadsSearch', () => {
       filter: 'all',
       sort: 'newest',
       language: 'all',
+      platform: 'all',
       tag: [],
       page: 1,
     })
@@ -131,11 +146,14 @@ describe('control value parsers', () => {
     expect(parseStatusFilter('has-space')).toBe('has-space')
     expect(parseSort('oldest')).toBe('oldest')
     expect(parseLanguageFilter('pt-br')).toBe('pt-br')
+    expect(parsePlatformFilter('all')).toBe('all')
+    expect(parsePlatformFilter('xbox-series')).toBe('xbox-series')
   })
 
   it('reject anything else', () => {
     expect(parseStatusFilter('nope')).toBeUndefined()
     expect(parseSort('')).toBeUndefined()
     expect(parseLanguageFilter(undefined)).toBeUndefined()
+    expect(parsePlatformFilter('ps3')).toBeUndefined()
   })
 })

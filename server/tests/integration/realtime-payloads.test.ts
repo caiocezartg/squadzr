@@ -4,6 +4,7 @@
  * within 60 seconds. The exact size boundary and one byte above remain tested.
  */
 import { afterEach, describe, expect, it } from 'vitest'
+import { roomCreatedMessageSchema, roomSnapshotMessageSchema } from '@squadzr/schemas/ws'
 import { signInMany } from '@test/harness/auth'
 import { countMembers, createRoom, insertGame, joinAll } from '@test/harness/rooms'
 import {
@@ -191,5 +192,37 @@ describe('16 KiB maxPayload', () => {
         },
       },
     ])
+  })
+})
+
+describe('Squad platform in realtime payloads', () => {
+  it('carries the platform in room_created and in room_snapshot, and null for a Game without one', async () => {
+    server = await buildTestServer()
+    const [host] = await signInMany(server, 1)
+    const platformGame = await insertGame(server, { platforms: ['pc', 'ps5'] })
+    const plainGame = await insertGame(server)
+    const catalog = await open(server)
+    await subscribeCatalog(catalog)
+
+    const withPlatform = await createRoom(server, host!, {
+      gameId: platformGame.id,
+      platform: 'ps5',
+    })
+    const withoutPlatform = await createRoom(server, host!, { gameId: plainGame.id })
+
+    const created = (await catalog.drain()).map((message) =>
+      roomCreatedMessageSchema.parse(message)
+    )
+    expect(created.map((message) => message.payload.room.platform)).toEqual(['ps5', null])
+
+    const socket = await open(server, host!)
+    const snapshot = roomSnapshotMessageSchema.parse(
+      await joinRoomChannel(socket, withPlatform.code)
+    )
+    expect(snapshot.payload.room.platform).toBe('ps5')
+    const other = roomSnapshotMessageSchema.parse(
+      await joinRoomChannel(socket, withoutPlatform.code)
+    )
+    expect(other.payload.room.platform).toBeNull()
   })
 })

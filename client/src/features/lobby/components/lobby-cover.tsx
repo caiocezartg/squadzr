@@ -77,6 +77,14 @@ export function LobbyCover({ squad }: LobbyCoverProps) {
             {squad?.language && (
               <Tag variant="lang-light" size="md" label={t(languageBadgeKey(squad.language))} />
             )}
+            {squad?.platform && (
+              <Tag
+                variant="platform-light"
+                size="md"
+                platform={squad.platform}
+                label={t(`platforms.${squad.platform}`)}
+              />
+            )}
             {squad?.tags.map((tag) => (
               <Tag key={tag} variant="glass" size="md" label={tag} />
             ))}

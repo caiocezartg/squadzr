@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { isoDateTimeSchema } from './date'
 import { discordInviteCode } from './discord'
 import { gameSummarySchema } from './game'
+import { platformSchema } from './platform'
 
 export const roomLanguageSchema = z.enum(['en', 'pt-br'])
 
@@ -34,6 +35,8 @@ export const publicRoomSchema = z.object({
   maxPlayers: z.number().int(),
   tags: z.array(z.string()).default([]),
   language: roomLanguageSchema.default('pt-br'),
+  // The platform the group plays on; null for a Squad whose Game has none.
+  platform: platformSchema.nullable(),
   memberCount: z.number().int().optional(),
   memberPreview: z.array(memberPreviewSchema).max(MEMBER_PREVIEW_LIMIT),
   isMember: z.boolean().optional(),
@@ -97,6 +100,9 @@ export const createRoomInputSchema = z.object({
     .max(5, 'Max 5 tags')
     .default([]),
   language: roomLanguageSchema.default('pt-br'),
+  // Required when the Game has platforms and absent when it has none: the
+  // create use case decides, because it depends on the Game.
+  platform: platformSchema.nullish(),
 })
 
 export type CreateRoomInput = z.infer<typeof createRoomInputSchema>

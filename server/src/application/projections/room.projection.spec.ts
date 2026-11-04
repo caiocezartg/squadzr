@@ -39,6 +39,7 @@ describe('toPublicRoom', () => {
       maxPlayers: 5,
       tags: [],
       language: 'pt-br',
+      platform: null,
       memberPreview: [],
       createdAt: '2024-01-01T08:30:00.000Z',
       updatedAt: '2024-01-01T09:45:00.000Z',
@@ -96,6 +97,12 @@ describe('toPublicRoom', () => {
       coverThumbUrl: game.thumbnailUrl,
     })
     expect(projection.game.coverThumbUrl).not.toBe(projection.game.coverUrl)
+  })
+
+  it('carries the chosen platform, or null when the Squad has none', () => {
+    expect(toPublicRoom({ ...readyRoom, platform: 'ps5' }).platform).toBe('ps5')
+    expect(toPublicRoom(readyRoom).platform).toBeNull()
+    expect(toMemberRoom({ ...readyRoom, platform: 'switch-2' }).platform).toBe('switch-2')
   })
 
   it('satisfies the shared public room contract', () => {

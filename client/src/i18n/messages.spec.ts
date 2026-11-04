@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { createTranslator } from 'next-intl'
+import { PLATFORMS, PLATFORM_LABELS } from '@squadzr/schemas'
 import en from '@/locales/en.json'
 import ptBR from '@/locales/pt-BR.json'
 
@@ -36,6 +37,14 @@ const tPtBR = createTranslator({ locale: 'pt-BR', messages: ptBR })
 describe('message files', () => {
   it('define the same message paths in English and Portuguese', () => {
     expect(messagePaths(ptBR).sort()).toEqual(messagePaths(en).sort())
+  })
+})
+
+describe('platform labels', () => {
+  it('live in one platforms namespace, the same in both languages and in the shared constant', () => {
+    expect(Object.keys(en.platforms)).toEqual([...PLATFORMS])
+    expect(en.platforms).toEqual(PLATFORM_LABELS)
+    expect(ptBR.platforms).toEqual(en.platforms)
   })
 })
 

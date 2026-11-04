@@ -31,6 +31,61 @@ describe('Tag', () => {
     }
   )
 
+  it.each(['platform', 'platform-light'] as const)(
+    'shows the %s variant as an icon and the short label, not a control',
+    (variant) => {
+      const { container } = render(<Tag variant={variant} platform="ps5" label="PS5" />)
+
+      expect(screen.getByText('PS5')).toBeInTheDocument()
+      expect(screen.queryByRole('button')).not.toBeInTheDocument()
+      expect(screen.queryByRole('img')).not.toBeInTheDocument()
+      expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    }
+  )
+
+  it('wears the language chip tokens on the platform chip, with no colour of its own', () => {
+    render(
+      <>
+        <Tag variant="lang" label="EN-US" />
+        <Tag variant="platform" platform="pc" label="PC" />
+        <Tag variant="lang-light" label="PT-BR" />
+        <Tag variant="platform-light" platform="pc" label="PC light" />
+      </>
+    )
+
+    expect(screen.getByText('PC').className).toContain(screen.getByText('EN-US').className)
+    expect(screen.getByText('PC light').className).toContain(screen.getByText('PT-BR').className)
+  })
+
+  it.each([
+    ['pc', 'lucide-monitor'],
+    ['ps5', 'lucide-gamepad-2'],
+    ['xbox-one', 'lucide-gamepad-2'],
+    ['switch-2', 'lucide-gamepad-2'],
+    ['mobile', 'lucide-smartphone'],
+  ] as const)('draws the %s platform with %s', (platform, icon) => {
+    const { container } = render(<Tag variant="platform" platform={platform} label={platform} />)
+
+    expect(container.querySelector('svg')).toHaveClass(icon)
+  })
+
+  it('exposes a single-choice toggle as a radio without the #', async () => {
+    const user = userEvent.setup()
+    const onClick = vi.fn()
+    const { rerender } = render(
+      <Tag variant="toggle" choice label="PC" pressed={false} onClick={onClick} />
+    )
+
+    const off = screen.getByRole('radio', { name: 'PC' })
+    expect(off).toHaveAttribute('aria-checked', 'false')
+    expect(off).not.toHaveAttribute('aria-pressed')
+    await user.click(off)
+    expect(onClick).toHaveBeenCalledOnce()
+
+    rerender(<Tag variant="toggle" choice label="PC" pressed onClick={onClick} />)
+    expect(screen.getByRole('radio', { name: 'PC' })).toHaveAttribute('aria-checked', 'true')
+  })
+
   it('shows a tag without a variant as a #label', () => {
     render(<Tag label="casual" />)
 

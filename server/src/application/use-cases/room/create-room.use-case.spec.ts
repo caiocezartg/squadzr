@@ -8,6 +8,7 @@ import {
   GameNotAvailableError,
   InvalidDiscordInviteError,
   InvalidGameError,
+  PlatformNotAvailableError,
   RoomCreateLimitReachedError,
   UserNotFoundError,
 } from '@application/errors'
@@ -93,6 +94,7 @@ describe('CreateRoomUseCase', () => {
         gameId: 'game-123',
         maxPlayers: 5,
         discordLink: 'https://discord.gg/test',
+        platform: null,
       })
       expect(mockRoomRepository.create).toHaveBeenCalledOnce()
     })
@@ -402,6 +404,91 @@ describe('CreateRoomUseCase', () => {
 
       expect(mockRoomRepository.create).toHaveBeenCalledOnce()
       expect(result.room).toBeDefined()
+    })
+
+    describe('platform', () => {
+      const baseInput = {
+        name: 'My Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        discordLink: 'https://discord.gg/test',
+      }
+
+      beforeEach(() => {
+        mockRoomRepository.create.mockResolvedValue({
+          status: 'created',
+          room: createMockRoom({ gameId: 'game-123' }),
+          hostMember: createMockRoomMember(),
+        })
+      })
+
+      it('stores the platform when it is one of the Game platforms', async () => {
+        mockGameRepository.findById.mockResolvedValue(
+          createMockGame({ id: 'game-123', platforms: ['pc', 'ps5', 'switch'] })
+        )
+
+        await useCase.execute({ ...baseInput, platform: 'ps5' })
+
+        expect(mockRoomRepository.create).toHaveBeenCalledWith(
+          expect.objectContaining({ platform: 'ps5' })
+        )
+      })
+
+      it('accepts the only platform of a Game that has just one', async () => {
+        mockGameRepository.findById.mockResolvedValue(
+          createMockGame({ id: 'game-123', platforms: ['mobile'] })
+        )
+
+        await useCase.execute({ ...baseInput, platform: 'mobile' })
+
+        expect(mockRoomRepository.create).toHaveBeenCalledWith(
+          expect.objectContaining({ platform: 'mobile' })
+        )
+      })
+
+      it.each([
+        ['a platform the Game does not have', 'xbox-one'],
+        ['no platform', undefined],
+        ['a null platform', null],
+      ] as const)('refuses %s when the Game has platforms', async (_label, platform) => {
+        mockGameRepository.findById.mockResolvedValue(
+          createMockGame({ id: 'game-123', platforms: ['pc', 'ps5'] })
+        )
+
+        await expect(useCase.execute({ ...baseInput, platform })).rejects.toBeInstanceOf(
+          PlatformNotAvailableError
+        )
+        expect(mockRoomRepository.create).not.toHaveBeenCalled()
+      })
+
+      it.each([undefined, null] as const)(
+        'stores no platform when the Game has none and the input says %s',
+        async (platform) => {
+          mockGameRepository.findById.mockResolvedValue(
+            createMockGame({ id: 'game-123', platforms: [] })
+          )
+
+          await useCase.execute({ ...baseInput, platform })
+
+          expect(mockRoomRepository.create).toHaveBeenCalledWith(
+            expect.objectContaining({ platform: null })
+          )
+        }
+      )
+
+      it('refuses a platform for a Game that has none', async () => {
+        mockGameRepository.findById.mockResolvedValue(
+          createMockGame({ id: 'game-123', platforms: [] })
+        )
+
+        const error = await useCase
+          .execute({ ...baseInput, platform: 'pc' })
+          .catch((caught: unknown) => caught)
+
+        expect(error).toBeInstanceOf(PlatformNotAvailableError)
+        expect(error).toMatchObject({ statusCode: 400, code: 'INVALID_PLATFORM' })
+        expect(mockRoomRepository.create).not.toHaveBeenCalled()
+      })
     })
   })
 })

@@ -770,6 +770,27 @@ describe('squad lobby — the member Lobby', () => {
     expect(screen.getByText('LIVE')).toBeInTheDocument()
   })
 
+  it('shows the platform chip right after the language', async () => {
+    const snapshot = lobbySnapshot()
+    await renderLobbyWithSnapshot({
+      ...snapshot,
+      room: { ...snapshot.room, platform: 'switch-2' },
+    })
+
+    const platform = screen.getByText('Switch 2')
+    expect(screen.getByText('EN-US').nextElementSibling).toBe(platform)
+    expect(platform).toHaveClass('text-[13px]')
+  })
+
+  it('shows no platform chip when the squad has none', async () => {
+    await renderLobbyWithSnapshot()
+
+    expect(screen.getByText('EN-US')).toBeInTheDocument()
+    expect(
+      screen.queryByText(/^(PC|PS5|PS4|Xbox Series|Xbox One|Switch|Switch 2|Mobile)$/)
+    ).not.toBeInTheDocument()
+  })
+
   it('counts the members as 02/03 and swaps the count when a snapshot changes it', async () => {
     await renderLobbyWithSnapshot()
 

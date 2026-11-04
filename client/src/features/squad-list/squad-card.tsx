@@ -50,15 +50,25 @@ export function SquadCard({ squad, onJoin, isLoading, preview = false }: SquadCa
   const isMember = squad.isMember === true
   const isFull = members >= squad.maxPlayers && !isMember && !preview
   const language = t(languageBadgeKey(squad.language))
-  const label = t('squads.card.label', {
+  const platform = squad.platform ? t(`platforms.${squad.platform}`) : null
+  const label = t(platform ? 'squads.card.labelPlatform' : 'squads.card.label', {
     name: squad.name,
     game: squad.game.name,
     language,
+    platform: platform ?? '',
     members,
     max: squad.maxPlayers,
   })
 
-  const body = <SquadCardBody squad={squad} members={members} language={language} isFull={isFull} />
+  const body = (
+    <SquadCardBody
+      squad={squad}
+      members={members}
+      language={language}
+      platform={platform}
+      isFull={isFull}
+    />
+  )
 
   if (preview) {
     return (
@@ -159,11 +169,14 @@ function SquadCardBody({
   squad,
   members,
   language,
+  platform,
   isFull,
 }: {
   readonly squad: PublicSquad
   readonly members: number
   readonly language: string
+  /** The translated platform label, or `null` for a Squad without a platform. */
+  readonly platform: string | null
   /** A full Squad the viewer has not joined: grayscale, with no hover. */
   readonly isFull: boolean
 }) {
@@ -181,7 +194,12 @@ function SquadCardBody({
 
       <span className="relative flex min-w-0 flex-col gap-2 px-4 py-3.5 lg:gap-2.5 lg:px-5.5 lg:py-4.5">
         <span className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1">
-          <Tag variant="lang" label={language} />
+          <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <Tag variant="lang" label={language} />
+            {squad.platform && platform && (
+              <Tag variant="platform" platform={squad.platform} label={platform} />
+            )}
+          </span>
           <span className="type-code shrink-0 text-faint">#{squad.code}</span>
         </span>
 

@@ -2,7 +2,13 @@ import { randomUUID } from 'node:crypto'
 import { count, eq } from 'drizzle-orm'
 import type { LightMyRequestResponse } from 'fastify'
 import { expect } from 'vitest'
-import { roomSchema, type GameDto, type GameSummaryDto, type RoomDto } from '@squadzr/schemas'
+import {
+  roomSchema,
+  type GameDto,
+  type GameSummaryDto,
+  type Platform,
+  type RoomDto,
+} from '@squadzr/schemas'
 import { games, roomMembers, rooms } from '@infrastructure/database/schema'
 import type { TestUser } from './auth'
 import type { TestServer } from './test-server'
@@ -15,6 +21,7 @@ export interface InsertGameOptions {
   coverUrl?: string
   thumbnailUrl?: string
   genres?: GameDto['genres']
+  platforms?: Platform[]
   popularity?: number
   listed?: boolean
   featuredRank?: number | null
@@ -48,6 +55,7 @@ export async function insertGameFixture(
       slug,
       igdbId: options.igdbId ?? null,
       genres: options.genres ?? [],
+      platforms: options.platforms ?? [],
       coverUrl,
       thumbnailUrl: options.thumbnailUrl ?? coverUrl,
       popularity: options.popularity ?? 0,
@@ -73,6 +81,7 @@ export async function insertGameFixture(
   return {
     game: {
       ...summary,
+      platforms: game.platforms,
       minPlayers: game.minPlayers,
       maxPlayers: game.maxPlayers,
       createdAt: game.createdAt.toISOString(),
@@ -100,6 +109,7 @@ export interface CreateRoomBody {
   discordLink?: string
   tags?: string[]
   language?: 'en' | 'pt-br'
+  platform?: Platform | null
 }
 
 export function postRoom(

@@ -1,3 +1,4 @@
+import type { Platform } from '@squadzr/schemas'
 import type { GameGenre } from '@domain/entities/game.entity'
 
 /** Multiplayer capacity as reported by the catalog source (IGDB in production). */
@@ -26,6 +27,8 @@ export interface GameCatalogCandidate {
   readonly name: string
   readonly slug: string
   readonly genres: readonly GameGenre[]
+  /** Supported platforms in display order; empty when the source lists none of them. */
+  readonly platforms: readonly Platform[]
   readonly coverUrl: string
   readonly thumbnailUrl: string
   readonly multiplayer: GameMultiplayerCapacity

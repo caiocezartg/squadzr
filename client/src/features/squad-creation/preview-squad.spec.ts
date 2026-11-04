@@ -18,6 +18,19 @@ describe('previewSquad', () => {
     })
   })
 
+  it('carries the chosen platform, or none', () => {
+    const chosen = previewSquad({
+      game: gameLol,
+      values: { ...values, platform: 'ps5' },
+      viewer,
+      nameFallback: 'Squad name',
+    })
+    const unchosen = previewSquad({ game: gameLol, values, viewer, nameFallback: 'Squad name' })
+
+    expect(chosen.platform).toBe('ps5')
+    expect(unchosen.platform).toBeNull()
+  })
+
   it('has the viewer as its only member and a masked six-character code', () => {
     const squad = previewSquad({ game: gameLol, values, viewer, nameFallback: 'Squad name' })
 

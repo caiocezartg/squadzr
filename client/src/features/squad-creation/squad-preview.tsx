@@ -15,9 +15,9 @@ export function SquadPreview({ game }: { game: Game }) {
   const t = useTranslations('ds.createSquad')
   const viewer = useSession()?.user
   const { control } = useFormContext<FormInput, unknown, FormValues>()
-  const [name, maxPlayers, tags, language] = useWatch({
+  const [name, maxPlayers, tags, language, platform] = useWatch({
     control,
-    name: ['name', 'maxPlayers', 'tags', 'language'],
+    name: ['name', 'maxPlayers', 'tags', 'language', 'platform'],
   })
   const nameFallback = t('previewNameFallback')
 
@@ -30,11 +30,12 @@ export function SquadPreview({ game }: { game: Game }) {
           maxPlayers: maxPlayers ?? defaultPlayers(game),
           tags,
           language,
+          platform,
         },
         viewer,
         nameFallback,
       }),
-    [game, name, maxPlayers, tags, language, viewer, nameFallback]
+    [game, name, maxPlayers, tags, language, platform, viewer, nameFallback]
   )
 
   return (

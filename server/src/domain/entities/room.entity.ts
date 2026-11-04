@@ -1,3 +1,4 @@
+import type { Platform } from '@squadzr/schemas'
 import type { GameSummary } from './game.entity'
 
 /** One member of a Squad's preview: enough to show who joined, never the roster. */
@@ -19,6 +20,8 @@ export interface Room {
   readonly discordLink: string | null
   readonly tags: string[]
   readonly language: 'en' | 'pt-br'
+  /** The platform the group plays on; null when the Game has none (or the Squad predates platforms). */
+  readonly platform: Platform | null
   /** Null while the room is open; set when the room reaches capacity. */
   readonly readyAt: Date | null
   /** Advanced only by durable membership changes; feeds open-room expiration. */
@@ -39,4 +42,5 @@ export interface NewRoom {
   readonly discordLink: string
   readonly tags?: string[]
   readonly language?: 'en' | 'pt-br'
+  readonly platform?: Platform | null
 }

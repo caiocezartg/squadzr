@@ -1,4 +1,4 @@
-import { roomLanguageSchema } from '@squadzr/schemas'
+import { platformSchema, roomLanguageSchema } from '@squadzr/schemas'
 import type { GameSummary } from '@domain/entities/game.entity'
 import type { MemberPreview, Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
@@ -7,6 +7,8 @@ import type { RoomMemberRow } from '@infrastructure/database/schema/room-members
 
 // A stored language outside the contract reads as pt-br instead of failing the row.
 const languageSchema = roomLanguageSchema.catch('pt-br')
+// A stored platform outside the contract reads as no platform instead of failing the row.
+const platformOrNullSchema = platformSchema.nullable().catch(null)
 
 /** A Squad without its Game and member preview: the inserted row never reads them back. */
 export type CreatedRoomEntity = Omit<Room, 'game' | 'memberPreview'>
@@ -23,6 +25,7 @@ function mapRoomColumns(row: RoomRow): CreatedRoomEntity {
     discordLink: row.discordLink,
     tags: row.tags,
     language: languageSchema.parse(row.language),
+    platform: platformOrNullSchema.parse(row.platform),
     readyAt: row.readyAt,
     lastActivityAt: row.lastActivityAt,
     createdAt: row.createdAt,

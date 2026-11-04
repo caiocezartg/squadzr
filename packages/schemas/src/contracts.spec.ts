@@ -1,10 +1,16 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import {
   MEMBER_PREVIEW_LIMIT,
+  IGDB_PLATFORM_IDS,
+  PLATFORMS,
+  PLATFORM_LABELS,
+  createRoomInputSchema,
   createRoomResponseSchema,
   describeContractIssues,
   isRoomLobbyResponse,
   notificationsResponseSchema,
+  platformSchema,
+  platformsFromIgdbIds,
   publicRoomSchema,
   roomCodeParamSchema,
   roomLobbyResponseSchema,
@@ -54,6 +60,7 @@ const publicRoom = {
   maxPlayers: 5,
   tags: ['ranked'],
   language: 'en',
+  platform: 'pc',
   memberCount: 2,
   memberPreview: [
     { id: 'user-1', name: 'Caio', image: null },
@@ -91,6 +98,7 @@ describe('transport dates', () => {
       name: 'Counter-Strike 2',
       slug: 'cs2',
       genres: [{ slug: 'shooter', name: 'Shooter' }],
+      platforms: ['pc'],
       coverUrl: 'https://cdn.squadzr.test/cs2.webp',
       coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
       minPlayers: 2,
@@ -184,6 +192,103 @@ describe('gamesQuerySchema', () => {
     for (const limit of ['0', '51', '1.5', 'many']) {
       expect(gamesQuerySchema.safeParse({ limit }).success).toBe(false)
     }
+  })
+})
+
+describe('platformSchema', () => {
+  it('lists the eight platforms in display order, each with a label and IGDB ids', () => {
+    expect(PLATFORMS).toEqual([
+      'pc',
+      'ps5',
+      'ps4',
+      'xbox-series',
+      'xbox-one',
+      'switch-2',
+      'switch',
+      'mobile',
+    ])
+    expect(platformSchema.options).toEqual([...PLATFORMS])
+    expect(PLATFORMS.map((platform) => PLATFORM_LABELS[platform])).toEqual([
+      'PC',
+      'PS5',
+      'PS4',
+      'Xbox Series',
+      'Xbox One',
+      'Switch 2',
+      'Switch',
+      'Mobile',
+    ])
+    expect(IGDB_PLATFORM_IDS).toEqual({
+      pc: [6, 14, 3],
+      ps5: [167],
+      ps4: [48],
+      'xbox-series': [169],
+      'xbox-one': [49],
+      'switch-2': [508],
+      switch: [130],
+      mobile: [34, 39],
+    })
+  })
+
+  it('maps IGDB ids to platforms without repeats, in display order, ignoring unknown ids', () => {
+    expect(platformsFromIgdbIds([39, 34, 130, 14, 6, 3, 9, 12, 41, 49])).toEqual([
+      'pc',
+      'xbox-one',
+      'switch',
+      'mobile',
+    ])
+    expect(platformsFromIgdbIds([9, 12, 41])).toEqual([])
+    expect(platformsFromIgdbIds([])).toEqual([])
+  })
+
+  it('rejects a value outside the list', () => {
+    expect(platformSchema.safeParse('ps3').success).toBe(false)
+    expect(platformSchema.safeParse('steam').success).toBe(false)
+  })
+})
+
+describe('game platforms', () => {
+  const game = {
+    id: GAME_ID,
+    name: 'Counter-Strike 2',
+    slug: 'cs2',
+    genres: [],
+    coverUrl: 'https://cdn.squadzr.test/cs2.webp',
+    coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
+    minPlayers: 2,
+    maxPlayers: 5,
+    createdAt: CREATED_AT,
+    updatedAt: CREATED_AT,
+  }
+
+  it('requires the platforms list on a Game, and accepts an empty one', () => {
+    expect(gameSchema.parse({ ...game, platforms: ['pc', 'ps5'] }).platforms).toEqual(['pc', 'ps5'])
+    expect(gameSchema.parse({ ...game, platforms: [] }).platforms).toEqual([])
+    expect(gameSchema.safeParse(game).success).toBe(false)
+    expect(gameSchema.safeParse({ ...game, platforms: ['ps3'] }).success).toBe(false)
+  })
+})
+
+describe('Squad platform', () => {
+  it('is required on the public and the member Squad, and is nullable', () => {
+    const { platform: _platform, ...withoutPlatform } = publicRoom
+
+    expect(publicRoomSchema.safeParse(withoutPlatform).success).toBe(false)
+    expect(roomSchema.safeParse({ ...withoutPlatform, discordLink: null }).success).toBe(false)
+    expect(publicRoomSchema.parse({ ...publicRoom, platform: null }).platform).toBeNull()
+    expect(roomSchema.parse({ ...memberRoom, platform: 'switch-2' }).platform).toBe('switch-2')
+    expect(publicRoomSchema.safeParse({ ...publicRoom, platform: 'ps3' }).success).toBe(false)
+  })
+
+  it('is optional on the create input and validated against the list when given', () => {
+    const input = { name: 'Ranked', gameId: GAME_ID, discordLink: INVITE }
+
+    expect(createRoomInputSchema.parse(input).platform).toBeUndefined()
+    expect(createRoomInputSchema.parse({ ...input, platform: null }).platform).toBeNull()
+    expect(createRoomInputSchema.parse({ ...input, platform: 'xbox-series' }).platform).toBe(
+      'xbox-series'
+    )
+    expect(createRoomInputSchema.safeParse({ ...input, platform: 'steam' }).success).toBe(false)
   })
 })
 

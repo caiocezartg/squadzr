@@ -1,16 +1,19 @@
 // `zod/mini` keeps the same contracts as the classic build while letting the
 // bundler drop every schema the route validation does not use.
 import * as z from 'zod/mini'
+import { PLATFORMS } from '@squadzr/schemas'
 import { SQUAD_CODE_PATTERN } from '@/lib/squad-links'
 import { normalizeTags } from './squad-tags'
 
 const filterSchema = z.enum(['all', 'has-space', 'almost-full'])
 const sortSchema = z.enum(['newest', 'oldest'])
 const languageSchema = z.enum(['all', 'pt-br', 'en'])
+const platformSchema = z.enum(['all', ...PLATFORMS])
 
 export type SquadStatusFilter = z.infer<typeof filterSchema>
 export type SquadSort = z.infer<typeof sortSchema>
 export type SquadLanguageFilter = z.infer<typeof languageSchema>
+export type SquadPlatformFilter = z.infer<typeof platformSchema>
 
 /** An invalid parameter drops out of the result, so its default applies. */
 function lenient<T extends z.ZodMiniType>(schema: T) {
@@ -43,6 +46,7 @@ export const squadsSearchSchema = z.catch(
     filter: lenient(filterSchema),
     sort: lenient(sortSchema),
     language: lenient(languageSchema),
+    platform: lenient(platformSchema),
     tag: lenient(tagsSchema),
     page: lenient(z.coerce.number().check(z.int(), z.gte(1))),
     join: lenient(squadCodeSchema),
@@ -61,6 +65,7 @@ export const SQUADS_SEARCH_DEFAULTS: ResolvedSquadsSearch = {
   filter: 'all',
   sort: 'newest',
   language: 'all',
+  platform: 'all',
   tag: [],
   page: 1,
 }
@@ -71,6 +76,7 @@ export function resolveSquadsSearch(search: SquadsSearch): ResolvedSquadsSearch 
     filter: search.filter ?? SQUADS_SEARCH_DEFAULTS.filter,
     sort: search.sort ?? SQUADS_SEARCH_DEFAULTS.sort,
     language: search.language ?? SQUADS_SEARCH_DEFAULTS.language,
+    platform: search.platform ?? SQUADS_SEARCH_DEFAULTS.platform,
     tag: search.tag ?? SQUADS_SEARCH_DEFAULTS.tag,
     page: search.page ?? SQUADS_SEARCH_DEFAULTS.page,
   }
@@ -107,3 +113,4 @@ function parseValue<T extends z.ZodMiniType>(schema: T, value: unknown): z.outpu
 export const parseStatusFilter = (value: unknown) => parseValue(filterSchema, value)
 export const parseSort = (value: unknown) => parseValue(sortSchema, value)
 export const parseLanguageFilter = (value: unknown) => parseValue(languageSchema, value)
+export const parsePlatformFilter = (value: unknown) => parseValue(platformSchema, value)

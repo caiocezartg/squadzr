@@ -4,6 +4,7 @@ import { useId } from 'react'
 import { Controller, useFormContext, useWatch } from 'react-hook-form'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
+import { ChoiceChips } from '@/components/ds/choice-chips'
 import { Segmented } from '@/components/ds/segmented'
 import { languageBadgeKey } from '@/lib/language-badge'
 import { cn } from '@/lib/utils'
@@ -29,12 +30,15 @@ export interface DetailsStepProps {
 }
 
 /**
- * Step 2: the chosen game with "Change game", the name with its counter, the player stepper, the
- * Squad language and the tags with their suggestions. Every control writes to the wizard's form.
+ * Step 2: the chosen game with "Change game", the platform (only when the game has platforms), the
+ * name with its counter, the player stepper, the Squad language and the tags with their suggestions. Every control writes to the wizard's form.
  */
 export function DetailsStep({ selectedGame, onChangeGame }: DetailsStepProps) {
   const t = useTranslations()
+  const tPlatforms = useTranslations('platforms')
   const ids = {
+    platform: useId(),
+    platformError: useId(),
     name: useId(),
     nameError: useId(),
     players: useId(),
@@ -43,6 +47,7 @@ export function DetailsStep({ selectedGame, onChangeGame }: DetailsStepProps) {
   const {
     register,
     control,
+    clearErrors,
     formState: { errors },
   } = useFormContext<FormInput, unknown, FormValues>()
   const name = useWatch({ control, name: 'name' }) ?? ''
@@ -64,6 +69,34 @@ export function DetailsStep({ selectedGame, onChangeGame }: DetailsStepProps) {
           {t('ds.createSquad.changeGame')}
         </Button>
       </div>
+
+      {selectedGame.platforms.length > 0 && (
+        <FormField
+          labelId={ids.platform}
+          label={t('ds.createSquad.platformLabel')}
+          errorId={ids.platformError}
+          error={errors.platform ? t('ds.createSquad.platformRequired') : undefined}
+        >
+          <Controller
+            name="platform"
+            control={control}
+            render={({ field }) => (
+              <ChoiceChips
+                labelledBy={ids.platform}
+                options={selectedGame.platforms.map((platform) => ({
+                  value: platform,
+                  label: tPlatforms(platform),
+                }))}
+                value={field.value ?? null}
+                onChange={(platform) => {
+                  field.onChange(platform)
+                  clearErrors('platform')
+                }}
+              />
+            )}
+          />
+        </FormField>
+      )}
 
       <FormField
         htmlFor={ids.name}
