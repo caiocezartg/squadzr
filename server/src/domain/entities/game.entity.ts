@@ -1,3 +1,5 @@
+import type { Platform } from '@squadzr/schemas'
+
 export interface GameGenre {
   readonly slug: string
   readonly name: string
@@ -9,6 +11,8 @@ export interface Game {
   readonly slug: string
   readonly igdbId: number | null
   readonly genres: readonly GameGenre[]
+  /** Supported platforms the Game runs on, in display order; empty when it has none. */
+  readonly platforms: readonly Platform[]
   readonly coverUrl: string
   readonly thumbnailUrl: string
   readonly popularity: number
@@ -54,6 +58,7 @@ export interface UpsertGameInput {
   readonly name: string
   readonly slug: string
   readonly genres: readonly GameGenre[]
+  readonly platforms: readonly Platform[]
   readonly coverUrl: string
   readonly thumbnailUrl: string
   readonly popularity: number

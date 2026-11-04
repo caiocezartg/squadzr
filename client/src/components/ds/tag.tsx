@@ -1,6 +1,9 @@
+import type { ReactNode } from 'react'
 import { Globe, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import type { Platform } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
+import { PlatformIcon } from './platform-icon'
 
 type StaticTagVariant = 'tag' | 'glass' | 'lang' | 'lang-light'
 
@@ -13,11 +16,30 @@ interface StaticTagProps {
   readonly label: string
 }
 
+/** The read-only platform chip: an icon and the short label. `platform-light` is its twin for dark covers. */
+interface PlatformTagProps {
+  readonly variant: 'platform' | 'platform-light'
+  /** @default 'sm' */
+  readonly size?: 'sm' | 'md'
+  readonly platform: Platform
+  /** The short label, already translated. */
+  readonly label: string
+}
+
 interface ToggleTagProps {
   readonly variant: 'toggle'
   readonly label: string
   readonly pressed: boolean
   readonly onClick: () => void
+  /**
+   * One choice among several: the chip is a radio (the parent supplies the `radiogroup`) and its
+   * label carries no `#`.
+   */
+  readonly choice?: boolean
+  /** The roving tab stop of a radiogroup. */
+  readonly tabIndex?: number
+  /** A decorative mark before the label, such as a Platform's. */
+  readonly icon?: ReactNode
 }
 
 interface SuggestTagProps {
@@ -30,9 +52,16 @@ interface RemovableTagProps {
   readonly variant: 'removable'
   readonly label: string
   readonly onClick: () => void
+  /** A decorative mark before the label, such as a Platform's. */
+  readonly icon?: ReactNode
 }
 
-export type TagProps = StaticTagProps | ToggleTagProps | SuggestTagProps | RemovableTagProps
+export type TagProps =
+  | StaticTagProps
+  | PlatformTagProps
+  | ToggleTagProps
+  | SuggestTagProps
+  | RemovableTagProps
 
 interface StaticTagStyle {
   readonly classes: string
@@ -66,8 +95,8 @@ const BUTTON_BASE =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint'
 
 /**
- * The Redesign v2 tag (reference, Components). `tag`, `glass`, `lang` and `lang-light` are
- * read-only text; `toggle`, `suggest` and `removable` are buttons.
+ * The Redesign v2 tag (reference, Components). `tag`, `glass`, `lang`, `lang-light`, `platform` and
+ * `platform-light` are read-only text; `toggle`, `suggest` and `removable` are buttons.
  */
 export function Tag(props: TagProps) {
   switch (props.variant) {
@@ -77,6 +106,9 @@ export function Tag(props: TagProps) {
       return <SuggestTag {...props} />
     case 'removable':
       return <RemovableTag {...props} />
+    case 'platform':
+    case 'platform-light':
+      return <PlatformTag {...props} />
     default:
       return <StaticTag {...props} />
   }
@@ -101,11 +133,32 @@ function StaticTag({ variant = 'tag', size = 'sm', label }: StaticTagProps) {
   )
 }
 
-function ToggleTag({ label, pressed, onClick }: ToggleTagProps) {
+/** The platform chip wears the language chip's tokens: `lang` for `platform`, `lang-light` for its twin. */
+function PlatformTag({ variant, size = 'sm', platform, label }: PlatformTagProps) {
+  const style = STATIC_STYLES[variant === 'platform' ? 'lang' : 'lang-light']
+  const sizes = STATIC_SIZES[size]
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.25 whitespace-nowrap leading-[1.3]',
+        style.classes,
+        sizes.text,
+        sizes.lang
+      )}
+    >
+      <PlatformIcon platform={platform} className={sizes.globe} />
+      {label}
+    </span>
+  )
+}
+
+function ToggleTag({ label, pressed, onClick, choice = false, tabIndex, icon }: ToggleTagProps) {
   return (
     <button
       type="button"
-      aria-pressed={pressed}
+      {...(choice ? { role: 'radio', 'aria-checked': pressed } : { 'aria-pressed': pressed })}
+      tabIndex={tabIndex}
       onClick={onClick}
       className={cn(
         BUTTON_BASE,
@@ -115,7 +168,8 @@ function ToggleTag({ label, pressed, onClick }: ToggleTagProps) {
           : 'bg-mint/8 text-mint hover-fine:bg-mint/16'
       )}
     >
-      #{label}
+      {icon}
+      {choice ? label : `#${label}`}
     </button>
   )
 }
@@ -135,7 +189,7 @@ function SuggestTag({ label, onClick }: SuggestTagProps) {
   )
 }
 
-function RemovableTag({ label, onClick }: RemovableTagProps) {
+function RemovableTag({ label, onClick, icon }: RemovableTagProps) {
   const t = useTranslations('ds.tag')
 
   return (
@@ -148,6 +202,7 @@ function RemovableTag({ label, onClick }: RemovableTagProps) {
         'min-h-8.5 bg-line pr-2.25 pl-2.75 text-[12.5px] text-text hover-fine:bg-[#2a2b31]'
       )}
     >
+      {icon}
       {label}
       <X aria-hidden="true" className="size-2.75 shrink-0 text-text-3 stroke-[2.8]" />
     </button>

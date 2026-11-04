@@ -81,6 +81,7 @@ export class RoomController {
       discordLink: body.discordLink,
       tags: body.tags,
       language: body.language,
+      platform: body.platform,
     })
 
     request.server.log.info(

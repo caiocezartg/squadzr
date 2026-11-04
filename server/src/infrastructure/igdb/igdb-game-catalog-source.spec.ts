@@ -137,6 +137,7 @@ describe('IgdbGameCatalogSource', () => {
         name: 'Game 2000',
         slug: 'game-2000',
         genres: [{ slug: 'role-playing-rpg', name: 'Role-playing (RPG)' }],
+        platforms: [],
         coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/cover-2000.jpg',
         thumbnailUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_small_2x/cover-2000.jpg',
         multiplayer: { onlineCoopMax: 4, onlineMax: 8 },
@@ -280,6 +281,7 @@ describe('IgdbGameCatalogSource', () => {
       name: "Baldur's Gate",
       slug: 'baldur-s-gate',
       genres: [{ slug: 'role-playing-rpg', name: 'Role-playing (RPG)' }],
+      platforms: [],
       coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co20gb.jpg',
       thumbnailUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_small_2x/co20gb.jpg',
       multiplayer: { onlineCoopMax: null, onlineMax: null },
@@ -299,6 +301,74 @@ describe('IgdbGameCatalogSource', () => {
       popularitySignals: { playing: null, steamPeakPlayers: null },
     })
     expect(result.invalid).toBe(3)
+  })
+
+  it('asks IGDB for the platform ids of every game', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL ? tokenResponse() : Response.json([game()])
+    )
+
+    await harness.source.fetchCandidates()
+
+    expect(bodyOf(gamesRequests(harness.requests)[0]!)).toContain(',platforms,')
+  })
+
+  it('maps IGDB platform ids to the supported platforms, deduplicated and in display order', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL
+        ? tokenResponse()
+        : Response.json([
+            // Windows, Mac and Linux collapse into one PC; PS3 (9), Xbox 360 (12) and
+            // Wii U (41) are not in the list; the order of IGDB is not the display order.
+            game({ id: 61, platforms: [130, 39, 6, 14, 3, 48, 9, 12, 41, 169, 167, 34, 49, 508] }),
+          ])
+    )
+
+    const { candidates } = await harness.source.fetchCandidates()
+
+    expect(candidates[0]?.platforms).toEqual([
+      'pc',
+      'ps5',
+      'ps4',
+      'xbox-series',
+      'xbox-one',
+      'switch-2',
+      'switch',
+      'mobile',
+    ])
+  })
+
+  it('keeps a game with no supported platform, with an empty list', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL
+        ? tokenResponse()
+        : Response.json([
+            game({ id: 71, platforms: [9, 12, 41] }),
+            game({ id: 72, name: 'Game 72', slug: 'game-72', platforms: [] }),
+            game({ id: 73, name: 'Game 73', slug: 'game-73', platforms: null }),
+            game({ id: 74, name: 'Game 74', slug: 'game-74' }),
+          ])
+    )
+
+    const result = await harness.source.fetchCandidates()
+
+    expect(result.candidates.map((candidate) => [candidate.igdbId, candidate.platforms])).toEqual([
+      [71, []],
+      [72, []],
+      [73, []],
+      [74, []],
+    ])
+    expect(result.invalid).toBe(0)
+  })
+
+  it('fails the run when a games page carries a malformed platforms list', async () => {
+    const harness = createHarness((request) =>
+      request.url === TOKEN_URL
+        ? tokenResponse()
+        : Response.json([game({ id: 81, platforms: ['pc'] })])
+    )
+
+    await expect(harness.source.fetchCandidates()).rejects.toThrow('Invalid IGDB games page')
   })
 
   it('queries the Playing and Steam Peak primitives of the candidates with the run token', async () => {

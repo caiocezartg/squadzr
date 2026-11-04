@@ -83,6 +83,14 @@ describe('lobbyMetadata', () => {
     expect(metadata.description).toBe('Up to 3 players · EN-US')
   })
 
+  it('names the platform after the language when the Squad has one', async () => {
+    stubRead(jsonResponse({ room: { ...publicSquad, platform: 'ps5' } }))
+
+    const metadata = await lobbyMetadata(lobbySquad.code)
+
+    expect(metadata.description).toBe('Up to 3 players · EN-US · PS5 · #squad')
+  })
+
   it('reads the Squad anonymously and never from a cache', async () => {
     const fetchMock = stubRead(jsonResponse({ room: publicSquad }))
 

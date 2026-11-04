@@ -5,8 +5,12 @@ This context owns the concepts and rules used to form and coordinate Squads.
 ## Language
 
 **Squad**:
-A group being formed for a multiplayer match, with a fixed capacity, a code to join it and, once Ready, a Discord invite for its members.
+A group being formed for a multiplayer match, with a fixed capacity, the Platform it plays on (when its Game has any), a code to join it and, once Ready, a Discord invite for its members.
 _Avoid_: Room, party, premade, lobby
+
+**Platform**:
+Where a Squad's group plays a Game, one of a fixed list in display order: PC, PS5, PS4, Xbox Series, Xbox One, Switch 2, Switch and Mobile. A Game carries the Platforms the Catalog Import found for it (possibly none), and a Squad carries exactly one of its Game's Platforms, chosen by the host when forming it: it is required when the Game has Platforms and absent when it has none, and `POST /api/rooms` refuses anything else with 400 `INVALID_PLATFORM`. It is not a store (Steam, Epic) and a Squad has only one, so crossplay is not modelled. A Squad created before Platforms existed has none.
+_Avoid_: Store, launcher, console, device
 
 **Membership**:
 The durable association between a user and a Squad.
@@ -33,7 +37,7 @@ The public data Discord holds for the invite of a Ready Squad: its server's name
 _Avoid_: Server info, invite metadata, Discord card
 
 **Game**:
-A multiplayer title in the Game Catalog that a Squad can be formed for. Its squad size and featured placement follow the Catalog Import's curated rules, not the raw source data.
+A multiplayer title in the Game Catalog that a Squad can be formed for. Its squad size and featured placement follow the Catalog Import's curated rules, not the raw source data, and its Platforms are the supported ones the source lists for it.
 _Avoid_: Title, product, game entry
 
 **Game Catalog**:
@@ -53,5 +57,5 @@ A Listed Game the curated list highlights, ordered by its featured rank.
 _Avoid_: Highlight, promoted game, top game
 
 **Catalog Import**:
-One run that brings the Game Catalog in line with the candidates of a Game Catalog Source: it upserts, delists and relists Games, applies the curated squad sizes and featured ranks, and changes nothing when a safety check or a write fails.
+One run that brings the Game Catalog in line with the candidates of a Game Catalog Source: it upserts, delists and relists Games, applies the curated squad sizes and featured ranks, stores each Game's Platforms, and changes nothing when a safety check or a write fails.
 _Avoid_: Seed, sync job, IGDB import

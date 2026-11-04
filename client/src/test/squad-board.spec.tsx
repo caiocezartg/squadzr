@@ -70,6 +70,7 @@ const extraSquad: Squad = {
   discordLink: null,
   tags: [],
   language: 'en',
+  platform: null,
   memberCount: 1,
   memberPreview: [{ id: 'user-9', name: 'Mia', image: null }],
   isMember: false,
@@ -221,6 +222,103 @@ describe('squad board — filters', () => {
     expect(screen.getByText('Ranked grind')).toBeInTheDocument()
     expect(screen.queryByText('Full lobby')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Remove EN-US' })).toBeInTheDocument()
+  })
+
+  describe('by platform', () => {
+    function registerPlatformSquads(): void {
+      onHttp('GET', '/api/rooms', () =>
+        httpOk({
+          rooms: [{ ...openSquad, platform: 'pc' }, { ...fullSquad, platform: 'ps5' }, memberSquad],
+        })
+      )
+    }
+
+    it('lists All and the eight platforms as single-choice chips', async () => {
+      registerPlatformSquads()
+      const { user } = renderSquadsFlow('/squads')
+      await screen.findByText('Ranked grind')
+      const panel = await openFilters(user)
+
+      const group = within(panel).getByRole('radiogroup', { name: 'Platform' })
+      const chips = within(group).getAllByRole('radio')
+      expect(chips.map((chip) => chip.textContent)).toEqual([
+        'All',
+        'PC',
+        'PS5',
+        'PS4',
+        'Xbox Series',
+        'Xbox One',
+        'Switch 2',
+        'Switch',
+        'Mobile',
+      ])
+      expect(chips[0]).toHaveAttribute('aria-checked', 'true')
+      expect(chips[1]).toHaveAttribute('aria-checked', 'false')
+    })
+
+    it('filters by platform, drops the squads without one, and lists the removable chip', async () => {
+      registerPlatformSquads()
+      const { user, navigation } = renderSquadsFlow('/squads')
+      await screen.findByText('Ranked grind')
+      const panel = await openFilters(user)
+
+      await user.click(within(panel).getByRole('radio', { name: 'PS5' }))
+
+      await waitFor(() => expect(listedSquadNames()).toEqual(['Full lobby']))
+      expect(new URLSearchParams(navigation.history.location.search).get('platform')).toBe('ps5')
+      expect(within(panel).getByRole('radio', { name: 'PS5' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      )
+      expect(screen.getByRole('button', { name: 'Remove PS5' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^Filters/ })).toHaveTextContent('1')
+    })
+
+    it('removes the filter with its chip and with "Clear all"', async () => {
+      registerPlatformSquads()
+      const { user, navigation } = renderSquadsFlow('/squads?platform=pc')
+      await screen.findByText('Ranked grind')
+      expect(listedSquadNames()).toEqual(['Ranked grind'])
+
+      await user.click(screen.getByRole('button', { name: 'Remove PC' }))
+      await waitFor(() => expect(listedSquadNames()).toHaveLength(3))
+      expect(navigation.history.location.search).toBe('')
+
+      const panel = await openFilters(user)
+      await user.click(within(panel).getByRole('radio', { name: 'PS5' }))
+      await waitFor(() => expect(listedSquadNames()).toEqual(['Full lobby']))
+      await user.click(within(panel).getByRole('button', { name: 'Clear all' }))
+      await waitFor(() => expect(listedSquadNames()).toHaveLength(3))
+      expect(navigation.history.location.search).toBe('')
+    })
+
+    it('ignores an invalid platform in the URL', async () => {
+      registerPlatformSquads()
+      const { user } = renderSquadsFlow('/squads?platform=ps3')
+      await screen.findByText('Ranked grind')
+
+      expect(listedSquadNames()).toHaveLength(3)
+      expect(screen.getByRole('button', { name: /^Filters/ })).not.toHaveTextContent('1')
+      const panel = await openFilters(user)
+      expect(within(panel).getByRole('radio', { name: 'All' })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      )
+    })
+
+    it('moves the choice with the arrow keys', async () => {
+      registerPlatformSquads()
+      const { user } = renderSquadsFlow('/squads')
+      await screen.findByText('Ranked grind')
+      const panel = await openFilters(user)
+      const all = within(panel).getByRole('radio', { name: 'All' })
+
+      all.focus()
+      await user.keyboard('{ArrowRight}')
+
+      await waitFor(() => expect(listedSquadNames()).toEqual(['Ranked grind']))
+      expect(within(panel).getByRole('radio', { name: 'PC' })).toHaveFocus()
+    })
   })
 
   it('sorts squads by creation date', async () => {

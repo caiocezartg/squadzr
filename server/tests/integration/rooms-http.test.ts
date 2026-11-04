@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { playerSchema, roomMemberSchema, roomSchema } from '@squadzr/schemas'
+import { eq } from 'drizzle-orm'
+import { playerSchema, roomMemberSchema, roomSchema, type Platform } from '@squadzr/schemas'
+import { rooms } from '@infrastructure/database/schema'
 import { signIn, signInMany, type TestUser } from '@test/harness/auth'
 import {
   DISCORD_INVITE,
@@ -67,6 +69,7 @@ describe('POST /api/rooms', () => {
         'maxPlayers',
         'memberPreview',
         'name',
+        'platform',
         'tags',
         'updatedAt',
       ].sort()
@@ -232,6 +235,115 @@ describe('POST /api/rooms', () => {
     })
     const hosted = await get(server, '/api/rooms/my', host)
     expect(hosted.json()).toEqual({ hosted: [], joined: [] })
+  })
+})
+
+describe('POST /api/rooms platform', () => {
+  const PLATFORM_ERROR = 'INVALID_PLATFORM'
+
+  async function insertGameWithPlatforms(platforms: Platform[]): Promise<string> {
+    return (await insertGame(server, { platforms })).id
+  }
+
+  async function expectNoRoomCreated(): Promise<void> {
+    const hosted = await get(server, '/api/rooms/my', host)
+    expect(hosted.json()).toEqual({ hosted: [], joined: [] })
+  }
+
+  it('stores the chosen platform of a Game that has several and projects it everywhere', async () => {
+    const multi = await insertGameWithPlatforms(['pc', 'ps5', 'switch'])
+
+    const created = await createRoom(server, host, { gameId: multi, platform: 'ps5' })
+
+    expect(created.platform).toBe('ps5')
+    expect((await findRoomRow(server, created.id))?.platform).toBe('ps5')
+
+    const catalog = await get(server, '/api/rooms')
+    expect(catalog.json<{ rooms: { id: string; platform: string | null }[] }>().rooms).toEqual([
+      expect.objectContaining({ id: created.id, platform: 'ps5' }),
+    ])
+    const mine = await get(server, '/api/rooms/my', host)
+    expect(mine.json<{ hosted: { platform: string | null }[] }>().hosted[0]?.platform).toBe('ps5')
+    const lobby = await get(server, `/api/rooms/${created.code}`, host)
+    expect(lobby.json<{ room: { platform: string | null } }>().room.platform).toBe('ps5')
+    const guest = await get(server, `/api/rooms/${created.code}`)
+    expect(guest.json<{ room: { platform: string | null } }>().room.platform).toBe('ps5')
+  })
+
+  it('accepts the only platform of a Game that has one', async () => {
+    const single = await insertGameWithPlatforms(['mobile'])
+
+    const created = await createRoom(server, host, { gameId: single, platform: 'mobile' })
+
+    expect(created.platform).toBe('mobile')
+  })
+
+  it.each([undefined, null] as const)(
+    'creates a Squad without platform for a Game that has none (%s)',
+    async (platform) => {
+      const created = await createRoom(server, host, { gameId, platform })
+
+      expect(created.platform).toBeNull()
+      expect((await findRoomRow(server, created.id))?.platform).toBeNull()
+    }
+  )
+
+  it('rejects a platform the Game does not have with 400 INVALID_PLATFORM', async () => {
+    const game = await insertGameWithPlatforms(['pc', 'ps5'])
+
+    const response = await postRoom(server, host, { gameId: game, platform: 'xbox-one' })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      error: PLATFORM_ERROR,
+      message: `Platform "xbox-one" is not available for game with id "${game}"`,
+    })
+    await expectNoRoomCreated()
+  })
+
+  it.each([undefined, null] as const)(
+    'rejects a missing platform (%s) when the Game has platforms',
+    async (platform) => {
+      const game = await insertGameWithPlatforms(['pc', 'ps5'])
+
+      const response = await postRoom(server, host, { gameId: game, platform })
+
+      expect(response.statusCode).toBe(400)
+      expect(response.json()).toEqual({
+        error: PLATFORM_ERROR,
+        message: `Game with id "${game}" needs a platform`,
+      })
+      await expectNoRoomCreated()
+    }
+  )
+
+  it('rejects a platform sent for a Game that has none', async () => {
+    const response = await postRoom(server, host, { gameId, platform: 'pc' })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      error: PLATFORM_ERROR,
+      message: `Platform "pc" is not available for game with id "${gameId}"`,
+    })
+    await expectNoRoomCreated()
+  })
+
+  it('rejects a value outside the platform list with 400 VALIDATION_ERROR', async () => {
+    const response = await postRoom(server, host, {
+      gameId,
+      platform: 'ps3' as unknown as Platform,
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ error: 'VALIDATION_ERROR' })
+  })
+
+  it('refuses at the database a platform outside the list', async () => {
+    const created = await createRoom(server, host, { gameId })
+
+    await expect(
+      server.app.db.update(rooms).set({ platform: 'ps3' }).where(eq(rooms.id, created.id))
+    ).rejects.toThrow()
   })
 })
 

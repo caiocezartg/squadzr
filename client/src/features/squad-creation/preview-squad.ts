@@ -10,7 +10,7 @@ const PREVIEW_TIME = '1970-01-01T00:00:00.000Z'
 
 interface PreviewSquadInput {
   game: Game
-  values: Pick<FormInput, 'name' | 'tags' | 'language'> & { maxPlayers: number }
+  values: Pick<FormInput, 'name' | 'tags' | 'language' | 'platform'> & { maxPlayers: number }
   /** The viewer, who is the Squad's only member. */
   viewer: SessionDto['user'] | undefined
   /** The name the card shows while the field is empty. */
@@ -36,6 +36,7 @@ export function previewSquad({
     maxPlayers: values.maxPlayers,
     tags: values.tags ?? [],
     language: values.language ?? 'pt-br',
+    platform: values.platform ?? null,
     memberCount: 1,
     memberPreview: viewer ? [{ id: viewer.id, name: viewer.name, image: viewer.image }] : [],
     createdAt: PREVIEW_TIME,

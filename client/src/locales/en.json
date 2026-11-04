@@ -88,6 +88,8 @@
       "availabilityAlmostFull": "Almost full",
       "language": "Language",
       "languageAll": "All",
+      "platform": "Platform",
+      "platformAll": "All",
       "tags": "Tags",
       "tagLabel": "Add a tag",
       "tagPlaceholder": "type a tag…",
@@ -132,6 +134,8 @@
       "playersFewer": "One fewer player",
       "playersMore": "One more player",
       "languageLabel": "Squad language",
+      "platformLabel": "Platform",
+      "platformRequired": "Choose a platform to continue.",
       "tagsLabel": "Tags",
       "optional": "(optional)",
       "tagPlaceholder": "add a tag…",
@@ -338,7 +342,8 @@
       "openRoom": "Open room",
       "enter": "Enter",
       "full": "Full",
-      "label": "{name} — {game}, {language}, {members} of {max} players"
+      "label": "{name} — {game}, {language}, {members} of {max} players",
+      "labelPlatform": "{name} — {game}, {language}, {platform}, {members} of {max} players"
     },
     "authModal": {
       "title": "Sign in required",
@@ -391,6 +396,16 @@
     "reconnecting": "Reconnecting…",
     "disconnected": "Disconnected"
   },
+  "platforms": {
+    "pc": "PC",
+    "ps5": "PS5",
+    "ps4": "PS4",
+    "xbox-series": "Xbox Series",
+    "xbox-one": "Xbox One",
+    "switch-2": "Switch 2",
+    "switch": "Switch",
+    "mobile": "Mobile"
+  },
   "languages": {
     "ptBr": "PT-BR",
     "enUs": "EN-US"
@@ -398,6 +413,7 @@
   "errors": {
     "GAME_NOT_FOUND": "This game could not be found.",
     "INVALID_GAME": "This game is no longer available. Please choose another game.",
+    "INVALID_PLATFORM": "That platform is not available for this game. Please choose another platform.",
     "INVALID_DISCORD_INVITE": "That Discord invite doesn't exist anymore. Check the link or create a new invite.",
     "ROOM_NOT_FOUND": "This squad no longer exists or the code is invalid.",
     "ROOM_FULL": "This squad is already full.",

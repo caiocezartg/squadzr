@@ -14,7 +14,9 @@ import type { Game, Squad } from '@/types'
 import {
   DETAIL_FIELDS,
   STEPS,
+  defaultPlatform,
   defaultPlayers,
+  platformMissing,
   type Step,
   formSchema,
   type FormInput,
@@ -57,6 +59,7 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
       discordLink: '',
       tags: [],
       language: 'pt-br',
+      platform: null,
     },
   })
   const createSquad = useCreateSquad({ onClose, onCreated })
@@ -78,10 +81,14 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
     setStepIndex(index)
   }
 
-  // A different game starts the player stepper from its own maximum; choosing the same game again
-  // keeps the count the player set.
+  // A different game starts the player stepper from its own maximum and the platform from its own
+  // platforms (the only one, or none chosen); choosing the same game again keeps what the player set.
   const selectGame = (game: Game) => {
-    if (selectedGame?.id !== game.id) form.setValue('maxPlayers', defaultPlayers(game))
+    if (selectedGame?.id !== game.id) {
+      form.setValue('maxPlayers', defaultPlayers(game))
+      form.setValue('platform', defaultPlatform(game))
+      form.clearErrors('platform')
+    }
     setSelectedGame(game)
     form.setValue('gameId', game.id, { shouldValidate: form.formState.isSubmitted })
   }
@@ -114,7 +121,11 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
       return
     }
     return form.trigger([...DETAIL_FIELDS]).then((valid) => {
-      if (valid) goTo(stepIndex + 1)
+      // The contract leaves the platform optional; whether the game needs one is decided here.
+      const needsPlatform =
+        selectedGame !== null && platformMissing(selectedGame, form.getValues('platform'))
+      if (needsPlatform) form.setError('platform', { type: 'required' })
+      if (valid && !needsPlatform) goTo(stepIndex + 1)
     })
   }
 

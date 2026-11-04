@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { PLATFORMS } from '@squadzr/schemas'
 import { Button } from '@/components/ds/button'
+import { ChoiceChips } from '@/components/ds/choice-chips'
+import { PlatformIcon } from '@/components/ds/platform-icon'
 import { Segmented } from '@/components/ds/segmented'
 import { querySquadList, rankTagOptions, type UseSquadFiltersReturn } from '@/features/squad-list'
 import { AvailabilityOptions } from './availability-options'
@@ -21,8 +24,10 @@ interface FiltersPanelProps {
  */
 export function FiltersPanel({ filters, onClose }: FiltersPanelProps) {
   const t = useTranslations('ds.board')
+  const tPlatforms = useTranslations('platforms')
   const squads = useLoadedBoardSquads()
   const [tagText, setTagText] = useState('')
+  const platformLabelId = useId()
   const resultCount = squads && querySquadList(squads, filters.query).matching.length
 
   const clearAll = () => {
@@ -57,6 +62,25 @@ export function FiltersPanel({ filters, onClose }: FiltersPanelProps) {
           ]}
         />
       </fieldset>
+
+      <div>
+        <span id={platformLabelId} className="type-label text-muted mb-2.5 block">
+          {t('platform')}
+        </span>
+        <ChoiceChips
+          labelledBy={platformLabelId}
+          options={[
+            { value: 'all', label: t('platformAll') },
+            ...PLATFORMS.map((platform) => ({
+              value: platform,
+              label: tPlatforms(platform),
+              icon: <PlatformIcon platform={platform} className="size-3" />,
+            })),
+          ]}
+          value={filters.platform}
+          onChange={filters.setPlatform}
+        />
+      </div>
 
       <TagFilter
         options={rankTagOptions(squads ?? [], filters.tags)}

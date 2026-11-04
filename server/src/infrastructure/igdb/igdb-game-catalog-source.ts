@@ -1,3 +1,4 @@
+import { platformsFromIgdbIds } from '@squadzr/schemas'
 import { z } from 'zod'
 import type { Clock } from '@domain/services/clock.interface'
 import type {
@@ -303,6 +304,7 @@ export class IgdbGameCatalogSource implements IGameCatalogSource {
       name,
       slug,
       genres: (game.genres ?? []).map((genre) => ({ slug: genre.slug, name: genre.name })),
+      platforms: platformsFromIgdbIds(game.platforms ?? []),
       coverUrl: imageUrl(imageId, 'cover_big_2x'),
       thumbnailUrl: imageUrl(imageId, 'cover_small_2x'),
       multiplayer: toMultiplayerCapacity(game),

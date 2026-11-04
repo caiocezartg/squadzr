@@ -324,7 +324,7 @@ describe('protocol handshake', () => {
     client.connect()
     latestWebSocket().open()
 
-    latestWebSocket().serverSend({ type: 'protocol', payload: { version: 3 } })
+    latestWebSocket().serverSend({ type: 'protocol', payload: { version: 4 } })
 
     expect(onProtocolFailure).not.toHaveBeenCalled()
     expect(client.status).toBe('open')

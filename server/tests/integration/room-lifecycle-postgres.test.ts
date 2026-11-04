@@ -69,6 +69,7 @@ describe('rooms schema after the lifecycle migration', () => {
         'last_activity_at',
         'max_players',
         'name',
+        'platform',
         'ready_at',
         'tags',
         'updated_at',
@@ -120,7 +121,7 @@ describe('rooms schema after the lifecycle migration', () => {
 })
 
 describe('lifecycle CHECK constraints', () => {
-  it('declares the three invariants on rooms', async () => {
+  it('declares the three lifecycle invariants and the platform list on rooms', async () => {
     const constraints = await server.app.db.execute<{ conname: string }>(sql`
       SELECT conname
       FROM pg_constraint
@@ -130,6 +131,7 @@ describe('lifecycle CHECK constraints', () => {
 
     expect(constraints.rows.map((row) => row.conname)).toEqual([
       'rooms_last_activity_after_created',
+      'rooms_platform_in_enum',
       'rooms_ready_after_created',
       'rooms_ready_after_last_activity',
     ])

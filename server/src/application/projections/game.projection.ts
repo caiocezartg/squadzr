@@ -19,6 +19,7 @@ export function toGameSummaryDto(game: GameSummary): GameSummaryDto {
 export function toGameDto(game: Game): GameDto {
   return {
     ...toGameSummaryDto(game),
+    platforms: [...game.platforms],
     minPlayers: game.minPlayers,
     maxPlayers: game.maxPlayers,
     createdAt: game.createdAt.toISOString(),

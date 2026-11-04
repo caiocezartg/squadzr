@@ -208,6 +208,33 @@ describe('CatalogImportUseCase', () => {
     })
   })
 
+  it('stores the platforms of each candidate and refreshes them on a re-run', async () => {
+    source.withCandidates([
+      createCandidate({ igdbId: 1101, slug: 'multi', platforms: ['pc', 'ps5', 'switch'] }),
+      createCandidate({ igdbId: 1102, slug: 'single', platforms: ['mobile'] }),
+      createCandidate({ igdbId: 1103, slug: 'none', platforms: [] }),
+    ])
+    await buildUseCase().execute()
+
+    const first = await catalog()
+    expect(first.find((row) => row.igdbId === 1101)?.platforms).toEqual(['pc', 'ps5', 'switch'])
+    expect(first.find((row) => row.igdbId === 1102)?.platforms).toEqual(['mobile'])
+    // A game with none of the supported platforms is still imported and listed.
+    expect(first.find((row) => row.igdbId === 1103)).toMatchObject({ platforms: [], listed: true })
+
+    source.withCandidates([
+      createCandidate({ igdbId: 1101, slug: 'multi', platforms: ['pc'] }),
+      createCandidate({ igdbId: 1102, slug: 'single', platforms: ['mobile', 'switch-2'] }),
+      createCandidate({ igdbId: 1103, slug: 'none', platforms: ['ps4'] }),
+    ])
+    await buildUseCase().execute()
+
+    const second = await catalog()
+    expect(second.find((row) => row.igdbId === 1101)?.platforms).toEqual(['pc'])
+    expect(second.find((row) => row.igdbId === 1102)?.platforms).toEqual(['mobile', 'switch-2'])
+    expect(second.find((row) => row.igdbId === 1103)?.platforms).toEqual(['ps4'])
+  })
+
   it('is idempotent on a re-run: every candidate is updated in place, none is duplicated', async () => {
     source.withCandidates(candidates(2))
     const first = await buildUseCase().execute()

@@ -31,6 +31,7 @@ const publicRoom = {
   maxPlayers: 5,
   tags: [],
   language: 'en',
+  platform: null,
   memberPreview: [{ id: 'user-1', name: 'Caio', image: null }],
   createdAt: '2026-09-27T12:30:00.000Z',
   updatedAt: '2026-09-27T12:30:00.000Z',
@@ -56,7 +57,7 @@ const notification = {
 }
 
 const serverMessages = [
-  { type: 'protocol', payload: { version: 3 } },
+  { type: 'protocol', payload: { version: 4 } },
   {
     type: 'room_snapshot',
     payload: {
@@ -196,14 +197,14 @@ describe('member presence', () => {
 })
 
 describe('REALTIME_PROTOCOL_VERSION', () => {
-  it('is 3 and is the only version the protocol message accepts', () => {
-    expect(REALTIME_PROTOCOL_VERSION).toBe(3)
+  it('is 4 and is the only version the protocol message accepts', () => {
+    expect(REALTIME_PROTOCOL_VERSION).toBe(4)
     expect(
-      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 3 } })
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 4 } })
         .success
     ).toBe(true)
     expect(
-      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 2 } })
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 3 } })
         .success
     ).toBe(false)
   })

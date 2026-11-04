@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { isoDateTimeSchema } from './date'
+import { platformSchema } from './platform'
 
 export const gameGenreSchema = z.object({
   slug: z.string(),
@@ -14,6 +15,9 @@ export const gameSchema = z.object({
   name: z.string(),
   slug: z.string(),
   genres: z.array(gameGenreSchema),
+  // Platforms the Game can be played on, in display order. Empty when the import
+  // found none of the supported ones; such a Game's Squads carry no platform.
+  platforms: z.array(platformSchema),
   coverUrl: z.url(),
   coverThumbUrl: z.url(),
   minPlayers: z.number().int(),

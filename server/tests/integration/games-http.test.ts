@@ -50,6 +50,18 @@ describe('GET /api/games', () => {
     expect(game.coverThumbUrl).toBe('https://cdn.squadzr.test/lol-thumb.webp')
   })
 
+  it('answers with the platforms of each game, in display order, and [] when it has none', async () => {
+    const multi = await insertGame(server, { platforms: ['pc', 'ps5', 'switch', 'mobile'] })
+    const none = await insertGame(server)
+
+    const response = await get(server, '/api/games')
+
+    const { games } = gamesResponseSchema.parse(response.json())
+    expect(games).toEqual(expect.arrayContaining([multi, none]))
+    expect(multi.platforms).toEqual(['pc', 'ps5', 'switch', 'mobile'])
+    expect(none.platforms).toEqual([])
+  })
+
   it('returns the most popular Listed Games without a search', async () => {
     await insertGame(server, { name: 'Quiet Game', popularity: 1 })
     await insertGame(server, { name: 'Popular Game', popularity: 100 })
@@ -179,6 +191,17 @@ describe('GET /api/games/:id', () => {
 
     expect(response.statusCode).toBe(200)
     expect(gameResponseSchema.parse(response.json())).toEqual({ game })
+  })
+
+  it('returns the platforms of the game', async () => {
+    const game = await insertGame(server, { platforms: ['xbox-series', 'switch-2'] })
+
+    const response = await get(server, `/api/games/${game.id}`)
+
+    expect(gameResponseSchema.parse(response.json()).game.platforms).toEqual([
+      'xbox-series',
+      'switch-2',
+    ])
   })
 
   it('still answers for a delisted Game', async () => {

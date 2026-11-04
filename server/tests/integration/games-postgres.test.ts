@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import type { Platform } from '@squadzr/schemas'
 import { games } from '@infrastructure/database/schema'
 import { DrizzleGameRepository } from '@infrastructure/repositories/drizzle-game.repository'
 import { FakeClock } from '@test/harness/clock'
@@ -13,6 +14,7 @@ const LOL = {
   name: 'League of Legends',
   slug: 'lol',
   genres: [{ slug: 'moba', name: 'MOBA' }],
+  platforms: ['pc'] as Platform[],
   coverUrl: 'https://cdn.squadzr.test/lol.webp',
   thumbnailUrl: 'https://cdn.squadzr.test/lol-thumb.webp',
   popularity: 950,
@@ -90,6 +92,17 @@ describe('DrizzleGameRepository.upsertByIgdbId', () => {
     const updated = await pinned.upsertByIgdbId({ ...LOL, name: 'League of Legends: Wild Rift' })
 
     expect(updated.updatedAt).toEqual(instant)
+  })
+
+  it('stores the platforms and replaces them on an IGDB-id conflict', async () => {
+    const created = await repository.upsertByIgdbId({ ...LOL, platforms: ['pc', 'ps5'] })
+    expect(created.platforms).toEqual(['pc', 'ps5'])
+
+    const updated = await repository.upsertByIgdbId({ ...LOL, platforms: [] })
+
+    expect(updated.id).toBe(created.id)
+    expect(updated.platforms).toEqual([])
+    expect((await repository.findById(created.id))?.platforms).toEqual([])
   })
 
   it('keeps exactly one row when the same catalog entry is upserted again', async () => {

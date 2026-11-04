@@ -13,6 +13,7 @@ export function createCandidate(
     name: 'League of Legends',
     slug: 'league-of-legends',
     genres: [{ slug: 'moba', name: 'MOBA' }],
+    platforms: ['pc'],
     coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/lol.webp',
     thumbnailUrl: 'https://images.igdb.com/igdb/image/upload/t_thumb/lol.webp',
     multiplayer: { onlineCoopMax: null, onlineMax: 5 },

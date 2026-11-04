@@ -104,7 +104,7 @@ describe('realtime protocol handshake', () => {
     await screen.findByText(openSquad.name)
 
     openLatestWebSocket()
-    sendFromServer({ type: 'protocol', payload: { version: 3 } })
+    sendFromServer({ type: 'protocol', payload: { version: 4 } })
     serverSquads.rooms = serverSquads.rooms.filter((squad) => squad.id !== openSquad.id)
     sendFromServer({
       type: 'room_removed',

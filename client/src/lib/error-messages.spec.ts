@@ -70,6 +70,20 @@ describe('INVALID_GAME', () => {
   })
 })
 
+describe('INVALID_PLATFORM', () => {
+  it('asks for another platform in English', () => {
+    expect(getUserFriendlyError(apiError('INVALID_PLATFORM'), t)).toBe(
+      'That platform is not available for this game. Please choose another platform.'
+    )
+  })
+
+  it('asks for another platform in Portuguese', () => {
+    expect(getUserFriendlyError(apiError('INVALID_PLATFORM'), tPtBR)).toBe(
+      'Essa plataforma não está disponível para este jogo. Escolha outra plataforma.'
+    )
+  })
+})
+
 describe('translateErrorCode', () => {
   it('translates a known code, such as a realtime error payload', () => {
     expect(translateErrorCode('ROOM_FULL', tPtBR)).toBe('Este squad já está cheio.')

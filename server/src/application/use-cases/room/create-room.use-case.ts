@@ -1,14 +1,16 @@
+import type { Game } from '@domain/entities/game.entity'
 import type { NewRoom, Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
-import { discordInviteCode } from '@squadzr/schemas'
+import { discordInviteCode, type Platform } from '@squadzr/schemas'
 import {
   GameNotAvailableError,
   InvalidDiscordInviteError,
   InvalidGameError,
+  PlatformNotAvailableError,
   RoomCreateLimitReachedError,
   UserNotFoundError,
 } from '@application/errors'
@@ -46,6 +48,8 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       throw new GameNotAvailableError(input.gameId)
     }
 
+    const platform = this.resolvePlatform(game, input)
+
     await this.assertDiscordInviteExists(input.discordLink)
 
     // A new Squad has only its host, so the host's entry is the whole preview.
@@ -68,6 +72,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       discordLink: input.discordLink,
       tags: input.tags,
       language: input.language,
+      platform,
     })
 
     if (outcome.status === 'limit_reached') {
@@ -84,6 +89,22 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       },
       hostMember: outcome.hostMember,
     }
+  }
+
+  /**
+   * A Game with platforms needs one of them; a Game without any takes none. Anything else
+   * is refused, so a Squad never carries a platform its Game cannot be played on.
+   */
+  private resolvePlatform(game: Game, input: CreateRoomInput): Platform | null {
+    const platform = input.platform ?? null
+    if (game.platforms.length === 0) {
+      if (platform !== null) throw new PlatformNotAvailableError(game.id, platform)
+      return null
+    }
+    if (platform === null || !game.platforms.includes(platform)) {
+      throw new PlatformNotAvailableError(game.id, platform)
+    }
+    return platform
   }
 
   /**

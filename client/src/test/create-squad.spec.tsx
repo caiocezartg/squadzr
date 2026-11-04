@@ -494,6 +494,7 @@ describe('create squad — game search', () => {
       )
     )
     await continueStep(user)
+    await user.click(await screen.findByRole('radio', { name: 'PS5' }))
     await user.type(await screen.findByLabelText('Squad name'), 'Created squad')
     await continueStep(user)
     await user.type(
@@ -505,7 +506,7 @@ describe('create squad — game search', () => {
 
     await waitFor(() => {
       const post = getHttpLog().find((request) => request.method === 'POST')
-      expect(post?.body).toMatchObject({ gameId: gameCs2.id })
+      expect(post?.body).toMatchObject({ gameId: gameCs2.id, platform: 'ps5' })
     })
   })
 })
@@ -1330,7 +1331,8 @@ describe('create squad — discord step', () => {
 
     expect(screen.getByText('Preview')).toBeInTheDocument()
     const card = squadPreviewCard()
-    expect(card).toHaveAccessibleName('Night ranked — League of Legends, EN-US, 1 of 4 players')
+    expect(card).toHaveAccessibleName('Night ranked — League of Legends, EN-US, PC, 1 of 4 players')
+    expect(within(card).getByText('PC')).toBeInTheDocument()
     expect(within(card).getByText('Night ranked')).toBeInTheDocument()
     expect(within(card).getByText('EN-US')).toBeInTheDocument()
     expect(within(card).getByText('#ranked')).toBeInTheDocument()
@@ -1503,6 +1505,7 @@ describe('create squad — success flow', () => {
         discordLink: 'https://discord.gg/created',
         tags: ['ranked', 'flex'],
         language: 'pt-br',
+        platform: 'pc',
       })
     })
 
@@ -1533,6 +1536,180 @@ describe('create squad — success flow', () => {
       const post = getHttpLog().find((req) => req.method === 'POST' && req.path === '/api/rooms')
       expect(post?.body).toMatchObject({ maxPlayers: 3, language: 'en' })
     })
+  })
+})
+
+describe('create squad — platform', () => {
+  const CS2_OPTION = 'Counter-Strike 2, Shooter · 1–5 players'
+  const LOL_OPTION = 'League of Legends, MOBA · 1–5 players'
+
+  function platformGroup(): HTMLElement {
+    return screen.getByRole('radiogroup', { name: 'Platform' })
+  }
+
+  /** The platform chips in order, with their checked state. */
+  function platformChoices(): Array<[string, boolean]> {
+    return within(platformGroup())
+      .getAllByRole('radio')
+      .map((chip) => [chip.textContent ?? '', chip.getAttribute('aria-checked') === 'true'])
+  }
+
+  async function toCs2Details(user: FlowUser): Promise<void> {
+    await pickGame(user, 'counter', CS2_OPTION)
+    await continueStep(user)
+    await screen.findByLabelText('Squad name')
+  }
+
+  async function lastPostBody(): Promise<unknown> {
+    let body: unknown
+    await waitFor(() => {
+      body = getHttpLog().find((req) => req.method === 'POST' && req.path === '/api/rooms')?.body
+      expect(body).toBeDefined()
+    })
+    return body
+  }
+
+  it('is the first field and offers only the platforms of the chosen game, none chosen', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toCs2Details(user)
+
+    expect(platformChoices()).toEqual([
+      ['PC', false],
+      ['PS5', false],
+      ['Xbox Series', false],
+    ])
+    expect(
+      platformGroup().compareDocumentPosition(screen.getByLabelText('Squad name')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+  })
+
+  it('selects the only platform of a game that has one', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDetailsStep(user)
+
+    expect(platformChoices()).toEqual([['PC', true]])
+  })
+
+  it('hides the field for a game without platforms and posts no platform', async () => {
+    onHttp('GET', '/api/games', () => httpOk({ games: [{ ...gameLol, platforms: [] }] }))
+    registerCreateRoutes()
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await pickGame(user, 'league', LOL_OPTION)
+    await continueStep(user)
+    await user.type(await screen.findByLabelText('Squad name'), 'Created squad')
+
+    expect(screen.queryByRole('radiogroup', { name: 'Platform' })).not.toBeInTheDocument()
+    await continueStep(user)
+    await user.type(
+      await screen.findByLabelText('Discord invite link'),
+      'https://discord.gg/created'
+    )
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    expect(await lastPostBody()).toMatchObject({ gameId: gameLol.id, platform: null })
+  })
+
+  it('blocks Continue until a platform is chosen, then moves on', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toCs2Details(user)
+    await user.type(screen.getByLabelText('Squad name'), 'Created squad')
+
+    await continueStep(user)
+
+    expect(await screen.findByText('Choose a platform to continue.')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Discord invite link')).not.toBeInTheDocument()
+    expect(platformGroup()).toHaveAttribute('aria-invalid', 'true')
+    expect(platformGroup()).toHaveAccessibleDescription('Choose a platform to continue.')
+
+    await user.click(within(platformGroup()).getByRole('radio', { name: 'Xbox Series' }))
+    expect(screen.queryByText('Choose a platform to continue.')).not.toBeInTheDocument()
+    expect(platformGroup()).not.toHaveAttribute('aria-invalid')
+    await continueStep(user)
+
+    expect(await screen.findByLabelText('Discord invite link')).toBeInTheDocument()
+  })
+
+  it('posts the chosen platform and shows it on the preview card', async () => {
+    registerCreateRoutes()
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toCs2Details(user)
+    await user.click(within(platformGroup()).getByRole('radio', { name: 'PS5' }))
+    await user.type(screen.getByLabelText('Squad name'), 'Created squad')
+    await continueStep(user)
+    await user.type(
+      await screen.findByLabelText('Discord invite link'),
+      'https://discord.gg/created'
+    )
+
+    const card = squadPreviewCard()
+    expect(card).toHaveAccessibleName(/Counter-Strike 2, PT-BR, PS5, 1 of 5 players$/)
+    expect(within(card).getByText('PS5')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    expect(await lastPostBody()).toMatchObject({ gameId: gameCs2.id, platform: 'ps5' })
+  })
+
+  it('moves the choice with the arrow keys', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toCs2Details(user)
+
+    within(platformGroup()).getByRole('radio', { name: 'PC' }).focus()
+    await user.keyboard('{ArrowRight}')
+
+    expect(platformChoices()).toEqual([
+      ['PC', false],
+      ['PS5', true],
+      ['Xbox Series', false],
+    ])
+    expect(within(platformGroup()).getByRole('radio', { name: 'PS5' })).toHaveFocus()
+
+    await user.keyboard('{ArrowLeft}{ArrowLeft}')
+
+    expect(platformChoices()[2]).toEqual(['Xbox Series', true])
+  })
+
+  it('clears the choice when the game changes, or selects the only platform of the new game', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toCs2Details(user)
+    await user.click(within(platformGroup()).getByRole('radio', { name: 'PS5' }))
+
+    await user.click(screen.getByRole('button', { name: 'Change game' }))
+    await pickGame(user, 'league', LOL_OPTION)
+    await continueStep(user)
+    await screen.findByLabelText('Squad name')
+    expect(platformChoices()).toEqual([['PC', true]])
+
+    await user.click(screen.getByRole('button', { name: 'Change game' }))
+    await pickGame(user, 'counter', CS2_OPTION)
+    await continueStep(user)
+    await screen.findByLabelText('Squad name')
+    expect(platformChoices()).toEqual([
+      ['PC', false],
+      ['PS5', false],
+      ['Xbox Series', false],
+    ])
+  })
+
+  it('keeps the choice when the same game is chosen again', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toCs2Details(user)
+    await user.click(within(platformGroup()).getByRole('radio', { name: 'PS5' }))
+
+    await user.click(screen.getByRole('button', { name: 'Change game' }))
+    await continueStep(user)
+    await screen.findByLabelText('Squad name')
+
+    expect(platformChoices()[1]).toEqual(['PS5', true])
   })
 })
 
