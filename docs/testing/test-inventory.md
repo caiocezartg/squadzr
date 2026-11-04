@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 312   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 379   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 88     | 953   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 90     | 997   |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 169   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -43,7 +43,11 @@ and manual aliases written together, migration 0007 raises the migration count t
 up to 0006, stores games (including a "Pokémon") and applies 0007 to confirm that "pokemon" finds the game before
 any import, and `games-postgres` checks that a similarity search leaves `pg_trgm.word_similarity_threshold` of the
 pooled connection as it found it.
-`schemas:unit` goes from 168 to 169 tests with the 100-character limit of the search.
+`schemas:unit` goes from 168 to 169 tests with the 100-character limit of the search, which #105 exports as
+`GAME_SEARCH_MAX_LENGTH`. `client:unit` goes from 88 files / 953 tests to 90 / 997: `search-text.spec.ts` (the
+server's folding examples, and the part of a name a term matches, with offsets into the original name),
+`game-option.spec.tsx` ("pokemon" highlights "Pokémon", "counter strike" highlights "Counter-Strike", "lol" highlights
+nothing in "League of Legends") and `create-squad.spec.tsx` (the search field's `maxlength`).
 
 Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
 `client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.

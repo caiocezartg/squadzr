@@ -20,7 +20,7 @@ import {
   roomsResponseSchema,
   userNotificationSchema,
 } from './index'
-import { gameSchema, gameSummarySchema, gamesQuerySchema } from './game'
+import { GAME_SEARCH_MAX_LENGTH, gameSchema, gameSummarySchema, gamesQuerySchema } from './game'
 import { isoDateTimeSchema } from './date'
 import { userSchema } from './user'
 import type { UserNotificationPayloadDto } from './notification'
@@ -186,10 +186,13 @@ describe('gamesQuerySchema', () => {
     expect(gamesQuerySchema.parse({ search: '   ' })).toEqual({ search: '', limit: 20 })
   })
 
-  it('accepts a search of up to 100 characters after the trim and rejects a longer one', () => {
-    expect(gamesQuerySchema.safeParse({ search: 'a'.repeat(100) }).success).toBe(true)
-    expect(gamesQuerySchema.safeParse({ search: `  ${'a'.repeat(100)}  ` }).success).toBe(true)
-    expect(gamesQuerySchema.safeParse({ search: 'a'.repeat(101) }).success).toBe(false)
+  it('limits the search to GAME_SEARCH_MAX_LENGTH (100) characters after the trim', () => {
+    const longest = 'a'.repeat(GAME_SEARCH_MAX_LENGTH)
+
+    expect(GAME_SEARCH_MAX_LENGTH).toBe(100)
+    expect(gamesQuerySchema.safeParse({ search: longest }).success).toBe(true)
+    expect(gamesQuerySchema.safeParse({ search: `  ${longest}  ` }).success).toBe(true)
+    expect(gamesQuerySchema.safeParse({ search: `${longest}a` }).success).toBe(false)
   })
 
   it('reads the limit from the query string and bounds it from 1 to 50', () => {
