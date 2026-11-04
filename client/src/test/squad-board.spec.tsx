@@ -1062,6 +1062,20 @@ describe('squad board — refetch on mount', () => {
 })
 
 describe('squad board — join flows', () => {
+  it('closes the guest sign-in prompt with "Maybe later" and shows it again for the next squad', async () => {
+    const { user } = renderSquadsFlow('/squads', { user: null })
+
+    await user.click(await screen.findByText('Ranked grind'))
+    expect(await screen.findByText('Sign in required')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Maybe later' }))
+    await waitFor(() => expect(screen.queryByText('Sign in required')).not.toBeInTheDocument())
+
+    await user.click(screen.getByText('Ranked grind'))
+    expect(await screen.findByText('Sign in required')).toBeInTheDocument()
+    expect(screen.getByText('ABC123')).toBeInTheDocument()
+  })
+
   it('requires sign-in before a guest can join and defers to Discord', async () => {
     const { user } = renderSquadsFlow('/squads', { user: null })
 

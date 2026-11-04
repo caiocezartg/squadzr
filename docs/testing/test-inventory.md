@@ -25,7 +25,7 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 302   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 381   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 90     | 1016  |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 91     | 1026  |
 | `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 187   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
@@ -78,6 +78,16 @@ raw aliases and expects the folded ones on the create response, the list, My Squ
 `room_snapshot`. `client:unit` goes from 1011 to 1016: `squad-list-query.spec.ts` adds 5 cases ("lol" finds League
 of Legends, "cs2" finds Counter-Strike 2, a partial and punctuated alias, an alias of another game does not match,
 a game without aliases still matches by name). File counts stay.
+
+The dialog enter and exit transitions (the create-squad modal no longer appears "dry") add one file,
+`use-dialog-presence.spec.ts`, so `client:unit` goes from 90 files / 1016 tests to 91 / 1026. The new file (5 tests)
+covers the mount, open, closing and unmount phases of `useDialogPresence`, a `show` during the exit handing out a
+new key, and an old exit finishing late not closing the new dialog. `dialog.spec.tsx` adds 3 tests: a dialog the
+parent mounts already open is first rendered closed and gets `data-starting-style`, and an exit held open by a
+stubbed `getAnimations` keeps the dialog mounted with `data-ending-style` until `onOpenChangeComplete(false)`.
+`create-squad.spec.tsx` adds the fresh form on the next open, and `squad-board.spec.tsx` the guest prompt closed
+with "Maybe later" and shown again. jsdom runs no transitions, so the 280ms enter and the 180ms exit themselves
+were checked in the browser, not in these tests.
 
 Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
 `client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.

@@ -233,6 +233,24 @@ describe('create squad — entry point', () => {
     await openCreateModal(user)
   })
 
+  it('starts every open from an empty form, once the last dialog has left', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+    await continueStep(user)
+    await user.type(await screen.findByLabelText('Squad name'), 'Half written')
+
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await openCreateModal(user)
+
+    expect(screen.getByText('Choose the game')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+    await continueStep(user)
+    expect(await screen.findByLabelText('Squad name')).toHaveValue('')
+  })
+
   it('asks a guest to sign in instead of opening the create dialog', async () => {
     const { user } = renderSquadsFlow('/squads', { user: null, shell: true })
     expect(await screen.findByText('Ranked grind')).toBeInTheDocument()

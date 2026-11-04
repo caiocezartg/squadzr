@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactElement, ReactNode } from 'react'
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
 import { Dialog as BaseDialog } from '@base-ui-components/react/dialog'
 import { X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
@@ -19,6 +19,11 @@ interface DialogProps {
   defaultOpen?: boolean
   /** Base UI's change details let the parent `cancel()` a close, e.g. an Escape another widget owns. */
   onOpenChange?: (open: boolean, details: OpenChangeDetails) => void
+  /**
+   * Called once the open or close transition has finished. A parent that unmounts the dialog on
+   * close waits for `false` here, so the exit plays (see `useDialogPresence`).
+   */
+  onOpenChangeComplete?: (open: boolean) => void
   /** Fills the screen below 640px, with the content free to pin its own footer. */
   fullScreen?: boolean
   children: ReactNode
@@ -31,6 +36,10 @@ interface DialogProps {
  * 180ms; Escape skips the transition. Focus is trapped while it is open, then returns to the trigger.
  * The panel is flush: the heading carries its own padding and the content sets its own. Reduced
  * motion keeps the fade and drops the movement.
+ *
+ * Base UI plays the enter only when `open` turns true after the dialog mounted, so a dialog that a
+ * parent mounts already open is first rendered closed and opened right after. The exit needs the
+ * dialog to stay mounted until `onOpenChangeComplete(false)`.
  */
 export function Dialog({
   title,
@@ -39,6 +48,7 @@ export function Dialog({
   open,
   defaultOpen,
   onOpenChange,
+  onOpenChangeComplete,
   fullScreen = false,
   children,
   className,
@@ -46,9 +56,15 @@ export function Dialog({
   const t = useTranslations('ds')
   const { instant, handleOpenChange } = useInstantDismiss(onOpenChange)
   const instantAttribute = instant ? '' : undefined
+  const mounted = useMounted()
 
   return (
-    <BaseDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={handleOpenChange}>
+    <BaseDialog.Root
+      open={open === undefined ? undefined : open && mounted}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      onOpenChangeComplete={onOpenChangeComplete}
+    >
       {trigger && <BaseDialog.Trigger render={trigger} />}
       <BaseDialog.Portal>
         <BaseDialog.Backdrop
@@ -85,4 +101,11 @@ export function Dialog({
       </BaseDialog.Portal>
     </BaseDialog.Root>
   )
+}
+
+/** False for the first render and true from the first effect on, so `open` can turn true after mounting. */
+function useMounted(): boolean {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted
 }

@@ -31,8 +31,15 @@ import { useCreateSquad } from './use-create-squad'
 import { useDiscordInviteCheck } from './use-discord-invite-check'
 
 export interface CreateSquadDialogProps {
-  /** Dismisses the dialog; the caller unmounts it, so the next open starts from an empty form. */
+  /** Whether the dialog is shown; it leaves with its exit transition once this turns false. */
+  open: boolean
+  /** Dismisses the dialog by turning `open` off. */
   onClose: () => void
+  /**
+   * Called when the open or close transition has finished. The caller unmounts the dialog after
+   * `false`, so the next open starts from an empty form.
+   */
+  onOpenChangeComplete: (open: boolean) => void
   /**
    * Called with the new squad after the board refresh was requested and
    * before navigating to its lobby, so the caller can refresh its own data.
@@ -45,9 +52,14 @@ export interface CreateSquadDialogProps {
  * form values are inferred from the shared contract and live across steps, through "Back" and
  * "Change game" too; "Continue" validates the step it leaves, and the last step creates the
  * Squad. The creation mutation, its typed errors, the board refresh and the navigation to the new
- * lobby stay internal. Callers mount the dialog while it is open.
+ * lobby stay internal. Callers mount the dialog while it is shown and unmount it once it has left.
  */
-export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps) {
+export function CreateSquadDialog({
+  open,
+  onClose,
+  onOpenChangeComplete,
+  onCreated,
+}: CreateSquadDialogProps) {
   const t = useTranslations('ds.createSquad')
   const tAll = useTranslations()
   const form = useForm<FormInput, unknown, FormValues>({
@@ -131,9 +143,10 @@ export function CreateSquadDialog({ onClose, onCreated }: CreateSquadDialogProps
 
   return (
     <Dialog
-      open
+      open={open}
       title={t(`titles.${step}`)}
       fullScreen
+      onOpenChangeComplete={onOpenChangeComplete}
       onOpenChange={(isOpen, eventDetails) => {
         // The game search owns the first Escape while its list is open. It reports that
         // and the dialog cancels its own Escape dismissal, so keeping the draft does not

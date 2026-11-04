@@ -7,17 +7,20 @@ interface JoinSquadAuthModalProps {
   open: boolean
   squadCode: string | null
   onOpenChange: (open: boolean) => void
+  /** Called when the exit transition has finished, so the caller can unmount the modal. */
+  onOpenChangeComplete: (open: boolean) => void
   onSignIn: () => void
 }
 
 /**
  * The guest's sign-in prompt before joining a Squad. It is the design system's dialog, imported with the
- * page, so the first open shows it at once.
+ * page, so the first open shows it at once. It stays mounted until its exit has finished.
  */
 export function JoinSquadAuthModal({
   open,
   squadCode,
   onOpenChange,
+  onOpenChangeComplete,
   onSignIn,
 }: JoinSquadAuthModalProps) {
   const t = useTranslations()
@@ -26,6 +29,7 @@ export function JoinSquadAuthModal({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
+      onOpenChangeComplete={onOpenChangeComplete}
       title={t('squads.authModal.title')}
       className="max-w-115"
     >

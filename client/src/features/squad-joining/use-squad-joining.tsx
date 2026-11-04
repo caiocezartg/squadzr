@@ -77,13 +77,21 @@ export function useSquadJoining(invite: SquadSearchAccess): SquadJoining {
     signInWithDiscord(joinHref(promptCode))
   }
 
+  // The prompt stays mounted, still naming its Squad, until its exit transition has finished.
+  const [shownCode, setShownCode] = useState<string | null>(null)
+  if (promptCode !== null && promptCode !== shownCode) setShownCode(promptCode)
+
   const authPrompt =
-    promptCode !== null ? (
+    shownCode !== null ? (
       <JoinSquadAuthModal
-        open
-        squadCode={promptCode}
+        key={shownCode}
+        open={promptCode !== null}
+        squadCode={shownCode}
         onOpenChange={(open) => {
           if (!open) closePrompt()
+        }}
+        onOpenChangeComplete={(open) => {
+          if (!open && promptCode === null) setShownCode(null)
         }}
         onSignIn={handleSignIn}
       />

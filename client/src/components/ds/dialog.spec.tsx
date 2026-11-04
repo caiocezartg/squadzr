@@ -5,7 +5,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Dialog } from './dialog'
 
 function Settings({ onOpenChange }: { onOpenChange?: (open: boolean) => void }) {
@@ -27,6 +27,11 @@ function Settings({ onOpenChange }: { onOpenChange?: (open: boolean) => void }) 
 }
 
 describe('dialog', () => {
+  afterEach(() => {
+    // @ts-expect-error jsdom has no getAnimations; the exit test installs one
+    delete Element.prototype.getAnimations
+  })
+
   it('opens from its trigger as a modal dialog named by its title', async () => {
     const user = userEvent.setup({ delay: null })
     render(<Settings />)
@@ -118,5 +123,87 @@ describe('dialog', () => {
     await user.keyboard('{Escape}')
 
     expect(onOpenChange.mock.calls.map(([open]) => open)).toEqual([false])
+  })
+
+  describe('transitions', () => {
+    /** Every `data-*` state the popup showed, caught by a MutationObserver between two assertions. */
+    function watchPopupStates(): { states: Set<string>; stop: () => void } {
+      const states = new Set<string>()
+      const record = () => {
+        const popup = document.querySelector('[role="dialog"]')
+        for (const name of popup?.getAttributeNames() ?? []) {
+          if (name.endsWith('-style')) states.add(name)
+        }
+      }
+      const observer = new MutationObserver(record)
+      observer.observe(document.body, { subtree: true, childList: true, attributes: true })
+      return { states, stop: () => observer.disconnect() }
+    }
+
+    it('plays the enter of a dialog its parent mounts already open', async () => {
+      const watcher = watchPopupStates()
+      render(
+        <Dialog title="Create squad" open>
+          <p>Content</p>
+        </Dialog>
+      )
+
+      await screen.findByRole('dialog', { name: 'Create squad' })
+      await waitFor(() =>
+        expect(screen.getByRole('dialog')).not.toHaveAttribute('data-starting-style')
+      )
+      watcher.stop()
+
+      expect(watcher.states).toContain('data-starting-style')
+    })
+
+    it('is not rendered by the first render of a parent-driven dialog', () => {
+      const { container } = render(
+        <Dialog title="Create squad" open>
+          <p>Content</p>
+        </Dialog>
+      )
+
+      // The first paint is closed: the open state arrives with the first effect.
+      expect(container).toBeEmptyDOMElement()
+    })
+
+    it('stays through its exit and reports it once the transition has finished', async () => {
+      // jsdom runs no transitions: hold the exit open the way a running transition does.
+      let finishExit!: () => void
+      const exit = new Promise<void>((resolve) => {
+        finishExit = resolve
+      })
+      let holding = false
+      Element.prototype.getAnimations = () =>
+        holding ? [{ finished: exit } as unknown as Animation] : []
+      const onOpenChangeComplete = vi.fn()
+      const { rerender } = render(
+        <Dialog title="Create squad" open onOpenChangeComplete={onOpenChangeComplete}>
+          <p>Content</p>
+        </Dialog>
+      )
+      await screen.findByRole('dialog')
+      await waitFor(() => expect(onOpenChangeComplete).toHaveBeenCalledWith(true))
+      onOpenChangeComplete.mockClear()
+      holding = true
+
+      rerender(
+        <Dialog title="Create squad" open={false} onOpenChangeComplete={onOpenChangeComplete}>
+          <p>Content</p>
+        </Dialog>
+      )
+
+      await waitFor(() =>
+        expect(screen.getByRole('dialog', { hidden: true })).toHaveAttribute('data-ending-style')
+      )
+      expect(onOpenChangeComplete).not.toHaveBeenCalled()
+
+      finishExit()
+
+      await waitFor(() => expect(onOpenChangeComplete).toHaveBeenCalledWith(false))
+      expect(onOpenChangeComplete).toHaveBeenCalledTimes(1)
+      expect(screen.queryByRole('dialog', { hidden: true })).not.toBeInTheDocument()
+    })
   })
 })
