@@ -25,6 +25,9 @@ async function readPlayerProfile(playerId: string, signal: AbortSignal): Promise
   return profile
 }
 
+/** The pause before that one retry: short, so a failure reaches its "try again" quickly. */
+const PROFILE_RETRY_DELAY_MS = 400
+
 /** One retry keeps a flaky network from holding the skeleton for seconds; a refusal (404) is never retried. */
 function retryOnce(failureCount: number, error: Error): boolean {
   if (error instanceof ApiClientError && error.status >= 400 && error.status < 500) return false
@@ -44,7 +47,11 @@ function playerProfileQuery(playerId: string) {
  * background once it is a minute old, so reopening a profile never shows a loading state.
  */
 export function usePlayerProfile(playerId: string) {
-  return useQuery({ ...playerProfileQuery(playerId), retry: retryOnce })
+  return useQuery({
+    ...playerProfileQuery(playerId),
+    retry: retryOnce,
+    retryDelay: PROFILE_RETRY_DELAY_MS,
+  })
 }
 
 /** Reads a profile ahead, as a hover or focus on someone's tile hints it will open. Never throws. */

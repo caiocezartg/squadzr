@@ -6,13 +6,18 @@ import { Button } from '@/components/ds/button'
 import { cn } from '@/lib/utils'
 import { ProfileHero } from './profile-hero'
 
-/** The ruled box the states without a profile share: diagonal stripes, a number-shaped icon, a title and a line. */
+/**
+ * The ruled box the states without a profile share: diagonal stripes, a one-character glyph, a title and a
+ * line. The glyph says which state it is: `0` for no history, `?` for a missing person, `!` for a failure.
+ */
 function StateBox({
+  glyph,
   title,
   text,
   action,
   compact,
 }: {
+  readonly glyph: '0' | '?' | '!'
   readonly title: string
   readonly text: string
   readonly action?: ReactNode
@@ -29,7 +34,7 @@ function StateBox({
         aria-hidden
         className="text-faint font-display mx-auto mb-3 grid size-10 place-items-center text-lg font-extrabold shadow-[inset_0_0_1px_1px_var(--color-track)]"
       >
-        0
+        {glyph}
       </div>
       <h3 className="font-display text-[22px] leading-none font-black uppercase">{title}</h3>
       <p className="text-text-3 mx-auto mt-1.5 mb-4 max-w-57.5 text-[13px] leading-[1.55] font-medium">
@@ -56,6 +61,7 @@ export function EmptyHistory({
     <div className="pt-4.5">
       <StateBox
         compact={compact}
+        glyph="0"
         title={t('title')}
         text={isOwn ? t('own') : t('other', { name })}
         action={
@@ -86,6 +92,7 @@ export function ProfileNotFound({
       <div className="pt-1">
         <StateBox
           compact={compact}
+          glyph="?"
           title={t('title')}
           text={t('text')}
           action={
@@ -115,6 +122,7 @@ export function ProfileLoadError({
       <div className="pt-1" role="alert">
         <StateBox
           compact={compact}
+          glyph="!"
           title={t('title')}
           text={t('text')}
           action={

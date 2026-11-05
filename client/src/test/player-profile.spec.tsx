@@ -295,7 +295,10 @@ describe('a profile that cannot be shown', () => {
     )
     const { user } = renderSquadsFlow(`/squads?player=${guestPlayer.id}`, { shell: true })
     const dialog = await profileDialog()
-    expect(await within(dialog).findByText("Couldn't load this profile")).toBeInTheDocument()
+    // The read is retried once before the failure shows, so this waits past the retry's pause.
+    expect(
+      await within(dialog).findByText("Couldn't load this profile", {}, { timeout: 3000 })
+    ).toBeInTheDocument()
 
     failing = false
     await user.click(within(dialog).getByRole('button', { name: 'Try again' }))

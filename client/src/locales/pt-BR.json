@@ -454,7 +454,7 @@
     "memberSince": "Membro desde {date}",
     "stats": {
       "squads": "Squads",
-      "completed": "completos",
+      "completed": "{count, plural, one {completo} other {completos}}",
       "games": "Jogos",
       "lastSquad": "Último squad"
     },

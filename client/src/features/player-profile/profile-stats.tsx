@@ -36,7 +36,7 @@ export function ProfileStats({ profile, compact }: ProfileStatsProps) {
         <dd className={value}>
           {profile.completedSquads}
           <small className="text-text-3 font-body ml-1 text-[13px] font-bold">
-            {t('completed')}
+            {t('completed', { count: profile.completedSquads })}
           </small>
         </dd>
       </div>
