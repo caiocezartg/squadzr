@@ -11,6 +11,8 @@ export interface Game {
   readonly slug: string
   readonly igdbId: number | null
   readonly genres: readonly GameGenre[]
+  /** Nicknames and acronyms Game Search matches, normalized as stored; empty when it has none. */
+  readonly aliases: readonly string[]
   /** Supported platforms the Game runs on, in display order; empty when it has none. */
   readonly platforms: readonly Platform[]
   readonly coverUrl: string
@@ -40,12 +42,13 @@ export interface PopularGames {
 }
 
 /**
- * The Game fields a Squad carries so a client can render its game without a
- * second read. Legacy Games (no IGDB identity, empty genres) have the same shape.
+ * The Game fields a Squad carries so a client can render its game, and the board
+ * search it by alias, without a second read. Legacy Games (no IGDB identity, empty
+ * genres) have the same shape.
  */
 export type GameSummary = Pick<
   Game,
-  'id' | 'name' | 'slug' | 'genres' | 'coverUrl' | 'thumbnailUrl'
+  'id' | 'name' | 'slug' | 'genres' | 'aliases' | 'coverUrl' | 'thumbnailUrl'
 >
 
 /**

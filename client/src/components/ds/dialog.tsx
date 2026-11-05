@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { useInstantDismiss } from './use-instant-dismiss'
+import { useMounted } from './use-mounted'
 
 type OpenChangeDetails = BaseDialog.Root.ChangeEventDetails
 
@@ -19,6 +20,11 @@ interface DialogProps {
   defaultOpen?: boolean
   /** Base UI's change details let the parent `cancel()` a close, e.g. an Escape another widget owns. */
   onOpenChange?: (open: boolean, details: OpenChangeDetails) => void
+  /**
+   * Called once the open or close transition has finished. A parent that unmounts the dialog on
+   * close waits for `false` here, so the exit plays (see `useDialogPresence`).
+   */
+  onOpenChangeComplete?: (open: boolean) => void
   /** Fills the screen below 640px, with the content free to pin its own footer. */
   fullScreen?: boolean
   children: ReactNode
@@ -31,6 +37,11 @@ interface DialogProps {
  * 180ms; Escape skips the transition. Focus is trapped while it is open, then returns to the trigger.
  * The panel is flush: the heading carries its own padding and the content sets its own. Reduced
  * motion keeps the fade and drops the movement.
+ *
+ * Base UI plays the enter only when `open` turns true after the dialog mounted, so a dialog whose
+ * parent passes `open` already true is first rendered closed and opened right after; `defaultOpen`
+ * alone skips that step. The exit needs the dialog to stay mounted until
+ * `onOpenChangeComplete(false)`.
  */
 export function Dialog({
   title,
@@ -39,6 +50,7 @@ export function Dialog({
   open,
   defaultOpen,
   onOpenChange,
+  onOpenChangeComplete,
   fullScreen = false,
   children,
   className,
@@ -46,9 +58,15 @@ export function Dialog({
   const t = useTranslations('ds')
   const { instant, handleOpenChange } = useInstantDismiss(onOpenChange)
   const instantAttribute = instant ? '' : undefined
+  const mounted = useMounted()
 
   return (
-    <BaseDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={handleOpenChange}>
+    <BaseDialog.Root
+      open={open === undefined ? undefined : open && mounted}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      onOpenChangeComplete={onOpenChangeComplete}
+    >
       {trigger && <BaseDialog.Trigger render={trigger} />}
       <BaseDialog.Portal>
         <BaseDialog.Backdrop

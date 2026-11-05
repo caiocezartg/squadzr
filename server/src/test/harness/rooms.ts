@@ -75,19 +75,21 @@ export async function insertGameFixture(
     })
     .returning()
   if (!game) throw new Error('Failed to insert game')
-  // One summary, spread into both fixtures: `thumbnailUrl` is mapped to the
-  // contract's `coverThumbUrl` exactly once.
   const summary: GameSummaryDto = {
     id: game.id,
     name: game.name,
     slug: game.slug,
     genres: game.genres,
+    aliases: game.aliases,
     coverUrl: game.coverUrl,
     coverThumbUrl: game.thumbnailUrl,
   }
+  // `thumbnailUrl` is mapped to the contract's `coverThumbUrl` exactly once; only
+  // the Squad's summary carries the aliases.
+  const { aliases: _aliases, ...catalogFields } = summary
   return {
     game: {
-      ...summary,
+      ...catalogFields,
       platforms: game.platforms,
       minPlayers: game.minPlayers,
       maxPlayers: game.maxPlayers,

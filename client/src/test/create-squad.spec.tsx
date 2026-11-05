@@ -14,7 +14,7 @@
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GAME_SEARCH_MAX_LENGTH } from '@squadzr/schemas'
+import { GAME_SEARCH_MAX_LENGTH, normalizeSearchText } from '@squadzr/schemas'
 import { renderSquadsFlow } from './harness'
 import { settleNavigation } from './navigation'
 import {
@@ -93,9 +93,9 @@ function registerBoardRoutes(): void {
   // The invite check of the Discord step: Discord knows every invite unless a test says otherwise.
   onHttp('GET', '/api/discord/invites/:code', () => httpOk(validInvite))
   onHttp('GET', '/api/games', (request) => {
-    const search = request.query.get('search')?.toLowerCase() ?? ''
+    const search = normalizeSearchText(request.query.get('search') ?? '')
     return httpOk({
-      games: boardGames.games.filter((game) => game.name.toLowerCase().includes(search)),
+      games: boardGames.games.filter((game) => normalizeSearchText(game.name).includes(search)),
     })
   })
 }
@@ -231,6 +231,24 @@ describe('create squad — entry point', () => {
   it('shows the create button only for signed-in users', async () => {
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
+  })
+
+  it('starts every open from an empty form, once the last dialog has left', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+    await continueStep(user)
+    await user.type(await screen.findByLabelText('Squad name'), 'Half written')
+
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await openCreateModal(user)
+
+    expect(screen.getByText('Choose the game')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
+    await pickGame(user, 'league', 'League of Legends, MOBA · 1–5 players')
+    await continueStep(user)
+    expect(await screen.findByLabelText('Squad name')).toHaveValue('')
   })
 
   it('asks a guest to sign in instead of opening the create dialog', async () => {
@@ -1398,9 +1416,9 @@ describe('create squad — values across steps', () => {
   it('starts the stepper over from a different game and keeps the rest', async () => {
     const bigGame = { ...gameCs2, maxPlayers: 8 }
     onHttp('GET', '/api/games', (request) => {
-      const search = request.query.get('search')?.toLowerCase() ?? ''
+      const search = normalizeSearchText(request.query.get('search') ?? '')
       return httpOk({
-        games: [gameLol, bigGame].filter((game) => game.name.toLowerCase().includes(search)),
+        games: [gameLol, bigGame].filter((game) => normalizeSearchText(game.name).includes(search)),
       })
     })
     const { user } = renderSquadsFlow('/squads', { shell: true })

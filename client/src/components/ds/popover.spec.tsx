@@ -154,4 +154,80 @@ describe('popover as a bottom sheet', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
+
+  describe('enter transition of a panel its parent mounts already open', () => {
+    /** Every `data-*` state the popup showed, caught by a MutationObserver between two assertions. */
+    function watchPopupStates(): { states: Set<string>; stop: () => void } {
+      const states = new Set<string>()
+      const record = () => {
+        const popup = document.querySelector('[role="dialog"]')
+        for (const name of popup?.getAttributeNames() ?? []) {
+          if (name.endsWith('-style')) states.add(name)
+        }
+      }
+      const observer = new MutationObserver(record)
+      observer.observe(document.body, { subtree: true, childList: true, attributes: true })
+      return { states, stop: () => observer.disconnect() }
+    }
+
+    it('plays the enter of a popover that mounts open on a wide screen', async () => {
+      mockMediaQuery(NARROW_QUERY, false)
+      const watcher = watchPopupStates()
+      render(
+        <Popover title="Filters" open trigger={<button type="button">Open filters</button>}>
+          <button type="button">Apply</button>
+        </Popover>
+      )
+
+      await screen.findByRole('dialog', { name: 'Filters' })
+      await waitFor(() =>
+        expect(screen.getByRole('dialog')).not.toHaveAttribute('data-starting-style')
+      )
+      watcher.stop()
+
+      expect(watcher.states).toContain('data-starting-style')
+    })
+
+    it('plays the enter of a popover that mounts open below 640px', async () => {
+      mockMediaQuery(NARROW_QUERY, true)
+      const watcher = watchPopupStates()
+      render(
+        <Popover
+          title="Filters"
+          bottomSheet
+          open
+          trigger={<button type="button">Open filters</button>}
+        >
+          <button type="button">Apply</button>
+        </Popover>
+      )
+
+      await screen.findByRole('dialog', { name: 'Filters' })
+      await waitFor(() =>
+        expect(screen.getByRole('dialog')).not.toHaveAttribute('data-starting-style')
+      )
+      watcher.stop()
+
+      expect(watcher.states).toContain('data-starting-style')
+    })
+
+    it('plays the enter of the sheet an open popover becomes when the screen narrows', async () => {
+      const user = userEvent.setup({ delay: null })
+      const viewport = mockMediaQuery(NARROW_QUERY, false)
+      render(<Filters bottomSheet />)
+      await user.click(screen.getByRole('button', { name: 'Open filters' }))
+      await screen.findByRole('dialog', { name: 'Filters' })
+      const watcher = watchPopupStates()
+
+      act(() => viewport.set(true))
+
+      await screen.findByRole('button', { name: 'Close' })
+      await waitFor(() =>
+        expect(screen.getByRole('dialog')).not.toHaveAttribute('data-starting-style')
+      )
+      watcher.stop()
+
+      expect(watcher.states).toContain('data-starting-style')
+    })
+  })
 })

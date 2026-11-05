@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { BottomSheet } from './bottom-sheet'
 import type { FloatingPanelProps } from './floating-types'
 import { NARROW_QUERY, useMediaQuery } from './use-media-query'
+import { useMounted } from './use-mounted'
 
 interface PopoverProps extends FloatingPanelProps {
   side?: 'top' | 'right' | 'bottom' | 'left'
@@ -18,7 +19,12 @@ interface PopoverProps extends FloatingPanelProps {
 
 /**
  * A panel anchored to its trigger. It grows from the trigger's own corner (`--transform-origin`) in
- * 200ms and leaves in 150ms; Escape skips the exit transition and returns focus to the trigger. Reduced motion keeps the fade and drops the scale.
+ * 200ms and leaves in 150ms; Escape skips the exit transition and returns focus to the trigger.
+ * Reduced motion keeps the fade and drops the scale.
+ *
+ * Base UI plays the enter only when `open` turns true after the panel mounted. A panel that mounts
+ * already open, because a parent opened it before its code arrived or because crossing 640px swapped
+ * the surface, is first rendered closed and opened right after (see `useMounted`).
  */
 export function Popover({
   side = 'bottom',
@@ -60,7 +66,45 @@ export function Popover({
   }
 
   return (
-    <BasePopover.Root open={open} onOpenChange={handleOpenChange}>
+    <AnchoredPanel
+      side={side}
+      align={align}
+      sideOffset={sideOffset}
+      trigger={trigger}
+      title={title}
+      hideTitle={hideTitle}
+      open={open}
+      onOpenChange={handleOpenChange}
+      className={className}
+    >
+      {children}
+    </AnchoredPanel>
+  )
+}
+
+type AnchoredPanelProps = Required<Pick<PopoverProps, 'side' | 'align' | 'sideOffset'>> &
+  Pick<PopoverProps, 'trigger' | 'title' | 'hideTitle' | 'children' | 'className'> & {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+  }
+
+/** The desktop surface: a floating panel placed beside the trigger. */
+function AnchoredPanel({
+  side,
+  align,
+  sideOffset,
+  trigger,
+  title,
+  hideTitle,
+  children,
+  open,
+  onOpenChange,
+  className,
+}: AnchoredPanelProps) {
+  const mounted = useMounted()
+
+  return (
+    <BasePopover.Root open={open && mounted} onOpenChange={onOpenChange}>
       <BasePopover.Trigger render={trigger} />
       <BasePopover.Portal>
         <BasePopover.Positioner side={side} align={align} sideOffset={sideOffset} className="z-50">

@@ -25,6 +25,7 @@ export {
   platformsFromIgdbIds,
   type Platform,
 } from './platform'
+export { normalizeSearchText } from './search-text'
 export { healthResponseSchema, type HealthResponse } from './health'
 export { sessionResponseSchema, type SessionDto } from './session'
 export { userResponseSchema, type UserDto } from './user'

@@ -32,7 +32,8 @@ export function previewSquad({
     name: values.name.trim() || nameFallback,
     hostId: viewer?.id ?? '',
     gameId: id,
-    game: { id, name, slug, genres, coverUrl, coverThumbUrl },
+    // The preview card never reads aliases, and the catalog's Game carries none.
+    game: { id, name, slug, genres, aliases: [], coverUrl, coverThumbUrl },
     maxPlayers: values.maxPlayers,
     tags: values.tags ?? [],
     language: values.language ?? 'pt-br',

@@ -25,6 +25,7 @@ const publicRoom = {
     name: 'Counter-Strike 2',
     slug: 'cs2',
     genres: [{ slug: 'shooter', name: 'Shooter' }],
+    aliases: ['cs2'],
     coverUrl: 'https://cdn.squadzr.test/cs2.webp',
     coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
   },

@@ -23,10 +23,10 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 317   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 380   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 90     | 1011  |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 5      | 169   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 302   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 381   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 91     | 1030  |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 187   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
 Issue #100 (Game Search by acronym and nickname) adds two server unit files, `search-text.spec.ts` and
@@ -57,6 +57,45 @@ pages that share one window although the clock moves between them; the import en
 (`catalog-import-env.spec.ts`, +3) checks the default of each threshold, the explicit values, an empty value
 falling back to the default, negative and fractional values refused for both variables and `0` accepted for the
 hype threshold. The other workspaces keep the counts below.
+
+Issue #109 (one search normalization in `@squadzr/schemas`) moves `normalizeSearchText` and its spec out of the
+server and the client. `schemas:unit` gains `search-text.spec.ts` and goes from 5 files / 169 tests to 6 / 185 (the folding examples,
+the text made only of punctuation and idempotence), `server:unit` goes from 317 to 301 tests, losing the same 16 cases from
+`search-text.spec.ts` (`normalizeAliases` and `buildSearchText` stay) and `client:unit` loses its 16 copies,
+while its `foldWithOrigins` case ties `foldWithOrigins(x).text` to the shared function for 21 texts instead
+of 10 (+11), so the client nets −5 (1011 to 1006, back to 1011 with #108). File counts of `server:unit` and `client:unit` stay.
+
+Issue #108 (board search with the same normalization) adds 5 cases to `squad-list-query.spec.ts` in `client:unit`
+("pokemon" finds "Pokémon Go", "counter strike" finds "Counter-Strike 2", case still ignored, a squad name with
+accents, and a term made only of punctuation keeps every squad). No file is added.
+
+The board finds squads by game alias (a Squad's Game summary now carries the Game's `aliases`; no file is added).
+`schemas:unit` goes from 185 to 187 tests (`contracts.spec.ts`: the `aliases` array, empty for a Game without any,
+and the summary refused without it). `server:unit` goes from 301 to 302 (`room.projection.spec.ts`: the aliases
+copied from the Game into the Squad's summary, empty for a Game without any). `server:integration` goes from 380
+to 381: `games-http` checks that the catalog's Game never carries `aliases`, and `squad-game-summary` now stores
+raw aliases and expects the folded ones on the create response, the list, My Squads, the Lobby, `room_created` and
+`room_snapshot`. `client:unit` goes from 1011 to 1016: `squad-list-query.spec.ts` adds 5 cases ("lol" finds League
+of Legends, "cs2" finds Counter-Strike 2, a partial and punctuated alias, an alias of another game does not match,
+a game without aliases still matches by name). File counts stay.
+
+The dialog enter and exit transitions (the create-squad modal no longer appears "dry") add one file,
+`use-dialog-presence.spec.ts`, so `client:unit` goes from 90 files / 1016 tests to 91 / 1026. The new file (5 tests)
+covers the mount, open, closing and unmount phases of `useDialogPresence`, a `show` during the exit handing out a
+new key, and an old exit finishing late not closing the new dialog. `dialog.spec.tsx` adds 3 tests: a dialog the
+parent mounts already open is first rendered closed and gets `data-starting-style`, and an exit held open by a
+stubbed `getAnimations` keeps the dialog mounted with `data-ending-style` until `onOpenChangeComplete(false)`.
+`create-squad.spec.tsx` adds the fresh form on the next open, and `squad-board.spec.tsx` the guest prompt closed
+with "Maybe later" and shown again. jsdom runs no transitions, so the 280ms enter and the 180ms exit themselves
+were checked in the browser, not in these tests.
+
+The review of that change makes a popover or bottom sheet that a parent mounts already open play its enter too, and
+keeps a second `show` of `useDialogPresence` from resetting an open dialog. `client:unit` goes from 91 files / 1026
+tests to 91 / 1030, with no file added. `use-dialog-presence.spec.ts` adds the case where a `show` while open keeps the
+key (+1). `popover.spec.tsx` adds three cases for the enter of a panel the parent mounts open: a popover on a wide
+screen, a sheet below 640px, and the sheet an open popover becomes when the screen narrows (+3). The "shows it again for
+the next squad" case in `squad-board.spec.tsx` now opens a different squad and expects its own code. The bell cases
+in `notifications.spec.tsx` wait for the panel to open, which now comes one render after its code arrives.
 
 Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
 `client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.

@@ -1,21 +1,14 @@
+import { normalizeSearchText } from '@squadzr/schemas'
+
 /**
- * The folding Game Search applies on the server (`normalizeSearchText` in the server's
- * `domain/services/search-text.ts`): accents removed, lowercase, and every run of characters
- * that are not letters or digits turned into one space. The client folds the same way to find
- * the part of a game name that answers the term the player typed. Keep the two in step.
+ * Locates, in a game name, the part a typed term matches. The folding is the shared
+ * `normalizeSearchText` from `@squadzr/schemas` (the one Game Search applies on the server);
+ * `foldWithOrigins` below produces the same text and also remembers where each character
+ * came from, so the match can be marked in the original name.
  */
 
 const MARK = /^\p{M}$/u
 const LETTER_OR_DIGIT = /^[\p{L}\p{N}]$/u
-
-export function normalizeSearchText(text: string): string {
-  return text
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
-}
 
 /** A folded text, with the span of the original text each of its UTF-16 units came from. */
 export interface FoldedText {

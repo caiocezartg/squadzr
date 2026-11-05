@@ -46,6 +46,7 @@ const gameSummary = {
   name: 'Counter-Strike 2',
   slug: 'cs2',
   genres: [{ slug: 'shooter', name: 'Shooter' }],
+  aliases: ['cs2', 'counter strike'],
   coverUrl: 'https://cdn.squadzr.test/cs2.webp',
   coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
 }
@@ -308,6 +309,19 @@ describe('gameSummarySchema', () => {
     expect(parsed).toEqual(gameSummary)
     expectTypeOf<GameSummaryDto['genres']>().toEqualTypeOf<{ slug: string; name: string }[]>()
     expectTypeOf<GameSummaryDto['coverThumbUrl']>().toEqualTypeOf<string>()
+    expectTypeOf<GameSummaryDto['aliases']>().toEqualTypeOf<string[]>()
+  })
+
+  it('carries the aliases as an array of strings, empty for a Game without any', () => {
+    expect(gameSummarySchema.parse({ ...gameSummary, aliases: [] }).aliases).toEqual([])
+    expect(gameSummarySchema.safeParse({ ...gameSummary, aliases: 'cs2' }).success).toBe(false)
+    expect(gameSummarySchema.safeParse({ ...gameSummary, aliases: [2] }).success).toBe(false)
+  })
+
+  it('rejects a summary without its aliases', () => {
+    const { aliases: _aliases, ...withoutAliases } = gameSummary
+
+    expect(gameSummarySchema.safeParse(withoutAliases).success).toBe(false)
   })
 
   it('rejects a summary without its genres or with an invalid cover URL', () => {

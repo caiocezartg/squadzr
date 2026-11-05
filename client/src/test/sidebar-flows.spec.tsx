@@ -4,6 +4,7 @@
  * below 1024px, the one bell, and warm-cache navigation between the pages.
  */
 
+import { normalizeSearchText } from '@squadzr/schemas'
 import { act, screen, waitFor, within } from '@testing-library/react'
 import { focusManager } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -32,9 +33,9 @@ function registerRoutes(rooms: RoomsResponse = boardSquads): void {
   onHttp('POST', '/api/rooms/:code/join', () => httpOk({ ok: true }))
   onHttp('GET', '/api/notifications', () => httpOk({ notifications: [] }))
   onHttp('GET', '/api/games', (request) => {
-    const search = request.query.get('search')?.trim().toLowerCase() ?? ''
+    const search = normalizeSearchText(request.query.get('search') ?? '')
     return httpOk({
-      games: boardGames.games.filter((game) => game.name.toLowerCase().includes(search)),
+      games: boardGames.games.filter((game) => normalizeSearchText(game.name).includes(search)),
     })
   })
 }

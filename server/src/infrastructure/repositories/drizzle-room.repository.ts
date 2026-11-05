@@ -28,6 +28,7 @@ const gameSummaryColumns = {
   name: games.name,
   slug: games.slug,
   genres: games.genres,
+  aliases: games.aliases,
   coverUrl: games.coverUrl,
   thumbnailUrl: games.thumbnailUrl,
 } as const

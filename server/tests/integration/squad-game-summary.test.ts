@@ -34,6 +34,10 @@ const GENRES = [
   { slug: 'strategy', name: 'Strategy' },
 ]
 
+/** Raw on the way in, stored folded: the board finds the Squad by these. */
+const RAW_ALIASES = ['LoL', 'Liga das Lendas']
+const STORED_ALIASES = ['lol', 'liga das lendas']
+
 /** The domain shape a read returns: the contract's `coverThumbUrl` is `thumbnailUrl`. */
 function domainGame(summary: GameSummaryDto) {
   return {
@@ -41,6 +45,7 @@ function domainGame(summary: GameSummaryDto) {
     name: summary.name,
     slug: summary.slug,
     genres: summary.genres,
+    aliases: summary.aliases,
     coverUrl: summary.coverUrl,
     thumbnailUrl: summary.coverThumbUrl,
   }
@@ -89,12 +94,15 @@ describe('Squad game summary over HTTP', () => {
   it('carries the summary on the create response, the catalog, My Squads and the lobby', async () => {
     const { game, summary } = await insertGameFixture(server, {
       genres: GENRES,
+      aliases: RAW_ALIASES,
       thumbnailUrl: 'https://cdn.squadzr.test/covers/thumb.webp',
     })
+    expect(summary.aliases).toEqual(STORED_ALIASES)
     const [member, outsider] = await signInMany(server, 2)
 
     const created = await createRoom(server, host, { gameId: game.id })
     expect(created.game).toEqual(summary)
+    expect(created.game.aliases).toEqual(STORED_ALIASES)
 
     await joinAll(server, created.code, [member!])
 
@@ -131,6 +139,7 @@ describe('Squad game summary over HTTP', () => {
       genres: [],
     })
     expect(summary.genres).toEqual([])
+    expect(summary.aliases).toEqual([])
     const [member, outsider] = await signInMany(server, 2)
     const guest = await open(server)
     await subscribeCatalog(guest)
@@ -174,7 +183,10 @@ describe('Squad game summary over HTTP', () => {
 
 describe('Squad game summary over realtime', () => {
   it('carries the summary on room_created and room_snapshot', async () => {
-    const { game, summary } = await insertGameFixture(server, { genres: GENRES })
+    const { game, summary } = await insertGameFixture(server, {
+      genres: GENRES,
+      aliases: RAW_ALIASES,
+    })
     const guest = await open(server)
     await subscribeCatalog(guest)
     const hostSocket = await open(server, host)
@@ -183,15 +195,20 @@ describe('Squad game summary over realtime', () => {
 
     const created = roomCreatedMessageSchema.parse(await guest.next())
     expect(created.payload.room.game).toEqual(summary)
+    expect(created.payload.room.game.aliases).toEqual(STORED_ALIASES)
 
     const snapshot = roomSnapshotMessageSchema.parse(await joinRoomChannel(hostSocket, room.code))
     expect(snapshot.payload.room.game).toEqual(summary)
+    expect(snapshot.payload.room.game.aliases).toEqual(STORED_ALIASES)
   })
 })
 
 describe('Squad reads join the Game', () => {
   it('reads the summary with the Squad, never with a per-Squad lookup', async () => {
-    const { game, summary } = await insertGameFixture(server, { genres: GENRES })
+    const { game, summary } = await insertGameFixture(server, {
+      genres: GENRES,
+      aliases: RAW_ALIASES,
+    })
     const room = await createRoom(server, host, { gameId: game.id })
     const now = new Date()
 

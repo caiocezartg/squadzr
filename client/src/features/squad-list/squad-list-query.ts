@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '@squadzr/schemas'
 import type { PublicSquad } from '@/types'
 import { hasEveryTag } from './squad-tags'
 import type { ResolvedSquadsSearch } from './squads-search'
@@ -16,9 +17,21 @@ export interface SquadListResult {
   totalPages: number
 }
 
+/**
+ * Matches like Game Search: accents, case and punctuation do not matter, so "pokemon" finds
+ * "Pokémon Go", "counter strike" finds "Counter-Strike 2" and "lol" finds League of Legends
+ * through its alias. The game's aliases arrive already normalized, as the catalog stores them,
+ * so only the term and the names are folded here. A term made only of punctuation folds to
+ * nothing and, like an empty field, keeps every squad.
+ */
 function matchesSearch(squad: PublicSquad, search: string): boolean {
-  const term = search.toLowerCase()
-  return squad.game.name.toLowerCase().includes(term) || squad.name.toLowerCase().includes(term)
+  const term = normalizeSearchText(search)
+  if (term === '') return true
+  return (
+    normalizeSearchText(squad.game.name).includes(term) ||
+    squad.game.aliases.some((alias) => alias.includes(term)) ||
+    normalizeSearchText(squad.name).includes(term)
+  )
 }
 
 function matchesStatus(squad: PublicSquad, filter: SquadListQuery['filter']): boolean {
@@ -48,7 +61,7 @@ function sortSquads(squads: PublicSquad[], sort: SquadListQuery['sort']): Public
 }
 
 /**
- * The Squad list: filters the squads by search term (the Squad's name or its own game's name),
+ * The Squad list: filters the squads by search term (the Squad's name, or its own game's name or aliases),
  * status, language, platform and tags (a Squad needs every selected tag), sorts them by creation date (newest first unless asked otherwise) and
  * cuts the page the query asks for. Pure on purpose: the same inputs give the same list on the
  * server render and in the browser, and `squads` is never mutated. A page past the last one resolves

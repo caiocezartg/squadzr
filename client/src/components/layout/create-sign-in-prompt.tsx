@@ -6,6 +6,9 @@ import { Dialog } from '@/components/ds/dialog'
 import { DiscordIcon } from '@/components/ui/icons'
 
 interface CreateSignInPromptProps {
+  readonly open: boolean
+  /** Called when the exit transition has finished, so the caller can unmount the prompt. */
+  readonly onOpenChangeComplete: (open: boolean) => void
   readonly onClose: () => void
   readonly onSignIn: () => void
 }
@@ -14,15 +17,21 @@ interface CreateSignInPromptProps {
  * What a visitor sees in place of the create dialog: a request to sign in with Discord. It is built
  * from the design system's dialog, so it adds nothing to the shell's own code.
  */
-export function CreateSignInPrompt({ onClose, onSignIn }: CreateSignInPromptProps) {
+export function CreateSignInPrompt({
+  open,
+  onOpenChangeComplete,
+  onClose,
+  onSignIn,
+}: CreateSignInPromptProps) {
   const t = useTranslations()
 
   return (
     <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose()
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose()
       }}
+      onOpenChangeComplete={onOpenChangeComplete}
       title={t('squads.authModal.title')}
       className="max-w-115"
     >

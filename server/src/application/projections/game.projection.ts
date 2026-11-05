@@ -3,7 +3,8 @@ import type { Game, GameSummary } from '@domain/entities/game.entity'
 
 /**
  * The domain `thumbnailUrl` travels as the contract's `coverThumbUrl`; both
- * Game DTOs are built from this one projection.
+ * Game DTOs are built from this one projection. Only the Squad's summary carries
+ * `aliases`: the catalog's Game contract does not.
  */
 export function toGameSummaryDto(game: GameSummary): GameSummaryDto {
   return {
@@ -11,14 +12,16 @@ export function toGameSummaryDto(game: GameSummary): GameSummaryDto {
     name: game.name,
     slug: game.slug,
     genres: game.genres.map(({ slug, name }) => ({ slug, name })),
+    aliases: [...game.aliases],
     coverUrl: game.coverUrl,
     coverThumbUrl: game.thumbnailUrl,
   }
 }
 
 export function toGameDto(game: Game): GameDto {
+  const { aliases: _aliases, ...summary } = toGameSummaryDto(game)
   return {
-    ...toGameSummaryDto(game),
+    ...summary,
     platforms: [...game.platforms],
     minPlayers: game.minPlayers,
     maxPlayers: game.maxPlayers,

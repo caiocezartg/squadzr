@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { useDialogPresence } from '@/components/ds/use-dialog-presence'
 import { useSession } from '@/hooks/use-session'
 import { signInWithDiscord } from '@/lib/auth-client'
 import { whenIdle } from '@/lib/when-idle'
@@ -39,9 +40,11 @@ export function useCreateSquadLauncher(): CreateSquadLauncher {
 /**
  * Owns the one create-Squad dialog of the shell, so it opens the same way on the board and in the
  * Lobby. The dialog never shows a loading state: it is fetched when the page is idle, and a request
- * that comes sooner waits for it before it opens. A visitor gets a sign-in prompt instead, which
- * returns to the same page with `?create=1`, and a signed-in viewer who arrives with `?create=1` gets
- * the dialog once, with the parameter dropped.
+ * that comes sooner waits for it before it opens. Both dialogs are mounted while they are shown and
+ * leave the tree after their exit transition, so each open starts from a fresh dialog.
+ *
+ * A visitor gets a sign-in prompt instead, which returns to the same page with `?create=1`. A
+ * signed-in viewer who arrives with `?create=1` gets the dialog once, with the parameter dropped.
  */
 export function CreateSquadLauncher({ children }: { readonly children: ReactNode }) {
   const session = useSession()
@@ -49,25 +52,27 @@ export function CreateSquadLauncher({ children }: { readonly children: ReactNode
   const params = useSearchParams()
   const signedIn = Boolean(session?.user)
   const [Dialog, setDialog] = useState<CreateDialogComponent | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [promptOpen, setPromptOpen] = useState(false)
+  const createDialog = useDialogPresence()
+  const signInPrompt = useDialogPresence()
+  const { show: showCreateDialog } = createDialog
+  const { show: showSignInPrompt } = signInPrompt
 
   const openDialog = useCallback(async () => {
     const loaded = await loadCreateDialog()
     setDialog(() => loaded)
-    setDialogOpen(true)
-  }, [])
+    showCreateDialog()
+  }, [showCreateDialog])
 
   const requestCreate = useCallback(() => {
     if (signedIn) void openDialog()
-    else setPromptOpen(true)
-  }, [signedIn, openDialog])
+    else showSignInPrompt()
+  }, [signedIn, openDialog, showSignInPrompt])
 
   useIdlePreload(signedIn)
   useCreateParameter({ signedIn, requestCreate })
 
   const closePrompt = () => {
-    setPromptOpen(false)
+    signInPrompt.hide()
     dropCreateParameter(pathname, params)
   }
 
@@ -76,9 +81,19 @@ export function CreateSquadLauncher({ children }: { readonly children: ReactNode
   return (
     <CreateSquadLauncherContext value={launcher}>
       {children}
-      {Dialog && dialogOpen && signedIn && <Dialog onClose={() => setDialogOpen(false)} />}
-      {promptOpen && !signedIn && (
+      {Dialog && createDialog.mounted && signedIn && (
+        <Dialog
+          key={createDialog.key}
+          open={createDialog.open}
+          onClose={createDialog.hide}
+          onOpenChangeComplete={createDialog.exited}
+        />
+      )}
+      {signInPrompt.mounted && !signedIn && (
         <CreateSignInPrompt
+          key={signInPrompt.key}
+          open={signInPrompt.open}
+          onOpenChangeComplete={signInPrompt.exited}
           onClose={closePrompt}
           onSignIn={() => void signInWithDiscord(createReturnPath(pathname, params))}
         />

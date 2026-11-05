@@ -1,3 +1,4 @@
+import { normalizeSearchText } from '@squadzr/schemas'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import type { Game, PopularGames, UpsertGameInput } from '@domain/entities/game.entity'
 import type {
@@ -10,7 +11,6 @@ import type { Database } from '@infrastructure/database/drizzle'
 import {
   buildSearchText,
   normalizeAliases,
-  normalizeSearchText,
   SEARCH_TEXT_SEPARATOR,
 } from '@domain/services/search-text'
 import { games, type GameRow } from '@infrastructure/database/schema/games'
@@ -127,6 +127,7 @@ function mapRowToEntity(row: GameRow): Game {
     slug: row.slug,
     igdbId: row.igdbId,
     genres: row.genres,
+    aliases: row.aliases,
     platforms: row.platforms,
     coverUrl: row.coverUrl,
     thumbnailUrl: row.thumbnailUrl,

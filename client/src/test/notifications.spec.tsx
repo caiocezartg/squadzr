@@ -62,9 +62,15 @@ function renderShell(): UserEvent {
   return userEvent.setup({ delay: null })
 }
 
-/** Opens the bell once its unread count shows; the count is part of the bell's accessible name. */
+/**
+ * Opens the bell once its unread count shows; the count is part of the bell's accessible name. jsdom
+ * has no `requestIdleCallback`, so the panel's code is never preloaded and every click here takes the
+ * path where the code arrives after the press. On that path the panel opens one render later (it
+ * mounts closed, then opens, to play its enter), so the helper waits for the dialog.
+ */
 async function openNotifications(user: UserEvent, unread: number): Promise<void> {
   await user.click(await screen.findByRole('button', { name: `Notifications, ${unread} unread` }))
+  await screen.findByRole('dialog', { name: 'Notifications' })
 }
 
 /** The row link of one squad; its dismiss button sits next to it in the same list item. */

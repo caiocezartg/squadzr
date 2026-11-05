@@ -1,16 +1,4 @@
-/**
- * Folds a name or a search term to the form Game Search compares: accents,
- * case and punctuation do not matter. "Counter-Strike 2" and "counter strike 2"
- * fold to the same text, and a term made only of punctuation folds to "".
- */
-export function normalizeSearchText(text: string): string {
-  return text
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
-}
+import { normalizeSearchText } from '@squadzr/schemas'
 
 /** Separates the normalized name from the normalized aliases in a Game's search text. */
 export const SEARCH_TEXT_SEPARATOR = ' | '

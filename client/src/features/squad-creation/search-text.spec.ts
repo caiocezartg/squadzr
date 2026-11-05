@@ -1,36 +1,6 @@
+import { normalizeSearchText } from '@squadzr/schemas'
 import { describe, expect, it } from 'vitest'
-import { findMatchRange, foldWithOrigins, normalizeSearchText } from './search-text'
-
-// #105: the client folds a game name and the typed term like the server's Game Search does, to
-// highlight the part of the name that answers the term. The folding examples are the server's
-// (server/src/domain/services/search-text.spec.ts); keep them in step.
-describe('normalizeSearchText', () => {
-  it.each([
-    ['Counter-Strike 2', 'counter strike 2'],
-    ['Pokémon UNITE', 'pokemon unite'],
-    ['Call of Duty: Modern Warfare', 'call of duty modern warfare'],
-    ['  League   of \t Legends  ', 'league of legends'],
-    ['100% Cup', '100 cup'],
-    ['half_life', 'half life'],
-    ['back\\slash', 'back slash'],
-    ['Ünïcödé Ñandú', 'unicode nandu'],
-    ['ＬＯＬ', 'lol'],
-  ])('folds %j to %j', (input, expected) => {
-    expect(normalizeSearchText(input)).toBe(expected)
-  })
-
-  it.each(['%_\\', '%', '_', '   ', '', '!!! ---'])(
-    'folds %j, only punctuation, to ""',
-    (input) => {
-      expect(normalizeSearchText(input)).toBe('')
-    }
-  )
-
-  it('is idempotent', () => {
-    const once = normalizeSearchText('Pokémon: Sword & Shield!')
-    expect(normalizeSearchText(once)).toBe(once)
-  })
-})
+import { findMatchRange, foldWithOrigins } from './search-text'
 
 /** The part of `name` that `findMatchRange` marks, or `null`. */
 function matched(name: string, term: string): string | null {
@@ -38,18 +8,31 @@ function matched(name: string, term: string): string | null {
   return range ? name.slice(range[0], range[1]) : null
 }
 
+// The examples the shared normalizeSearchText spec (packages/schemas/src/search-text.spec.ts) covers today,
+// plus texts with ligatures and astral characters, which the highlight must fold the same way.
 describe('foldWithOrigins', () => {
   it.each([
     'Counter-Strike 2',
     'Pokémon UNITE',
+    'Call of Duty: Modern Warfare',
     '  League   of \t Legends  ',
+    '100% Cup',
+    'half_life',
+    'back\\slash',
+    'Ünïcödé Ñandú',
+    'ＬＯＬ',
     'Fﬁnal Fantasy',
     '𠀀 Valorant',
     '𝐀rena',
     'ＬＯＬ Arena',
     '--half_life!!',
     '%_\\',
+    '%',
+    '_',
+    '   ',
     '',
+    '!!! ---',
+    'Pokémon: Sword & Shield!',
   ])('folds %j to the same text as normalizeSearchText', (input) => {
     expect(foldWithOrigins(input).text).toBe(normalizeSearchText(input))
   })

@@ -8,14 +8,25 @@ const lol: PublicSquad['game'] = {
   name: 'League of Legends',
   slug: 'lol',
   genres: [],
+  aliases: ['lol', 'league'],
   coverUrl: 'https://cdn.squadzr.test/lol.jpg',
   coverThumbUrl: 'https://cdn.squadzr.test/lol-thumb.jpg',
+}
+const pokemon: PublicSquad['game'] = {
+  id: 'game-pokemon',
+  name: 'Pokémon Go',
+  slug: 'pokemon-go',
+  genres: [],
+  aliases: ['pogo'],
+  coverUrl: 'https://cdn.squadzr.test/pokemon.jpg',
+  coverThumbUrl: 'https://cdn.squadzr.test/pokemon-thumb.jpg',
 }
 const cs2: PublicSquad['game'] = {
   id: 'game-cs2',
   name: 'Counter-Strike 2',
   slug: 'cs2',
   genres: [],
+  aliases: ['cs2', 'cs go'],
   coverUrl: 'https://cdn.squadzr.test/cs2.jpg',
   coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.jpg',
 }
@@ -83,6 +94,78 @@ describe('querySquadList — filters', () => {
 
   it('ignores a blank search term', () => {
     expect(querySquadList(all, query({ search: '   ' })).matching).toHaveLength(4)
+  })
+
+  describe('search folding', () => {
+    const pokemonSquad = squad({ id: 'pokemon', gameId: pokemon.id, game: pokemon })
+    const accented = squad({ id: 'accented', name: 'Café Ünïcode night' })
+    const board = [...all, pokemonSquad, accented]
+
+    it('finds a game name with an accent by its plain spelling', () => {
+      expect(ids(querySquadList(board, query({ search: 'pokemon' })).matching)).toEqual(['pokemon'])
+    })
+
+    it('finds a game name with punctuation when the term has a space instead', () => {
+      expect(ids(querySquadList(board, query({ search: 'counter strike' })).matching)).toEqual([
+        'full',
+      ])
+    })
+
+    it('still ignores case', () => {
+      expect(ids(querySquadList(board, query({ search: 'POKÉMON' })).matching)).toEqual(['pokemon'])
+      expect(ids(querySquadList(board, query({ search: 'COUNTER-STRIKE' })).matching)).toEqual([
+        'full',
+      ])
+    })
+
+    it('finds a squad name with accents by its plain spelling', () => {
+      expect(ids(querySquadList(board, query({ search: 'cafe unicode' })).matching)).toEqual([
+        'accented',
+      ])
+    })
+
+    it('keeps every squad for a term made only of punctuation', () => {
+      expect(querySquadList(board, query({ search: '!!!' })).matching).toHaveLength(board.length)
+    })
+  })
+
+  describe('game aliases', () => {
+    it('finds the squads of League of Legends by "lol"', () => {
+      expect(ids(querySquadList(all, query({ search: 'lol' })).matching).sort()).toEqual([
+        'almost',
+        'ranked',
+        'unknown',
+      ])
+    })
+
+    it('finds the squads of Counter-Strike 2 by "cs2"', () => {
+      expect(ids(querySquadList(all, query({ search: 'cs2' })).matching)).toEqual(['full'])
+    })
+
+    it('matches part of an alias and folds the term like the name', () => {
+      expect(ids(querySquadList(all, query({ search: 'CS-GO' })).matching)).toEqual(['full'])
+      expect(ids(querySquadList(all, query({ search: 'leag' })).matching).sort()).toEqual([
+        'almost',
+        'ranked',
+        'unknown',
+      ])
+    })
+
+    it('does not match an alias that belongs to another game', () => {
+      const pokemonSquad = squad({ id: 'pokemon', gameId: pokemon.id, game: pokemon })
+      const board = [...all, pokemonSquad]
+
+      expect(ids(querySquadList(board, query({ search: 'pogo' })).matching)).toEqual(['pokemon'])
+      expect(ids(querySquadList(board, query({ search: 'cs2' })).matching)).not.toContain('pokemon')
+      expect(ids(querySquadList(board, query({ search: 'lol' })).matching)).not.toContain('pokemon')
+    })
+
+    it('still finds a squad of a game without aliases by its names', () => {
+      const bare = squad({ id: 'bare', name: 'Plain squad', game: { ...lol, aliases: [] } })
+
+      expect(ids(querySquadList([bare], query({ search: 'lol' })).matching)).toEqual([])
+      expect(ids(querySquadList([bare], query({ search: 'legends' })).matching)).toEqual(['bare'])
+    })
   })
 
   it('keeps only squads with a free slot for has-space', () => {

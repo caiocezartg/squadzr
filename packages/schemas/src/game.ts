@@ -29,12 +29,15 @@ export const gameSchema = z.object({
 export type GameDto = z.infer<typeof gameSchema>
 
 // Game summary carried by every Squad: enough to render the game next to it
-// without a second read.
+// without a second read. `aliases` are the Game's nicknames and acronyms exactly
+// as the catalog stores them, already normalized (`normalizeSearchText`), so the
+// board's search finds "lol" or "cs2" without asking the catalog.
 export const gameSummarySchema = z.object({
   id: z.uuid(),
   name: z.string(),
   slug: z.string(),
   genres: z.array(gameGenreSchema),
+  aliases: z.array(z.string()),
   coverUrl: z.url(),
   coverThumbUrl: z.url(),
 })

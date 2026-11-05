@@ -33,6 +33,7 @@ describe('toPublicRoom', () => {
         name: game.name,
         slug: game.slug,
         genres: [{ slug: 'moba', name: 'MOBA' }],
+        aliases: ['lol'],
         coverUrl: game.coverUrl,
         coverThumbUrl: game.thumbnailUrl,
       },
@@ -93,10 +94,22 @@ describe('toPublicRoom', () => {
       name: game.name,
       slug: game.slug,
       genres: [{ slug: 'moba', name: 'MOBA' }],
+      aliases: ['lol'],
       coverUrl: game.coverUrl,
       coverThumbUrl: game.thumbnailUrl,
     })
     expect(projection.game.coverThumbUrl).not.toBe(projection.game.coverUrl)
+  })
+
+  it('carries the Game aliases as stored, as a copy the domain entity cannot be changed through', () => {
+    const aliased = createMockGame({ id: GAME_ID, aliases: ['cs2', 'counter strike'] })
+    const projection = toPublicRoom({ ...readyRoom, game: aliased })
+
+    expect(projection.game.aliases).toEqual(['cs2', 'counter strike'])
+    expect(projection.game.aliases).not.toBe(aliased.aliases)
+    expect(
+      toPublicRoom({ ...readyRoom, game: createMockGame({ aliases: [] }) }).game.aliases
+    ).toEqual([])
   })
 
   it('carries the chosen platform, or null when the Squad has none', () => {
