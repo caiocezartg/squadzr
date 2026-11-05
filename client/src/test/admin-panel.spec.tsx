@@ -216,7 +216,13 @@ describe('admin audit', () => {
     // What a screen reader reads in each cell: the avatars' initials and the dash are hidden from it.
     const cells = (row: HTMLElement) => within(row).getAllByRole('cell').map(spokenText)
 
-    expect(cells(grant)).toEqual(['5m ago', 'System', 'Granted adminuser → admin', 'Caio', 'None'])
+    expect(cells(grant)).toEqual([
+      '5m ago',
+      'System',
+      'Granted admin: user → admin',
+      'Caio',
+      'None',
+    ])
     expect(cells(closure)).toEqual([
       '30m ago',
       'Marina Rocha',
@@ -227,7 +233,7 @@ describe('admin audit', () => {
     expect(cells(run)).toEqual([
       '1h ago',
       'Caio',
-      'Ran the Catalog ImportManual run',
+      'Ran the Catalog Import: Manual run',
       'None',
       'None',
     ])
@@ -245,6 +251,8 @@ describe('admin audit', () => {
 
     expect(within(grant).getByText('Granted admin')).toBeInTheDocument()
     expect(within(grant).getByText('System')).toBeInTheDocument()
+    // The detail paragraph names its action for a screen reader, which reads it apart from the title.
+    expect(spokenText(within(grant).getByText('user → admin'))).toBe('Granted admin: user → admin')
     expect(within(closure).getByText('Marina Rocha')).toBeInTheDocument()
     expect(within(closure).getByText('“Offensive squad name.”')).toBeInTheDocument()
   })

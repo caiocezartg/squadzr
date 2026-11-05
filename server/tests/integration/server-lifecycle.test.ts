@@ -102,8 +102,8 @@ describe('PostgreSQL 16 harness', () => {
     // #98 adds 0006 (platforms); #100 adds 0007 (aliases and search text);
     // #112 adds 0008 (the room_ready idempotency key becomes a partial index);
     // #114 adds 0009 (Squad Records and their backfill);
-    // #117 adds 0010 (the user role and the Audit Entry table).
-    expect(Number(migrations.rows[0]?.total)).toBe(11)
+    // #117 adds 0010 (the user role and the Audit Entry table) and 0011 (the audit trail is append-only).
+    expect(Number(migrations.rows[0]?.total)).toBe(12)
     expect(gameCount?.total).toBe(0)
   })
 

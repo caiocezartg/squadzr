@@ -48,7 +48,12 @@ export function AuditRowList({ entries }: { readonly entries: readonly AuditEntr
                   <AuditTargetView entry={entry} />
                 </div>
               )}
-              {entryDetail && <p className="text-muted text-xs">{entryDetail}</p>}
+              {entryDetail && (
+                <p className="text-muted text-xs">
+                  <span className="sr-only">{actionLabel(entry)}: </span>
+                  {entryDetail}
+                </p>
+              )}
               {entry.reason && (
                 <p className="text-xs">
                   <AuditReasonView entry={entry} />

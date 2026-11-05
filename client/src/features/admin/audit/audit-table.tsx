@@ -65,7 +65,12 @@ export function AuditTable({ entries }: { readonly entries: readonly AuditEntryD
               <td className={CELL}>
                 <span className="flex flex-col">
                   <span className="text-text font-bold">{actionLabel(entry)}</span>
-                  {entryDetail && <span className="text-muted text-xs">{entryDetail}</span>}
+                  {entryDetail && (
+                    <span className="text-muted text-xs">
+                      <span className="sr-only">: </span>
+                      {entryDetail}
+                    </span>
+                  )}
                 </span>
               </td>
               <td className={CELL}>
