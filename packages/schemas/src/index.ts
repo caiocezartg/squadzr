@@ -28,7 +28,18 @@ export {
 export { normalizeSearchText } from './search-text'
 export { healthResponseSchema, type HealthResponse } from './health'
 export { sessionResponseSchema, type SessionDto } from './session'
-export { userResponseSchema, type UserDto } from './user'
+export {
+  PROFILE_TOP_GAMES_LIMIT,
+  playerProfileParamsSchema,
+  playerProfileResponseSchema,
+  playerProfileSchema,
+  profileGameSchema,
+  userResponseSchema,
+  type PlayerProfileDto,
+  type PlayerProfileResponse,
+  type ProfileGameDto,
+  type UserDto,
+} from './user'
 export {
   GAME_SEARCH_MAX_LENGTH,
   gameGenreSchema,

@@ -51,6 +51,15 @@ export interface HarnessNavigation {
 
 let active: HarnessNavigation | undefined
 
+// The window's own `replaceState`, taken before the bridge patches it, so mirroring the harness location
+// into the window never feeds back into the harness.
+const writeWindowLocation = window.history.replaceState.bind(window.history)
+
+/** In a browser the address bar and the router's location are one; the harness keeps them one. */
+function mirrorToWindow(location: HarnessLocation): void {
+  writeWindowLocation(null, '', `${location.pathname}${location.search}${location.hash}`)
+}
+
 /**
  * A router navigation is applied on a timer, as the App Router commits a navigation as a transition.
  * A direct location write (the page's own `window.history` write) before it lands cancels it, as the
@@ -94,10 +103,12 @@ function createHarnessHistory(initial: string): HarnessHistory {
   let entries = [parseLocation(initial)]
   let index = 0
   let location = entries[index] as HarnessLocation
+  mirrorToWindow(location)
   const listeners = new Set<() => void>()
 
   const notify = (): void => {
     location = entries[index] as HarnessLocation
+    mirrorToWindow(location)
     for (const listener of listeners) listener()
   }
 

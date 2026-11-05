@@ -26,7 +26,8 @@
         "away": "Out of the room",
         "awaySince": "Out of the room · {time}",
         "open": "Waiting for a player"
-      }
+      },
+      "viewProfile": "View {name}'s profile"
     },
     "lobby": {
       "live": "LIVE",
@@ -174,7 +175,8 @@
       "mySquadsSignInAction": "Sign in",
       "signIn": "Sign in with Discord",
       "account": "Account menu",
-      "createSignIn": "You can explore squads as a guest, but creating a squad requires signing in with Discord."
+      "createSignIn": "You can explore squads as a guest, but creating a squad requires signing in with Discord.",
+      "myProfile": "My profile"
     },
     "notifications": {
       "bell": "Notifications",
@@ -443,5 +445,40 @@
     "UNAUTHORIZED": "You need to sign in to do this.",
     "INTERNAL_ERROR": "Something went wrong. Please try again later.",
     "DEFAULT": "Something went wrong. Please try again."
+  },
+  "playerProfile": {
+    "title": "Player profile",
+    "titleFor": "{name}'s profile",
+    "eyebrow": "Player",
+    "you": "You",
+    "memberSince": "Member since {date}",
+    "stats": {
+      "squads": "Squads",
+      "completed": "completed",
+      "games": "Games",
+      "lastSquad": "Last squad"
+    },
+    "topGames": {
+      "title": "Most played",
+      "unit": "squads",
+      "rank": "Number {rank}"
+    },
+    "empty": {
+      "title": "No completed squads",
+      "own": "Games show up here when a squad of yours fills every slot.",
+      "other": "{name} hasn't completed a squad yet.",
+      "find": "Find a squad"
+    },
+    "notFound": {
+      "title": "Player not found",
+      "text": "This profile doesn't exist or was removed.",
+      "close": "Close"
+    },
+    "error": {
+      "title": "Couldn't load this profile",
+      "text": "Check your connection and try again.",
+      "retry": "Try again"
+    },
+    "loading": "Loading the profile"
   }
 }

@@ -23,11 +23,30 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 43     | 336   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 40     | 404   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 91     | 1044  |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 203   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 45     | 342   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 43     | 427   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 92     | 1068  |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 208   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
+
+Issue #114 (Player Profile: Squad Records and `GET /api/users/:id/profile`) recounts every row. `server:unit` adds 2 files and 6
+tests: `get-player-profile.use-case.spec.ts` (3: the person with their stats, a person with no completed Squad, an unknown id reading
+no history) and `player-profile.projection.spec.ts` (3: the contract mapping, the empty history, no email or update time).
+`server:integration` adds 3 files and 23 tests: `squad-record-postgres.test.ts` (7: the record of the final join with its Game, name,
+platform, host, size, Ready instant and roster, nothing while the Squad is open, a second write changing nothing, a failed record
+rolling the whole join back, the record surviving `DeleteExpiredRoomsUseCase`, no record for an expired Open Squad, a deleted account
+leaving the record), `player-profile-http.test.ts` (13: `getPlayerStats` empty, ordered by Squads then latest Ready then name, the
+name tie-break, the limit with full totals, only the person's own Squads, a Game that left the catalog, open Squads ignored; the route
+public, in order and without the email, empty history, five Games at most, a delisted Game, 404 `USER_NOT_FOUND`, 400 past 255
+characters) and `squad-records-migration.test.ts` (3: migration 0009 on a database with no Squads, with Ready and Open ones, and its
+backfill run twice); `server-lifecycle` now expects 10 migrations. `schemas:unit` goes from 203 to 208 (`playerProfileSchema`: with
+and without history, no `email` or other private field, only the five Game fields, five Games at most, the id param bounds).
+`client:unit` goes from 1052 to 1068 (the 1044 above predates eight tests added since): `player-profile.spec.tsx` (16: opening from a
+Lobby tile over a Lobby that stays live, the stats and the ranked Games, opening from the non-member Lobby, from a shared link, and
+from "My profile"; reading ahead on hover; closing with the button, Escape, Back and Forward, and opening again; a cached profile
+opening with no skeleton and no second read; the empty profile of the viewer and of someone else; 404; the retry; the skeleton for a
+cold cache; the pushed `room_ready` notification reading the viewer's profile again). The harness location now mirrors into
+`window.location`, as the address bar and the router are one in a browser.
 
 Issue #112 (Squad Release, Host Transfer, Squad Limits of 1 hosted and 3 joined, one notification type per action)
 recounts every row. `server:unit` adds 4 files and 34 tests: `choose-next-host.spec.ts` (5: the oldest member, the tie on

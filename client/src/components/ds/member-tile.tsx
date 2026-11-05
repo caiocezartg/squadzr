@@ -19,6 +19,13 @@ interface OpenSlotProps extends TileHost {
   readonly open: true
 }
 
+/** What opens a player's profile from their tile: the click, and an earlier hint to read it ahead. */
+export interface TileProfileLink {
+  readonly onOpen: () => void
+  /** Hover or focus on the tile: the profile is likely next, so it can be read already. */
+  readonly onPreview?: () => void
+}
+
 interface PlayerProps extends TileHost {
   readonly open?: false
   readonly playerId: string
@@ -35,6 +42,8 @@ interface PlayerProps extends TileHost {
   readonly online?: boolean
   /** ISO time the player left the room. Without it an away player reads "Out of the room". */
   readonly offlineSince?: string | null
+  /** Makes the player's photo and name a button that opens their profile. */
+  readonly profile?: TileProfileLink
 }
 
 export type MemberTileProps = OpenSlotProps | PlayerProps
@@ -102,17 +111,50 @@ export function MemberTile(props: MemberTileProps) {
 
   return (
     <Tile look={look} presence={presence} host={props}>
-      <Avatar
-        state={look.avatar}
-        playerId={props.playerId}
-        name={props.name}
-        image={props.image}
-        host={props.host}
-        surface={look.groundColor}
-      />
-      <Name look={look}>{props.name}</Name>
+      <PlayerFace profile={props.profile} name={props.name}>
+        <Avatar
+          state={look.avatar}
+          playerId={props.playerId}
+          name={props.name}
+          image={props.image}
+          host={props.host}
+          surface={look.groundColor}
+        />
+        <Name look={look}>{props.name}</Name>
+      </PlayerFace>
       {props.you && <span className="shrink-0 text-xs text-muted">{t('you')}</span>}
     </Tile>
+  )
+}
+
+/**
+ * The player's photo and name. With a profile link they are one button named "View {name}'s
+ * profile", highlighted on hover for a fine pointer and outlined in mint on keyboard focus.
+ */
+function PlayerFace({
+  profile,
+  name,
+  children,
+}: {
+  readonly profile: TileProfileLink | undefined
+  readonly name: string
+  readonly children: ReactNode
+}) {
+  const t = useTranslations('ds.member')
+
+  if (!profile) return children
+
+  return (
+    <button
+      type="button"
+      aria-label={t('viewProfile', { name })}
+      onClick={profile.onOpen}
+      onPointerEnter={profile.onPreview}
+      onFocus={profile.onPreview}
+      className="press hover-fine:bg-white/6 focus-visible:outline-mint -mx-1.5 -my-1 flex min-w-0 flex-1 items-center gap-3.5 px-1.5 py-1 text-left focus-visible:outline-2 focus-visible:-outline-offset-2"
+    >
+      {children}
+    </button>
   )
 }
 

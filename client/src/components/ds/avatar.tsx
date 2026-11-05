@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { pickAvatarColors } from './avatar-colors'
 
-export type AvatarSize = 20 | 28 | 34 | 36 | 44 | 72
+export type AvatarSize = 20 | 28 | 34 | 36 | 44 | 72 | 88
 
 /**
  * `online`: in the room now. `away`: joined, out of the room. `open`: a slot waiting for a player.
@@ -66,6 +66,13 @@ const SIZE_STYLES: Record<AvatarSize, SizeStyle> = {
     plus: 'size-6',
     crown: 'size-6.5 -top-3.25',
     crownIcon: 15,
+  },
+  88: {
+    circle: 'size-22',
+    initials: 'text-[28px]',
+    plus: 'size-7',
+    crown: 'size-8 -top-4',
+    crownIcon: 18,
   },
 }
 

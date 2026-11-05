@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import { LogOut } from 'lucide-react'
+import { LogOut, UserRound } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { SessionDto } from '@squadzr/schemas'
 import { Button } from '@/components/ds/button'
 import { Popover } from '@/components/ds/popover'
+import { usePlayerProfileLink } from '@/features/player-profile'
 import { useSignOut } from '@/hooks/use-sign-out'
 import { AccountButton } from './account-button'
 
@@ -25,6 +26,7 @@ export interface AccountPopoverProps {
 export function AccountPopover({ user, defaultOpen, takeFocus }: AccountPopoverProps) {
   const t = useTranslations()
   const signOutViewer = useSignOut()
+  const profileLink = usePlayerProfileLink()
   const [open, setOpen] = useState(defaultOpen)
   // The focus is taken once, as the button appears, and never again when this renders.
   const pendingFocus = useRef(takeFocus)
@@ -33,6 +35,11 @@ export function AccountPopover({ user, defaultOpen, takeFocus }: AccountPopoverP
     pendingFocus.current = false
     button.focus()
   }, [])
+
+  const openOwnProfile = () => {
+    setOpen(false)
+    profileLink.open(user.id)
+  }
 
   const handleSignOut = async () => {
     setOpen(false)
@@ -51,6 +58,17 @@ export function AccountPopover({ user, defaultOpen, takeFocus }: AccountPopoverP
       trigger={<AccountButton user={user} ref={focusOnce} />}
     >
       <p className="text-muted truncate px-3 pt-2 pb-3 text-xs">{user.email}</p>
+      <Button
+        variant="ghost"
+        full
+        icon={<UserRound />}
+        onClick={openOwnProfile}
+        onPointerEnter={() => profileLink.prefetch(user.id)}
+        onFocus={() => profileLink.prefetch(user.id)}
+        className="justify-start"
+      >
+        {t('ds.shell.myProfile')}
+      </Button>
       <Button
         variant="ghost"
         full

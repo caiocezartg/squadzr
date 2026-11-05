@@ -2,7 +2,9 @@ import type { Database } from '@infrastructure/database/drizzle'
 import type { Clock } from '@domain/services/clock.interface'
 import { DrizzleUserRepository } from '@infrastructure/repositories/drizzle-user.repository'
 import { DrizzleUserNotificationRepository } from '@infrastructure/repositories/drizzle-user-notification.repository'
+import { DrizzleSquadRecordRepository } from '@infrastructure/repositories/drizzle-squad-record.repository'
 import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
+import { GetPlayerProfileUseCase } from '@application/use-cases/user/get-player-profile.use-case'
 import { GetUserUseCase } from '@application/use-cases/user/get-user.use-case'
 import { ListNotificationsUseCase } from '@application/use-cases/notification/list-notifications.use-case'
 import { MarkNotificationReadUseCase } from '@application/use-cases/notification/mark-notification-read.use-case'
@@ -14,8 +16,10 @@ export function createUserController(db: Database, clock: Clock) {
   const userRepository = new DrizzleUserRepository(db)
   const userNotificationRepository = new DrizzleUserNotificationRepository(db, clock)
   const roomRepository = new DrizzleRoomRepository(db, clock)
+  const squadRecordRepository = new DrizzleSquadRecordRepository(db)
 
   const getUserUseCase = new GetUserUseCase(userRepository)
+  const getPlayerProfileUseCase = new GetPlayerProfileUseCase(userRepository, squadRecordRepository)
   const listNotificationsUseCase = new ListNotificationsUseCase(
     userNotificationRepository,
     roomRepository,
@@ -29,6 +33,7 @@ export function createUserController(db: Database, clock: Clock) {
 
   return new UserController({
     getUserUseCase,
+    getPlayerProfileUseCase,
     listNotificationsUseCase,
     markNotificationReadUseCase,
     markAllNotificationsReadUseCase,

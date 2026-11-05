@@ -8,6 +8,8 @@ import {
   notificationChangeResponseSchema,
   notificationIdParamSchema,
   notificationsResponseSchema,
+  playerProfileParamsSchema,
+  playerProfileResponseSchema,
   readAllNotificationsResponseSchema,
   userResponseSchema,
 } from '@squadzr/schemas'
@@ -30,6 +32,21 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
     },
     preHandler: requireAuth,
     handler: userController.me.bind(userController),
+  })
+
+  app.get('/api/users/:id/profile', {
+    schema: {
+      tags: ['Users'],
+      summary: 'Get a Player Profile',
+      description:
+        'Returns the public profile of a person: name, photo, member since, completed Squads and most played Games. Public, never carries the email.',
+      params: playerProfileParamsSchema,
+      response: {
+        200: playerProfileResponseSchema,
+        404: errorResponse,
+      },
+    },
+    handler: userController.playerProfile.bind(userController),
   })
 
   app.get('/api/notifications', {

@@ -29,8 +29,16 @@ A Squad that is accepting new memberships while it is being formed.
 _Avoid_: Open Room, waiting room, active room
 
 **Ready Squad**:
-A Squad that has reached its required capacity and no longer accepts membership changes. The join that fills it also runs the Squad Release of its members.
+A Squad that has reached its required capacity and no longer accepts membership changes. The join that fills it also writes its Squad Record and runs the Squad Release of its members. The cleanup deletes it 60 minutes after it became Ready; its Squad Record stays.
 _Avoid_: Ready Room, completed room, waiting room
+
+**Squad Record**:
+The immutable account of a Squad that became Ready: its Game, name, Platform, host, size, the instant it became Ready and every member it had then, each with the time they joined. It is written by the join that fills the Squad, in that join's transaction, after the roster is read and before the Squad Release, so a failure rolls the whole join back. It is keyed by the Squad's id, which has no foreign key because the cleanup deletes the Squad, so writing it twice changes nothing and its members are written only by the call that created it. Nothing alters or deletes a record (deleting a member's account removes only their line, and the host is left empty). An Open Squad that expired never has one. Migration 0009 gave a record to each Ready Squad that still existed. It is what the Player Profile counts.
+_Avoid_: History entry, completed squad row, match
+
+**Player Profile**:
+What anyone may read about a person (`GET /api/users/:id/profile`, public): their name and photo, when they joined Squadzr, how many Squads they completed (the Squad Records they are a member of), in how many Games, their latest Squad and their five most played Games. The Games are ordered by Squads, then by the most recent Ready, then by name, and a Game that left the catalog still counts. It never carries the email, the Discord id, the Squads themselves or who the person played with, and an unknown id is 404 `USER_NOT_FOUND`.
+_Avoid_: User page, public user, stats
 
 **Squad Limits**:
 How many Open Squads one person can be in, both counted over valid Open Squads at the moment of the write. A person hosts at most 1 Open Squad (`ROOM.CREATE_LIMIT`), also when a Host Transfer would make them host, and holds at most 3 Memberships in Open Squads (`ROOM.JOIN_LIMIT`), the one they host included. Creating a Squad checks both, the host limit first (422 `ROOM_CREATE_LIMIT_REACHED`, then 422 `ROOM_JOIN_LIMIT_REACHED`), and joining checks the Membership limit. Ready Squads and Open Squads past their activity window do not count, so whoever just completed a Squad can create or join another at once.

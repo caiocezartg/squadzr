@@ -6,10 +6,14 @@ import {
   PLATFORM_LABELS,
   createRoomInputSchema,
   createRoomResponseSchema,
+  PROFILE_TOP_GAMES_LIMIT,
   describeContractIssues,
   isRoomLobbyResponse,
   notificationsResponseSchema,
   platformSchema,
+  playerProfileParamsSchema,
+  playerProfileResponseSchema,
+  playerProfileSchema,
   platformsFromIgdbIds,
   publicRoomSchema,
   roomCodeParamSchema,
@@ -615,5 +619,87 @@ describe('describeContractIssues', () => {
     expect(describeContractIssues(result.error)).toEqual([
       { path: 'room.createdAt', code: 'invalid_format' },
     ])
+  })
+})
+
+describe('Player Profile contract', () => {
+  const profileGame = {
+    id: GAME_ID,
+    name: 'Counter-Strike 2',
+    slug: 'cs2',
+    coverUrl: 'https://cdn.squadzr.test/cs2.webp',
+    coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
+  }
+  const profile = {
+    id: 'user-1',
+    name: 'Caio',
+    image: null,
+    memberSince: CREATED_AT,
+    completedSquads: 3,
+    gamesPlayed: 1,
+    lastSquad: { game: profileGame, readyAt: CREATED_AT },
+    topGames: [{ game: profileGame, squads: 3 }],
+  }
+
+  it('accepts a profile with and without history', () => {
+    expect(playerProfileSchema.parse(profile)).toEqual(profile)
+    const empty = { ...profile, completedSquads: 0, gamesPlayed: 0, lastSquad: null, topGames: [] }
+    expect(playerProfileResponseSchema.parse({ profile: empty }).profile).toEqual(empty)
+  })
+
+  it('never carries the email or any other private field of the user', () => {
+    const leaky = {
+      ...profile,
+      email: 'caio@squadzr.test',
+      emailVerified: true,
+      updatedAt: CREATED_AT,
+    }
+
+    const parsed = playerProfileSchema.parse(leaky)
+
+    expect(parsed).not.toHaveProperty('email')
+    expect(parsed).not.toHaveProperty('emailVerified')
+    expect(parsed).not.toHaveProperty('updatedAt')
+    expect(Object.keys(playerProfileSchema.shape).sort()).toEqual([
+      'completedSquads',
+      'gamesPlayed',
+      'id',
+      'image',
+      'lastSquad',
+      'memberSince',
+      'name',
+      'topGames',
+    ])
+  })
+
+  it('carries only the Game fields the profile shows', () => {
+    const parsed = playerProfileSchema.parse({
+      ...profile,
+      topGames: [{ game: { ...profileGame, genres: [], aliases: ['cs'] }, squads: 3 }],
+    })
+
+    expect(Object.keys(parsed.topGames[0]!.game).sort()).toEqual([
+      'coverThumbUrl',
+      'coverUrl',
+      'id',
+      'name',
+      'slug',
+    ])
+  })
+
+  it('lists at most five Games', () => {
+    const topGames = Array.from({ length: PROFILE_TOP_GAMES_LIMIT + 1 }, () => ({
+      game: profileGame,
+      squads: 1,
+    }))
+
+    expect(playerProfileSchema.safeParse({ ...profile, topGames }).success).toBe(false)
+  })
+
+  it('bounds the id param to 1 through 255 characters', () => {
+    expect(playerProfileParamsSchema.safeParse({ id: 'a' }).success).toBe(true)
+    expect(playerProfileParamsSchema.safeParse({ id: 'a'.repeat(255) }).success).toBe(true)
+    expect(playerProfileParamsSchema.safeParse({ id: '' }).success).toBe(false)
+    expect(playerProfileParamsSchema.safeParse({ id: 'a'.repeat(256) }).success).toBe(false)
   })
 })

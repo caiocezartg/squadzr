@@ -12,6 +12,7 @@ import { ROOM } from '@config/constants'
 import { user } from '@infrastructure/database/schema/auth'
 import { roomMembers, type RoomMemberRow } from '@infrastructure/database/schema/room-members'
 import { rooms, type RoomRow } from '@infrastructure/database/schema/rooms'
+import { squadRecordMembers, squadRecords } from '@infrastructure/database/schema/squad-records'
 import {
   roomReadyOnly,
   userNotifications,
@@ -148,6 +149,45 @@ export async function advanceRoomActivity(
       ...(input.becameReady && { readyAt: input.now }),
     })
     .where(eq(rooms.id, input.roomId))
+}
+
+/**
+ * Record step: writes the Squad Record of the Squad this join made Ready, with its roster as
+ * it stands under the locks, in the join transaction. The record is keyed by `room_id`, so a
+ * repeat writes nothing: the members are written only when this call created the record.
+ * A failure rolls the whole join back, like the notifications.
+ */
+export async function recordCompletedSquad(
+  tx: DatabaseTransaction,
+  input: {
+    readonly room: Pick<Room, 'id' | 'gameId' | 'name' | 'platform' | 'hostId' | 'maxPlayers'>
+    readonly roster: Roster
+    readonly readyAt: Date
+  }
+): Promise<void> {
+  const { room, roster, readyAt } = input
+  const [record] = await tx
+    .insert(squadRecords)
+    .values({
+      roomId: room.id,
+      gameId: room.gameId,
+      name: room.name,
+      platform: room.platform,
+      hostId: room.hostId,
+      maxPlayers: room.maxPlayers,
+      readyAt,
+    })
+    .onConflictDoNothing({ target: squadRecords.roomId })
+    .returning({ id: squadRecords.id })
+  if (!record || roster.members.length === 0) return
+
+  await tx.insert(squadRecordMembers).values(
+    roster.members.map((member) => ({
+      recordId: record.id,
+      userId: member.userId,
+      joinedAt: member.joinedAt,
+    }))
+  )
 }
 
 /**
