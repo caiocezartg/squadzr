@@ -33,12 +33,7 @@ export function ProfileStats({ profile, compact }: ProfileStatsProps) {
     >
       <div className={CELL}>
         <dt className={LABEL}>{t('squads')}</dt>
-        <dd className={value}>
-          {profile.completedSquads}
-          <small className="text-text-3 font-body ml-1 text-[13px] font-bold">
-            {t('completed', { count: profile.completedSquads })}
-          </small>
-        </dd>
+        <dd className={value}>{profile.completedSquads}</dd>
       </div>
       <div className={cn(CELL, 'shadow-[inset_1px_0_0_var(--color-line)]')}>
         <dt className={LABEL}>{t('games')}</dt>

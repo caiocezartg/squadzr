@@ -452,7 +452,6 @@
     "memberSince": "Member since {date}",
     "stats": {
       "squads": "Squads",
-      "completed": "completed",
       "games": "Games",
       "lastSquad": "Last squad"
     },

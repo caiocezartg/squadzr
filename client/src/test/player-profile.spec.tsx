@@ -110,7 +110,6 @@ describe('opening the profile', () => {
 
     const dialog = await profileDialog()
     expect(await within(dialog).findByText('20')).toBeInTheDocument()
-    expect(within(dialog).getByText('completed')).toBeInTheDocument()
     expect(within(dialog).getByText('2d ago')).toBeInTheDocument()
     expect(within(dialog).getByText(/^Member since .*2026$/)).toBeInTheDocument()
     const ranked = within(within(dialog).getByRole('region', { name: 'Most played' }))

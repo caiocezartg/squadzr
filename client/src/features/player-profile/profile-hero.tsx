@@ -54,7 +54,7 @@ function HeroCover({ coverUrl }: { readonly coverUrl: string }) {
       alt=""
       onLoad={() => setLoaded(true)}
       data-loaded={loaded ? '' : undefined}
-      className="absolute -inset-7.5 size-[calc(100%+3.75rem)] scale-115 object-cover object-[50%_30%] opacity-0 blur-[14px] saturate-125 transition-opacity duration-200 ease-out data-loaded:opacity-75"
+      className="absolute -inset-7.5 size-[calc(100%+3.75rem)] scale-115 object-cover object-[50%_30%] opacity-0 blur-[8px] saturate-125 transition-opacity duration-200 ease-out data-loaded:opacity-75"
     />
   )
 }
