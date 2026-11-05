@@ -65,7 +65,6 @@ function ProfileView({
         name={profile.name}
         image={profile.image}
         memberSince={profile.memberSince}
-        isOwn={viewerId === profile.id}
         compact={compact}
       />
       {profile.completedSquads === 0 ? (

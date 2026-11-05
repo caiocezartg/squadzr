@@ -129,7 +129,8 @@ export function MemberTile(props: MemberTileProps) {
 
 /**
  * The player's photo and name. With a profile link they are one button named "View {name}'s
- * profile", highlighted on hover for a fine pointer and outlined in mint on keyboard focus.
+ * profile" whose hit area stretches over the whole tile: a fine pointer lifts the tile's ground and
+ * keyboard focus outlines the tile in mint, so neither draws a box of its own inside the row.
  */
 function PlayerFace({
   profile,
@@ -151,7 +152,7 @@ function PlayerFace({
       onClick={profile.onOpen}
       onPointerEnter={profile.onPreview}
       onFocus={profile.onPreview}
-      className="press hover-fine:bg-white/6 focus-visible:outline-mint -mx-1.5 -my-1 flex min-w-0 flex-1 items-center gap-3.5 px-1.5 py-1 text-left focus-visible:outline-2 focus-visible:-outline-offset-2"
+      className="flex min-w-0 flex-1 items-center gap-3.5 text-left outline-none after:absolute after:inset-0 after:transition-colors after:duration-150 after:ease-out hover-fine:after:bg-white/4 focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-mint active:after:bg-white/6"
     >
       {children}
     </button>
@@ -181,7 +182,7 @@ function Tile({
       style={host.style}
       title={presence}
       className={cn(
-        'flex min-h-16 items-center gap-3.5 pt-4.5 pr-3.5 pb-3.5 pl-3 text-text',
+        'relative flex min-h-16 items-center gap-3.5 pt-4.5 pr-3.5 pb-3.5 pl-3 text-text',
         look.ground
       )}
     >

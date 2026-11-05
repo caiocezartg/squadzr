@@ -449,8 +449,6 @@
   "playerProfile": {
     "title": "Player profile",
     "titleFor": "{name}'s profile",
-    "eyebrow": "Player",
-    "you": "You",
     "memberSince": "Member since {date}",
     "stats": {
       "squads": "Squads",

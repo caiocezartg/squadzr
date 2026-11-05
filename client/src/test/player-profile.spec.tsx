@@ -219,7 +219,7 @@ describe('closing the profile', () => {
 })
 
 describe('the account menu', () => {
-  it("opens the viewer's own profile, marked as theirs", async () => {
+  it("opens the viewer's own profile", async () => {
     registerRoutes({ 'user-1': { ...anaProfile, id: 'user-1', name: 'Caio' } })
     const { user, navigation } = renderSquadsFlow('/squads', { shell: true })
     await screen.findByText('Ranked grind')
@@ -228,7 +228,7 @@ describe('the account menu', () => {
     await user.click(await screen.findByRole('button', { name: 'My profile' }))
 
     const dialog = await profileDialog()
-    expect(await within(dialog).findByText('You')).toBeInTheDocument()
+    expect(await within(dialog).findByRole('heading', { name: 'Caio' })).toBeInTheDocument()
     expect(navigation.history.location.search).toBe('?player=user-1')
   })
 })

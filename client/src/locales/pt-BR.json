@@ -449,8 +449,6 @@
   "playerProfile": {
     "title": "Perfil do jogador",
     "titleFor": "Perfil de {name}",
-    "eyebrow": "Jogador",
-    "you": "Você",
     "memberSince": "Membro desde {date}",
     "stats": {
       "squads": "Squads",

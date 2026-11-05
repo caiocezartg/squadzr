@@ -11,13 +11,11 @@ interface ProfileIdentityProps {
   readonly image: string | null
   /** ISO time the person joined Squadzr. */
   readonly memberSince: string
-  /** The viewer's own profile carries the YOU mark. */
-  readonly isOwn: boolean
   readonly compact: boolean
 }
 
 /**
- * Who the person is, overlapping the header: the 88px photo (72px in the sheet), the PLAYER label, the
+ * Who the person is, overlapping the header: the 88px photo (72px in the sheet), the
  * name in display type on one line (the full name in its tooltip) and when they joined.
  */
 export function ProfileIdentity({
@@ -25,7 +23,6 @@ export function ProfileIdentity({
   name,
   image,
   memberSince,
-  isOwn,
   compact,
 }: ProfileIdentityProps) {
   const t = useTranslations('playerProfile')
@@ -44,24 +41,16 @@ export function ProfileIdentity({
         <Avatar size={compact ? 72 : 88} playerId={playerId} name={name} image={image} />
       </span>
       <div className="w-full min-w-0 flex-1">
-        <p className="type-label text-mint">{t('eyebrow')}</p>
-        <div className="mt-1 flex min-w-0 items-center gap-2">
-          <h2
-            title={name}
-            className={cn(
-              'font-display min-w-0 truncate leading-none font-black tracking-[0.01em] uppercase',
-              compact ? 'text-[32px]' : 'text-[40px]'
-            )}
-          >
-            {name}
-          </h2>
-          {isOwn && (
-            <span className="text-mint shrink-0 font-mono text-[10px] font-bold tracking-[0.14em] uppercase">
-              {t('you')}
-            </span>
+        <h2
+          title={name}
+          className={cn(
+            'font-display truncate leading-[0.9] font-black tracking-[0.01em] uppercase',
+            compact ? 'text-[32px]' : 'text-[40px]'
           )}
-        </div>
-        <p className="text-muted mt-1.5 text-[13px] font-medium">{t('memberSince', { date })}</p>
+        >
+          {name}
+        </h2>
+        <p className="text-muted mt-1 text-[13px] font-medium">{t('memberSince', { date })}</p>
       </div>
     </div>
   )
