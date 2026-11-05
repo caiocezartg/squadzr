@@ -19,10 +19,10 @@ export interface NotificationItemProps {
 
 /**
  * A notification as a row of the notifications panel (reference, Components). Each type has its
- * own row, with the media, badge and message of what happened: a Squad that filled (the cover and
- * Discord), an inherited Squad (the cover and a crown), a member who left (their avatar), a closed
- * Squad (a grey cover). They share one structure and differ only in those three. This is the one
- * place that tells the types apart.
+ * own row, with its tone, media, badge and message: a Squad that filled (mint, the cover and
+ * Discord), an inherited Squad (amber, the cover and a crown), a member who left (discord-soft, their
+ * avatar), a closed Squad (danger, a grey cover). They share one structure, and the tones live in
+ * `notification-tone.ts`. This is the one place that tells the types apart.
  */
 export function NotificationItem({ notification, ...actions }: NotificationItemProps) {
   switch (notification.type) {

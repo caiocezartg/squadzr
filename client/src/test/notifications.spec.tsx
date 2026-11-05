@@ -127,7 +127,9 @@ describe('the bell and its panel', () => {
     await openNotifications(user, 2)
 
     const panel = await screen.findByRole('dialog', { name: 'Notifications' })
-    expect(within(panel).getAllByText('Squad complete · invite unlocked')).toHaveLength(2)
+    expect(
+      within(panel).getAllByText("Everyone's in. The Discord invite is unlocked.")
+    ).toHaveLength(2)
     expect(within(panel).getAllByText('Unread')).toHaveLength(2)
     expect(squadEntry(/^Alpha squad/)).toBeInTheDocument()
     expect(squadEntry(/^Beta squad/)).toBeInTheDocument()
@@ -258,14 +260,10 @@ describe('every notification type in the panel', () => {
 
     const panel = await screen.findByRole('dialog', { name: 'Notifications' })
     expect(within(panel).getAllByRole('listitem')).toHaveLength(4)
-    expect(within(panel).getByText('Squad complete · invite unlocked')).toBeInTheDocument()
-    expect(within(panel).getByText('You are the new owner · Caio left')).toBeInTheDocument()
-    expect(
-      within(panel).getByText('Ana left · joined another squad that filled')
-    ).toBeInTheDocument()
-    expect(
-      within(panel).getByText('Squad closed · the owner left and nobody could take over')
-    ).toBeInTheDocument()
+    expect(within(panel).getByText('Squad complete')).toBeInTheDocument()
+    expect(within(panel).getByText("You're the new owner")).toBeInTheDocument()
+    expect(within(panel).getByText('Member left')).toBeInTheDocument()
+    expect(within(panel).getByText('Squad closed')).toBeInTheDocument()
   })
 
   it('draws them in the bottom sheet below 640px too', async () => {

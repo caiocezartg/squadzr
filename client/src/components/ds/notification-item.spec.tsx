@@ -1,7 +1,7 @@
 /**
- * The notification row, one variant per type: the Squad name, the message of what happened, the
- * game with the relative time, the media (a cover or the avatar of who left) with its badge, the
- * unread marks and a dismiss button named after the Squad.
+ * The notification row, one variant per type: an eyebrow in the type's tone, the title, the message
+ * of what happened, the game with the relative time, the media (a cover or the avatar of who left)
+ * with its badge, the unread marks and a dismiss button named after the Squad.
  */
 
 import { render, screen, within } from '@testing-library/react'
@@ -25,7 +25,7 @@ function renderItem(
 ) {
   const onOpen = vi.fn()
   const onDismiss = vi.fn()
-  const { container } = render(
+  const { container, unmount } = render(
     <ul>
       <NotificationItem
         notification={{ ...notification, createdAt: new Date().toISOString() }}
@@ -35,42 +35,80 @@ function renderItem(
       />
     </ul>
   )
-  return { onOpen, onDismiss, container }
+  return { onOpen, onDismiss, container, unmount }
 }
 
 function readVersion(notification: UserNotification): UserNotification {
   return { ...notification, readAt: '2026-01-01T00:00:00.000Z' }
 }
 
+function withPayload(payload: Partial<(typeof squadReadyNotification)['payload']>) {
+  return { ...squadReadyNotification, payload: { ...squadReadyNotification.payload, ...payload } }
+}
+
+const players = (count: number) =>
+  Array.from({ length: count }, (_, i) => ({ name: `P${i + 1}`, image: null }))
+
+describe('the eyebrow of each type', () => {
+  it.each([
+    [squadReadyNotification, 'Squad complete', 'text-mint'],
+    [hostTransferredNotification, "You're the new owner", 'text-amber'],
+    [memberLeftNotification, 'Member left', 'text-discord-soft'],
+    [roomClosedNotification, 'Squad closed', 'text-danger'],
+  ] as const)('labels a %#th type in its tone', (notification, eyebrow, tone) => {
+    renderItem(notification)
+
+    expect(screen.getByText(eyebrow).parentElement).toHaveClass(tone)
+  })
+
+  it('ends with the unread dot only on an unread row, and dims on a read one', () => {
+    const { container, unmount } = renderItem()
+    expect(container.querySelector('.bg-mint.rounded-full')).toBeInTheDocument()
+    unmount()
+
+    const read = renderItem(readVersion(squadReadyNotification))
+    expect(read.container.querySelector('.bg-mint.rounded-full')).toBeNull()
+    expect(screen.getByText('Squad complete').parentElement).toHaveClass('opacity-60')
+  })
+})
+
 describe('a room_ready row', () => {
   it('shows the name, the message and the game with the time', () => {
     renderItem()
 
     const row = screen.getByRole('link', { name: new RegExp(`^${SQUAD}`) })
-    expect(row).toHaveTextContent('Squad complete · invite unlocked')
+    expect(row).toHaveTextContent("Everyone's in. The Discord invite is unlocked.")
     expect(row).toHaveTextContent(`${squadReadyNotification.payload.gameName} · just now`)
   })
 
-  it('marks an unread row with a bold name and a hidden unread text', () => {
+  it('marks an unread row with its tone edge and a hidden unread text', () => {
     renderItem()
 
     expect(screen.getByText('Unread')).toHaveClass('sr-only')
-    expect(screen.getByText(SQUAD)).toHaveClass('font-bold')
+    expect(screen.getByRole('link', { name: new RegExp(`^${SQUAD}`) })).toHaveClass(
+      'shadow-[inset_3px_0_0_var(--color-mint)]'
+    )
   })
 
-  it('has no unread text on a read row and greys its cover', () => {
-    renderItem(
-      readVersion({
-        ...squadReadyNotification,
-        payload: {
-          ...squadReadyNotification.payload,
-          gameCoverUrl: 'https://cdn.squadzr.test/c.jpg',
-        },
-      })
-    )
+  it('has no unread text or edge on a read row and dims its media', () => {
+    renderItem(readVersion(withPayload({ gameCoverUrl: 'https://cdn.squadzr.test/c.jpg' })))
 
     expect(screen.queryByText('Unread')).not.toBeInTheDocument()
-    expect(document.querySelector('img')).toHaveClass('grayscale-60')
+    const row = screen.getByRole('link', { name: new RegExp(`^${SQUAD}`) })
+    expect(row.className).not.toMatch(/inset_3px/)
+    expect(document.querySelector('img')?.closest('.opacity-60')).toBeInTheDocument()
+  })
+
+  it('stacks the players before the game, at most five and a count of the rest', () => {
+    const { unmount } = renderItem(withPayload({ players: players(7) }))
+
+    expect(screen.getAllByText(/^P\d$/)).toHaveLength(5)
+    expect(screen.getByText('+2')).toBeInTheDocument()
+    unmount()
+
+    renderItem(withPayload({ players: players(5) }))
+    expect(screen.getAllByText(/^P\d$/)).toHaveLength(5)
+    expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument()
   })
 
   it('keeps a placeholder without a cover and a Discord badge on the cover', () => {
@@ -80,11 +118,9 @@ describe('a room_ready row', () => {
     expect(container.querySelector('.bg-discord')).toBeInTheDocument()
   })
 
-  it('lists the squads the viewer left, in the singular and in the plural', () => {
-    const withLeft = (leftSquads: { roomCode: string; roomName: string }[]) => ({
-      ...squadReadyNotification,
-      payload: { ...squadReadyNotification.payload, leftSquads },
-    })
+  it('lists the squads the viewer left in chips, in the singular and in the plural', () => {
+    const withLeft = (leftSquads: { roomCode: string; roomName: string }[]) =>
+      withPayload({ leftSquads })
     const { rerender } = render(<ul />)
     rerender(
       <ul>
@@ -95,7 +131,8 @@ describe('a room_ready row', () => {
         />
       </ul>
     )
-    expect(screen.getByText('You left 1 other squad: Squad B.')).toBeInTheDocument()
+    expect(screen.getByText('You left 1 squad')).toBeInTheDocument()
+    expect(screen.getByText('Squad B')).toHaveClass('border')
 
     rerender(
       <ul>
@@ -109,7 +146,9 @@ describe('a room_ready row', () => {
         />
       </ul>
     )
-    expect(screen.getByText('You left 2 other squads: Squad B, Squad C.')).toBeInTheDocument()
+    expect(screen.getByText('You left 2 squads')).toBeInTheDocument()
+    expect(screen.getByText('Squad B')).toHaveClass('border')
+    expect(screen.getByText('Squad C')).toHaveClass('border')
   })
 
   it('has no line about left squads when the viewer left none', () => {
@@ -171,8 +210,11 @@ describe('a host_transferred row', () => {
     const { container } = renderItem(hostTransferredNotification)
 
     const row = screen.getByRole('link', { name: `You are the new owner of ${SQUAD}, Unread` })
-    expect(row).toHaveTextContent('You are the new owner · Caio left')
-    expect(container.querySelector('.lucide-crown')).toBeInTheDocument()
+    expect(row).toHaveTextContent(
+      'Caio left because another squad of theirs filled. The squad is yours now.'
+    )
+    expect(screen.getByText('Caio').tagName).toBe('B')
+    expect(container.querySelector('.bg-amber .lucide-crown')).toBeInTheDocument()
     expect(container.querySelector('.bg-discord')).toBeNull()
   })
 
@@ -188,9 +230,17 @@ describe('a member_left row', () => {
     const { container } = renderItem(memberLeftNotification)
 
     const row = screen.getByRole('link', { name: `Ana left ${SQUAD}, Unread` })
-    expect(row).toHaveTextContent('Ana left · joined another squad that filled')
-    expect(container.querySelector('.lucide-user-minus')).toBeInTheDocument()
+    expect(row).toHaveTextContent('They joined another squad that filled. A slot opened up.')
+    expect(container.querySelector('.bg-discord-soft .lucide-user-minus')).toBeInTheDocument()
     expect(within(row).getByText('AN')).toBeInTheDocument()
+  })
+
+  it('titles the row with who left and the Squad name in a tinted chip', () => {
+    renderItem(memberLeftNotification)
+
+    const squad = screen.getByText(SQUAD)
+    expect(squad).toHaveClass('bg-discord-soft/13')
+    expect(squad.parentElement).toHaveTextContent(`Ana left ${SQUAD}`)
   })
 
   it('names a read row after the action without the unread text', () => {
@@ -218,9 +268,9 @@ describe('a room_closed row', () => {
     const { container } = renderItem(closed)
 
     const row = screen.getByRole('link', { name: `${SQUAD} was closed, Unread` })
-    expect(row).toHaveTextContent('Squad closed · the owner left and nobody could take over')
+    expect(row).toHaveTextContent('The owner, Caio, left and nobody who stayed could take over.')
+    expect(screen.getByText(SQUAD)).toHaveClass('line-through', 'text-text-3')
     expect(document.querySelector('img')).toHaveClass('grayscale')
-    expect(document.querySelector('img')).not.toHaveClass('grayscale-60')
     expect(container.querySelector('.lucide-door-closed')).toBeInTheDocument()
   })
 
