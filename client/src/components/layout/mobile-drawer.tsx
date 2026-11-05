@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Dialog } from '@base-ui-components/react/dialog'
 import { Menu, X } from 'lucide-react'
 import { usePathname } from 'next/navigation'
@@ -8,16 +8,20 @@ import { useTranslations } from 'next-intl'
 import { useInstantDismiss } from '@/components/ds/use-instant-dismiss'
 import { useMediaQuery } from '@/components/ds/use-media-query'
 import { WIDE_QUERY } from './wide-query'
-import { SidebarContent } from './sidebar'
+
+interface MobileDrawerProps {
+  /** What the drawer holds: a shell's sidebar, given the command that closes the drawer. */
+  readonly children: (close: () => void) => ReactNode
+}
 
 /**
- * The sidebar below 1024px: a menu button that opens it as a drawer. The drawer slides in from the
- * left in 250ms and leaves in 180ms; Escape closes it at once. Focus is trapped while it is open, and
- * returns to the menu button when it closes. It also closes when the page changes and when the
- * viewport grows to the widths that have the sidebar column. Reduced motion keeps the fade and drops
- * the slide.
+ * A shell's sidebar below 1024px (the app's or the admin panel's): a menu button that opens it as a
+ * drawer. The drawer slides in from the left in 250ms and leaves in 180ms; Escape closes it at once.
+ * Focus is trapped while it is open, and returns to the menu button when it closes. It also closes when
+ * the page changes and when the viewport grows to the widths that have the sidebar column. Reduced
+ * motion keeps the fade and drops the slide.
  */
-export function MobileDrawer() {
+export function MobileDrawer({ children }: MobileDrawerProps) {
   const t = useTranslations('ds.shell')
   const pathname = usePathname()
   const wide = useMediaQuery(WIDE_QUERY)
@@ -55,7 +59,7 @@ export function MobileDrawer() {
           >
             <X aria-hidden className="size-4" strokeWidth={2.4} />
           </Dialog.Close>
-          <SidebarContent onNavigate={() => setOpen(false)} />
+          {children(() => setOpen(false))}
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { gameLol } from '../../test/fixtures'
 import { MASKED_CODE, previewSquad } from './preview-squad'
 
-const viewer = { id: 'user-1', name: 'Caio', email: 'caio@squadzr.test', image: null }
+const viewer = {
+  id: 'user-1',
+  name: 'Caio',
+  email: 'caio@squadzr.test',
+  image: null,
+  role: 'user' as const,
+}
 const values = { name: ' Night ranked ', tags: ['ranked'], language: 'en' as const, maxPlayers: 4 }
 
 describe('previewSquad', () => {

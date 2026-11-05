@@ -1,14 +1,28 @@
-import { pgTable, text, timestamp, boolean } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { boolean, check, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { USER_ROLES, type UserRole } from '@squadzr/schemas'
 
-export const user = pgTable('user', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  emailVerified: boolean('email_verified').notNull().default(false),
-  image: text('image'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+export const user = pgTable(
+  'user',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    email: text('email').notNull().unique(),
+    emailVerified: boolean('email_verified').notNull().default(false),
+    image: text('image'),
+    // Declared to Better Auth through `user.additionalFields` with input disabled; the column name and
+    // values match the Better Auth admin plugin's, which is not installed (docs/adr/0005).
+    role: text('role').$type<UserRole>().notNull().default('user'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    roleInEnum: check(
+      'user_role_in_enum',
+      sql`${table.role} IN (${sql.raw(USER_ROLES.map((role) => `'${role}'`).join(', '))})`
+    ),
+  })
+)
 
 export const session = pgTable('session', {
   id: text('id').primaryKey(),

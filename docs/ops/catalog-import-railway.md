@@ -228,3 +228,19 @@ CJK names stay unsearchable until the import rewrites their rows with `normalize
 
 When the API is hosted on Railway, the migrations move to the API service's pre-deploy command and
 the `preDeployCommand` entry leaves this authoring file: exactly one service owns schema changes.
+
+## Make the first admin
+
+The admin panel (`/admin`) is reserved to people whose role is `admin`, and the first admin comes from
+a server script, never from the app. It reads only `DATABASE_URL`, like the migration script, and takes
+one id: a user id, or else the person's Discord id.
+
+```
+cd server
+DATABASE_URL=<connection string> bun run admin:grant <user id or Discord id>
+```
+
+It is safe to run twice (an existing admin is left alone, with no second audit entry), it never demotes
+and it reports an unknown id without writing anything. The grant shows in the panel's Audit page as done
+by "System".
+

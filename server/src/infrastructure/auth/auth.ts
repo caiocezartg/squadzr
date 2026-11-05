@@ -31,6 +31,13 @@ export function createAuth(db: Database, config: AuthConfig) {
         overrideUserInfoOnSignIn: true,
       },
     },
+    user: {
+      additionalFields: {
+        // The admin role. Input is off, so neither sign-up nor a profile update can set it; the
+        // `admin:grant` script and the panel's use cases write it. No Better Auth admin plugin (ADR 0005).
+        role: { type: 'string', required: false, defaultValue: 'user', input: false },
+      },
+    },
     session: {
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // 1 day

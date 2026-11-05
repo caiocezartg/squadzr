@@ -71,6 +71,20 @@
       "when": 1793856203735,
       "tag": "0009_broken_chronomancer",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793909325138,
+      "tag": "0010_chunky_solo",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793915164276,
+      "tag": "0011_audit_append_only",
+      "breakpoints": true
     }
   ]
 }

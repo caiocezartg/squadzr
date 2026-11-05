@@ -42,7 +42,7 @@ function heldCheck() {
 }
 
 function signedInAnswer(name: string) {
-  const user = { id: 'user-1', name, email: 'caio@squadzr.test', image: null }
+  const user = { id: 'user-1', name, email: 'caio@squadzr.test', image: null, role: 'user' }
   return { data: { user, session: { id: 'session-1' } }, error: null }
 }
 

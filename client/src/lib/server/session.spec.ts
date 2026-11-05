@@ -24,7 +24,13 @@ function readSession(cookie: string | null, forwardedFor: string | null = null) 
   return getRequestSession()
 }
 
-const user = { id: 'user-1', name: 'Caio', email: 'caio@squadzr.test', image: null }
+const user = {
+  id: 'user-1',
+  name: 'Caio',
+  email: 'caio@squadzr.test',
+  image: null,
+  role: 'user' as const,
+}
 
 // Better Auth's authenticated answer carries more than the app reads; the loader keeps the user only.
 const authenticatedBody = {

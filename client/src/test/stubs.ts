@@ -4,13 +4,15 @@
  * never leaks across files.
  */
 
-import type { SessionDto } from '@squadzr/schemas'
+import type { SessionDto, UserRole } from '@squadzr/schemas'
 
 export interface FakeSessionUser {
   id: string
   name: string
   email: string
   image: string | null
+  /** A plain user unless a test needs an admin. */
+  role?: UserRole
 }
 
 export const authStore = {
@@ -46,7 +48,15 @@ export function fakeSession(): SessionDto | null {
   const user = authStore.user
   if (!user) return null
 
-  return { user: { id: user.id, name: user.name, email: user.email, image: user.image } }
+  return {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      role: user.role ?? 'user',
+    },
+  }
 }
 
 export function resetStubs(): void {

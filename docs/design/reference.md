@@ -172,3 +172,17 @@ The toasts are hidden below 640px. Under reduced motion the card renders its fin
 - Mockups crossfade (opacity 300ms with a 2px blur bridge) when the active step changes. Inside each mockup the canvas's micro-animations play once on entry: the click on "Entrar com Discord", the search typing "valorant" and the pick, the last two members joining and the invite appearing.
 - When the third step completes, the sticky stage releases with the rest of the page.
 - Below 1024px and under reduced motion: three stacked cards with the section reveal, and the mockups in their final state.
+
+## 6. Admin panel
+
+The private panel at `/admin` (spec #116). The approved mockup is `AdminPanel.mockup.html` in this folder (copy in Portuguese, like the `pt-BR` catalog); this section adds what the mockup leaves open. It uses the foundations and components above in a denser, table-first layout.
+
+- **Shell:** its own layout, not the app shell. A 232px sidebar (`menu` ground, same inset edge as the app's) holds the logo with a mint `ADMIN` badge, Overview, Squads, Users, Catalog and Audit (current item: `raised` ground and a 2px mint edge), then "Back to Squadzr" and the account button at the foot. The sidebar shows no counts. Main padding is `30px 36px 40px`. Below 1024px the sidebar becomes a drawer opened from a top bar, with the app drawer's behaviour (slides from the left, traps focus, Escape closes, focus returns to the menu button).
+- **Page header:** a 52px Big Shoulders title (44px below 640px) with a one-line description in `muted`.
+- **Tables:** header row in mono labels, 44px rows, hairline `line` dividers, the newest row first. Below 640px a table becomes a list of rows, each a small card with the same fields stacked; nothing scrolls sideways.
+- **Pagination:** the shared Pagination component under the table, hidden when there is a single page.
+- **Audit:** columns when, who, action, target, reason. An entry without an actor reads "System" in `muted`; a missing reason shows a dash.
+- **Access:** the route renders the not-found page for anyone who is not an admin, so its existence is not revealed, and every page carries `noindex`. The account menu shows an "Admin" entry only to admins.
+- **Loading:** a page that arrives with data renders with no skeleton and no entrance animation; a skeleton shows only on a cold cache or a hard load.
+- Every screen is checked at 1440, 768 and 390px wide, in `en` and `pt-BR`.
+

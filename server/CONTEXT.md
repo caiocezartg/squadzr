@@ -87,3 +87,12 @@ _Avoid_: Highlight, promoted game, top game
 **Catalog Import**:
 One run that brings the Game Catalog in line with the candidates of a Game Catalog Source: it upserts, delists and relists Games, applies the curated squad sizes and featured ranks, stores each Game's Platforms, and changes nothing when a safety check or a write fails.
 _Avoid_: Seed, sync job, IGDB import
+
+**Admin**:
+A person whose role is `admin` rather than `user`. Admins alone can open the admin panel and call `/api/admin/*` (anyone else is refused with 401 `UNAUTHORIZED` when signed out and 403 `ADMIN_REQUIRED` otherwise). The role lives on the user, reaches the session as a required field and is checked against the database on every request, so a demotion applies at once. Nobody can set it through sign-up or a profile update. The first admin is made by the `admin:grant` server script, which takes a user id or a Discord id (the account id of the user's Discord account), is safe to run twice and never demotes. We own this role instead of installing the Better Auth admin plugin (`docs/adr/0005-own-the-admin-role.md`).
+_Avoid_: Moderator, superuser, staff
+
+**Audit Entry**:
+The append-only account of one admin action: who did it (an actor id that goes null when that admin's account is deleted, plus a name snapshot), the action (`role_changed`, `squad_closed`, `catalog_import_requested` or `admin_granted`), a snapshot of what it touched (a Squad's id, name, code and game, or a user's id and name), the reason when the action has one, details such as the old and new role, and when it happened. The snapshots keep it readable after the Squad or the person is gone, and nothing updates or deletes an entry. An action nobody took through the panel, the grant script, has no actor and the panel shows it as "System". `GET /api/admin/audit` lists the entries newest first, 20 per page.
+_Avoid_: Log line, history row, event
+

@@ -27,6 +27,29 @@ export {
 } from './platform'
 export { normalizeSearchText } from './search-text'
 export { healthResponseSchema, type HealthResponse } from './health'
+export {
+  AUDIT_ACTIONS,
+  USER_ROLES,
+  auditActionSchema,
+  auditDetailsSchema,
+  auditEntriesResponseSchema,
+  auditEntrySchema,
+  auditTargetSchema,
+  userRoleSchema,
+  type AuditAction,
+  type AuditDetails,
+  type AuditEntriesResponse,
+  type AuditEntryDto,
+  type AuditTarget,
+  type UserRole,
+} from './admin'
+export {
+  PAGE_SIZE,
+  pageQuerySchema,
+  paginatedResponseSchema,
+  type PageQuery,
+  type PaginatedResponse,
+} from './pagination'
 export { sessionResponseSchema, type SessionDto } from './session'
 export {
   PROFILE_TOP_GAMES_LIMIT,

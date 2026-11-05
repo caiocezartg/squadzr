@@ -85,9 +85,11 @@ async function authPlugin(fastify: FastifyInstance, options: AuthPluginOptions):
   })
 
   // Session hook for API and WebSocket routes. It reads the session without renewing it: only
-  // Better Auth's own endpoints renew it, because only their responses carry the renewed cookie.
+  // Better Auth's own endpoints renew it, because only their responses carry the renewed cookie. It runs
+  // before schema validation so a guard can answer 401 or 403 ahead of a 400, which tells a signed-out
+  // visitor nothing about a route's input.
   const sessionRoutes = ['/api/', '/ws']
-  fastify.addHook('preHandler', async (request: FastifyRequest) => {
+  fastify.addHook('preValidation', async (request: FastifyRequest) => {
     if (!sessionRoutes.some((prefix) => request.url.startsWith(prefix))) return
     if (request.url.startsWith('/api/auth')) return
 

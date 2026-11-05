@@ -65,12 +65,13 @@ Object.defineProperty(navigator, 'clipboard', {
 // 4. Auth and toasts as module mocks with shared mutable state (./stubs). The browser's session
 //    check answers from the same store the session provider is seeded from.
 vi.mock('@/lib/auth-client', async () => {
-  const { authStore } = await import('./stubs')
+  const { authStore, fakeSession } = await import('./stubs')
   return {
-    getSession: vi.fn(async () => ({
-      data: authStore.user ? { user: authStore.user, session: { id: 'session-1' } } : null,
-      error: null,
-    })),
+    // The same viewer the session provider is seeded with, role included.
+    getSession: vi.fn(async () => {
+      const session = fakeSession()
+      return { data: session ? { ...session, session: { id: 'session-1' } } : null, error: null }
+    }),
     signInWithDiscord: (callbackPath: string) => {
       authStore.signInSocialCalls.push({
         provider: 'discord',
