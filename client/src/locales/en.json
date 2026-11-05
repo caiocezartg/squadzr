@@ -443,6 +443,7 @@
     "ROOM_JOIN_LIMIT_REACHED": "You are already in 3 open squads. Leave one to join another.",
     "VALIDATION_ERROR": "Please check the form fields and try again.",
     "UNAUTHORIZED": "You need to sign in to do this.",
+    "ADMIN_REQUIRED": "Only administrators can do this.",
     "INTERNAL_ERROR": "Something went wrong. Please try again later.",
     "DEFAULT": "Something went wrong. Please try again."
   },
@@ -477,5 +478,76 @@
       "retry": "Try again"
     },
     "loading": "Loading the profile"
+  },
+  "admin": {
+    "badge": "Admin",
+    "caption": "Admin",
+    "menu": "Admin menu",
+    "home": "Squadzr — home",
+    "accountMenuLink": "Admin",
+    "comingSoon": "This section is on its way.",
+    "nav": {
+      "label": "Admin sections",
+      "overview": "Overview",
+      "squads": "Squads",
+      "users": "Users",
+      "catalog": "Catalog",
+      "audit": "Audit",
+      "back": "Back to Squadzr"
+    },
+    "overview": {
+      "title": "Overview",
+      "description": "Live numbers, activity and the latest admin actions."
+    },
+    "squads": {
+      "title": "Open squads",
+      "description": "Every Open Squad, newest first."
+    },
+    "users": {
+      "title": "Users",
+      "description": "Find people and manage who is an admin."
+    },
+    "catalog": {
+      "title": "Catalog Import",
+      "description": "Syncs the game catalog with IGDB."
+    },
+    "audit": {
+      "title": "Audit",
+      "description": "Every admin action, newest first.",
+      "tableLabel": "Audit entries",
+      "columns": {
+        "when": "When",
+        "who": "Who",
+        "action": "Action",
+        "target": "Target",
+        "reason": "Reason"
+      },
+      "system": "System",
+      "none": "None",
+      "actions": {
+        "role_changed": "Changed a role",
+        "squad_closed": "Closed a squad",
+        "catalog_import_requested": "Ran the Catalog Import",
+        "admin_granted": "Granted admin"
+      },
+      "roles": {
+        "user": "user",
+        "admin": "admin"
+      },
+      "roleChange": "{from} → {to}",
+      "manualRun": "Manual run",
+      "quoted": "“{text}”",
+      "empty": {
+        "title": "No admin actions yet",
+        "description": "Role changes, closed squads and Catalog Import runs show up here."
+      },
+      "pastEnd": {
+        "title": "No entries on this page",
+        "action": "Go to the first page"
+      },
+      "loading": "Loading the audit",
+      "loadError": "Couldn't load the audit.",
+      "retry": "Try again"
+    }
   }
 }

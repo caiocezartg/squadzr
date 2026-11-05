@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import { LogOut, UserRound } from 'lucide-react'
+import { LogOut, ShieldCheck, UserRound } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { SessionDto } from '@squadzr/schemas'
 import { Button } from '@/components/ds/button'
@@ -23,9 +23,9 @@ export interface AccountPopoverProps {
 }
 
 /**
- * The account menu: the account button with its popover, which holds the viewer's email and the
- * sign-out action. It lives in its own module because the popover brings the floating-panel code,
- * which the shell loads when the page is idle and no page needs sooner.
+ * The account menu: the account button with its popover, which holds the viewer's email, "My profile",
+ * "Admin" for an admin only, and the sign-out action. It lives in its own module because the popover
+ * brings the floating-panel code, which the shell loads when the page is idle and no page needs sooner.
  *
  * Beside the fixed sidebar the menu opens to the right, level with the button's foot, so it never
  * covers the language switch above it; in the narrow drawer there is no room beside, so it opens above.
@@ -77,6 +77,18 @@ export function AccountPopover({ user, defaultOpen, takeFocus }: AccountPopoverP
       >
         {t('ds.shell.myProfile')}
       </Button>
+      {user.role === 'admin' && (
+        <Button
+          variant="ghost"
+          full
+          href="/admin"
+          icon={<ShieldCheck />}
+          onClick={() => setOpen(false)}
+          className="justify-start"
+        >
+          {t('admin.accountMenuLink')}
+        </Button>
+      )}
       <Button
         variant="ghost"
         full

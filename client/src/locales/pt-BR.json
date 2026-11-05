@@ -443,6 +443,7 @@
     "ROOM_JOIN_LIMIT_REACHED": "Você já está em 3 squads abertos. Saia de um para entrar em outro.",
     "VALIDATION_ERROR": "Por favor, verifique os campos do formulário e tente novamente.",
     "UNAUTHORIZED": "Você precisa fazer login para fazer isso.",
+    "ADMIN_REQUIRED": "Só administradores podem fazer isso.",
     "INTERNAL_ERROR": "Algo deu errado. Por favor, tente novamente mais tarde.",
     "DEFAULT": "Algo deu errado. Por favor, tente novamente."
   },
@@ -477,5 +478,76 @@
       "retry": "Tentar de novo"
     },
     "loading": "Carregando o perfil"
+  },
+  "admin": {
+    "badge": "Admin",
+    "caption": "Admin",
+    "menu": "Menu de administração",
+    "home": "Squadzr — início",
+    "accountMenuLink": "Admin",
+    "comingSoon": "Esta seção está a caminho.",
+    "nav": {
+      "label": "Seções do admin",
+      "overview": "Visão geral",
+      "squads": "Squads",
+      "users": "Usuários",
+      "catalog": "Catálogo",
+      "audit": "Auditoria",
+      "back": "Voltar ao Squadzr"
+    },
+    "overview": {
+      "title": "Visão geral",
+      "description": "Números ao vivo, atividade e as últimas ações dos admins."
+    },
+    "squads": {
+      "title": "Squads abertos",
+      "description": "Todos os squads abertos, do mais novo ao mais antigo."
+    },
+    "users": {
+      "title": "Usuários",
+      "description": "Encontre pessoas e gerencie quem é admin."
+    },
+    "catalog": {
+      "title": "Catalog Import",
+      "description": "Sincroniza o catálogo de jogos com a IGDB."
+    },
+    "audit": {
+      "title": "Auditoria",
+      "description": "Todas as ações de admin, da mais recente à mais antiga.",
+      "tableLabel": "Entradas da auditoria",
+      "columns": {
+        "when": "Quando",
+        "who": "Quem",
+        "action": "Ação",
+        "target": "Alvo",
+        "reason": "Motivo"
+      },
+      "system": "Sistema",
+      "none": "Nenhum",
+      "actions": {
+        "role_changed": "Mudou um papel",
+        "squad_closed": "Fechou um squad",
+        "catalog_import_requested": "Executou o Catalog Import",
+        "admin_granted": "Concedeu admin"
+      },
+      "roles": {
+        "user": "usuário",
+        "admin": "admin"
+      },
+      "roleChange": "{from} → {to}",
+      "manualRun": "Execução manual",
+      "quoted": "“{text}”",
+      "empty": {
+        "title": "Nenhuma ação ainda",
+        "description": "Mudanças de papel, squads fechados e execuções do Catalog Import aparecem aqui."
+      },
+      "pastEnd": {
+        "title": "Nenhuma entrada nesta página",
+        "action": "Ir para a primeira página"
+      },
+      "loading": "Carregando a auditoria",
+      "loadError": "Não foi possível carregar a auditoria.",
+      "retry": "Tentar de novo"
+    }
   }
 }

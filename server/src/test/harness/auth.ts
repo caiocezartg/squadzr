@@ -1,5 +1,6 @@
 import { createHmac, randomUUID } from 'node:crypto'
-import { session, user } from '@infrastructure/database/schema'
+import type { UserRole } from '@squadzr/schemas'
+import { account, session, user } from '@infrastructure/database/schema'
 import { TEST_AUTH_SECRET, type TestServer } from './test-server'
 
 const SESSION_COOKIE = 'better-auth.session_token'
@@ -10,6 +11,9 @@ export interface TestUser {
   name: string
   email: string
   image: string | null
+  role: UserRole
+  /** The Discord account id of the user's Discord account, when the sign-in created one. */
+  discordId: string | null
   /** Request headers carrying a valid Better Auth session cookie for this user. */
   headers: { cookie: string }
 }
@@ -20,11 +24,22 @@ function signSessionToken(token: string): string {
   return encodeURIComponent(`${token}.${signature}`)
 }
 
+export interface SignInOptions {
+  /** The user's role; a plain `user` unless a test needs an admin. */
+  role?: UserRole
+  /** Also stores a Discord account row with this account id, as a Discord sign-in does. */
+  discordId?: string
+}
+
 /**
  * Persists a user and a live session in the test database, so requests go
  * through Better Auth's real `getSession` lookup instead of a stubbed session.
  */
-export async function signIn(server: TestServer, name = 'Player'): Promise<TestUser> {
+export async function signIn(
+  server: TestServer,
+  name = 'Player',
+  options: SignInOptions = {}
+): Promise<TestUser> {
   const id = randomUUID()
   const token = randomUUID().replaceAll('-', '')
   const profile = {
@@ -34,7 +49,15 @@ export async function signIn(server: TestServer, name = 'Player'): Promise<TestU
     image: `https://cdn.squadzr.test/${id}.png`,
   }
 
-  await server.app.db.insert(user).values({ ...profile, emailVerified: true })
+  const role = options.role ?? 'user'
+  const discordId = options.discordId ?? null
+
+  await server.app.db.insert(user).values({ ...profile, emailVerified: true, role })
+  if (discordId) {
+    await server.app.db
+      .insert(account)
+      .values({ id: randomUUID(), accountId: discordId, providerId: 'discord', userId: id })
+  }
   await server.app.db.insert(session).values({
     id: randomUUID(),
     token,
@@ -42,7 +65,12 @@ export async function signIn(server: TestServer, name = 'Player'): Promise<TestU
     expiresAt: new Date(Date.now() + SESSION_TTL_MS),
   })
 
-  return { ...profile, headers: { cookie: `${SESSION_COOKIE}=${signSessionToken(token)}` } }
+  return {
+    ...profile,
+    role,
+    discordId,
+    headers: { cookie: `${SESSION_COOKIE}=${signSessionToken(token)}` },
+  }
 }
 
 export async function signInMany(server: TestServer, count: number): Promise<TestUser[]> {

@@ -104,6 +104,7 @@ function isSameSession(current: SessionDto | null, next: SessionDto | null): boo
     current.user.id === next.user.id &&
     current.user.name === next.user.name &&
     current.user.email === next.user.email &&
-    current.user.image === next.user.image
+    current.user.image === next.user.image &&
+    current.user.role === next.user.role
   )
 }

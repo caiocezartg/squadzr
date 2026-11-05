@@ -3,6 +3,7 @@
 import { AppLink } from './app-link'
 import { MobileDrawer } from './mobile-drawer'
 import { NotificationsBell } from './notifications-bell'
+import { SidebarContent } from './sidebar'
 import { useTranslations } from 'next-intl'
 
 /**
@@ -19,7 +20,7 @@ export function TopBar() {
       </AppLink>
       <div className="flex items-center gap-1">
         <NotificationsBell placement="top-bar" />
-        <MobileDrawer />
+        <MobileDrawer>{(close) => <SidebarContent onNavigate={close} />}</MobileDrawer>
       </div>
     </header>
   )

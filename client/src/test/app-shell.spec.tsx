@@ -143,6 +143,13 @@ describe('shell document title', () => {
   })
 })
 
+const SHELL_USER: FakeSessionUser = {
+  id: 'user-1',
+  name: 'Caio Cezar',
+  email: 'c@squadzr.test',
+  image: null,
+}
+
 describe('shell account', () => {
   it('shows the initials in the account button when the viewer has no avatar', async () => {
     renderShell('/squads', {
@@ -171,6 +178,26 @@ describe('shell account', () => {
 
     expect(within(account).getByText('CC')).toBeInTheDocument()
     expect(account.querySelector('img')).toBeNull()
+  })
+
+  it('shows no Admin entry in the account menu of a user', async () => {
+    const { user } = renderShell('/squads', { ...SHELL_USER, role: 'user' })
+
+    await user.click(await within(sidebar()).findByRole('button', { name: 'Caio Cezar' }))
+
+    expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument()
+  })
+
+  it('leads an admin to the panel from the account menu', async () => {
+    const { user, navigation } = renderShell('/squads', { ...SHELL_USER, role: 'admin' })
+
+    await user.click(await within(sidebar()).findByRole('button', { name: 'Caio Cezar' }))
+    const admin = await screen.findByRole('link', { name: 'Admin' })
+    expect(admin).toHaveAttribute('href', '/admin')
+    await user.click(admin)
+
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/admin' }])
   })
 
   it('replaces the account button with Sign in with Discord for a visitor', () => {
