@@ -61,13 +61,15 @@ describe('the eyebrow of each type', () => {
     expect(screen.getByText(eyebrow).parentElement).toHaveClass(tone)
   })
 
-  it('ends with the unread dot only on an unread row, and dims on a read one', () => {
-    const { container, unmount } = renderItem()
-    expect(container.querySelector('.bg-mint.rounded-full')).toBeInTheDocument()
+  it('marks an unread row with the edge in its tone and no dot, and dims a read one', () => {
+    const { unmount } = renderItem()
+    const unreadLink = screen.getByRole('link')
+    expect(unreadLink).toHaveClass('shadow-[inset_3px_0_0_var(--color-mint)]')
+    expect(unreadLink.querySelector('.rounded-full.bg-mint')).toBeNull()
     unmount()
 
-    const read = renderItem(readVersion(squadReadyNotification))
-    expect(read.container.querySelector('.bg-mint.rounded-full')).toBeNull()
+    renderItem(readVersion(squadReadyNotification))
+    expect(screen.getByRole('link')).not.toHaveClass('shadow-[inset_3px_0_0_var(--color-mint)]')
     expect(screen.getByText('Squad complete').parentElement).toHaveClass('opacity-60')
   })
 })
@@ -149,6 +151,15 @@ describe('a room_ready row', () => {
     expect(screen.getByText('You left 2 squads')).toBeInTheDocument()
     expect(screen.getByText('Squad B')).toHaveClass('border')
     expect(screen.getByText('Squad C')).toHaveClass('border')
+  })
+
+  it('caps a long left squad name in its chip and keeps the full name in the tooltip', () => {
+    const longName = 'A very long squad name that would otherwise stretch the notification row'
+    renderItem(withPayload({ leftSquads: [{ roomCode: 'LNG111', roomName: longName }] }))
+
+    const chip = screen.getByText(longName)
+    expect(chip).toHaveClass('max-w-36', 'truncate')
+    expect(chip).toHaveAttribute('title', longName)
   })
 
   it('has no line about left squads when the viewer left none', () => {

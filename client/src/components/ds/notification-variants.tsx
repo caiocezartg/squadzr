@@ -68,7 +68,11 @@ function PlayerStack({ players }: { readonly players: readonly NotificationPerso
   )
 }
 
-/** The Squads the viewer left because this one filled, each name in its own chip. */
+/**
+ * The Squads the viewer left because this one filled, each name in its own chip. A chip is capped
+ * in width and truncates a long name, so the row never grows with it; the full name stays in its
+ * tooltip.
+ */
 function LeftSquads({ squads }: { readonly squads: readonly LeftSquad[] }) {
   const t = useTranslations('ds.notifications')
   return (
@@ -81,7 +85,8 @@ function LeftSquads({ squads }: { readonly squads: readonly LeftSquad[] }) {
         {squads.map((squad) => (
           <span
             key={squad.roomCode}
-            className="bg-panel border-line text-text min-w-0 border px-2 py-0.75 text-xs font-bold wrap-anywhere"
+            title={squad.roomName}
+            className="bg-panel border-line text-text block max-w-36 min-w-0 truncate border px-2 py-0.75 text-xs font-bold"
           >
             {squad.roomName}
           </span>

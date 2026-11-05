@@ -64,8 +64,7 @@ export function NotificationCover({
 
 /**
  * What kind of thing happened, in the type's tone, above the title. It repeats what the row's label
- * or message already says, so it is hidden from assistive technology. An unread row ends it with a
- * mint dot.
+ * or message already says, so it is hidden from assistive technology.
  */
 function NotificationEyebrow({
   type,
@@ -87,7 +86,6 @@ function NotificationEyebrow({
     >
       <Icon className="size-3 shrink-0" strokeWidth={2.4} />
       <span className="truncate">{t(type)}</span>
-      {unread && <span className="bg-mint ml-auto size-1.75 shrink-0 rounded-full" />}
     </span>
   )
 }
@@ -125,9 +123,9 @@ export interface NotificationRowProps {
 /**
  * The structure every notification shares (reference, Components): the media, an eyebrow in the
  * type's tone, the title, the message, and the game with the relative time. Unread shows an edge in
- * the type's tone, a mint dot on the eyebrow and a hidden "unread" text; read dims the media and the
- * eyebrow. It is a list item, so the parent is a `ul` or `ol`. The dismiss button shows on hover and
- * on focus, and always on a touch screen, which has no hover.
+ * the type's tone and a hidden "unread" text; read dims the media and the eyebrow. It is a list item,
+ * so the parent is a `ul` or `ol`. The dismiss button is a small X in the top right corner: it shows
+ * on hover and on focus, and always on a touch screen, which has no hover.
  */
 export function NotificationRow({
   type,
@@ -165,7 +163,7 @@ export function NotificationRow({
         aria-label={label ? (unread ? `${label}, ${t('unread')}` : label) : undefined}
         onClick={handleClick}
         className={cn(
-          'hover-fine:bg-line hover-fine:[--ground:var(--color-line)] focus-visible:outline-text flex w-full items-start gap-3.25 py-3 pr-14 pl-3 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2',
+          'hover-fine:bg-line hover-fine:[--ground:var(--color-line)] focus-visible:outline-text flex w-full items-start gap-3.25 py-3 pr-9 pl-3 text-left transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2',
           unread
             ? cn('bg-raised-2 [--ground:var(--color-raised-2)]', tone.edge)
             : 'bg-raised [--ground:var(--color-raised)]'
@@ -191,9 +189,9 @@ export function NotificationRow({
         disabled={disabled}
         onClick={onDismiss}
         aria-label={t('dismiss', { squad: squadName })}
-        className="bg-track text-text-2 hover-fine:text-text focus-visible:outline-text absolute top-1/2 right-2 flex size-11 -translate-y-1/2 items-center justify-center opacity-0 transition-[opacity,color] duration-150 group-hover-fine:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:opacity-100"
+        className="text-muted hover-fine:text-text focus-visible:outline-text absolute top-1 right-1 flex size-8 items-center justify-center opacity-0 transition-[opacity,color] duration-150 group-hover-fine:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 pointer-coarse:opacity-100"
       >
-        <X aria-hidden className="size-3" strokeWidth={2.8} />
+        <X aria-hidden className="size-3.5" strokeWidth={2.4} />
       </button>
     </li>
   )
