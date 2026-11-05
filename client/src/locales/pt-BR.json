@@ -26,7 +26,8 @@
         "away": "Fora da sala",
         "awaySince": "Fora da sala · {time}",
         "open": "Aguardando jogador"
-      }
+      },
+      "viewProfile": "Ver perfil de {name}"
     },
     "lobby": {
       "live": "AO VIVO",
@@ -174,7 +175,8 @@
       "mySquadsSignInAction": "Entrar",
       "signIn": "Entrar com Discord",
       "account": "Menu da conta",
-      "createSignIn": "Você pode explorar os squads como visitante, mas criar um squad exige entrar com o Discord."
+      "createSignIn": "Você pode explorar os squads como visitante, mas criar um squad exige entrar com o Discord.",
+      "myProfile": "Meu perfil"
     },
     "notifications": {
       "bell": "Notificações",
@@ -443,5 +445,37 @@
     "UNAUTHORIZED": "Você precisa fazer login para fazer isso.",
     "INTERNAL_ERROR": "Algo deu errado. Por favor, tente novamente mais tarde.",
     "DEFAULT": "Algo deu errado. Por favor, tente novamente."
+  },
+  "playerProfile": {
+    "title": "Perfil do jogador",
+    "titleFor": "Perfil de {name}",
+    "memberSince": "Membro desde {date}",
+    "stats": {
+      "squads": "Squads",
+      "games": "Jogos",
+      "lastSquad": "Último squad"
+    },
+    "topGames": {
+      "title": "Mais jogados",
+      "unit": "squads",
+      "rank": "Posição {rank}"
+    },
+    "empty": {
+      "title": "Nenhum squad completo",
+      "own": "Os jogos aparecem aqui quando um squad seu fecha todas as vagas.",
+      "other": "{name} ainda não completou nenhum squad.",
+      "find": "Encontrar squad"
+    },
+    "notFound": {
+      "title": "Jogador não encontrado",
+      "text": "Esse perfil não existe ou foi removido.",
+      "close": "Fechar"
+    },
+    "error": {
+      "title": "Não foi possível carregar este perfil",
+      "text": "Verifique sua conexão e tente de novo.",
+      "retry": "Tentar de novo"
+    },
+    "loading": "Carregando o perfil"
   }
 }

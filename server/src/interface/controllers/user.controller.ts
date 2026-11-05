@@ -1,18 +1,25 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { z } from 'zod'
-import type { listNotificationsQuerySchema, notificationIdParamSchema } from '@squadzr/schemas'
+import type {
+  listNotificationsQuerySchema,
+  notificationIdParamSchema,
+  playerProfileParamsSchema,
+} from '@squadzr/schemas'
 import type { IGetUserUseCase } from '@application/use-cases/user/get-user.use-case'
+import type { IGetPlayerProfileUseCase } from '@application/use-cases/user/get-player-profile.use-case'
 import type { IListNotificationsUseCase } from '@application/use-cases/notification/list-notifications.use-case'
 import type { IMarkNotificationReadUseCase } from '@application/use-cases/notification/mark-notification-read.use-case'
 import type { IMarkAllNotificationsReadUseCase } from '@application/use-cases/notification/mark-all-notifications-read.use-case'
 import type { IDeleteNotificationUseCase } from '@application/use-cases/notification/delete-notification.use-case'
-import { toUserDto, toUserNotificationDto } from '@application/projections'
+import { toPlayerProfileDto, toUserDto, toUserNotificationDto } from '@application/projections'
 
 type ListNotificationsQuery = z.infer<typeof listNotificationsQuerySchema>
 type NotificationIdParams = z.infer<typeof notificationIdParamSchema>
+type PlayerProfileParams = z.infer<typeof playerProfileParamsSchema>
 
 export interface UserControllerDeps {
   readonly getUserUseCase: IGetUserUseCase
+  readonly getPlayerProfileUseCase: IGetPlayerProfileUseCase
   readonly listNotificationsUseCase: IListNotificationsUseCase
   readonly markNotificationReadUseCase: IMarkNotificationReadUseCase
   readonly markAllNotificationsReadUseCase: IMarkAllNotificationsReadUseCase
@@ -26,6 +33,17 @@ export class UserController {
     const result = await this.deps.getUserUseCase.execute({ id: request.userId })
 
     await reply.send({ user: toUserDto(result.user) })
+  }
+
+  async playerProfile(
+    request: FastifyRequest<{ Params: PlayerProfileParams }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    const { user, stats } = await this.deps.getPlayerProfileUseCase.execute({
+      id: request.params.id,
+    })
+
+    await reply.send({ profile: toPlayerProfileDto(user, stats) })
   }
 
   async listNotifications(

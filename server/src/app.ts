@@ -112,6 +112,9 @@ export async function buildApp({
 }: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
     trustProxy: env.TRUST_PROXY_HOPS === 0 ? false : env.TRUST_PROXY_HOPS,
+    // The router refuses a longer parameter (404) before a route schema sees it, which
+    // would hide the schemas' own bounds (a user id is at most 255 characters).
+    routerOptions: { maxParamLength: 512 },
     logger: logger ?? defaultLogger(env),
   })
 

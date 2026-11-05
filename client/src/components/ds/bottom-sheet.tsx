@@ -4,9 +4,22 @@ import { Dialog } from '@base-ui-components/react/dialog'
 import { X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
+import type { ReactElement } from 'react'
 import type { FloatingPanelProps } from './floating-types'
 import { useInstantDismiss } from './use-instant-dismiss'
 import { useMounted } from './use-mounted'
+
+type BottomSheetProps = Omit<FloatingPanelProps, 'trigger'> & {
+  /** The element that opens the sheet; leave it out when the parent drives `open`. */
+  trigger?: ReactElement<Record<string, unknown>>
+  /**
+   * Called once the open or close transition has finished. A parent that unmounts the sheet on
+   * close waits for `false` here, so the exit plays (see `useDialogPresence`).
+   */
+  onOpenChangeComplete?: (open: boolean) => void
+  /** Classes for the close button, for a sheet whose header carries its own artwork. */
+  closeClassName?: string
+}
 
 /**
  * A panel that rises from the bottom edge. It takes the same props as a popover, so a popover can
@@ -23,8 +36,10 @@ export function BottomSheet({
   open,
   defaultOpen,
   onOpenChange,
+  onOpenChangeComplete,
   className,
-}: FloatingPanelProps) {
+  closeClassName,
+}: BottomSheetProps) {
   const t = useTranslations('ds')
   const { instant, handleOpenChange } = useInstantDismiss(onOpenChange)
   const instantAttribute = instant ? '' : undefined
@@ -35,8 +50,9 @@ export function BottomSheet({
       open={open === undefined ? undefined : open && mounted}
       defaultOpen={defaultOpen}
       onOpenChange={handleOpenChange}
+      onOpenChangeComplete={onOpenChangeComplete}
     >
-      <Dialog.Trigger render={trigger} />
+      {trigger && <Dialog.Trigger render={trigger} />}
       <Dialog.Portal>
         <Dialog.Backdrop
           data-instant={instantAttribute}
@@ -55,7 +71,10 @@ export function BottomSheet({
         >
           <Dialog.Close
             aria-label={t('close')}
-            className="press bg-raised-2 text-text-3 hover-fine:text-text focus-visible:outline-text absolute top-3 right-3 flex size-11 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2"
+            className={cn(
+              'press bg-raised-2 text-text-3 hover-fine:text-text focus-visible:outline-text absolute top-3 right-3 z-10 flex size-11 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2',
+              closeClassName
+            )}
           >
             <X aria-hidden className="size-4" strokeWidth={2.4} />
           </Dialog.Close>

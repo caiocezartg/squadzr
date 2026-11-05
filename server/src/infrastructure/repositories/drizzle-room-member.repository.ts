@@ -22,6 +22,7 @@ import {
   joinedOutcome,
   loadRoster,
   lockRoomRow,
+  recordCompletedSquad,
   validateJoin,
 } from './room-join-steps'
 import { releaseMembersFromOtherOpenRooms } from './squad-release-steps'
@@ -131,6 +132,7 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
       // Squad Release: the join that takes the last seat takes every member out of their
       // other Open Squads, then emits the notifications. Both are in this transaction.
       const roster = await loadRoster(tx, room.id)
+      await recordCompletedSquad(tx, { room, roster, readyAt: now })
       const departures = await releaseMembersFromOtherOpenRooms(tx, {
         roomId: room.id,
         memberIds: roster.members.map((member) => member.userId),

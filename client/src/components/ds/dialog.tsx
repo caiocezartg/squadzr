@@ -30,6 +30,8 @@ interface DialogProps {
   children: ReactNode
   /** Classes for the panel itself, e.g. a width. */
   className?: string
+  /** Classes for the close button, for a dialog whose header carries its own artwork. */
+  closeClassName?: string
 }
 
 /**
@@ -54,6 +56,7 @@ export function Dialog({
   fullScreen = false,
   children,
   className,
+  closeClassName,
 }: DialogProps) {
   const t = useTranslations('ds')
   const { instant, handleOpenChange } = useInstantDismiss(onOpenChange)
@@ -89,7 +92,10 @@ export function Dialog({
         >
           <BaseDialog.Close
             aria-label={t('close')}
-            className="press bg-raised-2 text-text-3 hover-fine:text-text focus-visible:outline-text absolute top-3 right-3 z-10 flex size-11 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2"
+            className={cn(
+              'press bg-raised-2 text-text-3 hover-fine:text-text focus-visible:outline-text absolute top-3 right-3 z-10 flex size-11 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2',
+              closeClassName
+            )}
           >
             <X aria-hidden className="size-4" strokeWidth={2.4} />
           </BaseDialog.Close>

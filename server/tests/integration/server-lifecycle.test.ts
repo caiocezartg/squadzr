@@ -100,8 +100,9 @@ describe('PostgreSQL 16 harness', () => {
     expect(Math.floor(Number(version.rows[0]?.server_version_num) / 10_000)).toBe(16)
     // CCC-89 adds 0005 (slug is no longer the game identity), on top of CCC-88's 0004;
     // #98 adds 0006 (platforms); #100 adds 0007 (aliases and search text);
-    // #112 adds 0008 (the room_ready idempotency key becomes a partial index).
-    expect(Number(migrations.rows[0]?.total)).toBe(9)
+    // #112 adds 0008 (the room_ready idempotency key becomes a partial index);
+    // #114 adds 0009 (Squad Records and their backfill).
+    expect(Number(migrations.rows[0]?.total)).toBe(10)
     expect(gameCount?.total).toBe(0)
   })
 

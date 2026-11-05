@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@800;900&family=Plus+Jakarta+Sans:wght@500;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07080A;--panel:#0F1013;--card:#121317;--raised:#17181D;--raised2:#1A1B20;--line:#1F2026;--track:#24252B;--text:#F2F3F5;--text2:#C9CBD1;--text3:#A9ABB3;--muted:#80838C;--faint:#5F626B;--mint:#00FFA2;--mintink:#03140D}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;color:var(--text)}
+.cap{font:700 11px 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.stage{background:var(--bg);border-radius:var(--radius,10px);padding:16px;position:relative;overflow:hidden}
+.note{font:500 12.5px 'Plus Jakarta Sans';color:var(--text3);margin:10px 2px 0;line-height:1.5}
+.note b{color:var(--text2)}
+/* fake lobby behind */
+.behind{position:absolute;inset:0;padding:22px 28px;opacity:.35;filter:blur(1.5px)}
+.behind h1{font:900 34px 'Big Shoulders';text-transform:uppercase;color:var(--text)}
+.behind .t{height:52px;background:#15161A;margin-top:8px;width:46%}
+.scrim{position:absolute;inset:0;background:rgba(4,5,6,.72)}
+/* dialog */
+.dlg{position:relative;width:520px;margin:30px auto;background:var(--panel);box-shadow:0 0 0 1px var(--line),0 30px 80px rgba(0,0,0,.6)}
+.hero{position:relative;height:150px;overflow:hidden}
+.hero .art{position:absolute;inset:-30px;background-size:cover;background-position:center 30%;filter:blur(14px) saturate(1.25);transform:scale(1.15);opacity:.75}
+.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,16,19,.05) 0%,rgba(15,16,19,.55) 55%,var(--panel) 100%)}
+.hero.empty .art{background:radial-gradient(60% 90% at 25% 10%,rgba(0,255,162,.16),transparent 70%),radial-gradient(50% 80% at 90% 0%,rgba(78,90,232,.18),transparent 70%);filter:none;opacity:1;transform:none;inset:0}
+.close{position:absolute;z-index:2;top:12px;right:12px;width:32px;height:32px;background:rgba(7,8,10,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);display:grid;place-items:center;color:var(--text2);font-size:16px}
+.id{position:relative;z-index:2;display:flex;gap:16px;align-items:flex-end;padding:0 26px;margin-top:-58px}
+.av{width:88px;height:88px;border-radius:50%;flex:none;background:#3A2A5C;color:#E7DBFF;display:grid;place-items:center;font:800 28px 'Plus Jakarta Sans';box-shadow:0 0 0 4px var(--panel),0 0 0 5px rgba(255,255,255,.06);background-size:cover}
+.av.img{background-image:url(https://images.igdb.com/igdb/image/upload/t_cover_small_2x/cocqbp.jpg)}
+.name{font:900 40px/1 'Big Shoulders';text-transform:uppercase;letter-spacing:.01em}
+.since{font:500 13px 'Plus Jakarta Sans';color:var(--muted);margin-top:6px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1.5fr;margin:22px 26px 0;box-shadow:inset 0 0 0 1px var(--line)}
+.stat{padding:14px 16px}
+.stat+.stat{box-shadow:inset 1px 0 0 var(--line)}
+.stat .v{font:800 34px/1 'Big Shoulders';margin-top:8px}
+.stat .v small{font:700 13px 'Plus Jakarta Sans';color:var(--text3);margin-left:4px}
+.last{display:flex;gap:10px;align-items:center;margin-top:8px}
+.last img{width:26px;height:35px;object-fit:cover}
+.last b{font:800 14px 'Plus Jakarta Sans';display:block}
+.last span{font:500 12px 'Plus Jakarta Sans';color:var(--muted)}
+.top{padding:22px 26px 26px}
+.top .cap{display:flex;justify-content:space-between}
+.row{display:grid;grid-template-columns:22px 38px 1fr auto;gap:12px;align-items:center;padding:9px 0}
+.row+.row{box-shadow:inset 0 1px 0 #16171B}
+.rk{font:700 11px 'JetBrains Mono';color:var(--faint)}
+.row img{width:38px;height:51px;object-fit:cover;display:block}
+.gn{font:800 14.5px 'Plus Jakarta Sans'}
+.bar{height:4px;background:var(--track);margin-top:9px}
+.bar i{display:block;height:100%;background:var(--mint);opacity:.38}
+.row.lead .bar i{opacity:1}
+.ct{font:800 22px/1 'Big Shoulders';text-align:right;min-width:44px}
+.ct small{display:block;font:700 10px 'JetBrains Mono';letter-spacing:.12em;color:var(--faint);margin-top:3px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+.mini .dlg{width:auto;margin:0;padding-bottom:1px}
+.mini .hero{height:118px}
+.mini .id{flex-direction:column;align-items:flex-start;gap:12px;margin-top:-50px;padding:0 18px}
+.mini .av{width:72px;height:72px;font-size:22px}
+.mini .name{font-size:32px}
+.mini .top{padding:18px}
+.mini .stats{margin:16px 18px 0;grid-template-columns:1fr 1fr}
+.mini .stat.wide{grid-column:1/-1;box-shadow:inset 0 1px 0 var(--line)}
+.mini .stat .v{font-size:28px}
+.mini .row{grid-template-columns:30px 1fr auto}
+.mini .row img{width:30px;height:40px}
+.mini .rk{display:none}
+.empty-box{margin:18px;padding:22px 18px;text-align:center;box-shadow:inset 0 0 0 1px var(--line);background:repeating-linear-gradient(135deg,transparent 0 10px,rgba(255,255,255,.012) 10px 20px)}
+.empty-box .ico{width:40px;height:40px;margin:0 auto 12px;display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--track);color:var(--faint);font:800 18px 'Big Shoulders'}
+.empty-box h3{font:900 22px 'Big Shoulders';text-transform:uppercase}
+.empty-box p{font:500 13px/1.55 'Plus Jakarta Sans';color:var(--text3);margin:6px auto 16px;max-width:230px}
+.btn{display:inline-block;background:var(--mint);color:var(--mintink);font:800 13px 'Plus Jakarta Sans';padding:10px 16px}
+.sheet{border-radius:0}
+.grab{position:absolute;z-index:3;top:8px;left:50%;width:36px;height:4px;margin-left:-18px;background:rgba(255,255,255,.28)}
+.you{font:700 10px 'JetBrains Mono';letter-spacing:.14em;color:var(--mint);margin-left:8px;vertical-align:middle}
+</style></head><body>
+
+<div class="stage">
+  <div class="behind"><h1>Ranked 5x5 sexta</h1><div class="t"></div><div class="t"></div><div class="t"></div><div class="t"></div></div>
+  <div class="scrim"></div>
+  <div class="dlg">
+    <div class="hero"><div class="art" style="background-image:url(https://images.igdb.com/igdb/image/upload/t_cover_big_2x/cocqbp.jpg)"></div><div class="close">✕</div></div>
+    <div class="id">
+      <div class="av">MR</div>
+      <div><div class="cap" style="color:var(--mint)">Jogador</div><div class="name">Marina Rocha</div><div class="since">Membro desde out. 2026</div></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="cap">Squads</div><div class="v">27<small>completos</small></div></div>
+      <div class="stat"><div class="cap">Jogos</div><div class="v">5</div></div>
+      <div class="stat"><div class="cap">Último squad</div><div class="last"><img src="https://images.igdb.com/igdb/image/upload/t_cover_small_2x/cocqbp.jpg"><div><b>Valorant</b><span>há 2 dias</span></div></div></div>
+    </div>
+    <div class="top">
+      <div class="cap"><span>Mais jogados</span><span style="color:var(--faint)">squads</span></div>
+      <div style="margin-top:6px">
+        <div class="row lead"><span class="rk">01</span><img src="https://images.igdb.com/igdb/image/upload/t_cover_small_2x/cocqbp.jpg"><div><div class="gn">Valorant</div><div class="bar"><i style="width:100%"></i></div></div><div class="ct">12</div></div>
+        <div class="row"><span class="rk">02</span><img src="https://images.igdb.com/igdb/image/upload/t_cover_small_2x/coc99o.jpg"><div><div class="gn">League of Legends</div><div class="bar"><i style="width:66%"></i></div></div><div class="ct">8</div></div>
+        <div class="row"><span class="rk">03</span><img src="https://images.igdb.com/igdb/image/upload/t_cover_small_2x/coaczd.jpg"><div><div class="gn">Counter-Strike 2</div><div class="bar"><i style="width:33%"></i></div></div><div class="ct">4</div></div>
+        <div class="row"><span class="rk">04</span><img src="https://images.igdb.com/igdb/image/upload/t_cover_small_2x/cod313.jpg"><div><div class="gn">Dota 2</div><div class="bar"><i style="width:17%"></i></div></div><div class="ct">2</div></div>
+        <div class="row"><span class="rk">05</span><img src="https://images.igdb.com/igdb/image/upload/t_cover_small_2x/cocxbi.jpg"><div><div class="gn">Fortnite</div><div class="bar"><i style="width:8%"></i></div></div><div class="ct">1</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="note"><b>Desktop · dialog sobre o Lobby.</b> A capa do jogo nº 1, borrada, vira o fundo do cabeçalho. A barra do líder é mint cheio e as outras são mint a 38%, para o olho cair no jogo principal. Os cantos são retos, como no resto do DS; só a foto é redonda.</p>
+
+<div class="two">
+  <div>
+    <div class="stage mini" style="padding:0;background:#000">
+      <div class="dlg sheet">
+        <div class="hero"><div class="grab"></div><div class="art" style="background-image:url(https://images.igdb.com/igdb/image/upload/t_cover_big_2x/coc99o.jpg)"></div></div>
+        <div class="id"><div class="av" style="background:#0E4D3A;color:#B9FFE4">JP</div><div><div class="name">João P.</div><div class="since">Membro desde set. 2026</div></div></div>
+        <div class="stats">
+          <div class="stat"><div class="cap">Squads</div><div class="v">9</div></div>
+          <div class="stat"><div class="cap">Jogos</div><div class="v">2</div></div>
+          <div class="stat wide"><div class="cap">Último squad</div><div class="last"><img src="https://images.igdb.com/igdb/image/upload/t_cover_small_2x/coc99o.jpg"><div><b>League of Legends</b><span>ontem</span></div></div></div>
+        </div>
+        <div class="top"><div class="cap">Mais jogados</div>
+          <div class="row lead"><img src="https://images.igdb.com/igdb/image/upload/t_cover_small_2x/coc99o.jpg"><div><div class="gn">League of Legends</div><div class="bar"><i style="width:100%"></i></div></div><div class="ct">7</div></div>
+          <div class="row"><img src="https://images.igdb.com/igdb/image/upload/t_cover_small_2x/coaczd.jpg"><div><div class="gn">Counter-Strike 2</div><div class="bar"><i style="width:29%"></i></div></div><div class="ct">2</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>Celular · sheet de baixo para cima.</b> O último squad desce para uma linha própria, e o número de posição sai para dar espaço ao nome.</p>
+  </div>
+  <div>
+    <div class="stage mini" style="padding:0;background:#000">
+      <div class="dlg">
+        <div class="hero empty"><div class="art"></div><div class="close">✕</div></div>
+        <div class="id"><div class="av" style="background:#1E3A5C;color:#CFE6FF">CC</div><div><div class="name">Caio<span class="you">VOCÊ</span></div><div class="since">Membro desde hoje</div></div></div>
+        <div class="empty-box">
+          <div class="ico">0</div>
+          <h3>Nenhum squad completo</h3>
+          <p>Os jogos aparecem aqui quando um squad seu fecha todas as vagas.</p>
+          <span class="btn">Encontrar squad</span>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>Estado vazio, no próprio perfil.</b> Sem capa, o cabeçalho usa um brilho mint/Discord. Os stats somem. Num perfil alheio, o texto muda para "Ainda não completou nenhum squad" e o botão não aparece.</p>
+  </div>
+</div>
+</body></html>

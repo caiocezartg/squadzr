@@ -5,7 +5,7 @@ import { useClock } from './use-clock'
  * The viewer's own zone. next-intl reports a date formatted without one, and these dates have always
  * been the browser's local dates, so the zone is passed explicitly.
  */
-const VIEWER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
+export const VIEWER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 type TimeAgoKey = 'timeAgo.justNow' | 'timeAgo.minutesAgo' | 'timeAgo.hoursAgo' | 'timeAgo.daysAgo'
 type Translate = (key: TimeAgoKey, values?: { count: number }) => string

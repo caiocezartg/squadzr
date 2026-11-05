@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { playerProfileQueryKey } from '@/features/player-profile'
 import type { RealtimeEventSubscribe } from '@/lib/ws-client'
 import type { NotificationsResponse } from '@/types'
 
@@ -30,6 +31,10 @@ export function useNotificationEvents({ on }: UseNotificationEventsOptions): voi
 
   useEffect(() => {
     return on('notification', ({ notification }) => {
+      // A Squad that filled adds to the viewer's profile, which would otherwise stay a minute behind.
+      if (notification.type === 'room_ready') {
+        void queryClient.invalidateQueries({ queryKey: playerProfileQueryKey(notification.userId) })
+      }
       for (const [queryKey, current] of queryClient.getQueriesData<NotificationsResponse>({
         queryKey: ['notifications'],
       })) {

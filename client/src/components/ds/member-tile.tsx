@@ -19,6 +19,13 @@ interface OpenSlotProps extends TileHost {
   readonly open: true
 }
 
+/** What opens a player's profile from their tile: the click, and an earlier hint to read it ahead. */
+export interface TileProfileLink {
+  readonly onOpen: () => void
+  /** Hover or focus on the tile: the profile is likely next, so it can be read already. */
+  readonly onPreview?: () => void
+}
+
 interface PlayerProps extends TileHost {
   readonly open?: false
   readonly playerId: string
@@ -35,6 +42,8 @@ interface PlayerProps extends TileHost {
   readonly online?: boolean
   /** ISO time the player left the room. Without it an away player reads "Out of the room". */
   readonly offlineSince?: string | null
+  /** Makes the player's photo and name a button that opens their profile. */
+  readonly profile?: TileProfileLink
 }
 
 export type MemberTileProps = OpenSlotProps | PlayerProps
@@ -102,17 +111,51 @@ export function MemberTile(props: MemberTileProps) {
 
   return (
     <Tile look={look} presence={presence} host={props}>
-      <Avatar
-        state={look.avatar}
-        playerId={props.playerId}
-        name={props.name}
-        image={props.image}
-        host={props.host}
-        surface={look.groundColor}
-      />
-      <Name look={look}>{props.name}</Name>
+      <PlayerFace profile={props.profile} name={props.name}>
+        <Avatar
+          state={look.avatar}
+          playerId={props.playerId}
+          name={props.name}
+          image={props.image}
+          host={props.host}
+          surface={look.groundColor}
+        />
+        <Name look={look}>{props.name}</Name>
+      </PlayerFace>
       {props.you && <span className="shrink-0 text-xs text-muted">{t('you')}</span>}
     </Tile>
+  )
+}
+
+/**
+ * The player's photo and name. With a profile link they are one button named "View {name}'s
+ * profile" whose hit area stretches over the whole tile: a fine pointer lifts the tile's ground and
+ * keyboard focus outlines the tile in mint, so neither draws a box of its own inside the row.
+ */
+function PlayerFace({
+  profile,
+  name,
+  children,
+}: {
+  readonly profile: TileProfileLink | undefined
+  readonly name: string
+  readonly children: ReactNode
+}) {
+  const t = useTranslations('ds.member')
+
+  if (!profile) return children
+
+  return (
+    <button
+      type="button"
+      aria-label={t('viewProfile', { name })}
+      onClick={profile.onOpen}
+      onPointerEnter={profile.onPreview}
+      onFocus={profile.onPreview}
+      className="flex min-w-0 flex-1 items-center gap-3.5 text-left outline-none after:absolute after:inset-0 after:transition-colors after:duration-150 after:ease-out hover-fine:after:bg-white/4 focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-mint active:after:bg-white/6"
+    >
+      {children}
+    </button>
   )
 }
 
@@ -139,7 +182,7 @@ function Tile({
       style={host.style}
       title={presence}
       className={cn(
-        'flex min-h-16 items-center gap-3.5 pt-4.5 pr-3.5 pb-3.5 pl-3 text-text',
+        'relative flex min-h-16 items-center gap-3.5 pt-4.5 pr-3.5 pb-3.5 pl-3 text-text',
         look.ground
       )}
     >

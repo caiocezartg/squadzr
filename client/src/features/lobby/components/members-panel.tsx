@@ -8,6 +8,7 @@ import { Button } from '@/components/ds/button'
 import { CopySwap } from '@/components/ds/copy-swap'
 import { MemberTile } from '@/components/ds/member-tile'
 import { Pagination } from '@/components/ds/pagination'
+import { usePlayerProfileLink } from '@/features/player-profile'
 import { SlotMeter } from '@/components/ds/slot-meter'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import type { Player } from '@/types'
@@ -64,6 +65,7 @@ export function MembersPanel({
   const reducedMotion = useReducedMotion()
   const [codeCopied, markCodeCopied] = useCopiedFlag()
   const { live, arrivals } = useRosterArrivals(players)
+  const profileLink = usePlayerProfileLink()
   const [requestedPage, setPage] = useState(1)
 
   // The tiles are the members drawn, then the open slots.
@@ -131,6 +133,10 @@ export function MembersPanel({
             you: player.id === viewerId,
             online: presence ? (memberPresence?.online ?? false) : undefined,
             offlineSince: memberPresence?.offlineSince ?? null,
+            profile: {
+              onOpen: () => profileLink.open(player.id),
+              onPreview: () => profileLink.prefetch(player.id),
+            },
           }
 
           const arriving = arrivals.has(player.id)

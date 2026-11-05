@@ -64,6 +64,13 @@
       "when": 1793847371356,
       "tag": "0008_wandering_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793856203735,
+      "tag": "0009_broken_chronomancer",
+      "breakpoints": true
     }
   ]
 }
