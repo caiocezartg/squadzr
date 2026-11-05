@@ -12,8 +12,7 @@ function mapRowToEntity(row: AuditEntryRow): AuditEntry {
     id: row.id,
     actorId: row.actorId,
     actorName: row.actorName,
-    // The column is a varchar and a check constraint keeps it to the known actions.
-    action: row.action as AuditEntry['action'],
+    action: row.action,
     target: row.target,
     reason: row.reason,
     details: row.details,

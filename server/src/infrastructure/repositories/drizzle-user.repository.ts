@@ -15,8 +15,7 @@ function mapRowToEntity(row: UserRow): User {
     email: row.email,
     name: row.name,
     avatarUrl: row.image, // Better Auth uses 'image', domain uses 'avatarUrl'
-    // A check constraint keeps the column to the known roles.
-    role: row.role as User['role'],
+    role: row.role,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }

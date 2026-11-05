@@ -1,6 +1,11 @@
 import { sql } from 'drizzle-orm'
 import { check, index, jsonb, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
-import { AUDIT_ACTIONS, type AuditDetails, type AuditTarget } from '@squadzr/schemas'
+import {
+  AUDIT_ACTIONS,
+  type AuditAction,
+  type AuditDetails,
+  type AuditTarget,
+} from '@squadzr/schemas'
 import { user } from './auth'
 
 // An Audit Entry is the append-only account of one admin action. The actor keeps a name snapshot and
@@ -12,7 +17,7 @@ export const auditEntries = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     actorId: text('actor_id').references(() => user.id, { onDelete: 'set null' }),
     actorName: text('actor_name'),
-    action: varchar('action', { length: 50 }).notNull(),
+    action: varchar('action', { length: 50 }).$type<AuditAction>().notNull(),
     target: jsonb('target').$type<AuditTarget>(),
     reason: text('reason'),
     details: jsonb('details').$type<AuditDetails>(),

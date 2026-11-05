@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { boolean, check, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
-import { USER_ROLES } from '@squadzr/schemas'
+import { USER_ROLES, type UserRole } from '@squadzr/schemas'
 
 export const user = pgTable(
   'user',
@@ -12,7 +12,7 @@ export const user = pgTable(
     image: text('image'),
     // Declared to Better Auth through `user.additionalFields` with input disabled; the column name and
     // values match the Better Auth admin plugin's, which is not installed (docs/adr/0005).
-    role: text('role').notNull().default('user'),
+    role: text('role').$type<UserRole>().notNull().default('user'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
