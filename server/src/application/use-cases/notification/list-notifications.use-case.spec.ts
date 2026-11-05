@@ -7,7 +7,9 @@ import { ROOM } from '@config/constants'
 
 const READY_AT = new Date('2026-01-01T00:00:00.000Z')
 
-function createNotification(overrides: Partial<UserNotification> = {}): UserNotification {
+type RoomReadyNotification = Extract<UserNotification, { type: 'room_ready' }>
+
+function createNotification(overrides: Partial<RoomReadyNotification> = {}): RoomReadyNotification {
   return {
     id: 'notification-1',
     userId: 'user-1',
@@ -100,6 +102,43 @@ describe('ListNotificationsUseCase', () => {
     const result = await useCase.execute({ userId: 'user-1', limit: 10 })
 
     expect(result.notifications[0]?.discordLink).toBeNull()
+  })
+
+  it('resolves the invite only for room_ready, never for the notifications of other types', async () => {
+    const room = createMockRoom({
+      id: 'room-1',
+      discordLink: 'https://discord.gg/secret',
+      readyAt: READY_AT,
+    })
+    notificationRepository.findByUserId.mockResolvedValue([
+      {
+        id: 'notification-2',
+        userId: 'user-1',
+        roomId: 'room-1',
+        type: 'member_left',
+        title: 'A member left your squad',
+        message: 'left',
+        payload: {
+          roomId: 'room-1',
+          roomCode: 'ABC123',
+          roomName: 'Ranked squad',
+          gameName: 'League of Legends',
+          member: { name: 'Leaver', image: null },
+          reason: 'squad_completed',
+        },
+        readAt: null,
+        createdAt: READY_AT,
+      },
+      createNotification(),
+    ])
+    roomRepository.findByIds.mockResolvedValue([room])
+
+    const result = await useCase.execute({ userId: 'user-1', limit: 10 })
+
+    expect(result.notifications.map((entry) => entry.discordLink)).toEqual([
+      null,
+      'https://discord.gg/secret',
+    ])
   })
 
   it('never queries rooms for notifications without a room id', async () => {

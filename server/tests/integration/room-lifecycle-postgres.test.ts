@@ -229,8 +229,9 @@ describe('lifecycle columns', () => {
 describe('ready_at filters', () => {
   it('lists only Open Rooms inside the activity window from findAvailable', async () => {
     const repository = new DrizzleRoomRepository(server.app.db, server.app.clock)
+    const staleHost = await signIn(server, 'Stale host')
     const open = await createRoom(server, host, { gameId })
-    const stale = await createRoom(server, host, { gameId })
+    const stale = await createRoom(server, staleHost, { gameId })
     await setRoomLifecycle(server, stale.id, {
       createdAt: FIXED_NOW,
       lastActivityAt: new Date(FIXED_NOW.getTime() - OPEN_TTL),

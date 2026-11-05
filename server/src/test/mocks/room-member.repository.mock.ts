@@ -39,6 +39,7 @@ export function createMockRoomMemberRepository(): MockRoomMemberRepository {
           memberCount: 1,
           becameReady: false,
           notifications: [],
+          departures: [],
         })
       ),
     leaveOpenRoom: vi

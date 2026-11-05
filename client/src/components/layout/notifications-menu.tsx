@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { useNotifications } from '@/hooks/use-notifications'
 import { useAppNavigation } from '@/lib/navigation'
-import { lobbyHref } from '@/lib/squad-links'
+import { notificationHref } from '@/lib/notification-links'
 import { whenIdle } from '@/lib/when-idle'
 import type { UserNotification } from '@/types'
 import { BellButton } from './notifications-bell-button'
@@ -52,7 +52,7 @@ export function NotificationsMenu() {
       }
     }
     setOpen(false)
-    navigate(lobbyHref(notification.payload.roomCode))
+    navigate(notificationHref(notification))
   }
 
   const load = (openOnLoad: boolean) => {

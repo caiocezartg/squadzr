@@ -198,7 +198,7 @@ describe('16 KiB maxPayload', () => {
 describe('Squad platform in realtime payloads', () => {
   it('carries the platform in room_created and in room_snapshot, and null for a Game without one', async () => {
     server = await buildTestServer()
-    const [host] = await signInMany(server, 1)
+    const [host, otherHost] = await signInMany(server, 2)
     const platformGame = await insertGame(server, { platforms: ['pc', 'ps5'] })
     const plainGame = await insertGame(server)
     const catalog = await open(server)
@@ -208,7 +208,7 @@ describe('Squad platform in realtime payloads', () => {
       gameId: platformGame.id,
       platform: 'ps5',
     })
-    const withoutPlatform = await createRoom(server, host!, { gameId: plainGame.id })
+    const withoutPlatform = await createRoom(server, otherHost!, { gameId: plainGame.id })
 
     const created = (await catalog.drain()).map((message) =>
       roomCreatedMessageSchema.parse(message)
@@ -220,8 +220,9 @@ describe('Squad platform in realtime payloads', () => {
       await joinRoomChannel(socket, withPlatform.code)
     )
     expect(snapshot.payload.room.platform).toBe('ps5')
+    const otherSocket = await open(server, otherHost!)
     const other = roomSnapshotMessageSchema.parse(
-      await joinRoomChannel(socket, withoutPlatform.code)
+      await joinRoomChannel(otherSocket, withoutPlatform.code)
     )
     expect(other.payload.room.platform).toBeNull()
   })

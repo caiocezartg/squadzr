@@ -119,7 +119,7 @@ describe('diagnostics', () => {
     expect(handler).not.toHaveBeenCalled()
     expect(vi.mocked(console.error).mock.calls).toEqual([
       ['Invalid WebSocket message:', { issues: [{ path: '', code: 'invalid_json' }] }],
-      ['Realtime protocol failure:', { reason: 'unparseable_frame', expectedVersion: 4 }],
+      ['Realtime protocol failure:', { reason: 'unparseable_frame', expectedVersion: 5 }],
     ])
     // A frame that cannot be parsed is a protocol failure: the connection
     // closes so the app can reload into the matching build.
@@ -187,7 +187,7 @@ describe('diagnostics', () => {
     })
     expect(console.error).toHaveBeenCalledWith('Realtime protocol failure:', {
       reason: 'unparseable_frame',
-      expectedVersion: 4,
+      expectedVersion: 5,
     })
     expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(SECRET_INVITE)
   })

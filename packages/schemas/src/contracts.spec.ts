@@ -156,6 +156,85 @@ describe('transport dates', () => {
     ).toBe(false)
   })
 
+  describe('userNotificationSchema as a union discriminated by type', () => {
+    const squad = {
+      roomId: ROOM_ID,
+      roomCode: 'ABC123',
+      roomName: 'Ranked 5v5',
+      gameName: 'Counter-Strike 2',
+    }
+    const person = { name: 'Caio', image: null }
+    const base = {
+      id: ROOM_ID,
+      userId: 'user-1',
+      title: 'Title',
+      message: 'Message',
+      readAt: null,
+      createdAt: CREATED_AT,
+    }
+    const byType = {
+      room_ready: { ...squad, players: [person], discordLink: INVITE },
+      host_transferred: { ...squad, previousHost: person, reason: 'squad_completed' },
+      member_left: { ...squad, member: person, reason: 'squad_completed' },
+      room_closed: { ...squad, previousHost: person, reason: 'no_eligible_host' },
+    } as const
+
+    it.each(Object.entries(byType))(
+      'accepts a %s notification with its own payload',
+      (type, payload) => {
+        expect(userNotificationSchema.safeParse({ ...base, type, payload }).success).toBe(true)
+      }
+    )
+
+    it('still accepts a room_ready written before leftSquads and covers existed', () => {
+      const legacy = { ...base, type: 'room_ready', payload: byType.room_ready }
+
+      const parsed = userNotificationSchema.parse(legacy)
+
+      expect(parsed.type === 'room_ready' && parsed.payload.leftSquads).toBeUndefined()
+      expect(parsed.type === 'room_ready' && parsed.payload.gameCoverUrl).toBeUndefined()
+    })
+
+    it('accepts the list of squads a member left on room_ready', () => {
+      const payload = { ...byType.room_ready, leftSquads: [{ roomCode: 'DEF456', roomName: 'B' }] }
+
+      const parsed = userNotificationSchema.parse({ ...base, type: 'room_ready', payload })
+
+      expect(parsed.type === 'room_ready' && parsed.payload.leftSquads).toEqual([
+        { roomCode: 'DEF456', roomName: 'B' },
+      ])
+    })
+
+    it.each([
+      ['an unknown type', { ...base, type: 'system_announcement', payload: byType.room_ready }],
+      ['a payload of another type', { ...base, type: 'member_left', payload: byType.room_closed }],
+      [
+        'a room_ready without the invite field',
+        { ...base, type: 'room_ready', payload: { ...squad, players: [] } },
+      ],
+      [
+        'a reason that does not belong to the type',
+        {
+          ...base,
+          type: 'room_closed',
+          payload: { ...byType.room_closed, reason: 'squad_completed' },
+        },
+      ],
+    ])('rejects %s', (_label, notification) => {
+      expect(userNotificationSchema.safeParse(notification).success).toBe(false)
+    })
+
+    it('does not let a type other than room_ready carry the invite', () => {
+      const parsed = userNotificationSchema.parse({
+        ...base,
+        type: 'member_left',
+        payload: { ...byType.member_left, discordLink: INVITE },
+      })
+
+      expect(parsed.payload).not.toHaveProperty('discordLink')
+    })
+  })
+
   it('infers transport types whose dates are strings', () => {
     expectTypeOf<UserDto['id']>().toEqualTypeOf<string>()
     expectTypeOf<UserDto['image']>().toEqualTypeOf<string | null>()

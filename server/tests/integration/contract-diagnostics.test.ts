@@ -142,7 +142,10 @@ describe('invalid WebSocket frames', () => {
 
 describe('lifecycle logs', () => {
   it('records created, joined, ready, left and deleted without the invite', async () => {
+    // A host holds one Open Squad at a time, so each Squad below has its own.
     const host = await signIn(server, 'Host')
+    const readyHost = await signIn(server, 'Ready host')
+    const leavingHost = await signIn(server, 'Leaving host')
     const member = await signIn(server, 'Member')
     const game = await insertGame(server)
 
@@ -150,11 +153,11 @@ describe('lifecycle logs', () => {
     await joinAll(server, openRoom.code, [member])
     await roomAction(server, member, openRoom.code, 'leave')
 
-    const readyRoom = await createRoom(server, host, { gameId: game.id, maxPlayers: 2 })
+    const readyRoom = await createRoom(server, readyHost, { gameId: game.id, maxPlayers: 2 })
     await joinAll(server, readyRoom.code, [member])
 
-    const hostRoom = await createRoom(server, host, { gameId: game.id, maxPlayers: 3 })
-    await roomAction(server, host, hostRoom.code, 'leave')
+    const hostRoom = await createRoom(server, leavingHost, { gameId: game.id, maxPlayers: 3 })
+    await roomAction(server, leavingHost, hostRoom.code, 'leave')
 
     const messages = lifecycleLogs().map((entry) => entry.msg)
     expect(messages).toEqual(

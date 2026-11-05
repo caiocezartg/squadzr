@@ -6,6 +6,7 @@ import {
   RoomJoinLimitReachedError,
   RoomReadyError,
 } from '@application/errors'
+import type { UserNotification } from '@domain/entities/user-notification.entity'
 import type { JoinOpenRoomInput } from '@domain/repositories/room-member.repository'
 import { ROOM } from '@config/constants'
 import {
@@ -19,6 +20,11 @@ import {
   createMockUser,
   FIXED_NOW,
 } from '@test/mocks'
+
+/** The payload of a `room_ready` notification; undefined for any other type or no notification. */
+function readyPayload(notification: UserNotification | undefined) {
+  return notification?.type === 'room_ready' ? notification.payload : undefined
+}
 
 describe('JoinRoomUseCase', () => {
   let useCase: JoinRoomUseCase
@@ -63,6 +69,7 @@ describe('JoinRoomUseCase', () => {
         memberCount: 3,
         becameReady: false,
         notifications: [],
+        departures: [],
       })
 
       const result = await useCase.execute({ code: 'ABC123', userId: 'user-1' })
@@ -78,6 +85,7 @@ describe('JoinRoomUseCase', () => {
         roomId: 'room-1',
         userId: 'user-1',
         buildReadyNotifications: expect.any(Function),
+        buildDepartureNotifications: expect.any(Function),
       })
     })
 
@@ -188,6 +196,7 @@ describe('JoinRoomUseCase', () => {
             createdAt: FIXED_NOW,
           },
         ],
+        departures: [],
       })
 
       const result = await useCase.execute({ code: 'ABC123', userId: 'user-3' })
@@ -217,7 +226,7 @@ describe('JoinRoomUseCase', () => {
           createMockRoomMember({ roomId: input.roomId, userId: 'host' }),
           createMockRoomMember({ roomId: input.roomId, userId: input.userId }),
         ]
-        const notifications = input.buildReadyNotifications?.(members, users) ?? []
+        const notifications = input.buildReadyNotifications?.(members, users, []) ?? []
         return {
           status: 'joined',
           member: members[1]!,
@@ -229,6 +238,7 @@ describe('JoinRoomUseCase', () => {
             readAt: null,
             createdAt: FIXED_NOW,
           })),
+          departures: [],
         }
       })
 
@@ -241,12 +251,12 @@ describe('JoinRoomUseCase', () => {
         expect(notification.payload).not.toHaveProperty('discordLink')
       }
       expect(result.createdNotifications.map((n) => n.userId).sort()).toEqual(['host', 'user-2'])
-      expect(result.createdNotifications[0]?.payload.players).toEqual([
+      expect(readyPayload(result.createdNotifications[0])?.players).toEqual([
         { name: 'Host', image: null },
         { name: 'Joiner', image: null },
       ])
-      expect(result.createdNotifications[1]?.payload.players).toEqual(
-        result.createdNotifications[0]?.payload.players
+      expect(readyPayload(result.createdNotifications[1])?.players).toEqual(
+        readyPayload(result.createdNotifications[0])?.players
       )
     })
 
@@ -270,7 +280,7 @@ describe('JoinRoomUseCase', () => {
           createMockUser({ id: 'host', name: 'Host' }),
           createMockUser({ id: input.userId, name: 'Joiner' }),
         ]
-        const notifications = input.buildReadyNotifications?.(members, users) ?? []
+        const notifications = input.buildReadyNotifications?.(members, users, []) ?? []
         return {
           status: 'joined',
           member: members[1]!,
@@ -282,12 +292,13 @@ describe('JoinRoomUseCase', () => {
             readAt: null,
             createdAt: FIXED_NOW,
           })),
+          departures: [],
         }
       })
 
       const result = await useCase.execute({ code: 'ABC123', userId: 'user-2' })
 
-      expect(result.createdNotifications[0]?.payload.gameCoverUrl).toBe(
+      expect(readyPayload(result.createdNotifications[0])?.gameCoverUrl).toBe(
         'https://images.igdb.com/igdb/image/upload/t_cover_big/lol.jpg'
       )
     })
@@ -309,7 +320,7 @@ describe('JoinRoomUseCase', () => {
         const users = members.map((member) =>
           createMockUser({ id: member.userId, name: `Name-${member.userId}` })
         )
-        const notifications = input.buildReadyNotifications?.(members, users) ?? []
+        const notifications = input.buildReadyNotifications?.(members, users, []) ?? []
         return {
           status: 'joined',
           member: members[2]!,
@@ -321,6 +332,7 @@ describe('JoinRoomUseCase', () => {
             readAt: null,
             createdAt: FIXED_NOW,
           })),
+          departures: [],
         }
       })
 
@@ -331,7 +343,7 @@ describe('JoinRoomUseCase', () => {
         'late-member',
         'user-2',
       ])
-      expect(result.createdNotifications[0]?.payload.players).toEqual([
+      expect(readyPayload(result.createdNotifications[0])?.players).toEqual([
         { name: 'Name-host', image: null },
         { name: 'Name-late-member', image: null },
         { name: 'Name-user-2', image: null },
@@ -365,6 +377,7 @@ describe('JoinRoomUseCase', () => {
         memberCount: 3,
         becameReady: false,
         notifications: [],
+        departures: [],
       })
 
       const result = await useCase.execute({ code: 'ABC123', userId: 'user-id' })

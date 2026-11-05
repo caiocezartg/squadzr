@@ -97,4 +97,80 @@ describe('buildRoomReadyNotifications', () => {
 
     expect(notifications[0]?.payload).not.toHaveProperty('gameCoverUrl')
   })
+
+  describe('squads left by the Squad Release', () => {
+    const members = [
+      createMockRoomMember({ roomId: 'room-1', userId: 'host' }),
+      createMockRoomMember({ roomId: 'room-1', userId: 'member' }),
+    ]
+    const users = [
+      createMockUser({ id: 'host', name: 'Host' }),
+      createMockUser({ id: 'member', name: 'Member' }),
+    ]
+    const departure = (
+      roomCode: string,
+      roomName: string,
+      removedUserIds: string[],
+      outcome: 'updated' | 'deleted' = 'updated'
+    ) => ({
+      roomId: `id-${roomCode}`,
+      roomCode,
+      roomName,
+      gameName: 'Dota 2',
+      outcome,
+      removedUserIds,
+      remainingUserIds: [],
+      previousHostId: 'someone',
+      newHostId: null,
+    })
+
+    it('lists, for each member, every other squad they left and only those', () => {
+      const notifications = buildRoomReadyNotifications({
+        room,
+        members,
+        users,
+        gameName: 'League of Legends',
+        departures: [
+          departure('AAA111', 'Squad A', ['member']),
+          departure('BBB222', 'Squad B', ['host', 'member']),
+          departure('CCC333', 'Squad C', ['host']),
+        ],
+      })
+
+      expect(notifications[0]?.payload.leftSquads).toEqual([
+        { roomCode: 'BBB222', roomName: 'Squad B' },
+        { roomCode: 'CCC333', roomName: 'Squad C' },
+      ])
+      expect(notifications[1]?.payload.leftSquads).toEqual([
+        { roomCode: 'AAA111', roomName: 'Squad A' },
+        { roomCode: 'BBB222', roomName: 'Squad B' },
+      ])
+    })
+
+    it('includes a squad the release deleted', () => {
+      const [notification] = buildRoomReadyNotifications({
+        room,
+        members,
+        users,
+        gameName: 'League of Legends',
+        departures: [departure('AAA111', 'Squad A', ['host'], 'deleted')],
+      })
+
+      expect(notification?.payload.leftSquads).toEqual([
+        { roomCode: 'AAA111', roomName: 'Squad A' },
+      ])
+    })
+
+    it('omits the field for a member who left nothing', () => {
+      const notifications = buildRoomReadyNotifications({
+        room,
+        members,
+        users,
+        gameName: 'League of Legends',
+        departures: [departure('AAA111', 'Squad A', ['member'])],
+      })
+
+      expect(notifications[0]?.payload).not.toHaveProperty('leftSquads')
+    })
+  })
 })

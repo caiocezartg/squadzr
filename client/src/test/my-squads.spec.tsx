@@ -12,7 +12,13 @@
 import { act, screen, waitFor, within } from '@testing-library/react'
 import { focusManager, type QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { boardSquads, lobbySquadResponse, memberSquad, openSquad } from './fixtures'
+import {
+  boardSquads,
+  hostTransferredNotification,
+  lobbySquadResponse,
+  memberSquad,
+  openSquad,
+} from './fixtures'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
 import { countHttpCalls, httpOk, onHttp } from './http-router'
 import { authStore } from './stubs'
@@ -216,6 +222,33 @@ describe('sidebar my squads — realtime', () => {
 
     const item = await menu.findByRole('img', { name: 'Invite unlocked' })
     expect(item).toBeInTheDocument()
+  })
+
+  it('reads the list again for any notification pushed to the viewer, such as a host transfer', async () => {
+    const lists: MyRoomsResponse = { hosted: [], joined: [{ ...newer, hostId: 'user-9' }] }
+    registerMySquads(() => lists)
+    renderSquadsFlow('/squads', { shell: true })
+    const menu = await sidebar()
+    const item = await menu.findByRole('link', { name: /Newer squad/ })
+    expect(within(item).queryByLabelText('You are the host')).not.toBeInTheDocument()
+    const sockets = openSockets()
+
+    lists.hosted = [{ ...newer, hostId: 'user-1' }]
+    lists.joined = []
+    act(() => {
+      for (const socket of sockets) {
+        socket.serverSend({
+          type: 'notification',
+          payload: { notification: hostTransferredNotification },
+        })
+      }
+    })
+
+    await waitFor(() =>
+      expect(
+        within(menu.getByRole('link', { name: /Newer squad/ })).getByLabelText('You are the host')
+      ).toBeInTheDocument()
+    )
   })
 
   it('does not read the list for a squad the viewer is not in', async () => {

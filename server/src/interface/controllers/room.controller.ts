@@ -139,15 +139,43 @@ export class RoomController {
 
     if (result.isRoomNowFull) {
       request.server.log.info(
-        { roomId: room.id, roomCode: room.code, memberCount: result.memberCount },
+        {
+          roomId: room.id,
+          roomCode: room.code,
+          memberCount: result.memberCount,
+          affectedSquads: result.departures.length,
+        },
         'Room ready'
       )
 
+      // Each other Squad the release changed: the lobby and the board hear about it
+      // like about any other Membership change, or about a deletion.
+      for (const departure of result.departures) {
+        request.server.log.info(
+          {
+            roomId: departure.roomId,
+            roomCode: departure.roomCode,
+            outcome: departure.outcome,
+            newHostId: departure.newHostId,
+          },
+          'Room membership released (squad completed)'
+        )
+        if (departure.outcome === 'updated') {
+          this.deps.broadcaster.broadcastRoomUpdated(departure.roomId, departure.roomCode)
+        } else {
+          this.deps.broadcaster.broadcastRoomDeleted(departure.roomId, departure.roomCode)
+        }
+      }
+
       // Best-effort realtime push: the notifications are already persisted, so
-      // a failed push never loses them (the next fetch returns them).
+      // a failed push never loses them (the next fetch returns them). Only the
+      // `room_ready` of this Squad carries its Discord invite.
       for (const notification of result.createdNotifications) {
         try {
-          this.deps.broadcaster.broadcastNotification(notification, room.discordLink)
+          this.deps.broadcaster.broadcastNotification(
+            notification,
+            notification.type === 'room_ready' ? room.discordLink : null
+          )
         } catch (error) {
           request.server.log.error(
             {
@@ -155,9 +183,10 @@ export class RoomController {
               roomId: room.id,
               roomCode: room.code,
               notificationId: notification.id,
+              notificationType: notification.type,
               userId: notification.userId,
             },
-            'Room ready notification push failed'
+            'Squad notification push failed'
           )
         }
       }

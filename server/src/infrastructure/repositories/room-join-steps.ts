@@ -6,13 +6,17 @@ import type {
   JoinOpenRoomInput,
   JoinOpenRoomOutcome,
 } from '@domain/repositories/room-member.repository'
+import type { SquadDeparture } from '@domain/services/squad-release'
 import { isRoomExpired } from '@domain/services/room-lifecycle'
 import { ROOM } from '@config/constants'
 import { user } from '@infrastructure/database/schema/auth'
 import { roomMembers, type RoomMemberRow } from '@infrastructure/database/schema/room-members'
 import { rooms, type RoomRow } from '@infrastructure/database/schema/rooms'
-import { userNotifications } from '@infrastructure/database/schema/user-notifications'
-import { validOpenRoomCondition } from './open-room-rules'
+import {
+  roomReadyOnly,
+  userNotifications,
+} from '@infrastructure/database/schema/user-notifications'
+import { countActiveMemberships } from './room-limits'
 import { mapRoomMemberRowToEntity } from './room-mapping'
 import { mapUserNotificationRow, notificationInputToRow } from './user-notification-mapping'
 import type { DatabaseTransaction } from './user-lock'
@@ -22,6 +26,7 @@ import type { DatabaseTransaction } from './user-lock'
 
 type JoinedOutcome = Extract<JoinOpenRoomOutcome, { readonly status: 'joined' }>
 type ReadyNotificationsBuilder = NonNullable<JoinOpenRoomInput['buildReadyNotifications']>
+type DepartureNotificationsBuilder = NonNullable<JoinOpenRoomInput['buildDepartureNotifications']>
 
 /** Validate result: answered without a new seat, or admitted with the seats taken so far. */
 export type JoinValidation =
@@ -45,6 +50,7 @@ export function joinedOutcome(fields: Omit<JoinedOutcome, 'status'>): JoinedOutc
     memberCount: fields.memberCount,
     becameReady: fields.becameReady,
     notifications: fields.notifications,
+    departures: fields.departures,
   }
 }
 
@@ -84,6 +90,7 @@ export async function validateJoin(
         memberCount: await countRoomMembers(tx, room.id),
         becameReady: false,
         notifications: [],
+        departures: [],
       })
     )
   }
@@ -144,27 +151,45 @@ export async function advanceRoomActivity(
 }
 
 /**
- * Emit step: persists one `room_ready` notification per roster member in the join
- * transaction, so a failure here rolls the readiness and the Membership back too. The
- * builder is pure and the roster reads use the same connection, so the lock never
- * waits for a second pool connection.
+ * Emit step: persists, in the join transaction, one `room_ready` notification per roster
+ * member and what the Squad Release did to the other Squads, so a failure here rolls the
+ * readiness, the Memberships and the release back too. The builders are pure and the roster
+ * reads use the same connection, so the lock never waits for a second pool connection.
+ * Only `room_ready` has an idempotency key; the other types are born once, here.
  */
-export async function emitReadyNotifications(
+export async function emitNotifications(
   tx: DatabaseTransaction,
-  input: { readonly roomId: string; readonly buildReadyNotifications: ReadyNotificationsBuilder }
+  input: {
+    readonly roster: Roster
+    readonly departures: readonly SquadDeparture[]
+    readonly buildReadyNotifications?: ReadyNotificationsBuilder
+    readonly buildDepartureNotifications?: DepartureNotificationsBuilder
+  }
 ): Promise<UserNotification[]> {
-  const roster = await loadRoster(tx, input.roomId)
-  const inputs = input.buildReadyNotifications(roster.members, roster.users)
-  if (inputs.length === 0) return []
+  const { roster } = input
+  const readyInputs =
+    input.buildReadyNotifications?.(roster.members, roster.users, input.departures) ?? []
+  const departureInputs = input.buildDepartureNotifications?.(input.departures, roster.users) ?? []
 
-  const notificationRows = await tx
-    .insert(userNotifications)
-    .values(inputs.map(notificationInputToRow))
-    .onConflictDoNothing({
-      target: [userNotifications.roomId, userNotifications.userId, userNotifications.type],
-    })
-    .returning()
-  return notificationRows.map(mapUserNotificationRow)
+  const ready =
+    readyInputs.length === 0
+      ? []
+      : await tx
+          .insert(userNotifications)
+          .values(readyInputs.map(notificationInputToRow))
+          .onConflictDoNothing({
+            target: [userNotifications.roomId, userNotifications.userId, userNotifications.type],
+            where: roomReadyOnly(userNotifications.type),
+          })
+          .returning()
+  const departed =
+    departureInputs.length === 0
+      ? []
+      : await tx
+          .insert(userNotifications)
+          .values(departureInputs.map(notificationInputToRow))
+          .returning()
+  return [...ready, ...departed].map(mapUserNotificationRow)
 }
 
 function withoutSeat(outcome: JoinOpenRoomOutcome): JoinValidation {
@@ -194,25 +219,13 @@ async function countRoomMembers(tx: DatabaseTransaction, roomId: string): Promis
   return rows[0]?.currentCount ?? 0
 }
 
-/**
- * Memberships of this user in valid Open Rooms. A Ready Room is done, and an Open
- * Room past its activity window is gone even before the scheduler deletes it.
- */
-async function countActiveMemberships(
-  tx: DatabaseTransaction,
-  userId: string,
-  now: Date
-): Promise<number> {
-  const rows = await tx
-    .select({ currentCount: count() })
-    .from(roomMembers)
-    .innerJoin(rooms, eq(rooms.id, roomMembers.roomId))
-    .where(and(eq(roomMembers.userId, userId), validOpenRoomCondition(now)))
-  return rows[0]?.currentCount ?? 0
+/** Members and profiles of a Room as they stand under the join's locks, not as they were before. */
+export interface Roster {
+  readonly members: RoomMember[]
+  readonly users: { id: string; name: string; avatarUrl: string | null }[]
 }
 
-/** Members and profiles as they stand under the join's locks, not as they were before. */
-async function loadRoster(tx: DatabaseTransaction, roomId: string) {
+export async function loadRoster(tx: DatabaseTransaction, roomId: string): Promise<Roster> {
   const memberRows = await tx
     .select({
       member: roomMembers,

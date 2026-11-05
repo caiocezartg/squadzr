@@ -45,7 +45,7 @@ export class RoomCreateLimitReachedError extends AppError {
   readonly code = 'ROOM_CREATE_LIMIT_REACHED'
 
   constructor(limit: number) {
-    super(`You can only host ${limit} active rooms at a time`)
+    super(`You can only host ${limit} open ${limit === 1 ? 'squad' : 'squads'} at a time`)
   }
 }
 
@@ -54,7 +54,7 @@ export class RoomJoinLimitReachedError extends AppError {
   readonly code = 'ROOM_JOIN_LIMIT_REACHED'
 
   constructor(limit: number) {
-    super(`You can only be in ${limit} active rooms at a time`)
+    super(`You can only be in ${limit} open ${limit === 1 ? 'squad' : 'squads'} at a time`)
   }
 }
 

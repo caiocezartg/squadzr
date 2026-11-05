@@ -238,7 +238,7 @@ describe('active-room limits enforced by create and join transactions', () => {
     expect(response.statusCode).toBe(422)
     expect(response.json()).toEqual({
       error: 'ROOM_CREATE_LIMIT_REACHED',
-      message: `You can only host ${ROOM.CREATE_LIMIT} active rooms at a time`,
+      message: 'You can only host 1 open squad at a time',
     })
   })
 
@@ -292,7 +292,79 @@ describe('active-room limits enforced by create and join transactions', () => {
     expect(response.statusCode).toBe(422)
     expect(response.json()).toEqual({
       error: 'ROOM_JOIN_LIMIT_REACHED',
-      message: `You can only be in ${ROOM.JOIN_LIMIT} active rooms at a time`,
+      message: `You can only be in ${ROOM.JOIN_LIMIT} open squads at a time`,
+    })
+  })
+
+  describe('the Membership limit on create', () => {
+    /** Memberships in Open Squads hosted by others, so the creator hosts nothing yet. */
+    async function joinOpenSquads(player: TestUser, total: number) {
+      const hosts = await signInMany(server, total)
+      const rooms = await Promise.all(hosts.map((owner) => createRoom(server, owner, { gameId })))
+      for (const room of rooms) await joinAll(server, room.code, [player])
+      return rooms
+    }
+
+    it(`rejects creating when the user holds ${ROOM.JOIN_LIMIT} Memberships and hosts nothing`, async () => {
+      const [player] = await signInMany(server, 1)
+      await joinOpenSquads(player!, ROOM.JOIN_LIMIT)
+
+      const response = await postRoom(server, player!, { gameId })
+
+      expect(response.statusCode).toBe(422)
+      expect(response.json()).toEqual({
+        error: 'ROOM_JOIN_LIMIT_REACHED',
+        message: `You can only be in ${ROOM.JOIN_LIMIT} open squads at a time`,
+      })
+      expect(await myRooms(player!)).toMatchObject({ hosted: [] })
+    })
+
+    it('answers the host limit first when both limits are reached', async () => {
+      const [player] = await signInMany(server, 1)
+      await createRoom(server, player!, { gameId })
+      await joinOpenSquads(player!, ROOM.JOIN_LIMIT - 1)
+
+      const response = await postRoom(server, player!, { gameId })
+
+      expect(response.statusCode).toBe(422)
+      expect(response.json()).toMatchObject({ error: 'ROOM_CREATE_LIMIT_REACHED' })
+    })
+
+    it('allows creating with one Membership slot left', async () => {
+      const [player] = await signInMany(server, 1)
+      await joinOpenSquads(player!, ROOM.JOIN_LIMIT - 1)
+
+      const response = await postRoom(server, player!, { gameId })
+
+      expect(response.statusCode).toBe(201)
+    })
+
+    it('does not count a Ready Squad, so whoever just completed one can create at once', async () => {
+      const [player] = await signInMany(server, 1)
+      const rooms = await joinOpenSquads(player!, ROOM.JOIN_LIMIT)
+      await setRoomLifecycle(server, rooms[0]!.id, {
+        createdAt: FIXED_NOW,
+        lastActivityAt: FIXED_NOW,
+        readyAt: FIXED_NOW,
+      })
+
+      const response = await postRoom(server, player!, { gameId })
+
+      expect(response.statusCode).toBe(201)
+    })
+
+    it('does not count an expired Open Squad that the scheduler has not deleted yet', async () => {
+      const [player] = await signInMany(server, 1)
+      const rooms = await joinOpenSquads(player!, ROOM.JOIN_LIMIT)
+      await setRoomLifecycle(server, rooms[0]!.id, {
+        createdAt: FIXED_NOW,
+        lastActivityAt: new Date(FIXED_NOW.getTime() - OPEN_TTL),
+        readyAt: null,
+      })
+
+      const response = await postRoom(server, player!, { gameId })
+
+      expect(response.statusCode).toBe(201)
     })
   })
 

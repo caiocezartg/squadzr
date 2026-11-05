@@ -202,8 +202,9 @@ describe('POST /api/rooms', () => {
   )
 
   it('accepts the Squad size bounds of 2 and 40', async () => {
+    const [otherHost] = await signInMany(server, 1)
     const smallest = await createRoom(server, host, { gameId, maxPlayers: 2 })
-    const largest = await createRoom(server, host, { gameId, maxPlayers: 40 })
+    const largest = await createRoom(server, otherHost!, { gameId, maxPlayers: 40 })
 
     expect(smallest.maxPlayers).toBe(2)
     expect(largest.maxPlayers).toBe(40)
@@ -678,22 +679,23 @@ describe('POST /api/rooms/:code/leave', () => {
 
 describe('GET /api/rooms/my', () => {
   it('groups active rooms into hosted and joined, newest first, with memberCount', async () => {
-    const [member] = await signInMany(server, 1)
-    const older = await createRoom(server, host, { gameId, name: 'Older' })
-    const newer = await createRoom(server, host, { gameId, name: 'Newer' })
-    const foreign = await createRoom(server, member!, { gameId, name: 'Foreign' })
-    await joinAll(server, older.code, [member!])
-    await joinAll(server, foreign.code, [host])
+    const [member, other] = await signInMany(server, 2)
+    const mine = await createRoom(server, host, { gameId, name: 'Mine' })
+    const older = await createRoom(server, member!, { gameId, name: 'Older' })
+    const newer = await createRoom(server, other!, { gameId, name: 'Newer' })
+    await joinAll(server, mine.code, [member!])
+    await joinAll(server, older.code, [host])
+    await joinAll(server, newer.code, [host])
 
     const response = await get(server, '/api/rooms/my', host)
 
     expect(response.statusCode).toBe(200)
     const body = response.json<{ hosted: unknown[]; joined: unknown[] }>()
-    expect(body.hosted).toMatchObject([
-      { id: newer.id, memberCount: 1, isMember: true },
+    expect(body.hosted).toMatchObject([{ id: mine.id, memberCount: 2, isMember: true }])
+    expect(body.joined).toMatchObject([
+      { id: newer.id, memberCount: 2, isMember: true },
       { id: older.id, memberCount: 2, isMember: true },
     ])
-    expect(body.joined).toMatchObject([{ id: foreign.id, memberCount: 2, isMember: true }])
   })
 
   it('requires authentication', async () => {

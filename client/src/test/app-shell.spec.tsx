@@ -6,7 +6,12 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { UserNotification } from '@/types'
-import { boardSquads, squadReadyNotification } from './fixtures'
+import {
+  boardSquads,
+  roomClosedNotification,
+  squadReadyNotification,
+  type RoomReadyNotification,
+} from './fixtures'
 import { renderSquadsFlow } from './harness'
 import { httpOk, onHttp } from './http-router'
 import type { FakeSessionUser } from './stubs'
@@ -16,7 +21,11 @@ const BETA_ID = '3f1c2b4a-5d6e-4f70-8a9b-0c1d2e3f4a5b'
 
 let notifications: UserNotification[] = []
 
-function squadNotification(id: string, squadName: string, readAt: string | null): UserNotification {
+function squadNotification(
+  id: string,
+  squadName: string,
+  readAt: string | null
+): RoomReadyNotification {
   return {
     ...squadReadyNotification,
     id,
@@ -87,6 +96,20 @@ describe('shell navigation', () => {
 
     navigation.history.push('/')
     await waitFor(() => expect(allSquads).not.toHaveAttribute('aria-current'))
+  })
+
+  it('sends a closed squad notification to the Squad Board, because its Lobby is gone', async () => {
+    notifications = [roomClosedNotification]
+    const { user, navigation } = renderShell('/squads')
+
+    await user.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }))
+    await user.click(
+      await screen.findByRole('link', {
+        name: `${roomClosedNotification.payload.roomName} was closed, Unread`,
+      })
+    )
+
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads' }])
   })
 
   it('hands a squad notification to the Next router', async () => {

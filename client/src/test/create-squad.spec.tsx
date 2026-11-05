@@ -1817,7 +1817,9 @@ describe('create squad — server error', () => {
     await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
     await waitFor(() =>
-      expect(toastStore.errorCalls[0]).toBe('You have reached the maximum number of active squads.')
+      expect(toastStore.errorCalls[0]).toBe(
+        'You already have an open squad. Close or complete it before creating another.'
+      )
     )
     expect(screen.getByLabelText('Discord invite link')).toBeInTheDocument()
     expect(countHttpCalls('POST', '/api/rooms')).toBe(1)

@@ -51,10 +51,13 @@ export class ListNotificationsUseCase implements IListNotificationsUseCase {
 
     return {
       notifications: notifications.map((notification) => {
-        // The payload never stores the invite: it is resolved here, and only
-        // while the room is still retained. A notification may outlive its
-        // room without ever revealing the link.
-        const room = notification.roomId ? roomsById.get(notification.roomId) : undefined
+        // The payload never stores the invite: it is resolved here, only for a
+        // `room_ready` and only while the room is still retained. A notification may
+        // outlive its room without ever revealing the link, and no other type has one.
+        const room =
+          notification.type === 'room_ready' && notification.roomId
+            ? roomsById.get(notification.roomId)
+            : undefined
         const discordLink = room && !isRoomExpired(room, now, ROOM) ? room.discordLink : null
         return { notification, discordLink }
       }),

@@ -10,6 +10,7 @@ import {
   InvalidGameError,
   PlatformNotAvailableError,
   RoomCreateLimitReachedError,
+  RoomJoinLimitReachedError,
   UserNotFoundError,
 } from '@application/errors'
 import {
@@ -21,6 +22,7 @@ import {
   createMockUser,
   createMockUserRepository,
 } from '@test/mocks'
+import { ROOM } from '@config/constants'
 
 describe('CreateRoomUseCase', () => {
   let useCase: CreateRoomUseCase
@@ -308,6 +310,25 @@ describe('CreateRoomUseCase', () => {
       expect(mockRoomRepository.create).toHaveBeenCalledOnce()
     })
 
+    it('should throw RoomJoinLimitReachedError when the transaction reports the Membership limit', async () => {
+      const game = createMockGame({ id: 'game-123' })
+      mockGameRepository.findById.mockResolvedValue(game)
+      mockRoomRepository.create.mockResolvedValue({ status: 'join_limit_reached' })
+
+      const attempt = useCase.execute({
+        name: 'Test Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        discordLink: 'https://discord.gg/test',
+      })
+
+      await expect(attempt).rejects.toThrow(RoomJoinLimitReachedError)
+      await expect(attempt).rejects.toMatchObject({
+        code: 'ROOM_JOIN_LIMIT_REACHED',
+        message: `You can only be in ${ROOM.JOIN_LIMIT} open squads at a time`,
+      })
+    })
+
     describe('Discord invite check', () => {
       const input = {
         name: 'My Room',
@@ -378,7 +399,7 @@ describe('CreateRoomUseCase', () => {
       })
     })
 
-    it('should allow room creation when user hosts 2 valid rooms (below limit)', async () => {
+    it('should allow room creation when the transaction finds the user below both limits', async () => {
       const game = createMockGame({ id: 'game-123', maxPlayers: 5 })
       mockGameRepository.findById.mockResolvedValue(game)
 

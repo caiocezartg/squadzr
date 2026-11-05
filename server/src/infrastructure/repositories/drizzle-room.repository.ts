@@ -17,6 +17,7 @@ import {
   mapRoomRowToEntity,
 } from './room-mapping'
 import { memberPreviewColumn } from './member-preview'
+import { countActiveMemberships, countHostedOpenRooms } from './room-limits'
 import { lockUserRow } from './user-lock'
 
 /**
@@ -200,23 +201,26 @@ export class DrizzleRoomRepository implements IRoomRepository {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
         return await this.db.transaction(async (tx) => {
-          // Per-host limit: the user row is locked before the count and the
+          // Per-user limits: the user row is locked before the counts and the
           // insert, so two concurrent creations by one host cannot both read a
-          // count below the limit. This path only inserts a brand-new room row
-          // (never locks an existing one), so its user-first order cannot cycle
-          // with the room-then-user order of `joinOpenRoom`; see `lockUserRow`.
+          // count below the limit, and a Squad Release that would make this person
+          // host waits for it. This path only inserts a brand-new room row (never
+          // locks an existing one), so its user-first order cannot cycle with the
+          // order of `joinOpenRoom`; see `lockUserRow`.
           await lockUserRow(tx, input.hostId)
 
           // Read once after the lock wait: the host-limit cutoff, room and host
           // Membership all use the current instant, including on code retries.
           const now = this.clock.now()
 
-          const hostedRows = await tx
-            .select({ currentCount: count() })
-            .from(rooms)
-            .where(and(eq(rooms.hostId, input.hostId), validOpenRoomCondition(now)))
-          const hostedCount = hostedRows[0]?.currentCount ?? 0
-          if (hostedCount >= ROOM.CREATE_LIMIT) return { status: 'limit_reached' }
+          // Both limits, hosting first: hosting a Squad is also a Membership, so a person
+          // at the Membership limit who hosts nothing is the one `join_limit_reached` is for.
+          if ((await countHostedOpenRooms(tx, input.hostId, now)) >= ROOM.CREATE_LIMIT) {
+            return { status: 'limit_reached' }
+          }
+          if ((await countActiveMemberships(tx, input.hostId, now)) >= ROOM.JOIN_LIMIT) {
+            return { status: 'join_limit_reached' }
+          }
 
           const roomRows = await tx
             .insert(rooms)

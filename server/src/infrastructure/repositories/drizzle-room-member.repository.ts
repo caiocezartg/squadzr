@@ -17,12 +17,24 @@ import { mapCreatedRoomRowToEntity, mapRoomMemberRowToEntity } from './room-mapp
 import { lockUserRow } from './user-lock'
 import {
   advanceRoomActivity,
-  emitReadyNotifications,
+  emitNotifications,
   insertMembership,
   joinedOutcome,
+  loadRoster,
   lockRoomRow,
   validateJoin,
 } from './room-join-steps'
+import { releaseMembersFromOtherOpenRooms } from './squad-release-steps'
+
+/** A join PostgreSQL aborts for a deadlock runs again, this many attempts in all. */
+const JOIN_MAX_ATTEMPTS = 3
+const DEADLOCK_DETECTED = '40P01'
+
+function isDeadlock(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false
+  const candidate = error as { code?: unknown; cause?: unknown }
+  return candidate.code === DEADLOCK_DETECTED || isDeadlock(candidate.cause)
+}
 
 export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
   constructor(
@@ -59,6 +71,19 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
   }
 
   async joinOpenRoom(input: JoinOpenRoomInput): Promise<JoinOpenRoomOutcome> {
+    // Two Squads that become Ready at once with a member in common each lock the other
+    // in the Squad Release. PostgreSQL aborts one of them; it runs again from the start,
+    // where the winner has already taken the shared member out of its Squad.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.joinOpenRoomOnce(input)
+      } catch (error) {
+        if (attempt >= JOIN_MAX_ATTEMPTS || !isDeadlock(error)) throw error
+      }
+    }
+  }
+
+  private joinOpenRoomOnce(input: JoinOpenRoomInput): Promise<JoinOpenRoomOutcome> {
     return this.db.transaction(async (tx) => {
       // Lock: the room row first, which serializes joins and leaves on this Room, then
       // the joining user's row, which serializes the per-user limits. Both waits end
@@ -85,6 +110,7 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
           memberCount: validation.currentCount,
           becameReady: false,
           notifications: [],
+          departures: [],
         })
       }
 
@@ -92,16 +118,42 @@ export class DrizzleRoomMemberRepository implements IRoomMemberRepository {
       const becameReady = memberCount >= room.maxPlayers
       await advanceRoomActivity(tx, { roomId: room.id, now, becameReady })
 
-      // Emit Ready notifications: only the join that takes the last seat emits them.
-      const notifications =
-        becameReady && input.buildReadyNotifications
-          ? await emitReadyNotifications(tx, {
-              roomId: room.id,
-              buildReadyNotifications: input.buildReadyNotifications,
-            })
-          : []
+      if (!becameReady) {
+        return joinedOutcome({
+          member: insertion.member,
+          memberCount,
+          becameReady,
+          notifications: [],
+          departures: [],
+        })
+      }
 
-      return joinedOutcome({ member: insertion.member, memberCount, becameReady, notifications })
+      // Squad Release: the join that takes the last seat takes every member out of their
+      // other Open Squads, then emits the notifications. Both are in this transaction.
+      const roster = await loadRoster(tx, room.id)
+      const departures = await releaseMembersFromOtherOpenRooms(tx, {
+        roomId: room.id,
+        memberIds: roster.members.map((member) => member.userId),
+        now,
+      })
+      const notifications = await emitNotifications(tx, {
+        roster,
+        departures,
+        ...(input.buildReadyNotifications
+          ? { buildReadyNotifications: input.buildReadyNotifications }
+          : {}),
+        ...(input.buildDepartureNotifications
+          ? { buildDepartureNotifications: input.buildDepartureNotifications }
+          : {}),
+      })
+
+      return joinedOutcome({
+        member: insertion.member,
+        memberCount,
+        becameReady,
+        notifications,
+        departures,
+      })
     })
   }
 
