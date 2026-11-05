@@ -11,9 +11,9 @@ import { useMounted } from './use-mounted'
 /**
  * A panel that rises from the bottom edge. It takes the same props as a popover, so a popover can
  * stand in for it on narrow screens. It is modal: focus stays inside, Escape and the backdrop close
- * it, and focus returns to the trigger. Reduced motion swaps the slide for a fade. A sheet a parent
- * mounts already open (a popover that crossed 640px while open) is first rendered closed and opened
- * right after, so it still slides in.
+ * it, and focus returns to the trigger. Reduced motion swaps the slide for a fade. A sheet whose
+ * parent passes `open` already true (a popover that crossed 640px while open) is first rendered
+ * closed and opened right after, so it still slides in; `defaultOpen` alone skips that step.
  */
 export function BottomSheet({
   trigger,

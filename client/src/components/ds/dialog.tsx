@@ -38,9 +38,10 @@ interface DialogProps {
  * The panel is flush: the heading carries its own padding and the content sets its own. Reduced
  * motion keeps the fade and drops the movement.
  *
- * Base UI plays the enter only when `open` turns true after the dialog mounted, so a dialog that a
- * parent mounts already open is first rendered closed and opened right after. The exit needs the
- * dialog to stay mounted until `onOpenChangeComplete(false)`.
+ * Base UI plays the enter only when `open` turns true after the dialog mounted, so a dialog whose
+ * parent passes `open` already true is first rendered closed and opened right after; `defaultOpen`
+ * alone skips that step. The exit needs the dialog to stay mounted until
+ * `onOpenChangeComplete(false)`.
  */
 export function Dialog({
   title,
