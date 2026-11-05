@@ -5,3 +5,4 @@ import 'server-only'
  * It stays apart from the `page` entry, which carries client views.
  */
 export { prefetchAuditEntriesAndWait } from './audit/prefetch-audit'
+export { prefetchAdminUserAndWait, prefetchAdminUsersAndWait } from './users/prefetch-users'

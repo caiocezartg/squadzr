@@ -445,6 +445,9 @@
     "UNAUTHORIZED": "Você precisa fazer login para fazer isso.",
     "ADMIN_REQUIRED": "Só administradores podem fazer isso.",
     "INTERNAL_ERROR": "Algo deu errado. Por favor, tente novamente mais tarde.",
+    "USER_NOT_FOUND": "Não encontramos esse usuário.",
+    "CANNOT_CHANGE_OWN_ROLE": "Você não pode alterar o seu próprio papel.",
+    "LAST_ADMIN": "É preciso manter ao menos um admin, então este papel não pode ser removido.",
     "DEFAULT": "Algo deu errado. Por favor, tente novamente."
   },
   "playerProfile": {
@@ -505,7 +508,93 @@
     },
     "users": {
       "title": "Usuários",
-      "description": "Encontre pessoas e gerencie quem é admin."
+      "description": "Encontre pessoas e gerencie quem é admin.",
+      "search": {
+        "label": "Buscar usuários",
+        "placeholder": "Buscar por nome, ID do Discord ou ID do usuário"
+      },
+      "tableLabel": "Usuários",
+      "columns": {
+        "user": "Usuário",
+        "discordId": "ID do Discord",
+        "joined": "Entrou em",
+        "role": "Papel",
+        "openSquads": "Squads abertos"
+      },
+      "roles": {
+        "user": "Usuário",
+        "admin": "Admin"
+      },
+      "noDiscord": "Sem conta do Discord",
+      "openSquadsCount": "{count, plural, one {# squad aberto} other {# squads abertos}}",
+      "empty": {
+        "title": "Nenhum usuário ainda",
+        "description": "As pessoas aparecem aqui quando entram com o Discord."
+      },
+      "noMatch": {
+        "title": "Nenhum usuário encontrado para “{search}”",
+        "description": "Tente outro nome, ID do Discord ou ID do usuário.",
+        "action": "Limpar a busca"
+      },
+      "pastEnd": {
+        "title": "Nenhum usuário nesta página",
+        "action": "Ir para a primeira página"
+      },
+      "loading": "Carregando os usuários",
+      "loadError": "Não foi possível carregar os usuários.",
+      "retry": "Tentar de novo",
+      "detail": {
+        "caption": "Admin · Usuários",
+        "back": "Todos os usuários",
+        "fallbackTitle": "Usuário",
+        "discordId": "ID do Discord · {id}",
+        "noDiscord": "Sem conta do Discord",
+        "joined": "Membro desde {date}",
+        "online": "Online agora",
+        "offline": "Offline",
+        "role": {
+          "label": "Papel",
+          "own": "Você não pode mudar o seu próprio papel.",
+          "hint": "A mudança vale na próxima requisição da pessoa e fica na auditoria.",
+          "changed": "{name} agora é {role, select, admin {admin} other {usuário}}."
+        },
+        "dialog": {
+          "title": "{role, select, admin {Tornar {name} admin?} other {Tornar {name} usuário?}}",
+          "body": "{role, select, admin {{name} passa a acessar o painel de admin a partir da próxima requisição.} other {{name} perde o acesso ao painel de admin a partir da próxima requisição.}} A mudança fica registrada na auditoria.",
+          "confirm": "Confirmar",
+          "confirming": "Alterando…",
+          "cancel": "Cancelar"
+        },
+        "limits": {
+          "title": "Limites de squads",
+          "held": "Squads abertos",
+          "hosted": "Hospedando",
+          "usage": "{used} / {limit}",
+          "usageLabel": "{used} de {limit}"
+        },
+        "openSquads": {
+          "caption": "Agora",
+          "title": "Squads abertos",
+          "host": "Host",
+          "meta": "{game} · {members}/{max}",
+          "empty": "Não está em nenhum squad aberto agora."
+        },
+        "history": {
+          "caption": "Histórico",
+          "title": "Últimos completados",
+          "completed": "Squads completados",
+          "games": "Jogos",
+          "latest": "Últimos squads completados",
+          "meta": "{game} · {count, plural, one {# jogador} other {# jogadores}}",
+          "empty": "Nenhum squad completado ainda."
+        },
+        "notFound": {
+          "title": "Usuário não encontrado",
+          "description": "Este usuário não existe ou a conta foi apagada."
+        },
+        "loading": "Carregando o usuário",
+        "loadError": "Não foi possível carregar este usuário."
+      }
     },
     "catalog": {
       "title": "Catalog Import",

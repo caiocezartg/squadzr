@@ -2,7 +2,7 @@ import type { PlayerProfileDto, ProfileGameDto } from '@squadzr/schemas'
 import type { PlayerStats, ProfileGame } from '@domain/entities/squad-record.entity'
 import type { User } from '@domain/entities/user.entity'
 
-function toProfileGameDto(game: ProfileGame): ProfileGameDto {
+export function toProfileGameDto(game: ProfileGame): ProfileGameDto {
   return {
     id: game.id,
     name: game.name,

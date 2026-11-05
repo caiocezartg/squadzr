@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { requireAdmin } from '@interface/hooks/admin.hook'
 import { adminAuditRoutes } from './admin-audit.routes'
+import { adminUsersRoutes } from './admin-users.routes'
 
 /**
  * Every `/api/admin/*` route. The guard is a hook of this plugin's scope, so a route added to it is
@@ -13,4 +14,5 @@ export async function adminRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.addHook('preValidation', requireAdmin)
 
   await fastify.register(adminAuditRoutes)
+  await fastify.register(adminUsersRoutes)
 }
