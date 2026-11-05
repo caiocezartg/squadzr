@@ -5,6 +5,7 @@ import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
 import type { Clock } from '@domain/services/clock.interface'
+import type { SquadDeparture } from '@domain/services/squad-release'
 import {
   RoomNotFoundError,
   RoomFullError,
@@ -12,6 +13,7 @@ import {
   RoomReadyError,
 } from '@application/errors'
 import { buildRoomReadyNotifications } from './helpers/room-ready-notifications'
+import { buildSquadReleaseNotifications } from './helpers/squad-release-notifications'
 import { findUnexpiredRoomByCode } from './helpers/find-unexpired-room-by-code'
 import { ROOM } from '@config/constants'
 
@@ -28,6 +30,8 @@ export interface JoinRoomOutput {
   readonly isRoomNowFull: boolean
   /** Persisted by the join transaction; pushed best-effort after commit. */
   readonly createdNotifications: readonly UserNotification[]
+  /** What the Squad Release did to each other Open Squad; empty unless this join made the Squad Ready. */
+  readonly departures: readonly SquadDeparture[]
 }
 
 export interface IJoinRoomUseCase {
@@ -58,6 +62,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
         memberCount,
         isRoomNowFull: false,
         createdNotifications: [],
+        departures: [],
       }
     }
 
@@ -70,14 +75,17 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
     const outcome = await this.roomMemberRepository.joinOpenRoom({
       roomId: room.id,
       userId: input.userId,
-      buildReadyNotifications: (authoritativeMembers, users) =>
+      buildReadyNotifications: (authoritativeMembers, users, departures) =>
         buildRoomReadyNotifications({
           room,
           members: authoritativeMembers,
           users,
           gameName,
+          departures,
           ...(gameCoverUrl === undefined ? {} : { gameCoverUrl }),
         }),
+      buildDepartureNotifications: (departures, users) =>
+        buildSquadReleaseNotifications({ departures, users }),
     })
 
     switch (outcome.status) {
@@ -88,6 +96,7 @@ export class JoinRoomUseCase implements IJoinRoomUseCase {
           memberCount: outcome.memberCount,
           isRoomNowFull: outcome.becameReady,
           createdNotifications: outcome.notifications,
+          departures: outcome.departures,
         }
       case 'full':
         // Capacity is decided before readiness so the seat race loser keeps the

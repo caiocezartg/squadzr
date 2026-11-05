@@ -1,6 +1,5 @@
 import { Bell, CheckCheck } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { lobbyHref } from '@/lib/squad-links'
 import { NotificationItem } from '@/components/ds/notification-item'
 import type { UserNotification } from '@/types'
 
@@ -63,12 +62,7 @@ export function NotificationsPanel({
           {notifications.map((notification) => (
             <NotificationItem
               key={notification.id}
-              squadName={notification.payload.roomName}
-              gameName={notification.payload.gameName}
-              coverUrl={notification.payload.gameCoverUrl}
-              createdAt={notification.createdAt}
-              unread={notification.readAt === null}
-              href={lobbyHref(notification.payload.roomCode)}
+              notification={notification}
               disabled={busy}
               onOpen={() => onOpen(notification)}
               onDismiss={() => onDismiss(notification)}

@@ -12,6 +12,7 @@ import {
   InvalidGameError,
   PlatformNotAvailableError,
   RoomCreateLimitReachedError,
+  RoomJoinLimitReachedError,
   UserNotFoundError,
 } from '@application/errors'
 import { ROOM } from '@config/constants'
@@ -77,6 +78,9 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
     if (outcome.status === 'limit_reached') {
       throw new RoomCreateLimitReachedError(ROOM.CREATE_LIMIT)
+    }
+    if (outcome.status === 'join_limit_reached') {
+      throw new RoomJoinLimitReachedError(ROOM.JOIN_LIMIT)
     }
 
     // The Game read to validate `gameId` is the one the response and the

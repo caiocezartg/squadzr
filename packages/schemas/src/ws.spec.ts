@@ -58,7 +58,7 @@ const notification = {
 }
 
 const serverMessages = [
-  { type: 'protocol', payload: { version: 4 } },
+  { type: 'protocol', payload: { version: 5 } },
   {
     type: 'room_snapshot',
     payload: {
@@ -198,14 +198,14 @@ describe('member presence', () => {
 })
 
 describe('REALTIME_PROTOCOL_VERSION', () => {
-  it('is 4 and is the only version the protocol message accepts', () => {
-    expect(REALTIME_PROTOCOL_VERSION).toBe(4)
+  it('is 5 and is the only version the protocol message accepts', () => {
+    expect(REALTIME_PROTOCOL_VERSION).toBe(5)
     expect(
-      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 4 } })
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 5 } })
         .success
     ).toBe(true)
     expect(
-      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 3 } })
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 4 } })
         .success
     ).toBe(false)
   })
@@ -272,6 +272,69 @@ describe('member preview on realtime payloads', () => {
     expect(
       wsServerMessageSchema.safeParse({ type: 'room_created', timestamp: 0, payload: { room } })
         .success
+    ).toBe(false)
+  })
+})
+
+describe('notification pushes of every type', () => {
+  const squad = {
+    roomId: ROOM_ID,
+    roomCode: 'ABC123',
+    roomName: 'Ranked 5v5',
+    gameName: 'League of Legends',
+  }
+  const person = { name: 'Caio', image: null }
+  const base = {
+    id: notification.id,
+    userId: 'user-1',
+    title: 'Title',
+    message: 'Message',
+    readAt: null,
+    createdAt: '2026-09-27T12:30:00.000Z',
+  }
+  const pushes = [
+    {
+      ...base,
+      type: 'room_ready',
+      payload: {
+        ...squad,
+        players: [person],
+        discordLink: INVITE,
+        leftSquads: [{ roomCode: 'DEF456', roomName: 'Other' }],
+      },
+    },
+    {
+      ...base,
+      type: 'host_transferred',
+      payload: { ...squad, previousHost: person, reason: 'squad_completed' },
+    },
+    {
+      ...base,
+      type: 'member_left',
+      payload: { ...squad, member: person, reason: 'squad_completed' },
+    },
+    {
+      ...base,
+      type: 'room_closed',
+      payload: { ...squad, previousHost: person, reason: 'no_eligible_host' },
+    },
+  ]
+
+  it.each(pushes.map((push) => [push.type, push] as const))('accepts a %s push', (_type, push) => {
+    const message = { type: 'notification', timestamp: 1, payload: { notification: push } }
+
+    expect(wsServerMessageSchema.parse(message)).toEqual(message)
+  })
+
+  it('rejects a push whose payload belongs to another type', () => {
+    const crossed = { ...pushes[1], type: 'member_left' }
+
+    expect(
+      wsServerMessageSchema.safeParse({
+        type: 'notification',
+        timestamp: 1,
+        payload: { notification: crossed },
+      }).success
     ).toBe(false)
   })
 })

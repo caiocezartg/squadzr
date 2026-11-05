@@ -181,11 +181,20 @@
       "bellUnread": "Notifications, {count} unread",
       "title": "Notifications",
       "markAllRead": "Mark all as read",
-      "message": "Discord invite unlocked",
+      "roomReady": "Squad complete · invite unlocked",
+      "leftSquads": "You left {count, plural, one {1 other squad} other {# other squads}}: {squads}.",
+      "hostTransferred": "You are the new owner · {name} left",
+      "memberLeft": "{name} left · joined another squad that filled",
+      "roomClosed": "Squad closed · the owner left and nobody could take over",
+      "label": {
+        "hostTransferred": "You are the new owner of {squad}",
+        "memberLeft": "{name} left {squad}",
+        "roomClosed": "{squad} was closed"
+      },
       "unread": "Unread",
       "dismiss": "Dismiss notification for {squad}",
       "emptyTitle": "All caught up",
-      "emptyHint": "When one of your squads fills up, the invite lands here."
+      "emptyHint": "When something happens in your squads, it shows up here."
     },
     "notice": {
       "emptySlots": "Nobody here"
@@ -420,8 +429,8 @@
     "ROOM_READY": "This squad is ready — members cannot leave.",
     "SQUAD_READY_JOIN": "This squad is already full and ready — it's no longer accepting players.",
     "NOT_ROOM_MEMBER": "You are not a member of this squad.",
-    "ROOM_CREATE_LIMIT_REACHED": "You have reached the maximum number of active squads.",
-    "ROOM_JOIN_LIMIT_REACHED": "You have reached the maximum number of squads you can join.",
+    "ROOM_CREATE_LIMIT_REACHED": "You already have an open squad. Close or complete it before creating another.",
+    "ROOM_JOIN_LIMIT_REACHED": "You are already in 3 open squads. Leave one to join another.",
     "VALIDATION_ERROR": "Please check the form fields and try again.",
     "UNAUTHORIZED": "You need to sign in to do this.",
     "INTERNAL_ERROR": "Something went wrong. Please try again later.",

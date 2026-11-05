@@ -16,7 +16,13 @@ import { NARROW_QUERY } from '@/components/ds/use-media-query'
 import type { UserNotification } from '@/types'
 import { createTestQueryClient } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp } from './http-router'
-import { squadReadyNotification } from './fixtures'
+import {
+  hostTransferredNotification,
+  memberLeftNotification,
+  roomClosedNotification,
+  squadReadyNotification,
+  type RoomReadyNotification,
+} from './fixtures'
 import { mockMediaQuery } from './media-query'
 import { createHarnessNavigation } from './navigation'
 import { signInAsFakeUser, toastStore } from './stubs'
@@ -30,7 +36,7 @@ function squadNotification(
   squadName: string,
   roomCode: string,
   readAt: string | null
-): UserNotification {
+): RoomReadyNotification {
   return {
     ...squadReadyNotification,
     id,
@@ -121,7 +127,7 @@ describe('the bell and its panel', () => {
     await openNotifications(user, 2)
 
     const panel = await screen.findByRole('dialog', { name: 'Notifications' })
-    expect(within(panel).getAllByText('Discord invite unlocked')).toHaveLength(2)
+    expect(within(panel).getAllByText('Squad complete · invite unlocked')).toHaveLength(2)
     expect(within(panel).getAllByText('Unread')).toHaveLength(2)
     expect(squadEntry(/^Alpha squad/)).toBeInTheDocument()
     expect(squadEntry(/^Beta squad/)).toBeInTheDocument()
@@ -162,7 +168,7 @@ describe('the bell and its panel', () => {
 
     expect(await screen.findByText('All caught up')).toBeInTheDocument()
     expect(
-      screen.getByText('When one of your squads fills up, the invite lands here.')
+      screen.getByText('When something happens in your squads, it shows up here.')
     ).toBeInTheDocument()
     expect(screen.getByRole('button', MARK_ALL)).toBeDisabled()
   })
@@ -236,6 +242,40 @@ describe('the panel code loaded on idle', () => {
     )
 
     expect(screen.getByRole('button', { name: 'Notifications, 2 unread' })).toHaveFocus()
+  })
+})
+
+describe('every notification type in the panel', () => {
+  it('draws each type with its own message and media in one list', async () => {
+    notifications = [
+      squadNotification(ALPHA_ID, 'Alpha squad', 'ALPHA1', null),
+      { ...hostTransferredNotification, id: 'a1b2c3d4-1001-4e5f-8a6b-1c2d3e4f5a6b' },
+      { ...memberLeftNotification, id: 'a1b2c3d4-1002-4e5f-8a6b-1c2d3e4f5a6b' },
+      { ...roomClosedNotification, id: 'a1b2c3d4-1003-4e5f-8a6b-1c2d3e4f5a6b' },
+    ]
+    const user = renderShell()
+    await openNotifications(user, 4)
+
+    const panel = await screen.findByRole('dialog', { name: 'Notifications' })
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(4)
+    expect(within(panel).getByText('Squad complete · invite unlocked')).toBeInTheDocument()
+    expect(within(panel).getByText('You are the new owner · Caio left')).toBeInTheDocument()
+    expect(
+      within(panel).getByText('Ana left · joined another squad that filled')
+    ).toBeInTheDocument()
+    expect(
+      within(panel).getByText('Squad closed · the owner left and nobody could take over')
+    ).toBeInTheDocument()
+  })
+
+  it('draws them in the bottom sheet below 640px too', async () => {
+    mockMediaQuery(NARROW_QUERY, true)
+    notifications = [memberLeftNotification, roomClosedNotification]
+    const user = renderShell()
+    await openNotifications(user, 2)
+
+    const sheet = await screen.findByRole('dialog', { name: 'Notifications' })
+    expect(within(sheet).getAllByRole('listitem')).toHaveLength(2)
   })
 })
 
@@ -339,7 +379,7 @@ describe('game cover in the bell', () => {
 
   it('shows the game cover when the notification carries one', async () => {
     notifications = notifications.map((notification) =>
-      notification.id === ALPHA_ID
+      notification.id === ALPHA_ID && notification.type === 'room_ready'
         ? { ...notification, payload: { ...notification.payload, gameCoverUrl: COVER_URL } }
         : notification
     )

@@ -289,7 +289,10 @@ export function readyLobbySnapshot(overrides: Partial<LobbySnapshot> = {}): Lobb
   })
 }
 
-export const squadReadyNotification: UserNotification = {
+/** A `room_ready` notification: the one with a Discord invite and the roster. */
+export type RoomReadyNotification = Extract<UserNotification, { type: 'room_ready' }>
+
+export const squadReadyNotification: RoomReadyNotification = {
   id: '9b2f7a1e-4c3d-4e5f-8a6b-1c2d3e4f5a6b',
   userId: 'user-1',
   type: 'room_ready',
@@ -305,4 +308,59 @@ export const squadReadyNotification: UserNotification = {
   },
   readAt: null,
   createdAt: hoursAgo(0),
+}
+
+const squadNotificationFields = {
+  userId: 'user-1',
+  readAt: null,
+  createdAt: hoursAgo(0),
+}
+const squadNotificationPayload = {
+  roomId: lobbySquad.id,
+  roomCode: lobbySquad.code,
+  roomName: lobbySquad.name,
+  gameName: gameLol.name,
+}
+
+/** The viewer inherited the Squad because its owner left (a Squad Release). */
+export const hostTransferredNotification: Extract<UserNotification, { type: 'host_transferred' }> =
+  {
+    ...squadNotificationFields,
+    id: 'a1b2c3d4-0001-4e5f-8a6b-1c2d3e4f5a6b',
+    type: 'host_transferred',
+    title: 'You are the new squad owner',
+    message: 'You now own the squad.',
+    payload: {
+      ...squadNotificationPayload,
+      previousHost: { name: hostPlayer.name, image: hostPlayer.image },
+      reason: 'squad_completed',
+    },
+  }
+
+/** A member of the viewer's Squad left for another one of theirs that filled. */
+export const memberLeftNotification: Extract<UserNotification, { type: 'member_left' }> = {
+  ...squadNotificationFields,
+  id: 'a1b2c3d4-0002-4e5f-8a6b-1c2d3e4f5a6b',
+  type: 'member_left',
+  title: 'A member left your squad',
+  message: 'A member left the squad.',
+  payload: {
+    ...squadNotificationPayload,
+    member: { name: guestPlayer.name, image: null },
+    reason: 'squad_completed',
+  },
+}
+
+/** The viewer's Squad was closed: nobody who stayed could take over. */
+export const roomClosedNotification: Extract<UserNotification, { type: 'room_closed' }> = {
+  ...squadNotificationFields,
+  id: 'a1b2c3d4-0003-4e5f-8a6b-1c2d3e4f5a6b',
+  type: 'room_closed',
+  title: 'Squad closed',
+  message: 'The squad was closed.',
+  payload: {
+    ...squadNotificationPayload,
+    previousHost: { name: hostPlayer.name, image: hostPlayer.image },
+    reason: 'no_eligible_host',
+  },
 }

@@ -1,7 +1,9 @@
 export const ROOM = {
   CODE_LENGTH: 6,
-  CREATE_LIMIT: 3,
-  JOIN_LIMIT: 5,
+  /** Open Squads a person may host at once, also when a Host Transfer would make them host. */
+  CREATE_LIMIT: 1,
+  /** Memberships in valid Open Squads a person may hold at once, the one they host included. */
+  JOIN_LIMIT: 3,
   CLEANUP_INTERVAL_MS: 60_000,
   NOTIFICATION_LIMIT: 20,
   /** An Open Room expires 24h after its last durable Membership change. */

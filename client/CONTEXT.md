@@ -15,3 +15,7 @@ _Avoid_: Squad Board, room page, waiting room
 **My Squads**:
 The view of the Squads a player hosts or holds a Membership in, including Ready Squads during their retention.
 _Avoid_: My Rooms, dashboard, my lobbies
+
+**Notification**:
+One row of the bell's panel, one per action that happened to the viewer's Squads, drawn by its type with its own media, badge and message: a Squad that filled (the game cover with a Discord badge, and the Squads the viewer left for it), a Squad the viewer inherited (the cover with a crown), a member who left (their avatar), and a Squad that was closed (a grey cover). All but the last open the Squad's Lobby; a closed Squad has no Lobby, so its row opens the Squad Board. Any notification pushed to the viewer also reads My Squads again, because a Squad Release changes the viewer's list.
+_Avoid_: Alert, toast, message

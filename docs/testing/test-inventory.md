@@ -23,11 +23,31 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 39     | 302   |
-| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 36     | 381   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 91     | 1030  |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 187   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 43     | 336   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 40     | 404   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 91     | 1044  |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 203   |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
+
+Issue #112 (Squad Release, Host Transfer, Squad Limits of 1 hosted and 3 joined, one notification type per action)
+recounts every row. `server:unit` adds 4 files and 34 tests: `choose-next-host.spec.ts` (5: the oldest member, the tie on
+`joinedAt` by `userId`, the ineligible skipped, nobody eligible, an empty Squad), `squad-release.spec.ts` (10: the plan for a
+leaver, a host handed over, an ineligible member skipped, a closed Squad, a deleted Squad, the same heir of two Squads taking
+only the first, the order of the Squads, and the candidates who need locking), `squad-release-notifications.spec.ts` (7: the
+four notifications and who gets each), `notification.projection.spec.ts` (7: each type in the contract, the invite only on
+`room_ready`, `leftSquads`) plus cases in `room-ready-notifications.spec.ts` (3: `leftSquads`), `list-notifications` (1: no
+invite for another type) and `create-room` (1: the Membership limit). `server:integration` adds 4 files and 23 tests:
+`squad-release-postgres.test.ts` (12: host handed over, tie, skipped host, heir of two Squads, one `member_left` per leaver and
+two for two releases, a closed and a deleted Squad, Ready and expired Squads untouched, no release when the Squad does not fill,
+a manual host leave still deleting the Squad), `squad-release-concurrency.test.ts` (3: crossed releases that deadlock and run
+again, and a `create` by the heir racing the release in both orders), `squad-release-realtime.test.ts` (3: snapshot, revoked
+leaver, board events and pushes) and `notification-types-migration.test.ts` (1: migration 0008 on a database with
+notifications); the Membership limit on create adds 5 cases to `rooms-postgres`, the crossed final joins of
+`room-limit-concurrency` move to the new concurrency suite, and the suites that created several Squads with one host now use
+one host per Squad. `schemas:unit` goes from 187 to 203 (the notification union per type, the legacy `room_ready`, the
+protocol at version 5). `client:unit` goes from 1030 to 1044: `notification-item.spec.tsx` covers every type (the media, badge,
+message, accessible name and link, 17 tests, from 7), `notifications.spec.tsx` the four types in the panel, `app-shell.spec.tsx`
+the closed Squad opening the Squad Board and `my-squads.spec.tsx` the sidebar reading again on a pushed notification.
 
 Issue #100 (Game Search by acronym and nickname) adds two server unit files, `search-text.spec.ts` and
 `game-aliases.spec.ts`, and extends the IGDB adapter suite, so `server:unit` goes from 37 files / 264 tests

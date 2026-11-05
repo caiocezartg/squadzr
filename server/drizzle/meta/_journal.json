@@ -57,6 +57,13 @@
       "when": 1793766881661,
       "tag": "0007_abandoned_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793847371356,
+      "tag": "0008_wandering_tarantula",
+      "breakpoints": true
     }
   ]
 }

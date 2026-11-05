@@ -29,8 +29,24 @@ A Squad that is accepting new memberships while it is being formed.
 _Avoid_: Open Room, waiting room, active room
 
 **Ready Squad**:
-A Squad that has reached its required capacity and no longer accepts membership changes.
+A Squad that has reached its required capacity and no longer accepts membership changes. The join that fills it also runs the Squad Release of its members.
 _Avoid_: Ready Room, completed room, waiting room
+
+**Squad Limits**:
+How many Open Squads one person can be in, both counted over valid Open Squads at the moment of the write. A person hosts at most 1 Open Squad (`ROOM.CREATE_LIMIT`), also when a Host Transfer would make them host, and holds at most 3 Memberships in Open Squads (`ROOM.JOIN_LIMIT`), the one they host included. Creating a Squad checks both, the host limit first (422 `ROOM_CREATE_LIMIT_REACHED`, then 422 `ROOM_JOIN_LIMIT_REACHED`), and joining checks the Membership limit. Ready Squads and Open Squads past their activity window do not count, so whoever just completed a Squad can create or join another at once.
+_Avoid_: Room limit, quota, cap
+
+**Squad Release**:
+What happens to a person's other Open Squads when a Squad they are in becomes Ready: in the same transaction as the final join, every member of the Ready Squad leaves every other valid Open Squad. Ready Squads and expired Open Squads keep their Memberships. A Squad that loses its host goes through a Host Transfer; one that is left empty is deleted. Each Squad that continues advances its Squad Activity. It is automatic and only follows a Squad becoming Ready: leaving by hand is unchanged, and a host who leaves a Squad by hand still deletes it.
+_Avoid_: Auto-leave, cleanup, kick
+
+**Host Transfer**:
+The handover of a Squad whose host left in a Squad Release. The remaining member who has been in it the longest (ties go to the smaller user id) and does not host another valid Open Squad becomes its host, so nobody ever hosts two; the Discord invite stays the same. When no remaining member is eligible, the Squad is closed: it is deleted and its remaining members are told. People are chosen Squad by Squad in ascending id order, and someone who just inherited one is no longer eligible for the next. It never happens when a host leaves by hand.
+_Avoid_: Host change, promotion, ownership transfer
+
+**User Notification**:
+A persisted message for one person about a Squad, one type per action. `room_ready` goes to every member of a Squad that became Ready and lists the other Squads they left; it is the only type that gets the Discord invite, resolved when it is read and never stored. `host_transferred` goes to the member who inherited a Squad. `member_left` goes to the host a Squad has after a Squad Release, once for each member who left and was not the old host. `room_closed` goes to every remaining member of a Squad closed for lack of an eligible host. Only `room_ready` is stored once per Squad and person; the others repeat, because a host is told again for each member who leaves. A Squad deleted for being left empty tells nobody.
+_Avoid_: Alert, message, inbox item
 
 **Discord Preview**:
 The public data Discord holds for the invite of a Ready Squad: its server's name, icon, backdrop and member counts. Only a member of a Ready Squad may read it. The server reads it from Discord and keeps each answer for ten minutes, except an invite Discord does not know or a Discord that could not be reached, which it keeps for one minute so a mistyped or just-created invite is asked about again soon; when Discord has nothing to show (an invalid or expired invite, Discord down or rate limiting) the preview is absent and the Squad's own data stands in. The same provider also verifies an invite before its Squad exists: creating a Squad asks Discord about the invite and refuses one Discord does not know with 422 `INVALID_DISCORD_INVITE`, while a Discord that cannot be reached, or an invite that expires, lets the Squad through. `GET /api/discord/invites/:code` (authenticated) gives the create form the same check while the host types: `valid` with the server and whether the invite expires, `invalid`, or `unknown` when Discord could not be asked. There is no rate limit on it yet; the cache is the only protection for Discord.

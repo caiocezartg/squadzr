@@ -1,0 +1,2 @@
+ALTER TABLE "user_notifications" DROP CONSTRAINT "user_notifications_room_user_type_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "user_notifications_room_user_type_unique" ON "user_notifications" USING btree ("room_id","user_id","type") WHERE "user_notifications"."type" = 'room_ready';

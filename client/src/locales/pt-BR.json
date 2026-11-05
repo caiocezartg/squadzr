@@ -181,11 +181,20 @@
       "bellUnread": "Notificações, {count} {count, plural, one {não lida} other {não lidas}}",
       "title": "Notificações",
       "markAllRead": "Marcar todas como lidas",
-      "message": "Convite do Discord liberado",
+      "roomReady": "Squad completo · convite liberado",
+      "leftSquads": "Você saiu de {count, plural, one {1 outro squad} other {# outros squads}}: {squads}.",
+      "hostTransferred": "Você é o novo dono · {name} saiu",
+      "memberLeft": "{name} saiu · entrou em outro squad que completou",
+      "roomClosed": "Squad encerrado · o dono saiu e ninguém podia assumir",
+      "label": {
+        "hostTransferred": "Você é o novo dono de {squad}",
+        "memberLeft": "{name} saiu de {squad}",
+        "roomClosed": "{squad} foi encerrado"
+      },
       "unread": "Não lida",
       "dismiss": "Dispensar notificação de {squad}",
       "emptyTitle": "Tudo em dia",
-      "emptyHint": "Quando um squad seu completar, o convite chega aqui."
+      "emptyHint": "Quando algo acontecer nos seus squads, aparece aqui."
     },
     "notice": {
       "emptySlots": "Ninguém por aqui"
@@ -420,8 +429,8 @@
     "ROOM_READY": "Este squad está pronto — membros não podem sair.",
     "SQUAD_READY_JOIN": "Este squad já está cheio e pronto — não aceita mais jogadores.",
     "NOT_ROOM_MEMBER": "Você não é membro deste squad.",
-    "ROOM_CREATE_LIMIT_REACHED": "Você atingiu o número máximo de squads ativos.",
-    "ROOM_JOIN_LIMIT_REACHED": "Você atingiu o número máximo de squads que pode participar.",
+    "ROOM_CREATE_LIMIT_REACHED": "Você já tem um squad aberto. Feche ou complete ele antes de criar outro.",
+    "ROOM_JOIN_LIMIT_REACHED": "Você já está em 3 squads abertos. Saia de um para entrar em outro.",
     "VALIDATION_ERROR": "Por favor, verifique os campos do formulário e tente novamente.",
     "UNAUTHORIZED": "Você precisa fazer login para fazer isso.",
     "INTERNAL_ERROR": "Algo deu errado. Por favor, tente novamente mais tarde.",

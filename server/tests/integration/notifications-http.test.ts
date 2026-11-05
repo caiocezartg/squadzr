@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm'
 import { userNotificationSchema, type UserNotificationDto } from '@squadzr/schemas'
 import { signIn, signInMany, type TestUser } from '@test/harness/auth'
 import { FakeClock } from '@test/harness/clock'
+import { roomReadyPayload } from '@test/harness/notifications'
 import {
   DISCORD_INVITE,
   countMembers,
@@ -83,7 +84,7 @@ describe('Room Ready notifications', () => {
           discordLink: DISCORD_INVITE,
         },
       })
-      expect(notification?.payload.players).toEqual(
+      expect(roomReadyPayload(notification).players).toEqual(
         expect.arrayContaining([
           { name: host.name, image: host.image },
           { name: member.name, image: member.image },
@@ -261,15 +262,17 @@ describe('Room Ready notification persistence and delivery', () => {
     ]
     for (const user of [host, ...contenders]) {
       const [notification] = await listNotifications(user)
-      expect(notification?.payload.players).toEqual(expect.arrayContaining(expectedPlayers))
-      expect(JSON.stringify(notification?.payload.players)).not.toContain('Unknown')
+      expect(roomReadyPayload(notification).players).toEqual(
+        expect.arrayContaining(expectedPlayers)
+      )
+      expect(JSON.stringify(roomReadyPayload(notification).players)).not.toContain('Unknown')
     }
   })
 
   it('resolves the invite at read time and hides it once retention passed', async () => {
     const { room } = await fillRoom()
 
-    expect((await listNotifications(member))[0]?.payload.discordLink).toBe(DISCORD_INVITE)
+    expect(roomReadyPayload((await listNotifications(member))[0]).discordLink).toBe(DISCORD_INVITE)
 
     const readyAt = new Date(Date.now() - 61 * 60_000)
     await setRoomLifecycle(server, room.id, {
@@ -280,7 +283,7 @@ describe('Room Ready notification persistence and delivery', () => {
 
     const expired = await listNotifications(member)
     expect(expired).toHaveLength(1)
-    expect(expired[0]?.payload.discordLink).toBeNull()
+    expect(roomReadyPayload(expired[0]).discordLink).toBeNull()
   })
 
   it('keeps the notification when the best-effort realtime push fails', async () => {

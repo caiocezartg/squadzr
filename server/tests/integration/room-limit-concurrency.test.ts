@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import pg from 'pg'
 import { and, count, eq } from 'drizzle-orm'
 import { ROOM } from '@config/constants'
-import { roomMembers, rooms, userNotifications } from '@infrastructure/database/schema'
+import { roomMembers, rooms } from '@infrastructure/database/schema'
 import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
 import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzle-room-member.repository'
 import { validOpenRoomCondition } from '@infrastructure/repositories/open-room-rules'
@@ -22,8 +22,7 @@ import { buildTestServer, type TestServer } from '@test/harness/test-server'
 // CCC-53: the per-user Membership limit and the per-host room limit are decided
 // inside the transaction that writes the row, under a lock on the user row.
 // Lock barriers force writes to overlap after any old pre-transaction counts.
-// Crossed final joins also pause before notification FK checks, with each user
-// lock already held, to expose an incompatible lock mode deterministically.
+// The crossed final joins that used to live here are in squad-release-concurrency.
 // Every concurrent operation must complete within the explicit 5s deadline.
 
 const COMPLETION_LIMIT_MS = 5_000
@@ -130,72 +129,10 @@ describe('active room limits under a concurrent race', () => {
       expect(response.statusCode, response.body).toBe(422)
       expect(response.json()).toEqual({
         error: 'ROOM_JOIN_LIMIT_REACHED',
-        message: `You can only be in ${ROOM.JOIN_LIMIT} active rooms at a time`,
+        message: `You can only be in ${ROOM.JOIN_LIMIT} open squads at a time`,
       })
     }
     expect(await activeMemberships(player!.id)).toBe(ROOM.JOIN_LIMIT)
-  })
-
-  it('finishes crossed final joins with notifications without a user FK deadlock', async () => {
-    const [first, second] = await signInMany(server, 2)
-    const game = await insertGame(server)
-    const firstRoom = await createRoom(server, first!, { gameId: game.id, maxPlayers: 2 })
-    const secondRoom = await createRoom(server, second!, { gameId: game.id, maxPlayers: 2 })
-
-    // Pause BEFORE the FK checks, with both transactions already holding their
-    // room and joining-user locks. Shared advisory locks let both proceed when
-    // the control lock is released, exposing the crossed notification FKs.
-    await control.query(`
-      CREATE FUNCTION pause_ready_notifications() RETURNS trigger AS $$
-      BEGIN
-        PERFORM pg_advisory_xact_lock_shared(53);
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-      CREATE TRIGGER pause_ready_notifications BEFORE INSERT ON user_notifications
-      FOR EACH ROW EXECUTE FUNCTION pause_ready_notifications();
-    `)
-    await control.query('BEGIN')
-    let transactionOpen = true
-    await control.query('SELECT pg_advisory_xact_lock(53)')
-    const pending = Promise.all([
-      roomAction(server, second!, firstRoom.code, 'join'),
-      roomAction(server, first!, secondRoom.code, 'join'),
-    ])
-    try {
-      await waitForLockedSessions(2, ['insert into "user_notifications"%'])
-      await control.query('COMMIT')
-      transactionOpen = false
-      const responses = await withinDeadline(pending, 'Crossed final joins')
-
-      for (const response of responses) expect(response.statusCode, response.body).toBe(200)
-      for (const room of [firstRoom, secondRoom]) {
-        const [persisted] = await server.app.db.select().from(rooms).where(eq(rooms.id, room.id))
-        expect(persisted!.readyAt).not.toBeNull()
-        expect(persisted!.lastActivityAt).toEqual(persisted!.readyAt)
-        expect(persisted!.updatedAt).toEqual(persisted!.readyAt)
-        const members = await server.app.db
-          .select()
-          .from(roomMembers)
-          .where(eq(roomMembers.roomId, room.id))
-        expect(members).toHaveLength(2)
-        expect(members.find((member) => member.userId !== room.hostId)!.joinedAt).toEqual(
-          persisted!.readyAt
-        )
-        const notifications = await server.app.db
-          .select()
-          .from(userNotifications)
-          .where(eq(userNotifications.roomId, room.id))
-        expect(notifications).toHaveLength(2)
-        expect(notifications.map((notification) => notification.userId).sort()).toEqual(
-          [first!.id, second!.id].sort()
-        )
-        for (const notification of notifications) expect(notification.type).toBe('room_ready')
-      }
-    } finally {
-      if (transactionOpen) await control.query('ROLLBACK')
-      await pending.catch(() => undefined)
-    }
   })
 
   it('lets exactly one of two concurrent joins through when the user holds one free slot', async () => {
@@ -277,21 +214,18 @@ describe('active room limits under a concurrent race', () => {
         )
         const [created, joined] = first === 'create' ? responses : [responses[1], responses[0]]
 
-        expect(created!.statusCode, created!.body).toBe(201)
-        expect(joined!.statusCode, joined!.body).toBe(first === 'create' ? 422 : 200)
-        if (first === 'create') {
-          expect(joined!.json()).toEqual({
-            error: 'ROOM_JOIN_LIMIT_REACHED',
-            message: `You can only be in ${ROOM.JOIN_LIMIT} active rooms at a time`,
-          })
-        }
-        // Creation has always enforced only the host limit. If join goes first,
-        // the subsequent create is allowed to add a sixth active Membership.
-        // Join-first therefore passes even without the user lock.
-        expect(await activeMemberships(player.id)).toBe(
-          ROOM.JOIN_LIMIT + (first === 'join' ? 1 : 0)
-        )
-        expect(await hostedRooms(player.id)).toBe(ROOM.CREATE_LIMIT)
+        // Creation counts Memberships too, so whoever reaches the user lock first takes
+        // the last free Membership and the other is refused, in either order.
+        const winner = first === 'create' ? created! : joined!
+        const loser = first === 'create' ? joined! : created!
+        expect(winner.statusCode, winner.body).toBe(first === 'create' ? 201 : 200)
+        expect(loser.statusCode, loser.body).toBe(422)
+        expect(loser.json()).toEqual({
+          error: 'ROOM_JOIN_LIMIT_REACHED',
+          message: `You can only be in ${ROOM.JOIN_LIMIT} open squads at a time`,
+        })
+        expect(await activeMemberships(player.id)).toBe(ROOM.JOIN_LIMIT)
+        expect(await hostedRooms(player.id)).toBe(first === 'create' ? ROOM.CREATE_LIMIT : 0)
       } finally {
         if (transactionOpen) await control.query('ROLLBACK')
         await Promise.allSettled([firstPending, secondPending])
@@ -440,7 +374,7 @@ describe('active room limits under a concurrent race', () => {
       expect(rejected).toHaveLength(1)
       expect(rejected[0]!.json()).toEqual({
         error: 'ROOM_CREATE_LIMIT_REACHED',
-        message: `You can only host ${ROOM.CREATE_LIMIT} active rooms at a time`,
+        message: 'You can only host 1 open squad at a time',
       })
       expect(await hostedRooms(host.id)).toBe(ROOM.CREATE_LIMIT)
     } finally {

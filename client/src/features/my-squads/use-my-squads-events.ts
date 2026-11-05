@@ -16,7 +16,10 @@ interface UseMySquadsEventsOptions {
  * Keeps the sidebar's list live for every member, wherever they are in the app. The lobby stream
  * reports each Membership change of a public squad (`room_updated`), and a squad that fills up or
  * closes (`room_removed`); the sidebar listens on its own socket, so a page without one still
- * hears them. An event about a squad in the list reads the list again instead of patching it, and a
+ * hears them. Any notification pushed to the viewer reads the list again too: a Squad Release changes
+ * the viewer's Squads (a new host, a Squad closed, a Squad left) and a lobby event may not reach a
+ * viewer who just left the Squad. An event about a squad in the list reads the list again instead of
+ * patching it, and a
  * restored subscription reads it too, which repairs events missed while the socket was down.
  */
 export function useMySquadsEvents({ squadIds, subscribe }: UseMySquadsEventsOptions): void {
@@ -46,6 +49,7 @@ export function useMySquadsEvents({ squadIds, subscribe }: UseMySquadsEventsOpti
         },
         room_updated: refreshIfListed,
         room_removed: refreshIfListed,
+        notification: refresh,
       }
     )
   }, [subscribe, queryClient])

@@ -8,6 +8,7 @@ import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room
 import { DrizzleRoomMemberRepository } from '@infrastructure/repositories/drizzle-room-member.repository'
 import { DrizzleGameRepository } from '@infrastructure/repositories/drizzle-game.repository'
 import { signIn, signInMany } from '@test/harness/auth'
+import { roomReadyPayload } from '@test/harness/notifications'
 import { createRoom, insertGame } from '@test/harness/rooms'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
@@ -120,13 +121,13 @@ describe('join transactions under pool saturation', () => {
     expect(winner.createdNotifications).toHaveLength(2)
     const player = players.find((candidate) => candidate.id === winner.roomMember.userId)!
     for (const notification of winner.createdNotifications) {
-      expect(notification.payload.players).toEqual(
+      expect(roomReadyPayload(notification).players).toEqual(
         expect.arrayContaining([
           { name: host.name, image: host.image },
           { name: player.name, image: player.image },
         ])
       )
-      expect(notification.payload.players).toHaveLength(2)
+      expect(roomReadyPayload(notification).players).toHaveLength(2)
     }
   })
 
@@ -152,13 +153,13 @@ describe('join transactions under pool saturation', () => {
       expect(outcome.value.isRoomNowFull).toBe(true)
       expect(outcome.value.createdNotifications).toHaveLength(2)
       for (const notification of outcome.value.createdNotifications) {
-        expect(notification.payload.players).toEqual(
+        expect(roomReadyPayload(notification).players).toEqual(
           expect.arrayContaining([
             { name: hosts[index]!.name, image: hosts[index]!.image },
             { name: players[index]!.name, image: players[index]!.image },
           ])
         )
-        expect(notification.payload.players).toHaveLength(2)
+        expect(roomReadyPayload(notification).players).toHaveLength(2)
       }
     }
     const notifications = await server.app.db.select().from(schema.userNotifications)

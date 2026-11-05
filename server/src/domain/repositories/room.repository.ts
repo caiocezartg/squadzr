@@ -15,6 +15,7 @@ export interface CreatedRoom {
 export type CreateRoomOutcome =
   | ({ readonly status: 'created' } & CreatedRoom)
   | { readonly status: 'limit_reached' }
+  | { readonly status: 'join_limit_reached' }
 
 export interface IRoomRepository {
   findByCode(code: string): Promise<Room | null>
@@ -27,12 +28,14 @@ export interface IRoomRepository {
    * Creates the room and its host Membership in one transaction, stamping Room
    * Activity with the injected clock, read once after the user row lock. The
    * same instant is used for the host-limit cutoff and all creation timestamps.
-   * The per-host limit of valid Open Rooms is decided in that same transaction:
-   * the user row is locked first, then the count and insert happen under that
-   * lock, so concurrent creations by one host cannot
-   * both pass the limit. A creation inserts a brand-new room row and never
-   * locks an existing one, so this user-first path cannot cycle with the
-   * room-then-user order of `joinOpenRoom`. The capacity arrives resolved.
+   * Both per-user limits are decided in that same transaction, in this order:
+   * hosting a valid Open Room (`limit_reached`), then holding the maximum of
+   * Memberships in valid Open Rooms (`join_limit_reached`). The user row is
+   * locked first, then the counts and the insert happen under that lock, so
+   * concurrent creations by one host cannot both pass the limit. A creation
+   * inserts a brand-new room row and never locks an existing one, so this
+   * user-first path cannot cycle with the room-then-user order of
+   * `joinOpenRoom`. The capacity arrives resolved.
    */
   create(input: NewRoom): Promise<CreateRoomOutcome>
   /** Rooms whose activity/retention window ended at or before `now`. */
