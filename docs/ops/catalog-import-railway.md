@@ -6,13 +6,13 @@ not hosted yet, so this service is the only hosted consumer of the database.
 
 ## Project and services
 
-| | |
-| --- | --- |
-| Project | `squadzr` |
-| Environment | `staging` |
-| Database | `postgres`, PostgreSQL 16 (`ghcr.io/railwayapp-templates/postgres-ssl:16`), volume `postgres-data` mounted at `/var/lib/postgresql/data` |
-| Cron service | `games-import`, deployed from `caiocezartg/squadzr` branch `development` |
-| Config as code | `.railway/railway.ts` (Railway Infrastructure as Code) |
+|                |                                                                                                                                          |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Project        | `squadzr`                                                                                                                                |
+| Environment    | `staging`                                                                                                                                |
+| Database       | `postgres`, PostgreSQL 16 (`ghcr.io/railwayapp-templates/postgres-ssl:16`), volume `postgres-data` mounted at `/var/lib/postgresql/data` |
+| Cron service   | `games-import`, deployed from `caiocezartg/squadzr` branch `development`                                                                 |
+| Config as code | `.railway/railway.ts` (Railway Infrastructure as Code)                                                                                   |
 
 The authoring file owns the whole environment: the build installs the Bun workspace from the
 repository root (`bun install --frozen-lockfile`), the start command runs the import from `server/`
@@ -77,11 +77,11 @@ and only their names appear there.
 
 The service receives exactly three variables:
 
-| Variable | Value |
-| --- | --- |
-| `DATABASE_URL` | `${{postgres.DATABASE_URL}}`, a reference to the Postgres service |
-| `IGDB_CLIENT_ID` | Twitch application client id (owner-set) |
-| `IGDB_CLIENT_SECRET` | Twitch application client secret (owner-set) |
+| Variable             | Value                                                             |
+| -------------------- | ----------------------------------------------------------------- |
+| `DATABASE_URL`       | `${{postgres.DATABASE_URL}}`, a reference to the Postgres service |
+| `IGDB_CLIENT_ID`     | Twitch application client id (owner-set)                          |
+| `IGDB_CLIENT_SECRET` | Twitch application client secret (owner-set)                      |
 
 Set the two credentials in Railway under `squadzr` → `staging` → `games-import` → Variables. A
 variable change redeploys the service; the next cron run uses the new values. The names are exact:
@@ -165,8 +165,7 @@ railway variable set IGDB_POPULARITY_THRESHOLD=120 CATALOG_IMPORT_OVERRIDE_FRACT
 ```
 
 Raising only `IGDB_POPULARITY_THRESHOLD` still lets in the games released in the last 180 days that
-pass `IGDB_HYPE_THRESHOLD`. To cut those too, raise `IGDB_HYPE_THRESHOLD` as well (for example to
-100) in the same call.
+pass `IGDB_HYPE_THRESHOLD`. To cut those too, raise `IGDB_HYPE_THRESHOLD` as well (for example to 100) in the same call.
 
 Wait for the redeploy that the change triggers before starting a run:
 
@@ -231,8 +230,8 @@ the `preDeployCommand` entry leaves this authoring file: exactly one service own
 
 ## Make the first admin
 
-The admin panel (`/admin`) is reserved to people whose role is `admin`, and the first admin comes from
-a server script, never from the app. It reads only `DATABASE_URL`, like the migration script, and takes
+The admin panel (`/admin`) is reserved to people whose role is `moderator`, `admin` or `owner`, and the
+first admin comes from a server script, never from the app. It reads only `DATABASE_URL`, like the migration script, and takes
 one id: a user id, or else the person's Discord id.
 
 ```
@@ -240,7 +239,20 @@ cd server
 DATABASE_URL=<connection string> bun run admin:grant <user id or Discord id>
 ```
 
-It is safe to run twice (an existing admin is left alone, with no second audit entry), it never demotes
-and it reports an unknown id without writing anything. The grant shows in the panel's Audit page as done
-by "System".
+It is safe to run twice (an existing admin or owner is left alone, with no second audit entry), it never
+demotes and it reports an unknown id without writing anything. The grant shows in the panel's Audit page
+as done by "System".
 
+### Make the owner
+
+The owner is the one person who also changes admins' roles. Nobody can become the owner from the app;
+add `--owner` to the same script:
+
+```
+cd server
+DATABASE_URL=<connection string> bun run admin:grant --owner <user id or Discord id>
+```
+
+There is at most one owner (the database refuses a second): when someone already is the owner, the script
+says who and writes nothing. It makes the person the owner whatever role they held and never demotes
+anyone.

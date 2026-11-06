@@ -70,7 +70,9 @@ body{background:#030405;font-family:'Plus Jakarta Sans',sans-serif;color:var(--t
 .pill.run{color:var(--dsoft);background:rgba(78,90,232,.14)}
 .pill.fail{color:var(--danger);background:rgba(239,68,68,.10)}
 .pill.warn{color:var(--amber);background:rgba(255,181,71,.10)}
-.pill.adm{color:var(--mintink);background:var(--mint)}
+.pill.adm{color:var(--mint);background:rgba(0,255,162,.08)}
+.pill.mod{color:var(--dsoft);background:rgba(78,90,232,.14)}
+.pill.own{color:var(--mintink);background:var(--mint)}
 .pill .d{width:6px;height:6px;border-radius:50%;background:currentColor}
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .search{flex:1;min-width:220px;height:46px;background:var(--card);box-shadow:inset 0 0 0 1px var(--track);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--faint);font:500 14px 'Plus Jakarta Sans'}
@@ -192,7 +194,7 @@ body{background:#030405;font-family:'Plus Jakarta Sans',sans-serif;color:var(--t
 <div class="doc-h" style="margin-top:10px">Painel <span>admin</span></div>
 <p class="note">Referência visual da spec. Mesmo design system do app (tokens, tipografia, cantos retos), em um layout próprio em <b>/admin</b>: sidebar de administração no lugar da sidebar de squads, conteúdo em <b>tabelas densas</b> no lugar dos cards. Os textos de interface ficam em português, como o resto do app.</p>
 <div class="legend">
-  <div><b>Acesso</b>Só quem tem papel <i>admin</i>. Para os demais, <b>/admin</b> responde 404. O link “Admin” aparece no menu da conta só para admins.</div>
+  <div><b>Acesso</b>Moderador, admin ou dono abrem o painel. Para os usuários comuns, <b>/admin</b> responde 404. O link “Admin” aparece no menu da conta para esses três papéis.</div>
   <div><b>Ações destrutivas</b>Sempre em um diálogo de confirmação. Fechar um squad exige um motivo, que vai para a auditoria e para os membros; mudar um papel não pede motivo.</div>
   <div><b>Responsivo</b>Abaixo de 1024px a sidebar vira drawer (mesmo padrão do app); abaixo de 640px as tabelas viram listas de linhas.</div>
 </div>
@@ -332,7 +334,7 @@ body{background:#030405;font-family:'Plus Jakarta Sans',sans-serif;color:var(--t
       <section class="panel">
         <div class="uid"><div class="av a2">MR</div><div><div class="cap">ID Discord · 2849…1173</div><h3 style="margin-top:6px">Marina Rocha</h3><div style="font:500 13px 'Plus Jakarta Sans';color:var(--muted);margin-top:6px">Membro desde out. 2026 · online agora</div></div></div>
         <div class="cap" style="margin-top:22px">Papel</div>
-        <div class="role"><span>Usuário</span><span class="on">Admin</span></div>
+        <div class="role"><span>Usuário</span><span>Moderador</span><span class="on">Admin</span></div>
         <div class="hint">Você não pode mudar o seu próprio papel. A mudança vale na próxima requisição da pessoa e fica na auditoria.</div>
         <div class="kv" style="margin-top:18px"><div><span class="cap">Squads completados</span>47</div><div><span class="cap">Jogos</span>6</div><div><span class="cap">Squads abertos</span>2 / 3</div><div><span class="cap">Hospedando</span>1 / 1</div></div>
       </section>
@@ -349,7 +351,8 @@ body{background:#030405;font-family:'Plus Jakarta Sans',sans-serif;color:var(--t
     </div>
   </main>
 </div>
-<p class="note">A lista de usuários (não desenhada aqui) é uma tabela com avatar, nome, ID do Discord, data de entrada, papel <span class="pill adm">ADMIN</span> e squads abertos, com busca por nome ou ID do Discord. A ficha soma o que o admin precisa para suporte: limites atuais (2/3 squads, 1/1 hospedando), squads abertos agora e histórico.</p>
+<p class="note">A lista de usuários (não desenhada aqui) é uma tabela com avatar, nome, ID do Discord, data de entrada, papel (<span class="pill">Usuário</span> <span class="pill mod">Moderador</span> <span class="pill adm">Admin</span> <span class="pill own">Dono</span>, o dono em mint cheio) e squads abertos, com busca por nome ou ID do Discord. A ficha soma o que o admin precisa para suporte: limites atuais (2/3 squads, 1/1 hospedando), squads abertos agora e histórico.</p>
+<p class="note">Papéis: o dono muda o papel de qualquer outra pessoa entre Usuário, Moderador e Admin; um admin muda só o de usuários e moderadores; ninguém muda o próprio papel nem o do dono. O seletor fica travado com o motivo embaixo (“Você não pode mudar o seu próprio papel.”, “O papel do dono não pode ser alterado.”, “Só o dono pode mudar o papel de um admin.”). Um moderador vê a ficha sem o seletor, e o menu dele mostra só Visão geral, Squads e Usuários.</p>
 
 <!-- 4. CATALOG -->
 <div class="sec"><span class="cap">04</span><h2>Catálogo · Catalog Import</h2></div>

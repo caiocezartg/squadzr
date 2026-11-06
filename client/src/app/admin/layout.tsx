@@ -19,9 +19,9 @@ export function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * The layout of the admin panel. The gate runs first and fails closed: anyone who is not an admin, and
- * any request whose session cannot be read, gets the app's not-found page, so the panel's existence is
- * never revealed. Admins get the panel's own shell, which stays mounted while they move between
+ * The layout of the admin panel. The gate runs first and fails closed: anyone who is not a moderator, an admin or the owner,
+ * and any request whose session cannot be read, gets the app's not-found page, so the panel's existence is
+ * never revealed. Panel roles get the panel's own shell, which stays mounted while they move between
  * sections. The root layout's providers (session, language, query client) are inherited.
  */
 export default async function AdminLayout({ children }: { readonly children: ReactNode }) {

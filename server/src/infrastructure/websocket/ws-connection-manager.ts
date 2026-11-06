@@ -1,8 +1,9 @@
 import type { WebSocket } from '@fastify/websocket'
 import type { WsServerMessage } from '@squadzr/schemas/ws'
 import type { WsClient } from './types'
+import type { OnlinePresence } from '@domain/services/online-presence.interface'
 
-export class WsConnectionManager {
+export class WsConnectionManager implements OnlinePresence {
   private readonly sockets = new Set<WebSocket>()
   private readonly rooms: Map<string, Set<WebSocket>> = new Map()
   private readonly clientData: WeakMap<WebSocket, WsClient> = new WeakMap()
@@ -77,6 +78,14 @@ export class WsConnectionManager {
     if (sockets.size === 0) {
       this.userSockets.delete(userId)
     }
+  }
+
+  countOnlineUsers(): number {
+    return this.userSockets.size
+  }
+
+  isUserOnline(userId: string): boolean {
+    return this.userSockets.has(userId)
   }
 
   getUserSockets(userId: string): Set<WebSocket> | undefined {

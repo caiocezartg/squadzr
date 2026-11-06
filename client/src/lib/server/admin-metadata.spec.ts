@@ -22,10 +22,25 @@ beforeEach(() => {
 })
 
 describe('adminMetadata', () => {
-  it('gives an admin the panel head, which keeps the page out of search engines', async () => {
-    vi.mocked(getRequestSession).mockResolvedValue(sessionOf('admin'))
+  it.each(['moderator', 'admin', 'owner'] as const)(
+    'gives a %s the panel head, which keeps the page out of search engines',
+    async (role) => {
+      vi.mocked(getRequestSession).mockResolvedValue(sessionOf(role))
 
-    await expect(adminMetadata(panelHead)).resolves.toEqual(panelHead)
+      await expect(adminMetadata(panelHead)).resolves.toEqual(panelHead)
+    }
+  )
+
+  it('gives an admin-only page the panel head for an admin and the owner, the not-found head for a moderator', async () => {
+    for (const role of ['admin', 'owner'] as const) {
+      vi.mocked(getRequestSession).mockResolvedValue(sessionOf(role))
+      await expect(adminMetadata(panelHead, 'full')).resolves.toEqual(panelHead)
+    }
+
+    vi.mocked(getRequestSession).mockResolvedValue(sessionOf('moderator'))
+    await expect(adminMetadata(panelHead, 'full')).resolves.toEqual({
+      title: { absolute: 'Page not found · Squadzr' },
+    })
   })
 
   it.each([

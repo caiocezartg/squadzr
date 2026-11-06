@@ -445,6 +445,10 @@
     "UNAUTHORIZED": "You need to sign in to do this.",
     "ADMIN_REQUIRED": "Only administrators can do this.",
     "INTERNAL_ERROR": "Something went wrong. Please try again later.",
+    "USER_NOT_FOUND": "We could not find that user.",
+    "CANNOT_CHANGE_OWN_ROLE": "You cannot change your own role.",
+    "CANNOT_CHANGE_OWNER": "The owner's role cannot be changed.",
+    "ROLE_CHANGE_FORBIDDEN": "Your role does not allow this change.",
     "DEFAULT": "Something went wrong. Please try again."
   },
   "playerProfile": {
@@ -505,7 +509,97 @@
     },
     "users": {
       "title": "Users",
-      "description": "Find people and manage who is an admin."
+      "description": "Find people and see their roles and activity.",
+      "search": {
+        "label": "Search users",
+        "placeholder": "Search by name, Discord ID or user ID"
+      },
+      "tableLabel": "Users",
+      "columns": {
+        "user": "User",
+        "discordId": "Discord ID",
+        "joined": "Joined",
+        "role": "Role",
+        "openSquads": "Open squads"
+      },
+      "roles": {
+        "user": "User",
+        "moderator": "Moderator",
+        "admin": "Admin",
+        "owner": "Owner"
+      },
+      "noDiscord": "No Discord account",
+      "openSquadsCount": "{count, plural, one {# open squad} other {# open squads}}",
+      "empty": {
+        "title": "No users yet",
+        "description": "People show up here once they sign in with Discord."
+      },
+      "noMatch": {
+        "title": "No users match “{search}”",
+        "description": "Try another name, Discord ID or user ID.",
+        "action": "Clear the search"
+      },
+      "pastEnd": {
+        "title": "No users on this page",
+        "action": "Go to the first page"
+      },
+      "loading": "Loading users",
+      "loadError": "Couldn't load the users.",
+      "retry": "Try again",
+      "detail": {
+        "caption": "Admin · Users",
+        "back": "All users",
+        "fallbackTitle": "User",
+        "discordId": "Discord ID · {id}",
+        "noDiscord": "No Discord account",
+        "joined": "Member since {date}",
+        "online": "Online now",
+        "offline": "Offline",
+        "role": {
+          "label": "Role",
+          "own": "You can't change your own role.",
+          "owner": "The owner's role cannot be changed.",
+          "adminTarget": "Only the owner can change an admin's role.",
+          "hint": "The change applies on the person's next request and goes to the audit.",
+          "changed": "{name} is now {role, select, admin {an admin} moderator {a moderator} other {a user}}."
+        },
+        "dialog": {
+          "title": "{role, select, admin {Make {name} an admin?} moderator {Make {name} a moderator?} other {Make {name} a user?}}",
+          "body": "{role, select, admin {{name} gets full access to the admin panel from their next request.} moderator {{name} gets access to the Overview, Users and Squads of the admin panel from their next request.} other {{name} loses access to the admin panel from their next request.}} The change is recorded in the audit.",
+          "confirm": "Confirm",
+          "confirming": "Changing…",
+          "cancel": "Cancel"
+        },
+        "limits": {
+          "title": "Squad limits",
+          "completed": "Completed squads",
+          "games": "Games",
+          "held": "Open squads",
+          "hosted": "Hosting",
+          "usage": "{used} / {limit}",
+          "usageLabel": "{used} of {limit}"
+        },
+        "openSquads": {
+          "caption": "Now",
+          "title": "Open squads",
+          "host": "Host",
+          "meta": "{game} · {members}/{max}",
+          "empty": "Not in any open squad right now."
+        },
+        "history": {
+          "caption": "History",
+          "title": "Latest completed",
+          "latest": "Latest completed squads",
+          "meta": "{game} · {count, plural, one {# player} other {# players}}",
+          "empty": "No completed squads yet."
+        },
+        "notFound": {
+          "title": "User not found",
+          "description": "This user doesn't exist or their account was deleted."
+        },
+        "loading": "Loading the user",
+        "loadError": "Couldn't load this user."
+      }
     },
     "catalog": {
       "title": "Catalog Import",
@@ -528,11 +622,13 @@
         "role_changed": "Changed a role",
         "squad_closed": "Closed a squad",
         "catalog_import_requested": "Ran the Catalog Import",
-        "admin_granted": "Granted admin"
+        "admin_granted": "Granted role"
       },
       "roles": {
         "user": "user",
-        "admin": "admin"
+        "moderator": "moderator",
+        "admin": "admin",
+        "owner": "owner"
       },
       "roleChange": "{from} → {to}",
       "manualRun": "Manual run",

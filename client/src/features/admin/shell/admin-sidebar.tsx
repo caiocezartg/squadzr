@@ -5,8 +5,9 @@ import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { AppLink } from '@/components/layout/app-link'
 import { UserMenu } from '@/components/layout/user-menu'
+import { useSession } from '@/hooks/use-session'
 import { cn } from '@/lib/utils'
-import { ADMIN_NAV, isCurrentSection } from './admin-nav'
+import { adminNavFor, isCurrentSection } from './admin-nav'
 
 /** The mint ADMIN mark beside the logo, in the sidebar and in the top bar. */
 export function AdminBadge({ className }: { readonly className?: string }) {
@@ -31,12 +32,13 @@ interface AdminSidebarContentProps {
 
 /**
  * What the admin sidebar holds, top to bottom (reference, Admin panel): the logo with the ADMIN mark,
- * the panel's sections, "Back to Squadzr" and the account button. The fixed column and the drawer both
+ * the panel's sections the viewer opens, "Back to Squadzr" and the account button. The fixed column and the drawer both
  * render it.
  */
 export function AdminSidebarContent({ onNavigate }: AdminSidebarContentProps) {
   const t = useTranslations('admin')
   const pathname = usePathname()
+  const role = useSession()?.user.role
 
   return (
     <div className="flex h-full min-h-full flex-col px-4 pt-5.5 pb-5">
@@ -48,7 +50,7 @@ export function AdminSidebarContent({ onNavigate }: AdminSidebarContentProps) {
       </div>
 
       <nav aria-label={t('nav.label')} className="flex flex-col gap-1">
-        {ADMIN_NAV.map(({ href, label, icon: Icon }) => {
+        {adminNavFor(role).map(({ href, label, icon: Icon }) => {
           const current = isCurrentSection(href, pathname)
 
           return (

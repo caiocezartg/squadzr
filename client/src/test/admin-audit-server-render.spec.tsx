@@ -29,6 +29,7 @@ vi.mock('@/lib/server/viewer', () => ({
 // The gate lets the admin through; its refusals are its own spec's.
 vi.mock('@/lib/server/admin-gate', () => ({
   requireAdminSession: async () => fakeSession(),
+  requireFullAdminSession: async () => fakeSession(),
 }))
 
 const grant: AuditEntryDto = {
@@ -73,7 +74,7 @@ describe('Audit route server render', () => {
 
     expect(requestedPages()).toEqual(['2'])
     expect(html).toContain('Marina Rocha')
-    expect(html).toContain('Granted admin')
+    expect(html).toContain('Granted role')
     expect(html).not.toContain('Loading the audit')
   })
 

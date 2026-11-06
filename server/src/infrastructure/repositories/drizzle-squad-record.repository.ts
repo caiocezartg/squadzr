@@ -6,7 +6,7 @@ import { games } from '@infrastructure/database/schema/games'
 import { squadRecordMembers, squadRecords } from '@infrastructure/database/schema/squad-records'
 
 /** The Game columns a Player Profile carries; read without looking at `listed`. */
-const profileGameColumns = {
+export const profileGameColumns = {
   id: games.id,
   name: games.name,
   slug: games.slug,

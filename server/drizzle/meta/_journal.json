@@ -85,6 +85,13 @@
       "when": 1793915164276,
       "tag": "0011_audit_append_only",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793925495786,
+      "tag": "0012_owner_moderator_roles",
+      "breakpoints": true
     }
   ]
 }
