@@ -18,4 +18,9 @@ export {
   RoomCreateLimitReachedError,
   RoomJoinLimitReachedError,
 } from './business-rule.error'
-export { CannotChangeOwnRoleError, LastAdminError } from './role-change.error'
+export {
+  CannotChangeOwnRoleError,
+  CannotChangeOwnerError,
+  OwnerAlreadyExistsError,
+  RoleChangeForbiddenError,
+} from './role-change.error'

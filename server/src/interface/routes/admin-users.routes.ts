@@ -9,6 +9,7 @@ import {
   changeUserRoleResponseSchema,
   errorResponseSchema as errorResponse,
 } from '@squadzr/schemas'
+import { requireFullAdmin } from '@interface/hooks/admin.hook'
 import { createAdminUsersController } from '@interface/factories/admin-users.factory'
 
 export async function adminUsersRoutes(fastify: FastifyInstance): Promise<void> {
@@ -24,7 +25,7 @@ export async function adminUsersRoutes(fastify: FastifyInstance): Promise<void> 
       tags: ['Admin'],
       summary: 'List users',
       description:
-        'Returns the users newest first, 20 per page. `q` matches a name by any part of it, or a Discord id or a user id exactly. Never carries an email. Requires the admin role.',
+        'Returns the users newest first, 20 per page. `q` matches a name by any part of it, or a Discord id or a user id exactly. Never carries an email. Requires the moderator, admin or owner role.',
       security: [{ session: [] }],
       querystring: adminUsersQuerySchema,
       response: {
@@ -41,7 +42,7 @@ export async function adminUsersRoutes(fastify: FastifyInstance): Promise<void> 
       tags: ['Admin'],
       summary: 'Get a user',
       description:
-        'Returns what an admin needs to support a person: Discord id, joined date, role, online state, Squad Limits usage, current Open Squads, completed Squads count, Games count and the latest completed Squads. Never carries an email. Requires the admin role.',
+        'Returns what an admin needs to support a person: Discord id, joined date, role, online state, Squad Limits usage, current Open Squads, completed Squads count, Games count and the latest completed Squads. Never carries an email. Requires the moderator, admin or owner role.',
       security: [{ session: [] }],
       params: adminUserParamsSchema,
       response: {
@@ -55,11 +56,12 @@ export async function adminUsersRoutes(fastify: FastifyInstance): Promise<void> 
   })
 
   app.put('/api/admin/users/:id/role', {
+    preValidation: requireFullAdmin,
     schema: {
       tags: ['Admin'],
       summary: "Change a user's role",
       description:
-        'Promotes a user to admin or demotes an admin to user, with one `role_changed` Audit Entry. Nobody changes their own role (422 `CANNOT_CHANGE_OWN_ROLE`), the last admin stays (422 `LAST_ADMIN`) and the same role is a no-op with no entry. Requires the admin role.',
+        'Gives a user the role user, moderator or admin, with one `role_changed` Audit Entry. Nobody changes their own role (422 `CANNOT_CHANGE_OWN_ROLE`) or the owner role (422 `CANNOT_CHANGE_OWNER`); an admin changes only user and moderator accounts and the owner anyone else (otherwise 403 `ROLE_CHANGE_FORBIDDEN`); the same role is a no-op with no entry. Requires the admin or owner role.',
       security: [{ session: [] }],
       params: adminUserParamsSchema,
       body: changeUserRoleInputSchema,

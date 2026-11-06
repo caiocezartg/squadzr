@@ -4,6 +4,7 @@ import type {
   AdminUserListItem,
   AdminUserOpenSquad,
 } from '@domain/entities/admin-user.entity'
+import type { RoleChangeDecision } from '@domain/services/role-change'
 
 export interface AdminUserPage {
   readonly items: AdminUserListItem[]
@@ -20,7 +21,7 @@ export interface ChangeRoleCommand {
 }
 
 /** Why a role change was refused, in the order the rules apply. */
-export type RoleChangeRefusal = 'actor_not_admin' | 'user_not_found' | 'own_role' | 'last_admin'
+export type RoleChangeRefusal = Exclude<RoleChangeDecision, 'unchanged' | 'change'>
 
 export type RoleChangeOutcome =
   | { readonly status: 'changed' }
@@ -40,8 +41,7 @@ export interface IAdminUserRepository {
   /** The person's latest completed Squads from their Squad Records, newest first. */
   findLatestCompleted(userId: string, limit: number): Promise<AdminUserCompletedSquad[]>
   /**
-   * Sets a role inside one transaction that locks every admin row (and the actor's and the target's),
-   * re-reads the actor's role and applies the rules in order (see `decideRoleChange`). A change and its
+   * Sets a role inside one transaction that locks the actor's and the target's rows, re-reads the actor's role and applies the rules in order (see `decideRoleChange`). A change and its
    * `role_changed` Audit Entry commit together; a refusal or a no-op writes nothing.
    */
   changeRole(command: ChangeRoleCommand): Promise<RoleChangeOutcome>

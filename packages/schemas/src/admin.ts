@@ -2,13 +2,49 @@ import { z } from 'zod'
 import { isoDateTimeSchema } from './date'
 import { paginatedResponseSchema } from './pagination'
 
-// A person's role. `user` is the default; `admin` opens the admin panel. The names match the ones
-// the Better Auth admin plugin uses, so the plugin can still be added later without a data migration.
-export const USER_ROLES = ['user', 'admin'] as const
+// A person's role. `user` is the default; `moderator`, `admin` and `owner` open the admin panel, each
+// with its own reach (see the permission helpers below). `owner` is set only by the terminal script.
+// `user` and `admin` match the names the Better Auth admin plugin uses, so the plugin can still be
+// added later (with custom roles) without a data migration.
+export const USER_ROLES = ['user', 'moderator', 'admin', 'owner'] as const
 
 export const userRoleSchema = z.enum(USER_ROLES)
 
 export type UserRole = z.infer<typeof userRoleSchema>
+
+// The roles a role change can hand out. `owner` is never one of them: it is not reachable through
+// the UI or the API.
+export const ASSIGNABLE_ROLES = ['user', 'moderator', 'admin'] as const
+
+export const assignableRoleSchema = z.enum(ASSIGNABLE_ROLES)
+
+export type AssignableRole = z.infer<typeof assignableRoleSchema>
+
+// A role as the session carries it: Better Auth types an additional field as a plain string.
+type RoleSubject = string | null | undefined
+
+/** Who opens the admin panel: a moderator, an admin or the owner. */
+export function canAccessAdminPanel(role: RoleSubject): boolean {
+  return role === 'moderator' || role === 'admin' || role === 'owner'
+}
+
+/** Who opens the admin-only areas (Audit, role changes, Catalog Import): an admin or the owner. */
+export function hasFullAdminAccess(role: RoleSubject): boolean {
+  return role === 'admin' || role === 'owner'
+}
+
+/**
+ * The roles `actor` may give `target`, before the "nobody changes their own role" rule (the caller
+ * checks that): the owner changes anyone else; an admin changes only `user` and `moderator` accounts;
+ * the owner's role never changes; moderators and users change nothing. Role changes only ever hand
+ * out `user`, `moderator` and `admin`.
+ */
+export function grantableRoles(actor: RoleSubject, target: RoleSubject): readonly AssignableRole[] {
+  if (!target || target === 'owner') return []
+  if (actor === 'owner') return ASSIGNABLE_ROLES
+  if (actor === 'admin' && (target === 'user' || target === 'moderator')) return ASSIGNABLE_ROLES
+  return []
+}
 
 // What an admin did. An Audit Entry is append-only and carries one of these.
 export const AUDIT_ACTIONS = [

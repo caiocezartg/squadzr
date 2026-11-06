@@ -28,14 +28,20 @@ export {
 export { normalizeSearchText } from './search-text'
 export { healthResponseSchema, type HealthResponse } from './health'
 export {
+  ASSIGNABLE_ROLES,
   AUDIT_ACTIONS,
   USER_ROLES,
+  assignableRoleSchema,
   auditActionSchema,
   auditDetailsSchema,
   auditEntriesResponseSchema,
   auditEntrySchema,
   auditTargetSchema,
+  canAccessAdminPanel,
+  grantableRoles,
+  hasFullAdminAccess,
   userRoleSchema,
+  type AssignableRole,
   type AuditAction,
   type AuditDetails,
   type AuditEntriesResponse,

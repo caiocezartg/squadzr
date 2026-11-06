@@ -167,13 +167,13 @@ export class DrizzleAdminUserRepository implements IAdminUserRepository {
 
   async changeRole(command: ChangeRoleCommand): Promise<RoleChangeOutcome> {
     return this.db.transaction(async (tx) => {
-      // Every admin row, plus the actor's and the target's, locked in one ordered statement. Two admins
-      // demoting each other queue on the same rows in the same order; the one that waits re-reads the
-      // other's committed change, so it sees the actor it acts for is no longer an admin.
+      // The actor's and the target's rows, locked in one ordered statement. A change racing the actor's
+      // own demotion queues on the actor's row; the one that waits re-reads the committed role, so an
+      // actor demoted a moment ago is refused as no longer an admin.
       const locked = await tx
         .select({ id: user.id, name: user.name, role: user.role })
         .from(user)
-        .where(or(eq(user.role, 'admin'), inArray(user.id, [command.actorId, command.targetId])))
+        .where(inArray(user.id, [command.actorId, command.targetId]))
         .orderBy(asc(user.id))
         .for('no key update')
 
@@ -185,7 +185,6 @@ export class DrizzleAdminUserRepository implements IAdminUserRepository {
         targetId: command.targetId,
         targetRole: target?.role ?? null,
         newRole: command.role,
-        adminCount: locked.filter((row) => row.role === 'admin').length,
       })
 
       if (decision === 'unchanged') return { status: 'unchanged' }

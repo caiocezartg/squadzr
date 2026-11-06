@@ -3,8 +3,12 @@ import {
   PAGE_SIZE,
   auditEntriesResponseSchema,
   auditEntrySchema,
+  canAccessAdminPanel,
+  grantableRoles,
+  hasFullAdminAccess,
   pageQuerySchema,
   paginatedResponseSchema,
+  assignableRoleSchema,
   userRoleSchema,
 } from './index'
 import { z } from 'zod'
@@ -61,8 +65,43 @@ describe('paginatedResponseSchema', () => {
 })
 
 describe('userRoleSchema', () => {
-  it('knows user and admin only', () => {
-    expect(userRoleSchema.options).toEqual(['user', 'admin'])
+  it('knows user, moderator, admin and owner only', () => {
+    expect(userRoleSchema.options).toEqual(['user', 'moderator', 'admin', 'owner'])
+  })
+
+  it('never hands out owner in a role change', () => {
+    expect(assignableRoleSchema.options).toEqual(['user', 'moderator', 'admin'])
+  })
+})
+
+describe('role permissions', () => {
+  it.each([
+    ['user', false, false],
+    ['moderator', true, false],
+    ['admin', true, true],
+    ['owner', true, true],
+    [null, false, false],
+    [undefined, false, false],
+  ] as const)('%s: panel %s, admin areas %s', (role, panel, full) => {
+    expect(canAccessAdminPanel(role)).toBe(panel)
+    expect(hasFullAdminAccess(role)).toBe(full)
+  })
+
+  it.each([
+    ['owner', 'user', ['user', 'moderator', 'admin']],
+    ['owner', 'moderator', ['user', 'moderator', 'admin']],
+    ['owner', 'admin', ['user', 'moderator', 'admin']],
+    ['owner', 'owner', []],
+    ['admin', 'user', ['user', 'moderator', 'admin']],
+    ['admin', 'moderator', ['user', 'moderator', 'admin']],
+    ['admin', 'admin', []],
+    ['admin', 'owner', []],
+    ['moderator', 'user', []],
+    ['user', 'user', []],
+    [null, 'user', []],
+    ['owner', null, []],
+  ] as const)('%s changing a %s may grant %j', (actor, target, granted) => {
+    expect(grantableRoles(actor, target)).toEqual(granted)
   })
 })
 

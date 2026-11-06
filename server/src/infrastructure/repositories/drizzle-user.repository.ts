@@ -50,13 +50,22 @@ export class DrizzleUserRepository implements IUserRepository {
     return row ? mapRowToEntity(row.person) : null
   }
 
-  async grantAdmin(userId: string, audit: NewAuditEntry): Promise<boolean> {
+  async findOwner(): Promise<User | null> {
+    const [row] = await this.db.select().from(user).where(eq(user.role, 'owner')).limit(1)
+    return row ? mapRowToEntity(row) : null
+  }
+
+  async grantRole(userId: string, role: 'admin' | 'owner', audit: NewAuditEntry): Promise<boolean> {
     return this.db.transaction(async (tx) => {
-      // The condition keeps it idempotent under a race: only the call that flips the role writes the entry.
+      // The condition keeps it idempotent under a race (only the call that flips the role writes the
+      // entry) and keeps `admin` from ever demoting the owner or an admin. A second owner is refused
+      // by the unique index, not by this code.
+      const grantable =
+        role === 'owner' ? ne(user.role, 'owner') : inArray(user.role, ['user', 'moderator'])
       const changed = await tx
         .update(user)
-        .set({ role: 'admin', updatedAt: audit.createdAt })
-        .where(and(eq(user.id, userId), ne(user.role, 'admin')))
+        .set({ role, updatedAt: audit.createdAt })
+        .where(and(eq(user.id, userId), grantable))
         .returning({ id: user.id })
       if (changed.length === 0) return false
 

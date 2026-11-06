@@ -9,7 +9,8 @@ import type { AppError } from '@application/errors'
 import {
   AdminRequiredError,
   CannotChangeOwnRoleError,
-  LastAdminError,
+  CannotChangeOwnerError,
+  RoleChangeForbiddenError,
   UserNotFoundError,
 } from '@application/errors'
 
@@ -37,16 +38,18 @@ function refusalError(reason: RoleChangeRefusal, targetId: string): AppError {
       return new UserNotFoundError(targetId)
     case 'own_role':
       return new CannotChangeOwnRoleError()
-    case 'last_admin':
-      return new LastAdminError()
+    case 'target_is_owner':
+      return new CannotChangeOwnerError()
+    case 'forbidden':
+      return new RoleChangeForbiddenError()
   }
 }
 
 /**
- * Promotes or demotes a user. The rules (the actor is still an admin, the user exists, nobody changes
- * their own role, the last admin stays) are applied by the repository inside the transaction that
- * locks the admin rows, so two admins demoting each other at once leave exactly one admin; this maps
- * a refusal to its error.
+ * Changes a user's role. The rules (the actor is still an admin or the owner, the user exists, nobody
+ * changes their own role or the owner's, the actor's role allows the change; see `decideRoleChange`)
+ * are applied by the repository inside the transaction that locks the actor's and the target's rows,
+ * so a change racing the actor's own demotion sees it; this maps a refusal to its error.
  */
 export class ChangeUserRoleUseCase implements IChangeUserRoleUseCase {
   constructor(

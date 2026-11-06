@@ -34,6 +34,14 @@ function grant(identifier: string, logger: GrantAdminLogger): Promise<number> {
   return runGrantAdmin({ databaseUrl: server.databaseUrl, identifier, clock, logger })
 }
 
+function grantAs(
+  role: 'admin' | 'owner',
+  identifier: string,
+  logger: GrantAdminLogger
+): Promise<number> {
+  return runGrantAdmin({ databaseUrl: server.databaseUrl, identifier, role, clock, logger })
+}
+
 async function roleOf(id: string): Promise<string | undefined> {
   const [row] = await server.app.db.select().from(user).where(eq(user.id, id))
   return row?.role
@@ -102,7 +110,7 @@ describe('admin:grant', () => {
 
     expect(await grant(person.id, logger)).toBe(0)
 
-    expect(infos[0]).toContain('already an admin')
+    expect(infos[0]).toContain('already holds the admin role')
     expect(await server.app.db.select().from(auditEntries)).toHaveLength(1)
   })
 
@@ -112,6 +120,65 @@ describe('admin:grant', () => {
     expect(await grant(admin.id, capture().logger)).toBe(0)
 
     expect(await roleOf(admin.id)).toBe('admin')
+    expect(await server.app.db.select().from(auditEntries)).toHaveLength(0)
+  })
+
+  it('promotes a moderator to admin', async () => {
+    const mod = await signIn(server, 'Moderator', { role: 'moderator' })
+
+    expect(await grant(mod.id, capture().logger)).toBe(0)
+
+    expect(await roleOf(mod.id)).toBe('admin')
+    expect(await server.app.db.select().from(auditEntries)).toEqual([
+      expect.objectContaining({ details: { oldRole: 'moderator', newRole: 'admin' } }),
+    ])
+  })
+
+  it('makes the owner with the owner role, writing one entry with the old role', async () => {
+    const person = await signIn(server, 'Operator', { role: 'admin' })
+    const { logger, infos } = capture()
+
+    expect(await grantAs('owner', person.id, logger)).toBe(0)
+
+    expect(await roleOf(person.id)).toBe('owner')
+    expect(infos[0]).toContain('Granted the owner role')
+    expect(await server.app.db.select().from(auditEntries)).toEqual([
+      expect.objectContaining({
+        action: 'admin_granted',
+        actorId: null,
+        details: { oldRole: 'admin', newRole: 'owner' },
+      }),
+    ])
+  })
+
+  it('never demotes the owner when asked for the admin role', async () => {
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
+
+    expect(await grant(owner.id, capture().logger)).toBe(0)
+
+    expect(await roleOf(owner.id)).toBe('owner')
+    expect(await server.app.db.select().from(auditEntries)).toHaveLength(0)
+  })
+
+  it('is a no-op for the person who already is the owner', async () => {
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
+
+    expect(await grantAs('owner', owner.id, capture().logger)).toBe(0)
+
+    expect(await roleOf(owner.id)).toBe('owner')
+    expect(await server.app.db.select().from(auditEntries)).toHaveLength(0)
+  })
+
+  it('refuses a second owner and writes nothing', async () => {
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
+    const other = await signIn(server, 'Other')
+    const { logger, errors } = capture()
+
+    expect(await grantAs('owner', other.id, logger)).toBe(1)
+
+    expect(errors[0]).toContain('already the owner')
+    expect(await roleOf(owner.id)).toBe('owner')
+    expect(await roleOf(other.id)).toBe('user')
     expect(await server.app.db.select().from(auditEntries)).toHaveLength(0)
   })
 

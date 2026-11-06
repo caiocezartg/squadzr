@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { eq, inArray } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import {
   PAGE_SIZE,
   adminUserResponseSchema,
@@ -88,7 +88,7 @@ async function spaceSignUps(people: TestUser[]): Promise<void> {
   }
 }
 
-describe('the admin guard on the Users endpoints', () => {
+describe('the guard on the Users endpoints', () => {
   it('answers 401 signed out and 403 ADMIN_REQUIRED for a user, before validating anything', async () => {
     const player = await signIn(server, 'Player')
     const requests = [
@@ -105,6 +105,30 @@ describe('the admin guard on the Users endpoints', () => {
       expect(asUser.statusCode, `${request.method} ${request.url}`).toBe(403)
       expect(asUser.json()).toMatchObject({ error: 'ADMIN_REQUIRED' })
     }
+  })
+
+  it('lets a moderator read the list and a user page, and refuses the role change and the Audit', async () => {
+    const mod = await signIn(server, 'Mod', { role: 'moderator' })
+    const marina = await signIn(server, 'Marina')
+
+    expect((await get(server, '/api/admin/users', mod)).statusCode).toBe(200)
+    expect((await get(server, `/api/admin/users/${marina.id}`, mod)).statusCode).toBe(200)
+    const audit = await get(server, '/api/admin/audit', mod)
+    expect(audit.statusCode).toBe(403)
+    expect(audit.json()).toMatchObject({ error: 'ADMIN_REQUIRED' })
+    const change = await putRole(marina.id, 'admin', mod)
+    expect(change.statusCode).toBe(403)
+    expect(change.json()).toMatchObject({ error: 'ADMIN_REQUIRED' })
+  })
+
+  it('lets the owner into the list, the user page, the Audit and the role change', async () => {
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
+    const marina = await signIn(server, 'Marina')
+
+    expect((await get(server, '/api/admin/users', owner)).statusCode).toBe(200)
+    expect((await get(server, `/api/admin/users/${marina.id}`, owner)).statusCode).toBe(200)
+    expect((await get(server, '/api/admin/audit', owner)).statusCode).toBe(200)
+    expect((await putRole(marina.id, 'moderator', owner)).statusCode).toBe(200)
   })
 })
 
@@ -369,20 +393,44 @@ describe('PUT /api/admin/users/:id/role', () => {
     expect((await get(server, '/api/admin/users', marina)).statusCode).toBe(200)
   })
 
-  it('demotes another admin, who loses access on their very next request', async () => {
-    const second = await signIn(server, 'Second', { role: 'admin' })
+  it('makes a moderator, who then opens the Users but not the Audit', async () => {
+    const marina = await signIn(server, 'Marina')
 
-    const response = await putRole(second.id, 'user')
+    const response = await putRole(marina.id, 'moderator')
 
     expect(response.statusCode, response.body).toBe(200)
-    expect(response.json()).toMatchObject({ user: { id: second.id, role: 'user' } })
-    expect((await get(server, '/api/admin/users', second)).statusCode).toBe(403)
+    expect(await roleInDatabase(marina.id)).toBe('moderator')
+    expect((await get(server, '/api/admin/users', marina)).statusCode).toBe(200)
+    expect((await get(server, '/api/admin/audit', marina)).statusCode).toBe(403)
+  })
+
+  it('lets an admin change a moderator to user, moderator or admin', async () => {
+    const mod = await signIn(server, 'Mod', { role: 'moderator' })
+
+    // Last to admin: once promoted, the account is out of an admin's reach.
+    for (const role of ['user', 'moderator', 'admin'] as const) {
+      const response = await putRole(mod.id, role)
+
+      expect(response.statusCode, role).toBe(200)
+      expect(await roleInDatabase(mod.id)).toBe(role)
+    }
+  })
+
+  it('lets the owner demote an admin, who loses the admin areas on their very next request', async () => {
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
+
+    const response = await putRole(admin.id, 'moderator', owner)
+
+    expect(response.statusCode, response.body).toBe(200)
+    expect(response.json()).toMatchObject({ user: { id: admin.id, role: 'moderator' } })
+    expect((await get(server, '/api/admin/audit', admin)).statusCode).toBe(403)
+    expect((await get(server, '/api/admin/users', admin)).statusCode).toBe(200)
   })
 
   it('writes one role_changed entry with the old and new role and a snapshot of both people', async () => {
     const marina = await signIn(server, 'Marina')
 
-    await putRole(marina.id, 'admin')
+    await putRole(marina.id, 'moderator')
     await putRole(marina.id, 'user')
 
     const entries = await auditEntries()
@@ -393,9 +441,9 @@ describe('PUT /api/admin/users/:id/role', () => {
       actorName: 'Admin',
       target: { type: 'user', id: marina.id, name: 'Marina' },
       reason: null,
-      details: { oldRole: 'admin', newRole: 'user' },
+      details: { oldRole: 'moderator', newRole: 'user' },
     })
-    expect(entries[1]).toMatchObject({ details: { oldRole: 'user', newRole: 'admin' } })
+    expect(entries[1]).toMatchObject({ details: { oldRole: 'user', newRole: 'moderator' } })
   })
 
   it('keeps the entry readable after the person it names is gone', async () => {
@@ -409,21 +457,20 @@ describe('PUT /api/admin/users/:id/role', () => {
     ])
   })
 
-  // The last_admin rule is defense in depth: an admin actor demoting a distinct admin implies at least
-  // two admins, so it cannot be reached through this endpoint. role-change.spec.ts and the use-case
-  // spec cover it.
-  it('refuses an admin changing their own role, to either role, and writes nothing', async () => {
-    const second = await signIn(server, 'Second', { role: 'admin' })
+  it('refuses anyone changing their own role, to any role, and writes nothing', async () => {
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
 
-    for (const role of ['user', 'admin'] as const) {
-      const response = await putRole(admin.id, role)
+    for (const actor of [admin, owner]) {
+      for (const role of ['user', 'moderator', 'admin'] as const) {
+        const response = await putRole(actor.id, role, actor)
 
-      expect(response.statusCode).toBe(422)
-      expect(response.json()).toMatchObject({ error: 'CANNOT_CHANGE_OWN_ROLE' })
+        expect(response.statusCode, actor.id + ' to ' + role).toBe(422)
+        expect(response.json()).toMatchObject({ error: 'CANNOT_CHANGE_OWN_ROLE' })
+      }
     }
     expect(await roleInDatabase(admin.id)).toBe('admin')
-    expect(await roleInDatabase(second.id)).toBe('admin')
-    expect(await auditEntries()).toEqual([])
+    expect(await roleInDatabase(owner.id)).toBe('owner')
+    expect(await auditEntryCount()).toBe(0)
   })
 
   it('answers 404 USER_NOT_FOUND for an id nobody has, before the own-role rule', async () => {
@@ -431,24 +478,62 @@ describe('PUT /api/admin/users/:id/role', () => {
 
     expect(response.statusCode).toBe(404)
     expect(response.json()).toMatchObject({ error: 'USER_NOT_FOUND' })
-    expect(await auditEntries()).toEqual([])
+    expect(await auditEntryCount()).toBe(0)
+  })
+
+  it('refuses changing the owner with 422 CANNOT_CHANGE_OWNER, whatever role is asked', async () => {
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
+
+    for (const role of ['user', 'moderator', 'admin'] as const) {
+      const response = await putRole(owner.id, role)
+
+      expect(response.statusCode, role).toBe(422)
+      expect(response.json()).toMatchObject({ error: 'CANNOT_CHANGE_OWNER' })
+    }
+    expect(await roleInDatabase(owner.id)).toBe('owner')
+    expect(await auditEntryCount()).toBe(0)
+  })
+
+  it('refuses an admin changing another admin with 403 ROLE_CHANGE_FORBIDDEN, even to the role they hold', async () => {
+    const second = await signIn(server, 'Second', { role: 'admin' })
+
+    for (const role of ['user', 'moderator', 'admin'] as const) {
+      const response = await putRole(second.id, role)
+
+      expect(response.statusCode, role).toBe(403)
+      expect(response.json()).toMatchObject({ error: 'ROLE_CHANGE_FORBIDDEN' })
+    }
+    expect(await roleInDatabase(second.id)).toBe('admin')
+    expect(await auditEntryCount()).toBe(0)
+  })
+
+  it('never hands out the owner role: the body is refused with 400 whoever asks', async () => {
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
+    const marina = await signIn(server, 'Marina')
+
+    for (const actor of [admin, owner]) {
+      const response = await putRole(marina.id, 'owner', actor)
+
+      expect(response.statusCode).toBe(400)
+    }
+    expect(await roleInDatabase(marina.id)).toBe('user')
   })
 
   it('treats the role the person already has as a no-op: 200 and no entry', async () => {
     const marina = await signIn(server, 'Marina')
-    const second = await signIn(server, 'Second', { role: 'admin' })
+    const mod = await signIn(server, 'Mod', { role: 'moderator' })
 
     const asUser = await putRole(marina.id, 'user')
-    const asAdmin = await putRole(second.id, 'admin')
+    const asModerator = await putRole(mod.id, 'moderator')
 
     expect(asUser.statusCode).toBe(200)
     expect(asUser.json()).toMatchObject({ user: { id: marina.id, role: 'user' } })
-    expect(asAdmin.statusCode).toBe(200)
-    expect(asAdmin.json()).toMatchObject({ user: { id: second.id, role: 'admin' } })
-    expect(await auditEntries()).toEqual([])
+    expect(asModerator.statusCode).toBe(200)
+    expect(asModerator.json()).toMatchObject({ user: { id: mod.id, role: 'moderator' } })
+    expect(await auditEntryCount()).toBe(0)
   })
 
-  it.each([{}, { role: 'owner' }, { role: '' }, { role: 1 }])(
+  it.each([{}, { role: 'owner' }, { role: 'root' }, { role: '' }, { role: 1 }])(
     'refuses the body %j with 400',
     async (body) => {
       const marina = await signIn(server, 'Marina')
@@ -464,69 +549,80 @@ describe('PUT /api/admin/users/:id/role', () => {
     }
   )
 
-  it('leaves exactly one admin when two admins demote each other at the same time', async () => {
-    const second = await signIn(server, 'Second', { role: 'admin' })
+  it('refuses a moderator or a user with 403 ADMIN_REQUIRED, even for an invalid body', async () => {
+    const mod = await signIn(server, 'Mod', { role: 'moderator' })
+    const marina = await signIn(server, 'Marina')
 
-    for (let round = 0; round < 5; round += 1) {
-      await server.app.db
-        .update(user)
-        .set({ role: 'admin' })
-        .where(inArray(user.id, [admin.id, second.id]))
+    for (const actor of [mod, marina]) {
+      const valid = await putRole(marina.id, 'moderator', actor)
+      const invalid = await putRole(marina.id, 'nope', actor)
+
+      expect([valid.statusCode, invalid.statusCode]).toEqual([403, 403])
+      expect(valid.json()).toMatchObject({ error: 'ADMIN_REQUIRED' })
+    }
+    expect(await roleInDatabase(marina.id)).toBe('user')
+  })
+
+  // The owner demotes admin A while A promotes a user. Both queue on A's row: either A's request goes
+  // first (both succeed and the user is an admin) or the owner's does and A, re-read inside the
+  // transaction as no longer an admin, is refused with 403 ADMIN_REQUIRED and promotes nobody.
+  it('leaves one consistent outcome when the owner demotes an admin who is promoting a user', async () => {
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
+    const marina = await signIn(server, 'Marina')
+
+    for (let round = 0; round < 8; round += 1) {
+      await server.app.db.update(user).set({ role: 'admin' }).where(eq(user.id, admin.id))
+      await server.app.db.update(user).set({ role: 'user' }).where(eq(user.id, marina.id))
       const before = await auditEntryCount()
 
-      const [firstDemotesSecond, secondDemotesFirst] = await Promise.all([
-        putRole(second.id, 'user', admin),
-        putRole(admin.id, 'user', second),
+      const [demotion, promotion] = await Promise.all([
+        putRole(admin.id, 'user', owner),
+        putRole(marina.id, 'admin', admin),
       ])
 
-      expect(
-        [firstDemotesSecond.statusCode, secondDemotesFirst.statusCode].sort(),
-        `round ${round}`
-      ).toEqual([200, 403])
-      const loser = firstDemotesSecond.statusCode === 200 ? secondDemotesFirst : firstDemotesSecond
-      expect(loser.json()).toMatchObject({ error: 'ADMIN_REQUIRED' })
-      const roles = await Promise.all([roleInDatabase(admin.id), roleInDatabase(second.id)])
-      expect(
-        roles.filter((role) => role === 'admin'),
-        `round ${round}`
-      ).toHaveLength(1)
-      expect(await auditEntryCount(), `round ${round}`).toBe(before + 1)
+      expect(demotion.statusCode, 'round ' + round).toBe(200)
+      expect(await roleInDatabase(admin.id), 'round ' + round).toBe('user')
+      if (promotion.statusCode === 200) {
+        expect(await roleInDatabase(marina.id), 'round ' + round).toBe('admin')
+        expect(await auditEntryCount(), 'round ' + round).toBe(before + 2)
+      } else {
+        expect(promotion.statusCode, 'round ' + round).toBe(403)
+        expect(promotion.json()).toMatchObject({ error: 'ADMIN_REQUIRED' })
+        expect(await roleInDatabase(marina.id), 'round ' + round).toBe('user')
+        expect(await auditEntryCount(), 'round ' + round).toBe(before + 1)
+      }
     }
   })
 
   it('decides the race inside the transaction, with both requests past the guard', async () => {
-    const second = await signIn(server, 'Second', { role: 'admin' })
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
+    const marina = await signIn(server, 'Marina')
     const repository = new DrizzleAdminUserRepository(server.app.db)
     const now = new Date()
 
-    for (let round = 0; round < 5; round += 1) {
-      await server.app.db
-        .update(user)
-        .set({ role: 'admin' })
-        .where(inArray(user.id, [admin.id, second.id]))
+    for (let round = 0; round < 8; round += 1) {
+      await server.app.db.update(user).set({ role: 'admin' }).where(eq(user.id, admin.id))
+      await server.app.db.update(user).set({ role: 'user' }).where(eq(user.id, marina.id))
 
-      const outcomes = await Promise.all([
-        repository.changeRole({ actorId: admin.id, targetId: second.id, role: 'user', now }),
-        repository.changeRole({ actorId: second.id, targetId: admin.id, role: 'user', now }),
+      const [demotion, promotion] = await Promise.all([
+        repository.changeRole({ actorId: owner.id, targetId: admin.id, role: 'user', now }),
+        repository.changeRole({ actorId: admin.id, targetId: marina.id, role: 'admin', now }),
       ])
 
-      expect(outcomes.map((outcome) => outcome.status).sort(), `round ${round}`).toEqual([
-        'changed',
-        'refused',
-      ])
-      expect(outcomes.find((outcome) => outcome.status === 'refused')).toEqual({
-        status: 'refused',
-        reason: 'actor_not_admin',
-      })
-      const roles = await Promise.all([roleInDatabase(admin.id), roleInDatabase(second.id)])
-      expect(
-        roles.filter((role) => role === 'admin'),
-        `round ${round}`
-      ).toHaveLength(1)
+      expect(demotion, 'round ' + round).toEqual({ status: 'changed' })
+      if (promotion.status === 'changed') {
+        expect(await roleInDatabase(marina.id), 'round ' + round).toBe('admin')
+      } else {
+        expect(promotion, 'round ' + round).toEqual({
+          status: 'refused',
+          reason: 'actor_not_admin',
+        })
+        expect(await roleInDatabase(marina.id), 'round ' + round).toBe('user')
+      }
     }
   })
 
-  it('writes a single entry when two admins promote the same user at the same time', async () => {
+  it('writes a single entry when two admins promote the same user at the same time, the second finding an admin it may not touch', async () => {
     const second = await signIn(server, 'Second', { role: 'admin' })
     const marina = await signIn(server, 'Marina')
 
@@ -535,8 +631,11 @@ describe('PUT /api/admin/users/:id/role', () => {
       putRole(marina.id, 'admin', second),
     ])
 
-    expect(responses.map((response) => response.statusCode)).toEqual([200, 200])
+    expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 403])
+    expect(responses.find((response) => response.statusCode === 403)?.json()).toMatchObject({
+      error: 'ROLE_CHANGE_FORBIDDEN',
+    })
     expect(await roleInDatabase(marina.id)).toBe('admin')
-    expect(await auditEntries()).toHaveLength(1)
+    expect(await auditEntryCount()).toBe(1)
   })
 })

@@ -7,21 +7,28 @@ const facts: RoleChangeFacts = {
   targetId: 'target',
   targetRole: 'user',
   newRole: 'admin',
-  adminCount: 1,
 }
 
 describe('decideRoleChange', () => {
-  it('promotes a user and demotes another admin', () => {
-    expect(decideRoleChange(facts)).toBe('change')
-    expect(
-      decideRoleChange({ ...facts, targetRole: 'admin', newRole: 'user', adminCount: 2 })
-    ).toBe('change')
+  it('lets the owner change anyone else among user, moderator and admin', () => {
+    const owner = { ...facts, actorRole: 'owner' as const }
+    expect(decideRoleChange(owner)).toBe('change')
+    expect(decideRoleChange({ ...owner, targetRole: 'admin', newRole: 'user' })).toBe('change')
+    expect(decideRoleChange({ ...owner, targetRole: 'admin', newRole: 'moderator' })).toBe('change')
+    expect(decideRoleChange({ ...owner, targetRole: 'moderator', newRole: 'admin' })).toBe('change')
   })
 
-  it('refuses an actor who is no longer an admin, or whose account is gone, before anything else', () => {
-    expect(decideRoleChange({ ...facts, actorRole: 'user', targetRole: null })).toBe(
+  it('lets an admin change user and moderator accounts to user, moderator or admin', () => {
+    expect(decideRoleChange(facts)).toBe('change')
+    expect(decideRoleChange({ ...facts, targetRole: 'moderator', newRole: 'admin' })).toBe('change')
+    expect(decideRoleChange({ ...facts, targetRole: 'moderator', newRole: 'user' })).toBe('change')
+  })
+
+  it('refuses an actor who is no longer an admin or owner, or whose account is gone, before anything else', () => {
+    expect(decideRoleChange({ ...facts, actorRole: 'moderator', targetRole: null })).toBe(
       'actor_not_admin'
     )
+    expect(decideRoleChange({ ...facts, actorRole: 'user' })).toBe('actor_not_admin')
     expect(decideRoleChange({ ...facts, actorRole: null })).toBe('actor_not_admin')
   })
 
@@ -31,23 +38,42 @@ describe('decideRoleChange', () => {
     )
   })
 
-  it('refuses the actor changing their own role, even to the role they hold', () => {
+  it('refuses the actor changing their own role, before the owner rules', () => {
     expect(decideRoleChange({ ...facts, targetId: 'actor', targetRole: 'admin' })).toBe('own_role')
     expect(
-      decideRoleChange({ ...facts, targetId: 'actor', targetRole: 'admin', newRole: 'user' })
+      decideRoleChange({
+        ...facts,
+        actorRole: 'owner',
+        targetId: 'actor',
+        targetRole: 'owner',
+        newRole: 'user',
+      })
     ).toBe('own_role')
   })
 
-  it('treats the role the target already has as a no-op, before the last-admin rule', () => {
-    expect(decideRoleChange({ ...facts, targetRole: 'user', newRole: 'user' })).toBe('unchanged')
-    expect(
-      decideRoleChange({ ...facts, targetRole: 'admin', newRole: 'admin', adminCount: 1 })
-    ).toBe('unchanged')
+  it('refuses changing the owner for everyone, before the forbidden rule', () => {
+    expect(decideRoleChange({ ...facts, actorRole: 'owner', targetRole: 'owner' })).toBe(
+      'target_is_owner'
+    )
+    expect(decideRoleChange({ ...facts, targetRole: 'owner', newRole: 'user' })).toBe(
+      'target_is_owner'
+    )
   })
 
-  it('refuses a demotion that would leave no admin', () => {
+  it('refuses an admin acting on another admin, even to the role the admin holds', () => {
+    expect(decideRoleChange({ ...facts, targetRole: 'admin', newRole: 'user' })).toBe('forbidden')
+    expect(decideRoleChange({ ...facts, targetRole: 'admin', newRole: 'admin' })).toBe('forbidden')
+  })
+
+  it('refuses handing out the owner role, whoever asks', () => {
+    expect(decideRoleChange({ ...facts, newRole: 'owner' })).toBe('forbidden')
+    expect(decideRoleChange({ ...facts, actorRole: 'owner', newRole: 'owner' })).toBe('forbidden')
+  })
+
+  it('treats the role the target already has as a no-op once the actor may act', () => {
+    expect(decideRoleChange({ ...facts, targetRole: 'user', newRole: 'user' })).toBe('unchanged')
     expect(
-      decideRoleChange({ ...facts, targetRole: 'admin', newRole: 'user', adminCount: 1 })
-    ).toBe('last_admin')
+      decideRoleChange({ ...facts, actorRole: 'owner', targetRole: 'admin', newRole: 'admin' })
+    ).toBe('unchanged')
   })
 })

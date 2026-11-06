@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   AdminRequiredError,
   CannotChangeOwnRoleError,
-  LastAdminError,
+  CannotChangeOwnerError,
+  RoleChangeForbiddenError,
   UserNotFoundError,
 } from '@application/errors'
 import type { RoleChangeRefusal } from '@domain/repositories/admin-user.repository'
@@ -53,7 +54,8 @@ describe('ChangeUserRoleUseCase', () => {
     ['actor_not_admin', AdminRequiredError],
     ['user_not_found', UserNotFoundError],
     ['own_role', CannotChangeOwnRoleError],
-    ['last_admin', LastAdminError],
+    ['target_is_owner', CannotChangeOwnerError],
+    ['forbidden', RoleChangeForbiddenError],
   ])('turns the refusal %s into its error', async (reason, errorClass) => {
     repository.changeRole.mockResolvedValue({ status: 'refused', reason })
 
@@ -73,6 +75,13 @@ describe('ChangeUserRoleUseCase', () => {
       statusCode: 422,
       code: 'CANNOT_CHANGE_OWN_ROLE',
     })
-    expect(new LastAdminError()).toMatchObject({ statusCode: 422, code: 'LAST_ADMIN' })
+    expect(new CannotChangeOwnerError()).toMatchObject({
+      statusCode: 422,
+      code: 'CANNOT_CHANGE_OWNER',
+    })
+    expect(new RoleChangeForbiddenError()).toMatchObject({
+      statusCode: 403,
+      code: 'ROLE_CHANGE_FORBIDDEN',
+    })
   })
 })

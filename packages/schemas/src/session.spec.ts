@@ -27,10 +27,10 @@ describe('sessionResponseSchema', () => {
     })
   })
 
-  it('keeps the admin role', () => {
-    const response = { user: { ...authenticated.user, role: 'admin' } }
+  it.each(['moderator', 'admin', 'owner'])('keeps the %s role', (role) => {
+    const response = { user: { ...authenticated.user, role } }
 
-    expect(sessionResponseSchema.parse(response)).toMatchObject({ user: { role: 'admin' } })
+    expect(sessionResponseSchema.parse(response)).toMatchObject({ user: { role } })
   })
 
   it('keeps a Discord avatar URL', () => {
@@ -50,7 +50,7 @@ describe('sessionResponseSchema', () => {
     ['a user without an email address', { user: { ...authenticated.user, email: 'caio' } }],
     ['a user without an image key', { user: { ...authenticated.user, image: undefined } }],
     ['a user without a role', { user: { ...authenticated.user, role: undefined } }],
-    ['a user with an unknown role', { user: { ...authenticated.user, role: 'moderator' } }],
+    ['a user with an unknown role', { user: { ...authenticated.user, role: 'superuser' } }],
     ['an undefined body', undefined],
   ])('rejects %s', (_, body) => {
     expect(sessionResponseSchema.safeParse(body).success).toBe(false)

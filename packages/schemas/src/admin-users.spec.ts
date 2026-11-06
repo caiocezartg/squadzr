@@ -111,7 +111,7 @@ describe('adminUsersResponseSchema', () => {
   })
 
   it.each([
-    ['an unknown role', { ...person, role: 'owner', openSquads: 0 }],
+    ['an unknown role', { ...person, role: 'superuser', openSquads: 0 }],
     ['a negative Open Squads count', { ...person, openSquads: -1 }],
     ['a joined date that is not ISO', { ...person, joinedAt: 'yesterday', openSquads: 0 }],
   ])('rejects %s', (_, row) => {
@@ -156,13 +156,16 @@ describe('adminUserResponseSchema', () => {
 })
 
 describe('changeUserRoleInputSchema', () => {
-  it.each(['user', 'admin'])('accepts the role %s and no reason', (role) => {
+  it.each(['user', 'moderator', 'admin'])('accepts the role %s and no reason', (role) => {
     expect(changeUserRoleInputSchema.parse({ role })).toEqual({ role })
   })
 
-  it.each([{}, { role: 'owner' }, { role: '' }])('rejects %j', (body) => {
-    expect(changeUserRoleInputSchema.safeParse(body).success).toBe(false)
-  })
+  it.each([{}, { role: 'owner' }, { role: '' }])(
+    'rejects %j (owner is never handed out)',
+    (body) => {
+      expect(changeUserRoleInputSchema.safeParse(body).success).toBe(false)
+    }
+  )
 
   it('answers with the changed user', () => {
     const body = { user: { ...person, role: 'admin' } }

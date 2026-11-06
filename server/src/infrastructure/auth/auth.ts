@@ -33,8 +33,10 @@ export function createAuth(db: Database, config: AuthConfig) {
     },
     user: {
       additionalFields: {
-        // The admin role. Input is off, so neither sign-up nor a profile update can set it; the
-        // `admin:grant` script and the panel's use cases write it. No Better Auth admin plugin (ADR 0005).
+        // The role (`user`, `moderator`, `admin` or `owner`). Input is off, so neither sign-up nor a
+        // profile update can set it; the `admin:grant` script and the panel's use cases write it. It
+        // reaches the session as a plain string; `@squadzr/schemas` narrows it (the session contract).
+        // No Better Auth admin plugin (ADR 0005).
         role: { type: 'string', required: false, defaultValue: 'user', input: false },
       },
     },

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { userRoleSchema } from './admin'
+import { assignableRoleSchema, userRoleSchema } from './admin'
 import { isoDateTimeSchema } from './date'
 import { pageQuerySchema, paginatedResponseSchema } from './pagination'
 import { profileGameSchema } from './user'
@@ -90,8 +90,9 @@ export const adminUserResponseSchema = z.object({ user: adminUserDetailSchema })
 
 export type AdminUserResponse = z.infer<typeof adminUserResponseSchema>
 
-// A role change takes no reason; the confirmation dialog is enough.
-export const changeUserRoleInputSchema = z.object({ role: userRoleSchema })
+// A role change takes no reason; the confirmation dialog is enough. `owner` is not a role it can
+// hand out.
+export const changeUserRoleInputSchema = z.object({ role: assignableRoleSchema })
 
 export type ChangeUserRoleInput = z.infer<typeof changeUserRoleInputSchema>
 

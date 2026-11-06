@@ -1,6 +1,6 @@
-import type { UserRole } from '@squadzr/schemas'
+import { grantableRoles, type UserRole } from '@squadzr/schemas'
 
-/** What the role change is decided on, read under the lock on the admin rows. */
+/** What the role change is decided on, read under the lock on the actor's and the target's rows. */
 export interface RoleChangeFacts {
   readonly actorId: string
   /** The actor's role as just re-read; null when the account is gone. */
@@ -9,31 +9,36 @@ export interface RoleChangeFacts {
   /** The target's role; null when no such user exists. */
   readonly targetRole: UserRole | null
   readonly newRole: UserRole
-  /** How many admins there are right now, the actor and the target included. */
-  readonly adminCount: number
 }
 
 export type RoleChangeDecision =
   | 'actor_not_admin'
   | 'user_not_found'
   | 'own_role'
+  | 'target_is_owner'
+  | 'forbidden'
   | 'unchanged'
-  | 'last_admin'
   | 'change'
 
 /**
- * The role change rules, in the order they apply: an actor who is no longer an admin is refused first
- * (the role is re-read, so a demotion that landed a moment ago counts), then an unknown user, then the
- * actor's own role, then a role the target already has (a no-op), and last a demotion that would leave
- * no admin at all.
+ * The role change rules, in the order they apply:
+ *
+ * 1. The actor, as just re-read, is an admin or the owner. A demotion that landed a moment ago counts,
+ *    and so does an account that is gone (`actor_not_admin`, 403 `ADMIN_REQUIRED`).
+ * 2. The target exists (`user_not_found`).
+ * 3. The target is not the actor: nobody changes their own role (`own_role`).
+ * 4. The target is not the owner: nobody changes the owner's role (`target_is_owner`).
+ * 5. The actor may act on this target and hand out the requested role (`forbidden`): the owner changes
+ *    anyone else, an admin only `user` and `moderator` accounts, and `owner` is never handed out.
+ * 6. A role the target already has is a no-op, with no Audit Entry (`unchanged`).
  */
 export function decideRoleChange(facts: RoleChangeFacts): RoleChangeDecision {
-  if (facts.actorRole !== 'admin') return 'actor_not_admin'
+  if (facts.actorRole !== 'admin' && facts.actorRole !== 'owner') return 'actor_not_admin'
   if (facts.targetRole === null) return 'user_not_found'
   if (facts.targetId === facts.actorId) return 'own_role'
+  if (facts.targetRole === 'owner') return 'target_is_owner'
+  const allowed = grantableRoles(facts.actorRole, facts.targetRole)
+  if (!allowed.some((role) => role === facts.newRole)) return 'forbidden'
   if (facts.targetRole === facts.newRole) return 'unchanged'
-  // Defense in depth: through the endpoint an admin actor demoting a distinct admin implies two admins
-  // at least, so this never fires there. The rule itself is covered by role-change.spec.ts.
-  if (facts.targetRole === 'admin' && facts.adminCount <= 1) return 'last_admin'
   return 'change'
 }

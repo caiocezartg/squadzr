@@ -27,8 +27,9 @@ export function createMockUserRepository(): MockUserRepository {
     findByIdOrDiscordId: vi
       .fn<(identifier: string) => Promise<User | null>>()
       .mockResolvedValue(null),
-    grantAdmin: vi
-      .fn<(userId: string, audit: NewAuditEntry) => Promise<boolean>>()
+    findOwner: vi.fn<() => Promise<User | null>>().mockResolvedValue(null),
+    grantRole: vi
+      .fn<(userId: string, role: 'admin' | 'owner', audit: NewAuditEntry) => Promise<boolean>>()
       .mockResolvedValue(true),
   }
 }
