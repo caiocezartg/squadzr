@@ -1,7 +1,7 @@
 import { vi, type Mock } from 'vitest'
 import type { NewAuditEntry } from '@domain/entities/audit-entry.entity'
 import type { User } from '@domain/entities/user.entity'
-import type { IUserRepository } from '@domain/repositories/user.repository'
+import type { GrantRoleOutcome, IUserRepository } from '@domain/repositories/user.repository'
 
 export function createMockUser(overrides?: Partial<User>): User {
   return {
@@ -29,7 +29,9 @@ export function createMockUserRepository(): MockUserRepository {
       .mockResolvedValue(null),
     findOwner: vi.fn<() => Promise<User | null>>().mockResolvedValue(null),
     grantRole: vi
-      .fn<(userId: string, role: 'admin' | 'owner', audit: NewAuditEntry) => Promise<boolean>>()
-      .mockResolvedValue(true),
+      .fn<
+        (userId: string, role: 'admin' | 'owner', audit: NewAuditEntry) => Promise<GrantRoleOutcome>
+      >()
+      .mockResolvedValue('granted'),
   }
 }

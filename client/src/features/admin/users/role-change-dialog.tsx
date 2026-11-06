@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import type { UserRole } from '@squadzr/schemas'
+import type { AssignableRole } from '@squadzr/schemas'
 import { Button } from '@/components/ds/button'
 import { Dialog } from '@/components/ds/dialog'
 
@@ -9,7 +9,7 @@ interface RoleChangeDialogProps {
   readonly open: boolean
   readonly name: string
   /** The role the change would give the person. */
-  readonly role: UserRole
+  readonly role: AssignableRole
   readonly pending: boolean
   readonly onConfirm: () => void
   readonly onCancel: () => void

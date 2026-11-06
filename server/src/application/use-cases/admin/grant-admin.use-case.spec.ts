@@ -99,7 +99,7 @@ describe('GrantAdminUseCase', () => {
 
   it('reports a person who lost the race as not granted', async () => {
     repository.findByIdOrDiscordId.mockResolvedValue(createMockUser({ role: 'user' }))
-    repository.grantRole.mockResolvedValue(false)
+    repository.grantRole.mockResolvedValue('unchanged')
 
     expect((await useCase.execute({ identifier: 'user-1' })).granted).toBe(false)
   })

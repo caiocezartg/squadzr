@@ -42,7 +42,7 @@ export async function adminUsersRoutes(fastify: FastifyInstance): Promise<void> 
       tags: ['Admin'],
       summary: 'Get a user',
       description:
-        'Returns what an admin needs to support a person: Discord id, joined date, role, online state, Squad Limits usage, current Open Squads, completed Squads count, Games count and the latest completed Squads. Never carries an email. Requires the moderator, admin or owner role.',
+        'Returns what the panel needs to support a person: Discord id, joined date, role, online state, Squad Limits usage, current Open Squads, completed Squads count, Games count and the latest completed Squads. Never carries an email. Requires the moderator, admin or owner role.',
       security: [{ session: [] }],
       params: adminUserParamsSchema,
       response: {

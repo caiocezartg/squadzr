@@ -1,13 +1,29 @@
 import { and, eq, inArray, ne } from 'drizzle-orm'
 import type { NewAuditEntry } from '@domain/entities/audit-entry.entity'
 import type { User } from '@domain/entities/user.entity'
-import type { IUserRepository } from '@domain/repositories/user.repository'
+import type { GrantRoleOutcome, IUserRepository } from '@domain/repositories/user.repository'
 import type { Database } from '@infrastructure/database/drizzle'
 import { account, user, type UserRow } from '@infrastructure/database/schema/auth'
 import { insertAuditEntry } from './audit-entry-writer'
 
 /** The provider id Better Auth stores on a Discord account row. */
 const DISCORD_PROVIDER_ID = 'discord'
+
+/** The unique index that allows a single owner. */
+const SINGLE_OWNER_INDEX = 'user_single_owner_idx'
+
+/** True when a Postgres error, or the error it is the cause of, is the single-owner index refusing a second owner. */
+function isSecondOwnerViolation(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false
+  const candidate = error as {
+    code?: string
+    constraint_name?: string
+    constraint?: string
+    cause?: unknown
+  }
+  const named = (candidate.constraint_name ?? candidate.constraint) === SINGLE_OWNER_INDEX
+  return (candidate.code === '23505' && named) || isSecondOwnerViolation(candidate.cause)
+}
 
 function mapRowToEntity(row: UserRow): User {
   return {
@@ -55,7 +71,25 @@ export class DrizzleUserRepository implements IUserRepository {
     return row ? mapRowToEntity(row) : null
   }
 
-  async grantRole(userId: string, role: 'admin' | 'owner', audit: NewAuditEntry): Promise<boolean> {
+  async grantRole(
+    userId: string,
+    role: 'admin' | 'owner',
+    audit: NewAuditEntry
+  ): Promise<GrantRoleOutcome> {
+    try {
+      return await this.writeRole(userId, role, audit)
+    } catch (error) {
+      // Two runs granting the first owner at once both pass the owner check; the index refuses the loser.
+      if (role === 'owner' && isSecondOwnerViolation(error)) return 'owner_taken'
+      throw error
+    }
+  }
+
+  private writeRole(
+    userId: string,
+    role: 'admin' | 'owner',
+    audit: NewAuditEntry
+  ): Promise<GrantRoleOutcome> {
     return this.db.transaction(async (tx) => {
       // The condition keeps it idempotent under a race (only the call that flips the role writes the
       // entry) and keeps `admin` from ever demoting the owner or an admin. A second owner is refused
@@ -67,10 +101,10 @@ export class DrizzleUserRepository implements IUserRepository {
         .set({ role, updatedAt: audit.createdAt })
         .where(and(eq(user.id, userId), grantable))
         .returning({ id: user.id })
-      if (changed.length === 0) return false
+      if (changed.length === 0) return 'unchanged'
 
       await insertAuditEntry(tx, audit)
-      return true
+      return 'granted'
     })
   }
 }

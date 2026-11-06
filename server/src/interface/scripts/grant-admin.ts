@@ -30,6 +30,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error('Granting the admin role failed:', error)
+  console.error('Granting the role failed:', error)
   process.exitCode = 1
 })

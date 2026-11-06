@@ -9,7 +9,7 @@ export function generateMetadata(): Promise<Metadata> {
   return adminMetadata({ title: 'Catalog' }, 'full')
 }
 
-/** Catalog Import is admin-only: a moderator passes the layout's gate and is stopped here with not-found. */
+/** Catalog Import is for an admin or the owner: a moderator passes the layout's gate and is stopped here with not-found. */
 export default async function AdminCatalogRoute() {
   await requireFullAdminSession()
   return <AdminCatalogPage />

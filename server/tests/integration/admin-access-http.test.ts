@@ -6,8 +6,8 @@ import { signIn } from '@test/harness/auth'
 import { get } from '@test/harness/rooms'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
-// #117: the admin role. It reaches the session, the person cannot set it, and the guard of every
-// `/api/admin/*` route refuses anyone who does not hold it, on the very next request.
+// #117: the panel roles (moderator, admin, owner). They reach the session, the person cannot set them, and the
+// guard of every `/api/admin/*` route refuses anyone who holds none of them, on the very next request.
 
 let server: TestServer
 

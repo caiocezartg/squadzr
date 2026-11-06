@@ -1,4 +1,4 @@
-import type { UserRole } from '@squadzr/schemas'
+import type { AssignableRole } from '@squadzr/schemas'
 import type { AdminUser } from '@domain/entities/admin-user.entity'
 import type {
   IAdminUserRepository,
@@ -17,7 +17,7 @@ import {
 export interface ChangeUserRoleInput {
   readonly actorId: string
   readonly targetId: string
-  readonly role: UserRole
+  readonly role: AssignableRole
 }
 
 export interface ChangeUserRoleOutput {

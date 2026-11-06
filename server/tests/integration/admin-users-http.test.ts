@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import {
   PAGE_SIZE,
   adminUserResponseSchema,
@@ -22,9 +22,9 @@ import {
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 import { DrizzleAdminUserRepository } from '@infrastructure/repositories/drizzle-admin-user.repository'
 
-// #118: the admin panel's Users. A list an admin can search, a user page that answers support
-// questions, and a role change the server polices (nobody changes their own role, the first request to
-// win a race between two admins decides) with one Audit Entry per change.
+// #118: the admin panel's Users. A list a panel role can search, a user page that answers support
+// questions, and a role change the server polices (nobody changes their own role, owner-vs-admin rules,
+// the first request to win a race decides) with one Audit Entry per change.
 
 let server: TestServer
 let admin: TestUser
@@ -75,6 +75,72 @@ async function roleInDatabase(id: string): Promise<UserRole | undefined> {
 /** How many entries the audit holds, read from the table: the admins of a race may both lose access. */
 async function auditEntryCount(): Promise<number> {
   return (await server.app.db.select().from(auditEntriesTable)).length
+}
+
+/**
+ * Puts the race back to its start: `admin` an admin and the user a user. The audit is append-only, so
+ * it returns the entries already there, which the round's reading leaves out.
+ */
+async function resetRace(userId: string): Promise<ReadonlySet<string>> {
+  const earlier = new Set(
+    (await server.app.db.select().from(auditEntriesTable)).map((row) => row.id)
+  )
+  await server.app.db.update(user).set({ role: 'admin' }).where(eq(user.id, admin.id))
+  await server.app.db.update(user).set({ role: 'user' }).where(eq(user.id, userId))
+  return earlier
+}
+
+/** The role changes in the audit since `earlier`, reduced to who changed whom, the promotion before the demotion. */
+async function roleChangeEntries(earlier: ReadonlySet<string>) {
+  const rows = await server.app.db.select().from(auditEntriesTable)
+  return rows
+    .filter((row) => row.action === 'role_changed' && !earlier.has(row.id))
+    .map((row) => ({
+      actorId: row.actorId,
+      targetId: row.target?.id,
+      oldRole: (row.details as { oldRole?: string } | null)?.oldRole,
+      newRole: (row.details as { newRole?: string } | null)?.newRole,
+    }))
+    .sort((a, b) => (a.newRole === b.newRole ? 0 : a.newRole === 'admin' ? -1 : 1))
+}
+
+/**
+ * Starts `start`'s work while a third transaction holds `rowId`'s user row, waits until `queued`
+ * statements are blocked on a lock, then lets go. Both pieces of work are past every guard when the
+ * lock is released, so the outcome is decided by the transactions alone.
+ */
+async function queuedBehindRowLock<A, B>(
+  rowId: string,
+  queued: number,
+  start: () => readonly [Promise<A>, Promise<B>]
+): Promise<[A, B]> {
+  let release!: () => void
+  const released = new Promise<void>((resolve) => (release = resolve))
+  let held!: () => void
+  const lockHeld = new Promise<void>((resolve) => (held = resolve))
+  const holder = server.app.db.transaction(async (tx) => {
+    await tx.select({ id: user.id }).from(user).where(eq(user.id, rowId)).for('update')
+    held()
+    await released
+  })
+  await Promise.race([lockHeld, holder])
+
+  const work = Promise.all(start())
+  try {
+    await vi.waitFor(
+      async () => {
+        const result = await server.app.db.execute<{ waiting: number }>(
+          sql`select count(*)::int as waiting from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'`
+        )
+        if ((result.rows[0]?.waiting ?? 0) < queued) throw new Error('requests not queued yet')
+      },
+      { timeout: 5000, interval: 10 }
+    )
+  } finally {
+    release()
+    await holder
+  }
+  return work
 }
 
 /** Places the users' sign-up instants one minute apart, the first listed the oldest. */
@@ -563,19 +629,18 @@ describe('PUT /api/admin/users/:id/role', () => {
     expect(await roleInDatabase(marina.id)).toBe('user')
   })
 
-  // The owner demotes admin A while A promotes a user. Both queue on A's row: either A's request goes
-  // first (both succeed and the user is an admin) or the owner's does and A, re-read inside the
-  // transaction as no longer an admin, is refused with 403 ADMIN_REQUIRED and promotes nobody.
+  // The owner demotes admin A while A promotes a user. A third transaction holds A's row until both
+  // changes are queued on it, so both are past every guard when the lock is released. Then either A's
+  // request goes first (the user is promoted, then A is demoted) or the owner's does and A, re-read in
+  // the transaction as no longer an admin, is refused with 403 ADMIN_REQUIRED and promotes nobody.
   it('leaves one consistent outcome when the owner demotes an admin who is promoting a user', async () => {
     const owner = await signIn(server, 'Owner', { role: 'owner' })
     const marina = await signIn(server, 'Marina')
 
-    for (let round = 0; round < 8; round += 1) {
-      await server.app.db.update(user).set({ role: 'admin' }).where(eq(user.id, admin.id))
-      await server.app.db.update(user).set({ role: 'user' }).where(eq(user.id, marina.id))
-      const before = await auditEntryCount()
+    for (let round = 0; round < 4; round += 1) {
+      const earlier = await resetRace(marina.id)
 
-      const [demotion, promotion] = await Promise.all([
+      const [demotion, promotion] = await queuedBehindRowLock(admin.id, 2, () => [
         putRole(admin.id, 'user', owner),
         putRole(marina.id, 'admin', admin),
       ])
@@ -584,12 +649,17 @@ describe('PUT /api/admin/users/:id/role', () => {
       expect(await roleInDatabase(admin.id), 'round ' + round).toBe('user')
       if (promotion.statusCode === 200) {
         expect(await roleInDatabase(marina.id), 'round ' + round).toBe('admin')
-        expect(await auditEntryCount(), 'round ' + round).toBe(before + 2)
+        expect(await roleChangeEntries(earlier), 'round ' + round).toEqual([
+          { actorId: admin.id, targetId: marina.id, oldRole: 'user', newRole: 'admin' },
+          { actorId: owner.id, targetId: admin.id, oldRole: 'admin', newRole: 'user' },
+        ])
       } else {
         expect(promotion.statusCode, 'round ' + round).toBe(403)
         expect(promotion.json()).toMatchObject({ error: 'ADMIN_REQUIRED' })
         expect(await roleInDatabase(marina.id), 'round ' + round).toBe('user')
-        expect(await auditEntryCount(), 'round ' + round).toBe(before + 1)
+        expect(await roleChangeEntries(earlier), 'round ' + round).toEqual([
+          { actorId: owner.id, targetId: admin.id, oldRole: 'admin', newRole: 'user' },
+        ])
       }
     }
   })
@@ -600,11 +670,10 @@ describe('PUT /api/admin/users/:id/role', () => {
     const repository = new DrizzleAdminUserRepository(server.app.db)
     const now = new Date()
 
-    for (let round = 0; round < 8; round += 1) {
-      await server.app.db.update(user).set({ role: 'admin' }).where(eq(user.id, admin.id))
-      await server.app.db.update(user).set({ role: 'user' }).where(eq(user.id, marina.id))
+    for (let round = 0; round < 4; round += 1) {
+      const earlier = await resetRace(marina.id)
 
-      const [demotion, promotion] = await Promise.all([
+      const [demotion, promotion] = await queuedBehindRowLock(admin.id, 2, () => [
         repository.changeRole({ actorId: owner.id, targetId: admin.id, role: 'user', now }),
         repository.changeRole({ actorId: admin.id, targetId: marina.id, role: 'admin', now }),
       ])
@@ -612,12 +681,14 @@ describe('PUT /api/admin/users/:id/role', () => {
       expect(demotion, 'round ' + round).toEqual({ status: 'changed' })
       if (promotion.status === 'changed') {
         expect(await roleInDatabase(marina.id), 'round ' + round).toBe('admin')
+        expect(await roleChangeEntries(earlier), 'round ' + round).toHaveLength(2)
       } else {
         expect(promotion, 'round ' + round).toEqual({
           status: 'refused',
           reason: 'actor_not_admin',
         })
         expect(await roleInDatabase(marina.id), 'round ' + round).toBe('user')
+        expect(await roleChangeEntries(earlier), 'round ' + round).toHaveLength(1)
       }
     }
   })

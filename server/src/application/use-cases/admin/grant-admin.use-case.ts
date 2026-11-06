@@ -46,7 +46,7 @@ export class GrantAdminUseCase implements IGrantAdminUseCase {
       if (owner && owner.id !== person.id) throw new OwnerAlreadyExistsError(owner.name, owner.id)
     }
 
-    const granted = await this.userRepository.grantRole(person.id, role, {
+    const outcome = await this.userRepository.grantRole(person.id, role, {
       actorId: null,
       actorName: null,
       action: 'admin_granted',
@@ -56,6 +56,13 @@ export class GrantAdminUseCase implements IGrantAdminUseCase {
       createdAt: this.clock.now(),
     })
 
+    if (outcome === 'owner_taken') {
+      // Another run made someone the owner between the check above and the write.
+      const owner = await this.userRepository.findOwner()
+      if (owner && owner.id !== person.id) throw new OwnerAlreadyExistsError(owner.name, owner.id)
+    }
+
+    const granted = outcome === 'granted'
     return { user: granted ? { ...person, role } : person, role, granted }
   }
 }

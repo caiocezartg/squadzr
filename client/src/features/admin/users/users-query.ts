@@ -4,7 +4,7 @@ import {
   adminUsersQuerySchema,
   adminUsersResponseSchema,
   changeUserRoleResponseSchema,
-  type UserRole,
+  type AssignableRole,
 } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 
@@ -74,7 +74,7 @@ export function useChangeUserRole(id: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (role: UserRole) =>
+    mutationFn: (role: AssignableRole) =>
       api.put(
         `/api/admin/users/${encodeURIComponent(id)}/role`,
         { role },

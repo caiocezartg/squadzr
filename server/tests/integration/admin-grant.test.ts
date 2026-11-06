@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { account, auditEntries, user } from '@infrastructure/database/schema'
+import type { NewAuditEntry } from '@domain/entities/audit-entry.entity'
+import { OwnerAlreadyExistsError } from '@application/errors'
+import { GrantAdminUseCase } from '@application/use-cases/admin/grant-admin.use-case'
+import { DrizzleUserRepository } from '@infrastructure/repositories/drizzle-user.repository'
 import { runGrantAdmin, type GrantAdminLogger } from '@interface/admin/grant-admin-entry'
 import { FakeClock } from '@test/harness/clock'
 import { signIn } from '@test/harness/auth'
@@ -180,6 +184,48 @@ describe('admin:grant', () => {
     expect(await roleOf(owner.id)).toBe('owner')
     expect(await roleOf(other.id)).toBe('user')
     expect(await server.app.db.select().from(auditEntries)).toHaveLength(0)
+  })
+
+  it('makes exactly one owner when two owner grants race, the loser refused as a second owner', async () => {
+    const first = await signIn(server, 'First')
+    const second = await signIn(server, 'Second')
+    const useCase = new GrantAdminUseCase(new DrizzleUserRepository(server.app.db), clock)
+
+    const results = await Promise.allSettled([
+      useCase.execute({ identifier: first.id, role: 'owner' }),
+      useCase.execute({ identifier: second.id, role: 'owner' }),
+    ])
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
+    const refused = results.filter((result) => result.status === 'rejected')
+    expect(refused).toHaveLength(1)
+    expect(refused[0]?.reason).toBeInstanceOf(OwnerAlreadyExistsError)
+    const owners = await server.app.db.select().from(user).where(eq(user.role, 'owner'))
+    expect(owners).toHaveLength(1)
+    expect(await server.app.db.select().from(auditEntries)).toHaveLength(1)
+  })
+
+  it('reports a unique-index loss as owner_taken from the repository, with nothing written for it', async () => {
+    const first = await signIn(server, 'First')
+    const second = await signIn(server, 'Second')
+    const repository = new DrizzleUserRepository(server.app.db)
+    const audit = (id: string, name: string): NewAuditEntry => ({
+      actorId: null,
+      actorName: null,
+      action: 'admin_granted',
+      target: { type: 'user', id, name },
+      reason: null,
+      details: { oldRole: 'user', newRole: 'owner' },
+      createdAt: clock.now(),
+    })
+
+    const outcomes = await Promise.all([
+      repository.grantRole(first.id, 'owner', audit(first.id, 'First')),
+      repository.grantRole(second.id, 'owner', audit(second.id, 'Second')),
+    ])
+
+    expect([...outcomes].sort()).toEqual(['granted', 'owner_taken'])
+    expect(await server.app.db.select().from(auditEntries)).toHaveLength(1)
   })
 
   it('reports an unknown id and writes nothing', async () => {
