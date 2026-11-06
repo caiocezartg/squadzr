@@ -87,6 +87,12 @@
     only, so under reduced motion nothing advances on its own.
   */
   --animate-tower-progress: tower-progress 4200ms linear both;
+  /*
+    The admin Overview's Activity chart: its lines draw in from the left once the series is on
+    screen, a clip so the dashed line keeps its dashes (src/features/admin/overview/activity-chart.tsx).
+    Used behind `motion-safe:` only, so under reduced motion the lines are simply there.
+  */
+  --animate-line-draw: line-draw 800ms var(--ease-out) both;
 
   @keyframes halo {
     0% {
@@ -198,6 +204,14 @@
     from {
       opacity: 0;
       transform: translateY(40%);
+    }
+  }
+  @keyframes line-draw {
+    from {
+      clip-path: inset(-8px 100% -8px -8px);
+    }
+    to {
+      clip-path: inset(-8px);
     }
   }
   @keyframes menu-in {

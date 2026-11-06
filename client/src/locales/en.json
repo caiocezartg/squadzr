@@ -516,7 +516,7 @@
         "open": "Open squads",
         "openNow": "Open right now",
         "completed": "Completed squads",
-        "inPeriod": "{count, plural, =0 {0 in the period} other {+# in the period}}"
+        "inPeriod": "{count, plural, =0 {<figure>0</figure> in the period} other {<figure>+#</figure> in the period}}"
       },
       "change": {
         "up": "Up",
@@ -552,7 +552,11 @@
           "date": "Date"
         },
         "chartLabel": "Daily chart. Use the left and right arrow keys to read each day.",
-        "showTable": "View as table",
+        "view": {
+          "label": "View",
+          "chart": "Chart",
+          "table": "Table"
+        },
         "loading": "Loading the chart",
         "loadError": "Couldn't load the chart."
       },

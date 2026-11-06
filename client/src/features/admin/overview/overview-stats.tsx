@@ -5,7 +5,10 @@ import type { OverviewResponse, PeriodComparisonDto } from '@squadzr/schemas'
 import { ChangeBadge } from './change-badge'
 import { StatTile } from './stat-tile'
 
-/** A tile's period line: how many joined the total in the period, and the change against before. */
+/**
+ * A tile's period line: how many joined the total in the period, the figure in bold (mint when the
+ * period brought any), and the change against before.
+ */
 function PeriodLine({
   comparison,
   period,
@@ -14,10 +17,16 @@ function PeriodLine({
   readonly period: number
 }) {
   const t = useTranslations('admin.overview.stats')
+  const tone = comparison.current > 0 ? 'text-mint' : 'text-text-2'
 
   return (
     <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-      <span>{t('inPeriod', { count: comparison.current })}</span>
+      <span>
+        {t.rich('inPeriod', {
+          count: comparison.current,
+          figure: (figure) => <strong className={`font-bold ${tone}`}>{figure}</strong>,
+        })}
+      </span>
       <ChangeBadge current={comparison.current} previous={comparison.previous} period={period} />
     </span>
   )

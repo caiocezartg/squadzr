@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import type { ActivityRowDto } from '@squadzr/schemas'
+import type { ActivityMetric, ActivityRowDto } from '@squadzr/schemas'
 import { ActivityTooltip } from './activity-tooltip'
 import { XAxisLabels, YAxisLabels } from './chart-axes'
 import { CHART_HEIGHT, CHART_WIDTH, linePath, xAt, yAt, Y_STEPS, yStep } from './chart-scale'
@@ -11,6 +11,8 @@ interface ActivityChartProps {
   /** Every day of the period, oldest first. */
   readonly rows: readonly ActivityRowDto[]
   readonly period: number
+  /** The metric the rows count; a new metric or period draws the lines in again. */
+  readonly metric: ActivityMetric
 }
 
 const GRID_LEVELS = Array.from({ length: Y_STEPS + 1 }, (_, level) => level)
@@ -39,9 +41,10 @@ function CursorDot({
  * The Activity chart (reference, Admin panel, Overview), drawn by hand in SVG: the period in a 2px mint
  * line over the previous period's dashed muted one, on a five-line grid. Pointing at a day, touching it
  * or focusing the chart and using the arrow keys stands a crosshair on it with a card of both values.
- * The same days are in the table view, which is how a screen reader reads them.
+ * The same days are in the table view, which is how a screen reader reads them. The lines draw in from
+ * the left over the grid whenever a series lands, never holding the chart back.
  */
-export function ActivityChart({ rows, period }: ActivityChartProps) {
+export function ActivityChart({ rows, period, metric }: ActivityChartProps) {
   const t = useTranslations('admin.overview.activity')
   const step = yStep(rows)
   const max = step * Y_STEPS
@@ -80,6 +83,15 @@ export function ActivityChart({ rows, period }: ActivityChartProps) {
               />
             )
           })}
+        </svg>
+        <svg
+          key={`${metric}-${period}`}
+          data-testid="activity-lines"
+          viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          className="motion-safe:animate-line-draw pointer-events-none absolute inset-0 block h-60 w-full overflow-visible"
+        >
           <path
             d={linePath(
               rows.map((row) => row.previous),

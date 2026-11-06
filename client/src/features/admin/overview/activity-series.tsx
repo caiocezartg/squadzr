@@ -52,7 +52,7 @@ export function ActivitySeries({ data, view, caption, busy }: ActivitySeriesProp
         </ul>
       </div>
       {view === 'chart' ? (
-        <ActivityChart rows={data.rows} period={data.period} />
+        <ActivityChart rows={data.rows} period={data.period} metric={data.metric} />
       ) : (
         <ActivityTable rows={data.rows} caption={caption} />
       )}

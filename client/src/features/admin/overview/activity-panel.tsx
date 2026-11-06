@@ -7,8 +7,7 @@ import { ActivityTabs } from './activity-tabs'
 import { ActivitySeries } from './activity-series'
 import { ActivitySkeleton, OverviewLoadError } from './overview-states'
 import { useActivity, useActivitySeriesOf } from './overview-query'
-
-type ActivityView = 'chart' | 'table'
+import { ViewSwitch, type ActivityView } from './view-switch'
 
 /**
  * The Activity panel (reference, Admin panel, Overview): a metric per tab, its daily counts over the
@@ -58,16 +57,9 @@ export function ActivityPanel({ period }: { readonly period: OverviewPeriod }) {
           <ActivitySkeleton />
         )}
       </div>
-      <div className="text-muted mt-1.5 flex flex-wrap justify-between gap-3 text-[12.5px] font-medium">
-        <p>{t(`notes.${metric}`)}</p>
-        <button
-          type="button"
-          aria-pressed={view === 'table'}
-          onClick={() => setView(view === 'chart' ? 'table' : 'chart')}
-          className="text-text-2 hover-fine:text-text focus-visible:outline-text underline underline-offset-3 focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
-          {t('showTable')}
-        </button>
+      <div className="text-muted mt-3 flex items-center justify-between gap-3 text-[12.5px] font-medium">
+        <p className="min-w-0">{t(`notes.${metric}`)}</p>
+        <ViewSwitch value={view} onChange={setView} />
       </div>
     </section>
   )

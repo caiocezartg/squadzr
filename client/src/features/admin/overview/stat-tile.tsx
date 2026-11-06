@@ -20,11 +20,15 @@ function LiveDot() {
   )
 }
 
-/** One of the Overview's numbers (reference, Admin panel, Overview): its label, the number, a line. */
+/**
+ * One of the Overview's numbers (reference, Admin panel, Overview): its label, the number, a line. The
+ * tile spans three rows of the stats grid as a subgrid, so in a row of tiles a label that wraps to two
+ * lines lowers every number in the row with it and the tiles keep one height.
+ */
 export function StatTile({ label, value, live = false, children }: StatTileProps) {
   return (
-    <div className="bg-panel flex min-w-0 flex-col px-5 py-4.5">
-      <dt className="type-label text-muted">{label}</dt>
+    <div className="bg-panel row-span-3 grid min-w-0 grid-rows-subgrid gap-0 px-5 py-4.5">
+      <dt className="type-label text-muted self-end">{label}</dt>
       <dd className="mt-3 flex items-center gap-2.5 font-display text-[40px] leading-none font-extrabold tabular-nums sm:text-5xl">
         {live && <LiveDot />}
         {value}

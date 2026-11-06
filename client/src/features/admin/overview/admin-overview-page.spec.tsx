@@ -1,7 +1,8 @@
 /**
  * The admin Overview (#120): the four numbers and the Activity chart following one period held in the
  * URL, the metric tabs, the table view of the chart, the recent audit for the roles that read it, and
- * a cached Overview rendering with no loading state. The look at each width is checked in the browser.
+ * a cached Overview rendering with no loading state, its lines drawing in only where motion is allowed.
+ * The look at each width is checked in the browser.
  */
 
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
@@ -111,6 +112,36 @@ describe('admin overview', () => {
     expect(tile('Completed squads')).toHaveTextContent('+2,131 in the period')
   })
 
+  it('sets the period figures in bold, in mint when the period brought any', async () => {
+    onHttp('GET', '/api/admin/overview', () =>
+      httpOk({
+        ...overview(30),
+        metrics: { completed: { current: 0, previous: 4 }, signups: { current: 12, previous: 3 } },
+      })
+    )
+    onHttp('GET', '/api/admin/activity', ({ query }) =>
+      httpOk(activity(query.get('metric') as ActivityMetric, 30))
+    )
+    renderOverview('/admin')
+
+    await screen.findByText('Online users', { selector: 'dt' })
+    const grown = within(tile('Registered users')).getByText('+12', { selector: 'strong' })
+    expect(grown).toHaveClass('text-mint')
+    const none = within(tile('Completed squads')).getByText('0', { selector: 'strong' })
+    expect(none).not.toHaveClass('text-mint')
+  })
+
+  it('keeps every tile in a row one height, a label on two lines lowering the whole row', async () => {
+    serveOverview()
+    renderOverview('/admin')
+
+    await screen.findByText('Online users', { selector: 'dt' })
+    for (const label of ['Online users', 'Registered users', 'Open squads', 'Completed squads']) {
+      expect(tile(label)).toHaveClass('row-span-3', 'grid-rows-subgrid')
+      expect(tile(label).children).toHaveLength(3)
+    }
+  })
+
   it('writes no plus sign before a period that brought nothing', async () => {
     onHttp('GET', '/api/admin/overview', () =>
       httpOk({
@@ -193,9 +224,16 @@ describe('admin overview', () => {
     const { user } = renderOverview('/admin?period=30')
     await screen.findByText('Last 30 days')
 
-    const toggle = screen.getByRole('button', { name: 'View as table' })
-    expect(toggle).toHaveAttribute('aria-pressed', 'false')
-    await user.click(toggle)
+    const views = screen.getByRole('group', { name: 'View' })
+    expect(within(views).getByRole('button', { name: 'Chart' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    expect(within(views).getByRole('button', { name: 'Table' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+    await user.click(within(views).getByRole('button', { name: 'Table' }))
 
     const table = screen.getByRole('table', { name: 'Squads completed per day' })
     const rows = within(table).getAllByRole('row').slice(1)
@@ -203,10 +241,29 @@ describe('admin overview', () => {
     expect(rows[0]).toHaveTextContent('Nov 5, 2026')
     expect(rows[29]).toHaveTextContent('Oct 7, 2026')
     expect(rows[0]).toHaveTextContent('32+1')
-    expect(screen.getByRole('button', { name: 'View as table' })).toHaveAttribute(
+    expect(within(views).getByRole('button', { name: 'Table' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
+    expect(within(views).getByRole('button', { name: 'Chart' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+  })
+
+  it('switches back to the chart from the keyboard', async () => {
+    serveOverview()
+    const { user } = renderOverview('/admin?period=30')
+    await screen.findByText('Last 30 days')
+    const views = screen.getByRole('group', { name: 'View' })
+
+    await user.click(within(views).getByRole('button', { name: 'Table' }))
+    expect(screen.queryByRole('group', { name: /Daily chart/ })).not.toBeInTheDocument()
+    act(() => within(views).getByRole('button', { name: 'Chart' }).focus())
+    await user.keyboard('{Enter}')
+
+    expect(screen.getByRole('group', { name: /Daily chart/ })).toBeVisible()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })
 
   it('shows a day with no data as a dash', async () => {
@@ -217,7 +274,7 @@ describe('admin overview', () => {
     const { user } = renderOverview('/admin?period=7')
     await screen.findByText('Last 7 days')
 
-    await user.click(screen.getByRole('button', { name: 'View as table' }))
+    await user.click(screen.getByRole('button', { name: 'Table' }))
 
     const [, latest] = within(screen.getByRole('table')).getAllByRole('row')
     expect(latest).toHaveTextContent('None')
@@ -256,6 +313,34 @@ describe('admin overview', () => {
     expect(screen.getByText('Last 30 days')).toBeVisible()
     expect(screen.queryByRole('status', { name: 'Loading the overview' })).not.toBeInTheDocument()
     expect(screen.queryByRole('status', { name: 'Loading the chart' })).not.toBeInTheDocument()
+  })
+
+  it('draws the lines in only where motion is allowed, without holding the chart back', () => {
+    const queryClient = createTestQueryClient()
+    queryClient.setQueryData(overviewQueryKey(30), overview(30))
+    queryClient.setQueryData(activityQueryKey('completed', 30), activity('completed', 30))
+    queryClient.setQueryData(activityQueryKey('signups', 30), activity('signups', 30))
+
+    renderOverview('/admin', queryClient)
+
+    // Both lines are on screen from the first render; the draw-in is a CSS animation over them that
+    // `motion-safe:` leaves out under reduced motion, so they are never hidden waiting for it.
+    const lines = screen.getByTestId('activity-lines')
+    expect(lines.querySelectorAll('path')).toHaveLength(2)
+    expect(lines).toHaveClass('motion-safe:animate-line-draw')
+    expect(lines.getAttribute('class')).not.toMatch(/(^|\s)animate-line-draw/)
+  })
+
+  it('draws the lines in again for a new metric', async () => {
+    serveOverview()
+    const { user } = renderOverview('/admin?period=7')
+    await screen.findByText('Last 7 days')
+    const first = screen.getByTestId('activity-lines')
+
+    await user.click(screen.getByRole('tab', { name: 'Sign-ups' }))
+    await screen.findByText('7', { selector: 'span' })
+
+    expect(screen.getByTestId('activity-lines')).not.toBe(first)
   })
 
   it('shows a failed read with a retry that reads the Overview again', async () => {
