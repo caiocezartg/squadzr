@@ -509,7 +509,7 @@
     },
     "users": {
       "title": "Users",
-      "description": "Find people and manage their roles.",
+      "description": "Find people and see their roles and activity.",
       "search": {
         "label": "Search users",
         "placeholder": "Search by name, Discord ID or user ID"

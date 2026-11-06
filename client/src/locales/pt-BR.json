@@ -509,7 +509,7 @@
     },
     "users": {
       "title": "Usuários",
-      "description": "Encontre pessoas e gerencie os papéis delas.",
+      "description": "Encontre pessoas e veja os papéis e a atividade delas.",
       "search": {
         "label": "Buscar usuários",
         "placeholder": "Buscar por nome, ID do Discord ou ID do usuário"
