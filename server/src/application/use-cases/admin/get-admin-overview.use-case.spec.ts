@@ -24,7 +24,7 @@ function entry(id: string): AuditEntry {
   }
 }
 
-function setup(counts: Record<string, Record<string, number>> = {}) {
+function setup(counts: Record<string, Record<string, number>> = {}, startsAt: Date = NOW) {
   const stats: IAdminStatsRepository = {
     countUsers: () => Promise.resolve(40),
     countOpenSquads: () => Promise.resolve(6),
@@ -34,11 +34,12 @@ function setup(counts: Record<string, Record<string, number>> = {}) {
   const list = vi.fn(() => Promise.resolve({ entries: [entry('a'), entry('b')], total: 2 }))
   const audit: IAuditEntryRepository = { list }
   const presence: OnlinePresence = { countOnlineUsers: () => 3, isUserOnline: () => false }
-  const clock = createMockClock(NOW)
+  const clock = createMockClock(startsAt)
   const activity = new GetAdminActivityUseCase(stats, clock, TIME_ZONE)
 
   return {
     stats,
+    clock,
     list,
     activity,
     overview: new GetAdminOverviewUseCase(stats, audit, activity, presence, clock),
@@ -91,6 +92,24 @@ describe('GetAdminOverviewUseCase', () => {
       completed: { current: 3, previous: 4 },
       signups: { current: 1, previous: 5 },
     })
+  })
+
+  it('reads the clock once, so a day rolling over mid-request cannot split the series', async () => {
+    // 23:59:59 in Sao Paulo on Nov 5: the next read would already be Nov 6.
+    const { overview, stats, clock } = setup({}, new Date('2026-11-06T02:59:59.000Z'))
+    vi.mocked(stats.countByDay).mockImplementation(() => {
+      clock.set(new Date('2026-11-06T03:00:01.000Z'))
+      return Promise.resolve(new Map())
+    })
+
+    await overview.execute({ period: 7, viewerRole: 'admin' })
+
+    expect(clock.now).toHaveBeenCalledTimes(1)
+    const ranges = vi.mocked(stats.countByDay).mock.calls.map(([, from, to]) => [from, to])
+    expect(ranges).toEqual([
+      ['2026-10-23', '2026-11-05'],
+      ['2026-10-23', '2026-11-05'],
+    ])
   })
 
   it('shows the latest 5 audit entries to an admin and the owner only', async () => {

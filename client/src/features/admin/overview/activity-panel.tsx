@@ -62,10 +62,11 @@ export function ActivityPanel({ period }: { readonly period: OverviewPeriod }) {
         <p>{t(`notes.${metric}`)}</p>
         <button
           type="button"
+          aria-pressed={view === 'table'}
           onClick={() => setView(view === 'chart' ? 'table' : 'chart')}
           className="text-text-2 hover-fine:text-text focus-visible:outline-text underline underline-offset-3 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          {view === 'chart' ? t('showTable') : t('showChart')}
+          {t('showTable')}
         </button>
       </div>
     </section>

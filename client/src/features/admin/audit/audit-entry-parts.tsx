@@ -6,20 +6,7 @@ import type { AuditEntryDto } from '@squadzr/schemas'
 import { Avatar, type AvatarSize } from '@/components/ds/avatar'
 import { useTimeAgo, VIEWER_TIME_ZONE } from '@/hooks/use-time-ago'
 import { cn } from '@/lib/utils'
-
-/** A missing value: a dash on screen, a word for a screen reader. */
-export function NoValue() {
-  const t = useTranslations('admin.audit')
-
-  return (
-    <>
-      <span aria-hidden="true" className="text-faint">
-        —
-      </span>
-      <span className="sr-only">{t('none')}</span>
-    </>
-  )
-}
+import { NoValue } from '../shared/no-value'
 
 /** When the entry was written: the relative time, with the full date and time as its tooltip. */
 export function AuditTime({ createdAt }: { readonly createdAt: string }) {

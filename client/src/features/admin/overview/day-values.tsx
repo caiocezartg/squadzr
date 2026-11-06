@@ -3,7 +3,7 @@
 import { useFormatter } from 'next-intl'
 import type { ActivityRowDto } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
-import { NoValue } from '../audit/audit-entry-parts'
+import { NoValue } from '../shared/no-value'
 
 /** A day's count, or a dash for a day with no data. */
 export function DayValue({ value }: { readonly value: number | null }) {

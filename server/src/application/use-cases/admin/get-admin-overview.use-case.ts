@@ -49,13 +49,15 @@ export class GetAdminOverviewUseCase implements IGetAdminOverviewUseCase {
 
   async execute(input: GetAdminOverviewInput): Promise<GetAdminOverviewOutput> {
     const { period } = input
+    // One read: the live count and both series must agree on what today is.
+    const now = this.clock.now()
     const [totalUsers, openSquads, completedSquads, completed, signups, recentAudit] =
       await Promise.all([
         this.statsRepository.countUsers(),
-        this.statsRepository.countOpenSquads(this.clock.now()),
+        this.statsRepository.countOpenSquads(now),
         this.statsRepository.countCompletedSquads(),
-        this.activity.execute({ metric: 'completed', period }),
-        this.activity.execute({ metric: 'signups', period }),
+        this.activity.execute({ metric: 'completed', period, now }),
+        this.activity.execute({ metric: 'signups', period, now }),
         hasFullAdminAccess(input.viewerRole)
           ? this.auditEntryRepository.list(0, OVERVIEW_AUDIT_LIMIT).then((page) => page.entries)
           : Promise.resolve(null),

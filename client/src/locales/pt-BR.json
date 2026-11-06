@@ -516,7 +516,7 @@
         "open": "Squads abertos",
         "openNow": "Abertos agora",
         "completed": "Squads completados",
-        "inPeriod": "+{count, number} no período"
+        "inPeriod": "{count, plural, =0 {0 no período} other {+# no período}}"
       },
       "change": {
         "up": "Alta de",
@@ -553,7 +553,6 @@
         },
         "chartLabel": "Gráfico diário. Use as setas para a esquerda e para a direita para ler cada dia.",
         "showTable": "Ver como tabela",
-        "showChart": "Ver como gráfico",
         "loading": "Carregando o gráfico",
         "loadError": "Não foi possível carregar o gráfico."
       },

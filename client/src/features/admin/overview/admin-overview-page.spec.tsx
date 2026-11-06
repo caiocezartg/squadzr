@@ -111,6 +111,24 @@ describe('admin overview', () => {
     expect(tile('Completed squads')).toHaveTextContent('+2,131 in the period')
   })
 
+  it('writes no plus sign before a period that brought nothing', async () => {
+    onHttp('GET', '/api/admin/overview', () =>
+      httpOk({
+        ...overview(30),
+        metrics: { completed: { current: 0, previous: 4 }, signups: { current: 3, previous: 3 } },
+      })
+    )
+    onHttp('GET', '/api/admin/activity', ({ query }) =>
+      httpOk(activity(query.get('metric') as ActivityMetric, 30))
+    )
+    renderOverview('/admin')
+
+    await screen.findByText('Online users', { selector: 'dt' })
+    expect(tile('Completed squads')).toHaveTextContent('0 in the period')
+    expect(tile('Completed squads')).not.toHaveTextContent('+0')
+    expect(tile('Registered users')).toHaveTextContent('+3 in the period')
+  })
+
   it('moves the tiles and the chart to the period picked, and writes it to the URL', async () => {
     serveOverview()
     const { user, navigation } = renderOverview('/admin')
@@ -175,7 +193,9 @@ describe('admin overview', () => {
     const { user } = renderOverview('/admin?period=30')
     await screen.findByText('Last 30 days')
 
-    await user.click(screen.getByRole('button', { name: 'View as table' }))
+    const toggle = screen.getByRole('button', { name: 'View as table' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await user.click(toggle)
 
     const table = screen.getByRole('table', { name: 'Squads completed per day' })
     const rows = within(table).getAllByRole('row').slice(1)
@@ -183,7 +203,10 @@ describe('admin overview', () => {
     expect(rows[0]).toHaveTextContent('Nov 5, 2026')
     expect(rows[29]).toHaveTextContent('Oct 7, 2026')
     expect(rows[0]).toHaveTextContent('32+1')
-    expect(screen.getByRole('button', { name: 'View as chart' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'View as table' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
   })
 
   it('shows a day with no data as a dash', async () => {

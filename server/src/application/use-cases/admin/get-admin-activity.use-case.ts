@@ -11,6 +11,8 @@ import type { Clock } from '@domain/services/clock.interface'
 export interface GetAdminActivityInput {
   readonly metric: ActivityMetric
   readonly period: OverviewPeriod
+  /** The instant the period ends at; the clock is read when omitted. */
+  readonly now?: Date
 }
 
 export interface GetAdminActivityOutput {
@@ -33,7 +35,10 @@ export class GetAdminActivityUseCase implements IGetAdminActivityUseCase {
   ) {}
 
   async execute(input: GetAdminActivityInput): Promise<GetAdminActivityOutput> {
-    const days = periodDays(calendarDayOf(this.clock.now(), this.timeZone), input.period)
+    const days = periodDays(
+      calendarDayOf(input.now ?? this.clock.now(), this.timeZone),
+      input.period
+    )
     const counts = await this.statsRepository.countByDay(
       input.metric,
       days.previous[0] ?? '',
