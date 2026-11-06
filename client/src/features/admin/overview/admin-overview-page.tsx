@@ -1,15 +1,61 @@
-import { useTranslations } from 'next-intl'
-import { AdminPageHeader } from '../shell/admin-page-header'
-import { AdminPlaceholder } from '../shell/admin-placeholder'
+'use client'
 
-/** The admin Overview page. For now it holds its header and a note; its content comes next. */
+import { useTranslations } from 'next-intl'
+import type { OverviewPeriod, OverviewResponse } from '@squadzr/schemas'
+import { cn } from '@/lib/utils'
+import { AdminPageHeader } from '../shell/admin-page-header'
+import { ActivityPanel } from './activity-panel'
+import { useOverview } from './overview-query'
+import { OverviewStats } from './overview-stats'
+import { OverviewLoadError, OverviewSkeleton } from './overview-states'
+import { PeriodSwitch } from './period-switch'
+import { RecentAuditPanel } from './recent-audit-panel'
+import { useOverviewPeriod } from './use-overview-period'
+
+/**
+ * The admin Overview page: the live numbers with what the period brought, the Activity chart and the
+ * latest admin actions, for the period the URL holds as `?period=`. A period the server or an earlier
+ * visit read renders at once, with no skeleton; the skeleton is only for a period the cache has never
+ * held. Moving to another period keeps the previous numbers on screen, dimmed, until the new ones land.
+ */
 export function AdminOverviewPage() {
   const t = useTranslations('admin.overview')
+  const [period, selectPeriod] = useOverviewPeriod()
+  const query = useOverview(period)
 
   return (
     <>
-      <AdminPageHeader title={t('title')} description={t('description')} />
-      <AdminPlaceholder />
+      <AdminPageHeader
+        title={t('title')}
+        description={t('description')}
+        actions={<PeriodSwitch value={period} onChange={selectPeriod} />}
+      />
+      {query.data ? (
+        <OverviewContent overview={query.data} period={period} busy={query.isPlaceholderData} />
+      ) : query.isError ? (
+        <OverviewLoadError message={t('loadError')} onRetry={() => void query.refetch()} />
+      ) : (
+        <OverviewSkeleton />
+      )}
     </>
+  )
+}
+
+interface OverviewContentProps {
+  readonly overview: OverviewResponse
+  /** The period the URL asks for, which `overview` may still be the previous one of. */
+  readonly period: OverviewPeriod
+  readonly busy: boolean
+}
+
+function OverviewContent({ overview, period, busy }: OverviewContentProps) {
+  return (
+    <div className="flex flex-col gap-4.5">
+      <div aria-busy={busy} className={cn('motion-safe:transition-opacity', busy && 'opacity-60')}>
+        <OverviewStats overview={overview} />
+      </div>
+      <ActivityPanel period={period} />
+      {overview.recentAudit && <RecentAuditPanel entries={overview.recentAudit} />}
+    </div>
   )
 }
