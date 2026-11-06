@@ -12,6 +12,11 @@ export const ROOM = {
   READY_ROOM_RETENTION_MS: 60 * 60_000,
 } as const
 
+export const ADMIN = {
+  /** The calendar the panel's days and periods follow: every per-day series buckets in this zone. */
+  TIME_ZONE: 'America/Sao_Paulo',
+} as const
+
 export const GAME_CATALOG_IMPORT = {
   /** Candidates must reach this share of today's Listed Games, or the run stops. */
   MINIMUM_RETAINED_FRACTION: 0.5,
