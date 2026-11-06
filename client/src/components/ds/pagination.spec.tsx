@@ -69,4 +69,51 @@ describe('pagination', () => {
     expect(onPageChange.mock.calls).toEqual([[1], [3]])
     expect(screen.getByRole('button', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page')
   })
+  describe('with many pages', () => {
+    it('shows the first and last page, the current one and its neighbours, and aria-hidden ellipses', () => {
+      render(<Pagination page={10} pageCount={20} onPageChange={() => undefined} />)
+
+      const pages = screen
+        .getAllByRole('button', { name: /^Page \d+$/ })
+        .map((button) => button.textContent)
+      expect(pages).toEqual(['1', '9', '10', '11', '20'])
+      expect(screen.getByRole('button', { name: 'Page 10' })).toHaveAttribute(
+        'aria-current',
+        'page'
+      )
+
+      const nav = screen.getByRole('navigation', { name: 'Pagination' })
+      const ellipses = nav.querySelectorAll('[data-ellipsis]')
+      expect(ellipses).toHaveLength(2)
+      ellipses.forEach((ellipsis) => expect(ellipsis).toHaveAttribute('aria-hidden', 'true'))
+      expect(screen.queryByRole('button', { name: 'Page 5' })).not.toBeInTheDocument()
+    })
+
+    it('shows the first run of pages and a single ellipsis on the first page', () => {
+      render(<Pagination page={1} pageCount={20} onPageChange={() => undefined} />)
+
+      const pages = screen
+        .getAllByRole('button', { name: /^Page \d+$/ })
+        .map((button) => button.textContent)
+      expect(pages).toEqual(['1', '2', '3', '4', '5', '20'])
+      expect(screen.getByRole('navigation').querySelectorAll('[data-ellipsis]')).toHaveLength(1)
+      expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled()
+    })
+
+    it('disables next on the last page and goes to a far page by its button', async () => {
+      const user = userEvent.setup({ delay: null })
+      const onPageChange = vi.fn()
+      render(<Pagination page={20} pageCount={20} onPageChange={onPageChange} />)
+
+      expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
+      await user.click(screen.getByRole('button', { name: 'Page 1' }))
+      expect(onPageChange).toHaveBeenLastCalledWith(1)
+    })
+
+    it('shows the current page of the total as plain text for narrow screens', () => {
+      render(<Pagination page={10} pageCount={20} onPageChange={() => undefined} />)
+
+      expect(screen.getByText('10 / 20')).toBeInTheDocument()
+    })
+  })
 })
