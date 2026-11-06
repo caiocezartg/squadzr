@@ -62,15 +62,15 @@ function UserDetail({ user }: { readonly user: AdminUserDetailDto }) {
         <section aria-label={user.name} className={PANEL}>
           <UserIdentity user={user} />
           <UserRoleControl key={user.id} user={user} own={user.id === viewerId} />
-          <UserLimits limits={user.squadLimits} />
+          <UserLimits
+            squadLimits={user.squadLimits}
+            completedSquads={user.completedSquads}
+            gamesPlayed={user.gamesPlayed}
+          />
         </section>
         <div className={PANEL}>
           <UserOpenSquads squads={user.openSquads} />
-          <UserHistory
-            completedSquads={user.completedSquads}
-            gamesPlayed={user.gamesPlayed}
-            latestCompleted={user.latestCompleted}
-          />
+          <UserHistory latestCompleted={user.latestCompleted} />
         </div>
       </div>
     </>

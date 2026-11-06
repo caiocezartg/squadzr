@@ -110,7 +110,11 @@ describe('admin user page', () => {
     expect(screen.getByRole('list', { name: 'Latest completed squads' })).toHaveTextContent(
       'Unrated chill'
     )
-    expect(screen.getByText('47')).toBeVisible()
+    const identity = screen.getByRole('region', { name: 'Marina Rocha' })
+    const counters = within(identity).getByRole('region', { name: 'Squad limits' })
+    expect(counters).toHaveTextContent(/Completed squads\s*47/)
+    expect(counters).toHaveTextContent(/Games\s*6/)
+    expect(counters).toHaveTextContent(/Open squads.*2 of 3/)
     expect(screen.getByRole('link', { name: 'All users' })).toHaveAttribute('href', '/admin/users')
   })
 
@@ -158,7 +162,7 @@ describe('admin user page', () => {
   it('shows why the server refused the change', async () => {
     servePerson(marina('admin'))
     onHttp('PUT', '/api/admin/users/user-marina/role', () =>
-      httpError(409, { error: 'LAST_ADMIN', message: 'Last admin' })
+      httpError(422, { error: 'LAST_ADMIN', message: 'Last admin' })
     )
     const user = renderPerson('user-marina')
 

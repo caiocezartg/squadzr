@@ -567,6 +567,8 @@
         },
         "limits": {
           "title": "Limites de squads",
+          "completed": "Squads completados",
+          "games": "Jogos",
           "held": "Squads abertos",
           "hosted": "Hospedando",
           "usage": "{used} / {limit}",
@@ -582,8 +584,6 @@
         "history": {
           "caption": "Histórico",
           "title": "Últimos completados",
-          "completed": "Squads completados",
-          "games": "Jogos",
           "latest": "Últimos squads completados",
           "meta": "{game} · {count, plural, one {# jogador} other {# jogadores}}",
           "empty": "Nenhum squad completado ainda."

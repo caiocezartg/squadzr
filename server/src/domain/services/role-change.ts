@@ -32,6 +32,8 @@ export function decideRoleChange(facts: RoleChangeFacts): RoleChangeDecision {
   if (facts.targetRole === null) return 'user_not_found'
   if (facts.targetId === facts.actorId) return 'own_role'
   if (facts.targetRole === facts.newRole) return 'unchanged'
+  // Defense in depth: through the endpoint an admin actor demoting a distinct admin implies two admins
+  // at least, so this never fires there. The rule itself is covered by role-change.spec.ts.
   if (facts.targetRole === 'admin' && facts.adminCount <= 1) return 'last_admin'
   return 'change'
 }

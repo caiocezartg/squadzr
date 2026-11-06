@@ -117,6 +117,35 @@ describe('admin users list', () => {
     expect(screen.getByRole('searchbox', { name: 'Search users' })).toHaveValue('')
   })
 
+  it('keeps the old empty answer off the new search while its read is in flight', async () => {
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    onHttp('GET', '/api/admin/users', async ({ query }) => {
+      if (query.get('q') === 'marina') {
+        await gate
+        return httpOk(usersPage([marina]))
+      }
+      return httpOk(usersPage([]))
+    })
+    const { user } = renderUsers('/admin/users?q=zed')
+    expect(await screen.findByRole('heading', { name: 'No users match “zed”' })).toBeVisible()
+
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search users' }),
+      '{Control>}a{/Control}'
+    )
+    await user.keyboard('marina')
+
+    await expect.poll(() => userReads()).toContain('page=1&q=marina')
+    expect(screen.queryByRole('heading', { name: /No users match/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'No users on this page' })).not.toBeInTheDocument()
+
+    release()
+    expect(await screen.findByRole('link', { name: 'Marina Rocha' })).toBeVisible()
+  })
+
   it('says when nobody signed up yet', async () => {
     serveUsers([])
     renderUsers('/admin/users')

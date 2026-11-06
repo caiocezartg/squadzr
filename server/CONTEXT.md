@@ -89,7 +89,7 @@ One run that brings the Game Catalog in line with the candidates of a Game Catal
 _Avoid_: Seed, sync job, IGDB import
 
 **Admin**:
-A person whose role is `admin` rather than `user`. Admins alone can open the admin panel and call `/api/admin/*` (anyone else is refused with 401 `UNAUTHORIZED` when signed out and 403 `ADMIN_REQUIRED` otherwise). The role lives on the user, reaches the session as a required field and is checked against the database on every request, so a demotion applies at once. Nobody can set it through sign-up or a profile update. The first admin is made by the `admin:grant` server script, which takes a user id or a Discord id (the account id of the user's Discord account), is safe to run twice and never demotes. We own this role instead of installing the Better Auth admin plugin (`docs/adr/0005-own-the-admin-role.md`).
+A person whose role is `admin` rather than `user`. Admins alone can open the admin panel and call `/api/admin/*` (anyone else is refused with 401 `UNAUTHORIZED` when signed out and 403 `ADMIN_REQUIRED` otherwise). The role lives on the user, reaches the session as a required field and is checked against the database on every request, so a demotion applies at once. Nobody changes their own role, at least one admin always remains, and each role change writes one `role_changed` Audit Entry. Nobody can set it through sign-up or a profile update. The first admin is made by the `admin:grant` server script, which takes a user id or a Discord id (the account id of the user's Discord account), is safe to run twice and never demotes. We own this role instead of installing the Better Auth admin plugin (`docs/adr/0005-own-the-admin-role.md`).
 _Avoid_: Moderator, superuser, staff
 
 **Audit Entry**:

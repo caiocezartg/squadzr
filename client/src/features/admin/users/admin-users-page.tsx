@@ -44,6 +44,7 @@ export function AdminUsersPage() {
             data={query.data}
             search={search}
             page={page}
+            stale={query.isPlaceholderData}
             onPageChange={goTo}
             onClearSearch={clear}
           />
@@ -62,13 +63,25 @@ interface UsersResultsProps {
   /** The search and page the URL asks for, which `data` may still be the previous one of. */
   readonly search: string
   readonly page: number
+  /** True while `data` is the previous search's or page's, so it cannot speak for the new one. */
+  readonly stale: boolean
   readonly onPageChange: (page: number) => void
   readonly onClearSearch: () => void
 }
 
-function UsersResults({ data, search, page, onPageChange, onClearSearch }: UsersResultsProps) {
+function UsersResults({
+  data,
+  search,
+  page,
+  stale,
+  onPageChange,
+  onClearSearch,
+}: UsersResultsProps) {
   const t = useTranslations('admin.users')
   const pageCount = Math.ceil(data.total / PAGE_SIZE)
+
+  // An empty answer belongs to the search and page it was read for: until the new one lands, say nothing.
+  if (stale && data.items.length === 0) return null
 
   if (data.total === 0 && search) {
     return (

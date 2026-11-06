@@ -409,6 +409,9 @@ describe('PUT /api/admin/users/:id/role', () => {
     ])
   })
 
+  // The last_admin rule is defense in depth: an admin actor demoting a distinct admin implies at least
+  // two admins, so it cannot be reached through this endpoint. role-change.spec.ts and the use-case
+  // spec cover it.
   it('refuses an admin changing their own role, to either role, and writes nothing', async () => {
     const second = await signIn(server, 'Second', { role: 'admin' })
 
