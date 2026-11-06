@@ -200,6 +200,17 @@ describe('shell account', () => {
     expect(navigation.calls).toEqual([{ method: 'push', href: '/admin' }])
   })
 
+  it.each(['moderator', 'owner'] as const)(
+    'leads a %s to the panel from the account menu',
+    async (role) => {
+      const { user } = renderShell('/squads', { ...SHELL_USER, role })
+
+      await user.click(await within(sidebar()).findByRole('button', { name: 'Caio Cezar' }))
+
+      expect(await screen.findByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin')
+    }
+  )
+
   it('replaces the account button with Sign in with Discord for a visitor', () => {
     renderShell('/squads', null)
 

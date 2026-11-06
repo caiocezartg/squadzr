@@ -11,7 +11,12 @@ import { usePathname } from 'next/navigation'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { PAGE_SIZE, type AuditEntriesResponse, type AuditEntryDto } from '@squadzr/schemas'
+import {
+  PAGE_SIZE,
+  type AuditEntriesResponse,
+  type AuditEntryDto,
+  type UserRole,
+} from '@squadzr/schemas'
 import { AdminShell } from '@/features/admin'
 import { AdminAuditPage, AdminOverviewPage } from '@/features/admin/page'
 import { createTestQueryClient } from './harness'
@@ -89,8 +94,12 @@ function AdminScene() {
   return pathname === '/admin/audit' ? <AdminAuditPage /> : <AdminOverviewPage />
 }
 
-function renderAdmin(url: string, queryClient: QueryClient = createTestQueryClient()) {
-  signInAsFakeUser({ role: 'admin' })
+function renderAdmin(
+  url: string,
+  queryClient: QueryClient = createTestQueryClient(),
+  role: UserRole = 'admin'
+) {
+  signInAsFakeUser({ role })
   const navigation = createHarnessNavigation(url)
   const tree: ReactNode = (
     <EnglishIntlProvider session={fakeSession()}>
@@ -172,6 +181,26 @@ describe('admin shell', () => {
     )
   })
 
+  it.each<UserRole>(['admin', 'owner'])('lists all five sections to an %s', (role) => {
+    renderAdmin('/admin', createTestQueryClient(), role)
+
+    expect(
+      within(sections())
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+    ).toEqual(['Overview', 'Squads', 'Users', 'Catalog', 'Audit'])
+  })
+
+  it('lists only the Overview, Squads and Users to a moderator', () => {
+    renderAdmin('/admin', createTestQueryClient(), 'moderator')
+
+    expect(
+      within(sections())
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+    ).toEqual(['Overview', 'Squads', 'Users'])
+  })
+
   it('marks the overview only on its own path, and follows a navigation', async () => {
     serveAudit({ 1: auditPage([systemGrant]) })
     const { user, navigation } = renderAdmin('/admin')
@@ -216,13 +245,7 @@ describe('admin audit', () => {
     // What a screen reader reads in each cell: the avatars' initials and the dash are hidden from it.
     const cells = (row: HTMLElement) => within(row).getAllByRole('cell').map(spokenText)
 
-    expect(cells(grant)).toEqual([
-      '5m ago',
-      'System',
-      'Granted admin: user → admin',
-      'Caio',
-      'None',
-    ])
+    expect(cells(grant)).toEqual(['5m ago', 'System', 'Granted role: user → admin', 'Caio', 'None'])
     expect(cells(closure)).toEqual([
       '30m ago',
       'Marina Rocha',
@@ -241,6 +264,22 @@ describe('admin audit', () => {
     expect(within(grant).getAllByRole('cell')[4]).toHaveTextContent('—')
   })
 
+  it('names the moderator and owner roles in a role entry', async () => {
+    const ownerGrant: AuditEntryDto = {
+      ...systemGrant,
+      id: 'entry-owner',
+      details: { oldRole: 'moderator', newRole: 'owner' },
+    }
+    serveAudit({ 1: auditPage([ownerGrant]) })
+    renderAdmin('/admin/audit')
+
+    const [row] = await tableRows()
+    if (!row) throw new Error('The audit table has no rows')
+    expect(spokenText(within(row).getAllByRole('cell')[2] as Node)).toBe(
+      'Granted role: moderator → owner'
+    )
+  })
+
   it('shows the same entries as a list of rows for phones', async () => {
     serveAudit({ 1: auditPage([systemGrant, closureByFormerAdmin]) })
     renderAdmin('/admin/audit')
@@ -249,10 +288,10 @@ describe('admin audit', () => {
     const [grant, closure] = within(list).getAllByRole('listitem')
     if (!grant || !closure) throw new Error('The audit list has fewer rows than entries')
 
-    expect(within(grant).getByText('Granted admin')).toBeInTheDocument()
+    expect(within(grant).getByText('Granted role')).toBeInTheDocument()
     expect(within(grant).getByText('System')).toBeInTheDocument()
     // The detail paragraph names its action for a screen reader, which reads it apart from the title.
-    expect(spokenText(within(grant).getByText('user → admin'))).toBe('Granted admin: user → admin')
+    expect(spokenText(within(grant).getByText('user → admin'))).toBe('Granted role: user → admin')
     expect(within(closure).getByText('Marina Rocha')).toBeInTheDocument()
     expect(within(closure).getByText('“Offensive squad name.”')).toBeInTheDocument()
   })

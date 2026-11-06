@@ -5,7 +5,18 @@ import type { UserRole } from '@squadzr/schemas'
 import { VIEWER_TIME_ZONE } from '@/hooks/use-time-ago'
 import { cn } from '@/lib/utils'
 
-/** The role as a pill: ADMIN in mint, USER muted. */
+/**
+ * Each role's pill colours (reference, Admin panel): the owner in solid mint, an admin in mint on a
+ * mint tint, a moderator in Discord blue on its tint, a user muted.
+ */
+const ROLE_PILL: Record<UserRole, string> = {
+  owner: 'bg-mint text-mint-ink',
+  admin: 'bg-mint/8 text-mint',
+  moderator: 'bg-discord-soft/13 text-discord-soft',
+  user: 'bg-raised-2 text-muted',
+}
+
+/** The role as a pill, its colours from `ROLE_PILL`. */
 export function RolePill({ role }: { readonly role: UserRole }) {
   const t = useTranslations('admin.users.roles')
 
@@ -13,7 +24,7 @@ export function RolePill({ role }: { readonly role: UserRole }) {
     <span
       className={cn(
         'type-label inline-flex px-2 py-1 text-[10.5px] tracking-[0.12em]',
-        role === 'admin' ? 'bg-mint text-mint-ink' : 'bg-raised-2 text-muted'
+        ROLE_PILL[role]
       )}
     >
       {t(role)}

@@ -88,6 +88,24 @@ describe('admin users list', () => {
     expect(phoneList).toHaveTextContent('2 open squads')
   })
 
+  it('labels each of the four roles in the role column', async () => {
+    const people = (['user', 'moderator', 'admin', 'owner'] as const).map((role) => ({
+      ...diego,
+      id: `user-${role}`,
+      name: `Player ${role}`,
+      role,
+    }))
+    serveUsers(people)
+    renderUsers('/admin/users')
+
+    const table = await screen.findByRole('table', { name: 'Users' })
+    const roleCells = within(table)
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell')[3]?.textContent)
+    expect(roleCells).toEqual(['User', 'Moderator', 'Admin', 'Owner'])
+  })
+
   it('starts the field from the URL and writes a new search back to it, on the first page', async () => {
     serveUsers([marina, diego])
     const { user, navigation } = renderUsers('/admin/users?q=mar&page=2')

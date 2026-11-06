@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { LogOut, ShieldCheck, UserRound } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import type { SessionDto } from '@squadzr/schemas'
+import { canAccessAdminPanel, type SessionDto } from '@squadzr/schemas'
 import { Button } from '@/components/ds/button'
 import { Popover } from '@/components/ds/popover'
 import { useMediaQuery } from '@/components/ds/use-media-query'
@@ -77,7 +77,7 @@ export function AccountPopover({ user, defaultOpen, takeFocus }: AccountPopoverP
       >
         {t('ds.shell.myProfile')}
       </Button>
-      {user.role === 'admin' && (
+      {canAccessAdminPanel(user.role) && (
         <Button
           variant="ghost"
           full

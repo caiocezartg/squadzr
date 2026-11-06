@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import type { AdminUserDetailDto } from '@squadzr/schemas'
+import { grantableRoles, hasFullAdminAccess, type AdminUserDetailDto } from '@squadzr/schemas'
 import { useSession } from '@/hooks/use-session'
 import { ApiClientError } from '@/lib/api'
 import { UserHistory } from './user-history'
@@ -10,7 +10,7 @@ import { UserLimits } from './user-limits'
 import { UserOpenSquads } from './user-open-squads'
 import { UserPageHeader } from './user-page-header'
 import { UserNotFound, UserPageSkeleton } from './user-page-states'
-import { UserRoleControl } from './user-role-control'
+import { UserRoleControl, UserRoleView } from './user-role-control'
 import { useAdminUser } from './users-query'
 import { UsersLoadError } from './users-states'
 
@@ -53,7 +53,7 @@ export function AdminUserPage({ id }: { readonly id: string }) {
 }
 
 function UserDetail({ user }: { readonly user: AdminUserDetailDto }) {
-  const viewerId = useSession()?.user.id
+  const viewer = useSession()?.user
 
   return (
     <>
@@ -61,7 +61,16 @@ function UserDetail({ user }: { readonly user: AdminUserDetailDto }) {
       <div className="grid items-start gap-4.5 lg:grid-cols-[1fr_1.3fr]">
         <section aria-label={user.name} className={PANEL}>
           <UserIdentity user={user} />
-          <UserRoleControl key={user.id} user={user} own={user.id === viewerId} />
+          {hasFullAdminAccess(viewer?.role) ? (
+            <UserRoleControl
+              key={user.id}
+              user={user}
+              own={user.id === viewer?.id}
+              grantable={grantableRoles(viewer?.role, user.role)}
+            />
+          ) : (
+            <UserRoleView role={user.role} />
+          )}
           <UserLimits
             squadLimits={user.squadLimits}
             completedSquads={user.completedSquads}

@@ -447,7 +447,8 @@
     "INTERNAL_ERROR": "Algo deu errado. Por favor, tente novamente mais tarde.",
     "USER_NOT_FOUND": "Não encontramos esse usuário.",
     "CANNOT_CHANGE_OWN_ROLE": "Você não pode alterar o seu próprio papel.",
-    "LAST_ADMIN": "É preciso manter ao menos um admin, então este papel não pode ser removido.",
+    "CANNOT_CHANGE_OWNER": "O papel do dono não pode ser alterado.",
+    "ROLE_CHANGE_FORBIDDEN": "O seu papel não permite esta alteração.",
     "DEFAULT": "Algo deu errado. Por favor, tente novamente."
   },
   "playerProfile": {
@@ -508,7 +509,7 @@
     },
     "users": {
       "title": "Usuários",
-      "description": "Encontre pessoas e gerencie quem é admin.",
+      "description": "Encontre pessoas e gerencie os papéis delas.",
       "search": {
         "label": "Buscar usuários",
         "placeholder": "Buscar por nome, ID do Discord ou ID do usuário"
@@ -523,7 +524,9 @@
       },
       "roles": {
         "user": "Usuário",
-        "admin": "Admin"
+        "moderator": "Moderador",
+        "admin": "Admin",
+        "owner": "Dono"
       },
       "noDiscord": "Sem conta do Discord",
       "openSquadsCount": "{count, plural, one {# squad aberto} other {# squads abertos}}",
@@ -555,12 +558,14 @@
         "role": {
           "label": "Papel",
           "own": "Você não pode mudar o seu próprio papel.",
+          "owner": "O papel do dono não pode ser alterado.",
+          "adminTarget": "Só o dono pode mudar o papel de um admin.",
           "hint": "A mudança vale na próxima requisição da pessoa e fica na auditoria.",
-          "changed": "{name} agora é {role, select, admin {admin} other {usuário}}."
+          "changed": "{name} agora é {role, select, admin {admin} moderator {moderador} other {usuário}}."
         },
         "dialog": {
-          "title": "{role, select, admin {Tornar {name} admin?} other {Tornar {name} usuário?}}",
-          "body": "{role, select, admin {{name} passa a acessar o painel de admin a partir da próxima requisição.} other {{name} perde o acesso ao painel de admin a partir da próxima requisição.}} A mudança fica registrada na auditoria.",
+          "title": "{role, select, admin {Tornar {name} admin?} moderator {Tornar {name} moderador?} other {Tornar {name} usuário?}}",
+          "body": "{role, select, admin {{name} passa a ter acesso completo ao painel de admin a partir da próxima requisição.} moderator {{name} passa a acessar a Visão geral, os Usuários e os Squads do painel de admin a partir da próxima requisição.} other {{name} perde o acesso ao painel de admin a partir da próxima requisição.}} A mudança fica registrada na auditoria.",
           "confirm": "Confirmar",
           "confirming": "Alterando…",
           "cancel": "Cancelar"
@@ -617,11 +622,13 @@
         "role_changed": "Mudou um papel",
         "squad_closed": "Fechou um squad",
         "catalog_import_requested": "Executou o Catalog Import",
-        "admin_granted": "Concedeu admin"
+        "admin_granted": "Concedeu papel"
       },
       "roles": {
         "user": "usuário",
-        "admin": "admin"
+        "moderator": "moderador",
+        "admin": "admin",
+        "owner": "dono"
       },
       "roleChange": "{from} → {to}",
       "manualRun": "Execução manual",
