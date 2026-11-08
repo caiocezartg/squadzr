@@ -6,3 +6,4 @@ import 'server-only'
  */
 export { prefetchAuditEntriesAndWait } from './audit/prefetch-audit'
 export { prefetchAdminUserAndWait, prefetchAdminUsersAndWait } from './users/prefetch-users'
+export { prefetchAdminOverviewAndWait } from './overview/prefetch-overview'
