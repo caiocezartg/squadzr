@@ -9,6 +9,8 @@ interface ChangeBadgeProps {
   readonly previous: number
   /** The length of both periods, in days. */
   readonly period: number
+  /** Where the comparison is written out: always, or from the sm width up (read aloud below it). */
+  readonly versus?: 'always' | 'from-sm'
   readonly className?: string
 }
 
@@ -45,9 +47,15 @@ function useChangeView(): (change: PeriodChange) => ChangeView {
 /**
  * A total's change against the previous period (reference, Admin panel, Overview): ▲ in mint or ▼ in
  * danger with the percentage, "new" when the previous period had none and a neutral dash when neither
- * had any, then what it compares with.
+ * had any, then what it compares with, which a tile on a phone leaves to screen readers.
  */
-export function ChangeBadge({ current, previous, period, className }: ChangeBadgeProps) {
+export function ChangeBadge({
+  current,
+  previous,
+  period,
+  versus = 'always',
+  className,
+}: ChangeBadgeProps) {
   const t = useTranslations('admin.overview.change')
   const view = useChangeView()(periodChange(current, previous))
 
@@ -63,7 +71,14 @@ export function ChangeBadge({ current, previous, period, className }: ChangeBadg
         {view.spoken && <span className="sr-only">{view.spoken} </span>}
         {view.value}
       </span>
-      <span className="text-muted text-xs whitespace-nowrap">{t('versus', { count: period })}</span>
+      <span
+        className={cn(
+          'text-muted text-xs whitespace-nowrap',
+          versus === 'from-sm' && 'max-sm:sr-only'
+        )}
+      >
+        {t('versus', { count: period })}
+      </span>
     </span>
   )
 }

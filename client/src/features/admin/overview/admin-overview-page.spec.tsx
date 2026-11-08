@@ -131,6 +131,21 @@ describe('admin overview', () => {
     expect(none).not.toHaveClass('text-mint')
   })
 
+  it('leaves what a tile compares with to screen readers on a phone, keeping it on the chart', async () => {
+    serveOverview()
+    renderOverview('/admin')
+
+    await screen.findByText('Last 30 days')
+    expect(within(tile('Registered users')).getByText('vs 30 previous days')).toHaveClass(
+      'max-sm:sr-only'
+    )
+    const chartTotal = screen
+      .getAllByText('vs 30 previous days')
+      .filter((element) => !element.closest('dl'))
+    expect(chartTotal).toHaveLength(1)
+    expect(chartTotal[0]).not.toHaveClass('max-sm:sr-only')
+  })
+
   it('keeps every tile in a row one height, a label on two lines lowering the whole row', async () => {
     serveOverview()
     renderOverview('/admin')

@@ -7,7 +7,8 @@ import { StatTile } from './stat-tile'
 
 /**
  * A tile's period line: how many joined the total in the period, the figure in bold (mint when the
- * period brought any), and the change against before.
+ * period brought any), and the change against before; on a phone, two lines: the figure, then the
+ * change.
  */
 function PeriodLine({
   comparison,
@@ -20,14 +21,19 @@ function PeriodLine({
   const tone = comparison.current > 0 ? 'text-mint' : 'text-text-2'
 
   return (
-    <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+    <span className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-1.5">
       <span>
         {t.rich('inPeriod', {
           count: comparison.current,
           figure: (figure) => <strong className={`font-bold ${tone}`}>{figure}</strong>,
         })}
       </span>
-      <ChangeBadge current={comparison.current} previous={comparison.previous} period={period} />
+      <ChangeBadge
+        current={comparison.current}
+        previous={comparison.previous}
+        period={period}
+        versus="from-sm"
+      />
     </span>
   )
 }
