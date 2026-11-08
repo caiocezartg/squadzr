@@ -91,14 +91,14 @@ describe('notification idempotency key migration (#112)', () => {
       code: UNIQUE_VIOLATION,
     })
     // ...and no other type has one: a host is told twice about the same Squad.
-    for (const type of ['member_left', 'host_transferred', 'room_closed']) {
+    for (const type of ['member_left', 'host_transferred', 'room_closed', 'room_closed_by_admin']) {
       await insertNotification(userId, roomId, type)
       await insertNotification(userId, roomId, type)
     }
     const { rows: repeated } = await client.query<{ total: number }>(
       `SELECT count(*)::int AS total FROM "user_notifications" WHERE type <> 'room_ready'`
     )
-    expect(repeated[0]?.total).toBe(6)
+    expect(repeated[0]?.total).toBe(8)
 
     const { rows: indexes } = await client.query<{ indexdef: string }>(
       `SELECT indexdef FROM pg_indexes WHERE indexname = 'user_notifications_room_user_type_unique'`

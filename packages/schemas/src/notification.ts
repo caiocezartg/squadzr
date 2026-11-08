@@ -2,12 +2,14 @@ import { z } from 'zod'
 import { isoDateTimeSchema } from './date'
 
 // One notification type per action. `room_ready` keeps its name from before the other types
-// existed; the rest are born in the Squad Release, when a member's other Open Squads are left.
+// existed; the rest are born in the Squad Release, when a member's other Open Squads are left, or in
+// an Admin Closure (`room_closed_by_admin`).
 export const userNotificationTypeSchema = z.enum([
   'room_ready',
   'member_left',
   'host_transferred',
   'room_closed',
+  'room_closed_by_admin',
 ])
 
 export type UserNotificationTypeDto = z.infer<typeof userNotificationTypeSchema>
@@ -57,11 +59,23 @@ export const roomClosedNotificationPayloadSchema = z.object({
   reason: z.literal('no_eligible_host'),
 })
 
+// A Squad an admin closed: the usual Squad fields and the admin's reason, which the members read in
+// the bell. It never names the admin. Strict, and listed before `room_closed` in the payload union,
+// so parsing a payload through the union never strips the `reason` of this type nor the
+// `previousHost` of `room_closed`.
+export const roomClosedByAdminNotificationPayloadSchema = z
+  .object({
+    ...notificationSquadFields,
+    reason: z.string(),
+  })
+  .strict()
+
 // Any one payload, for code that holds a payload without its notification.
 export const userNotificationPayloadSchema = z.union([
   roomReadyNotificationPayloadSchema,
   hostTransferredNotificationPayloadSchema,
   memberLeftNotificationPayloadSchema,
+  roomClosedByAdminNotificationPayloadSchema,
   roomClosedNotificationPayloadSchema,
 ])
 
@@ -96,6 +110,11 @@ export const userNotificationSchema = z.discriminatedUnion('type', [
     ...notificationBaseFields,
     type: z.literal('room_closed'),
     payload: roomClosedNotificationPayloadSchema,
+  }),
+  z.object({
+    ...notificationBaseFields,
+    type: z.literal('room_closed_by_admin'),
+    payload: roomClosedByAdminNotificationPayloadSchema,
   }),
 ])
 

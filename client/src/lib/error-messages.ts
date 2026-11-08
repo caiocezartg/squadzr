@@ -19,6 +19,7 @@ const ERROR_CODE_KEYS = [
   'CANNOT_CHANGE_OWNER',
   'ROLE_CHANGE_FORBIDDEN',
   'INTERNAL_ERROR',
+  'ROOM_NOT_OPEN',
 ] as const
 
 type ErrorCode = (typeof ERROR_CODE_KEYS)[number]

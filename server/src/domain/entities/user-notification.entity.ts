@@ -1,4 +1,9 @@
-export type UserNotificationType = 'room_ready' | 'member_left' | 'host_transferred' | 'room_closed'
+export type UserNotificationType =
+  | 'room_ready'
+  | 'member_left'
+  | 'host_transferred'
+  | 'room_closed'
+  | 'room_closed_by_admin'
 
 /** A person a notification talks about. */
 export interface NotificationPerson {
@@ -42,12 +47,18 @@ export interface RoomClosedPayload extends NotificationSquadPayload {
   readonly reason: 'no_eligible_host'
 }
 
+/** A Squad an admin closed. The reason is the admin's own words; the admin is never named. */
+export interface RoomClosedByAdminPayload extends NotificationSquadPayload {
+  readonly reason: string
+}
+
 /** Each type with the payload it owns, so the pair cannot drift. */
 export type UserNotificationContent =
   | { readonly type: 'room_ready'; readonly payload: RoomReadyPayload }
   | { readonly type: 'host_transferred'; readonly payload: HostTransferredPayload }
   | { readonly type: 'member_left'; readonly payload: MemberLeftPayload }
   | { readonly type: 'room_closed'; readonly payload: RoomClosedPayload }
+  | { readonly type: 'room_closed_by_admin'; readonly payload: RoomClosedByAdminPayload }
 
 export type UserNotificationPayload = UserNotificationContent['payload']
 

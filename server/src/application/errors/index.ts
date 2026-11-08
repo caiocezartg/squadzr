@@ -24,3 +24,4 @@ export {
   OwnerAlreadyExistsError,
   RoleChangeForbiddenError,
 } from './role-change.error'
+export { RoomNotOpenError } from './room-not-open.error'

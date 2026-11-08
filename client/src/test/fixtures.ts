@@ -351,6 +351,22 @@ export const memberLeftNotification: Extract<UserNotification, { type: 'member_l
   },
 }
 
+/** An admin closed the viewer's Squad and gave a reason. */
+export const roomClosedByAdminNotification: Extract<
+  UserNotification,
+  { type: 'room_closed_by_admin' }
+> = {
+  ...squadNotificationFields,
+  id: 'a1b2c3d4-0005-4e5f-8a6b-1c2d3e4f5a6b',
+  type: 'room_closed_by_admin',
+  title: 'Squad closed',
+  message: 'The squad was closed by moderation.',
+  payload: {
+    ...squadNotificationPayload,
+    reason: 'Offensive squad name',
+  },
+}
+
 /** The viewer's Squad was closed: nobody who stayed could take over. */
 export const roomClosedNotification: Extract<UserNotification, { type: 'room_closed' }> = {
   ...squadNotificationFields,

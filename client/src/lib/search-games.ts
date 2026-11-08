@@ -2,13 +2,13 @@ import { GAME_SEARCH_MAX_LENGTH, gamesResponseSchema } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import type { Game } from '@/types'
 
-/** How many matching games the create dialog lists. */
+/** How many matching games a search lists. */
 const GAME_SEARCH_LIMIT = 20
 
 /**
- * The game search behind the create dialog. An empty term asks for the
- * suggestions (Featured Games first, then by popularity), which is what the
- * dialog shows before the player types.
+ * The game search behind the create dialog and the admin Squads game filter. An empty term asks for
+ * the suggestions (Featured Games first, then by popularity), which is what the dialog shows before
+ * the player types.
  * The optional signal lets a newer term cancel the request it superseded.
  */
 export function searchGames(term: string, signal?: AbortSignal): Promise<Game[]> {

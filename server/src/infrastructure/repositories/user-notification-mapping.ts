@@ -1,6 +1,7 @@
 import {
   hostTransferredNotificationPayloadSchema,
   memberLeftNotificationPayloadSchema,
+  roomClosedByAdminNotificationPayloadSchema,
   roomClosedNotificationPayloadSchema,
   roomReadyNotificationPayloadSchema,
   userNotificationTypeSchema,
@@ -51,5 +52,11 @@ export function mapUserNotificationRow(row: UserNotificationRow): UserNotificati
       return { ...base, type, payload: memberLeftNotificationPayloadSchema.parse(row.payload) }
     case 'room_closed':
       return { ...base, type, payload: roomClosedNotificationPayloadSchema.parse(row.payload) }
+    case 'room_closed_by_admin':
+      return {
+        ...base,
+        type,
+        payload: roomClosedByAdminNotificationPayloadSchema.parse(row.payload),
+      }
   }
 }
