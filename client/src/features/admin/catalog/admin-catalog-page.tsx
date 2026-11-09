@@ -18,8 +18,8 @@ import { RunsRowList } from './runs-row-list'
 import { RunsTable, type OpenRun } from './runs-table'
 
 /**
- * The admin Catalog page's Import runs tab (`/admin/catalog/runs`): the Catalog Import Run history, newest first, 20 per page, the page held in
- * the URL as `?page=`. A page the server or an earlier visit read renders at once, with no skeleton;
+ * The admin Catalog page's Import runs tab (`/admin/catalog/runs`): the Catalog Import Run history,
+ * newest first, 20 per page, the page held in the URL as `?page=`. A page the server or an earlier visit read renders at once, with no skeleton;
  * the skeleton is only for a page the cache has never held. Moving between pages keeps the previous
  * page on screen until the next one lands. A row opens the run's detail in a side panel.
  */

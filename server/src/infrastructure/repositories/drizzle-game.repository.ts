@@ -120,7 +120,7 @@ function rankTopTags(roomTags: readonly (readonly string[])[]): string[] {
     .map(([tag]) => tag)
 }
 
-function mapRowToEntity(row: GameRow): Game {
+export function mapRowToEntity(row: GameRow): Game {
   return {
     id: row.id,
     name: row.name,

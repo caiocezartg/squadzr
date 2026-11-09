@@ -773,8 +773,6 @@
       }
     },
     "catalog": {
-      "title": "Catalog Import",
-      "description": "Sincroniza o catálogo de jogos com a IGDB.",
       "tableLabel": "Execuções do Catalog Import",
       "columns": {
         "started": "Início",

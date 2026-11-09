@@ -17,6 +17,7 @@ import type { Database } from '@infrastructure/database/drizzle'
 import { games, type GameRow } from '@infrastructure/database/schema/games'
 import { rooms } from '@infrastructure/database/schema/rooms'
 import { squadRecords } from '@infrastructure/database/schema/squad-records'
+import { mapRowToEntity } from './drizzle-game.repository'
 import { validOpenRoomCondition } from './open-room-rules'
 
 /** The Listed Games with a featured rank: the highlights players see. */
@@ -36,27 +37,7 @@ function searchCondition(search: string | undefined): SQL | undefined {
 }
 
 function mapRow(row: GameRow, openSquads: number, completedSquads: number): AdminGame {
-  return {
-    game: {
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      igdbId: row.igdbId,
-      genres: row.genres,
-      aliases: row.aliases,
-      platforms: row.platforms,
-      coverUrl: row.coverUrl,
-      thumbnailUrl: row.thumbnailUrl,
-      popularity: row.popularity,
-      listed: row.listed,
-      featuredRank: row.featuredRank,
-      minPlayers: row.minPlayers,
-      maxPlayers: row.maxPlayers,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    },
-    usage: { openSquads, completedSquads },
-  }
+  return { game: mapRowToEntity(row), usage: { openSquads, completedSquads } }
 }
 
 export class DrizzleAdminGameRepository implements IAdminGameRepository {

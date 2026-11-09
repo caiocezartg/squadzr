@@ -773,8 +773,6 @@
       }
     },
     "catalog": {
-      "title": "Catalog Import",
-      "description": "Syncs the game catalog with IGDB.",
       "tableLabel": "Catalog Import runs",
       "columns": {
         "started": "Started",

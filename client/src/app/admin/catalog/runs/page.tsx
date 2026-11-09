@@ -18,8 +18,9 @@ interface AdminCatalogRouteProps {
 }
 
 /**
- * The Catalog page's Import runs tab. Catalog Import is for an admin or the owner: a moderator passes the layout's gate
- * and is stopped here with not-found, before the read is sent. The page of the run history the URL asks
+ * The Catalog page's Import runs tab. Catalog Import is for an admin or the owner: a moderator passes
+ * the layout's gate and is stopped here with not-found, before the read is sent. The page of the run
+ * history the URL asks
  * for (`?page=`, the first when absent or invalid) is read on the server and waited for, so a hard load
  * has the table in its HTML and needs no skeleton; a read that fails or takes over two seconds is left
  * to the browser. Later moves between pages happen in the browser, without a server render.
