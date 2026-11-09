@@ -3,9 +3,11 @@ import type { Clock } from '@domain/services/clock.interface'
 import type { IGameCatalogSource } from '@domain/services/game-catalog-source.interface'
 import type { ICatalogImportUseCase } from '@application/use-cases/game/catalog-import.use-case'
 import { CatalogImportUseCase } from '@application/use-cases/game/catalog-import.use-case'
+import { CatalogImportRunRecorder } from '@application/use-cases/game/catalog-import-run-recorder'
+import { DrizzleCatalogImportRunRepository } from '@infrastructure/repositories/drizzle-catalog-import-run.repository'
 import { DrizzleGameRepository } from '@infrastructure/repositories/drizzle-game.repository'
 import { IgdbGameCatalogSource } from '@infrastructure/igdb/igdb-game-catalog-source'
-import { GAME_CATALOG_IMPORT } from '@config/constants'
+import { CATALOG_IMPORT_RUN, GAME_CATALOG_IMPORT } from '@config/constants'
 import { CURATED_GAMES } from '@interface/catalog/curated-games'
 import { GAME_ALIASES } from '@interface/catalog/game-aliases'
 
@@ -28,6 +30,32 @@ export function createCatalogImportUseCase(
       minimumCandidates: GAME_CATALOG_IMPORT.MINIMUM_CANDIDATES,
     },
     GAME_ALIASES
+  )
+}
+
+/**
+ * Composes the run recorder over the caller's own database connection: the import it records is built
+ * by {@link createCatalogImportUseCase}, and every run-row write goes through the same pool as its own
+ * statement, outside the import's transaction.
+ */
+export function createCatalogImportRunRecorder(
+  db: Database,
+  clock: Clock,
+  source: IGameCatalogSource,
+  onHeartbeatError?: (error: unknown) => void
+): CatalogImportRunRecorder {
+  return new CatalogImportRunRecorder(
+    new DrizzleCatalogImportRunRepository(db),
+    new DrizzleGameRepository(db, clock),
+    createCatalogImportUseCase(db, clock, source),
+    clock,
+    {
+      heartbeatIntervalMs: CATALOG_IMPORT_RUN.HEARTBEAT_INTERVAL_MS,
+      staleHeartbeatMs: CATALOG_IMPORT_RUN.STALE_HEARTBEAT_MS,
+      staleRequestedMs: CATALOG_IMPORT_RUN.STALE_REQUESTED_MS,
+      errorMessageMaxLength: CATALOG_IMPORT_RUN.ERROR_MESSAGE_MAX_LENGTH,
+    },
+    onHeartbeatError
   )
 }
 

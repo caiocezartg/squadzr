@@ -8,7 +8,12 @@ import {
   type ActivityMetric,
   type OverviewPeriod,
 } from '@squadzr/schemas'
-import { activitySamples, squadRecords, user } from '@infrastructure/database/schema'
+import {
+  activitySamples,
+  catalogImportRuns,
+  squadRecords,
+  user,
+} from '@infrastructure/database/schema'
 import { runActivitySample } from '@infrastructure/plugins/activity-sampler.plugin'
 import { createRunActivitySampleUseCase } from '@interface/factories/activity-sampler.factory'
 import { insertAuditEntry } from '@infrastructure/repositories/audit-entry-writer'
@@ -211,6 +216,53 @@ describe('the recent audit of GET /api/admin/overview', () => {
     const asModerator = await get(server, '/api/admin/overview?period=7', moderator)
     expect(asModerator.statusCode).toBe(200)
     expect(asModerator.json()).toMatchObject({ recentAudit: null })
+  })
+})
+
+describe('the last Catalog Import Run of GET /api/admin/overview', () => {
+  it('is empty for an admin before any run was recorded', async () => {
+    expect((await overview(7)).catalogImport).toEqual({ lastRun: null })
+  })
+
+  it('shows an admin and the owner the newest run, whatever its status', async () => {
+    const owner = await signIn(server, 'Owner', { role: 'owner' })
+    await server.app.db.insert(catalogImportRuns).values({
+      trigger: 'scheduled',
+      status: 'succeeded',
+      requestedAt: new Date(NOW.getTime() - 86_400_000),
+      startedAt: new Date(NOW.getTime() - 86_400_000),
+      finishedAt: new Date(NOW.getTime() - 86_396_000),
+      created: 1,
+      updated: 2,
+      delisted: 3,
+      relisted: 4,
+      received: 5,
+      dropped: 0,
+      invalid: 0,
+      listedGames: 42,
+    })
+    await server.app.db.insert(catalogImportRuns).values({
+      trigger: 'scheduled',
+      status: 'running',
+      requestedAt: NOW,
+      startedAt: NOW,
+      heartbeatAt: NOW,
+    })
+
+    for (const viewer of [admin, owner]) {
+      expect((await overview(7, viewer)).catalogImport?.lastRun).toMatchObject({
+        status: 'running',
+        requestedAt: NOW.toISOString(),
+        summary: null,
+      })
+    }
+  })
+
+  it('is left out for a moderator', async () => {
+    const asModerator = await get(server, '/api/admin/overview?period=7', moderator)
+
+    expect(asModerator.statusCode).toBe(200)
+    expect(asModerator.json()).toMatchObject({ catalogImport: null })
   })
 })
 

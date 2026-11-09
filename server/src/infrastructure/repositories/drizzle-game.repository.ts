@@ -8,45 +8,16 @@ import type {
 } from '@domain/repositories/game.repository'
 import type { Clock } from '@domain/services/clock.interface'
 import type { Database } from '@infrastructure/database/drizzle'
-import {
-  buildSearchText,
-  normalizeAliases,
-  SEARCH_TEXT_SEPARATOR,
-} from '@domain/services/search-text'
+import { buildSearchText, normalizeAliases } from '@domain/services/search-text'
 import { games, type GameRow } from '@infrastructure/database/schema/games'
 import { rooms } from '@infrastructure/database/schema/rooms'
+import {
+  gameSearchMatch,
+  gameSearchRelevance,
+  runGameSearch,
+  type SearchExecutor,
+} from './game-search-sql'
 import { validOpenRoomCondition } from './open-room-rules'
-
-/**
- * The minimum `word_similarity` between a term of five letters or more and a Game's
- * search text for a typo-tolerant match. 0.5 accepts an incomplete term ("valorat")
- * and a wrong letter in a long word ("counetr"), not a transposition in a short one.
- */
-const SEARCH_SIMILARITY_THRESHOLD = 0.5
-
-/**
- * The stricter minimum for a term of three or four letters. With 0.5 such a term
- * matches every word that merely starts alike: `word_similarity('lol', 'lost ark')`
- * is 0.5, so "lol" would list Lost Ark next to League of Legends.
- */
-const SHORT_TERM_SIMILARITY_THRESHOLD = 0.7
-
-/** Shorter terms match by text only: with 1 or 2 letters similarity matches almost everything. */
-const MIN_SIMILARITY_TERM_LENGTH = 3
-
-/** From this length on a term is "long" and uses {@link SEARCH_SIMILARITY_THRESHOLD}. */
-const LONG_TERM_LENGTH = 5
-
-/**
- * The `word_similarity` threshold for a normalized term, or `null` when the term
- * matches by text only. It counts characters, not UTF-16 units: a rare ideograph
- * outside the Basic Multilingual Plane (an astral character, such as 𠀀) is one letter.
- */
-function similarityThresholdFor(term: string): number | null {
-  const length = [...term].length
-  if (length < MIN_SIMILARITY_TERM_LENGTH) return null
-  return length < LONG_TERM_LENGTH ? SHORT_TERM_SIMILARITY_THRESHOLD : SEARCH_SIMILARITY_THRESHOLD
-}
 
 /**
  * The Listed Games matching a normalized `term`, ranked by how it matched. With
@@ -54,31 +25,16 @@ function similarityThresholdFor(term: string): number | null {
  * connection, which `<%` reads.
  */
 async function selectGamesByTerm(
-  executor: DatabaseExecutor,
+  executor: SearchExecutor,
   term: string,
   limit: number,
   withSimilarity: boolean
 ): Promise<Game[]> {
-  const contains = sql`${games.searchText} LIKE ${`%${term}%`}`
-  const similarity = sql`word_similarity(${term}, ${games.searchText})`
-  const matches = withSimilarity ? sql`(${contains} OR ${term} <% ${games.searchText})` : contains
-
   const result = await executor
     .select()
     .from(games)
-    .where(and(eq(games.listed, true), matches))
-    .orderBy(
-      sql`CASE
-        WHEN ${term} = split_part(${games.searchText}, ${SEARCH_TEXT_SEPARATOR}, 1) OR ${term} = ANY(${games.aliases}) THEN 0
-        WHEN starts_with(${games.searchText}, ${term}) THEN 1
-        WHEN ${contains} THEN 2
-        ELSE 3
-      END`,
-      sql`CASE WHEN ${contains} THEN 0 ELSE ${similarity} END DESC`,
-      desc(games.popularity),
-      asc(games.name),
-      asc(games.id)
-    )
+    .where(and(eq(games.listed, true), gameSearchMatch(term, withSimilarity)))
+    .orderBy(...gameSearchRelevance(term), desc(games.popularity), asc(games.name), asc(games.id))
     .limit(limit)
 
   return result.map(mapRowToEntity)
@@ -120,7 +76,7 @@ function rankTopTags(roomTags: readonly (readonly string[])[]): string[] {
     .map(([tag]) => tag)
 }
 
-function mapRowToEntity(row: GameRow): Game {
+export function mapRowToEntity(row: GameRow): Game {
   return {
     id: row.id,
     name: row.name,
@@ -183,19 +139,9 @@ export class DrizzleGameRepository implements IGameRepository {
    * are ranked by how the term matched.
    */
   private async searchByTerm(term: string, limit: number): Promise<Game[]> {
-    const threshold = similarityThresholdFor(term)
-    if (threshold === null) return selectGamesByTerm(this.executor, term, limit, false)
-
-    // `<%` is the indexable form of `word_similarity(...) >= threshold` and reads its
-    // threshold from a setting. `set_config(..., true)` is `SET LOCAL` with a bound
-    // value: the setting lasts for this transaction only, so it never leaks into the
-    // next user of the pooled connection.
-    return this.db.transaction(async (tx) => {
-      await tx.execute(
-        sql`SELECT set_config('pg_trgm.word_similarity_threshold', ${String(threshold)}, true)`
-      )
-      return selectGamesByTerm(tx, term, limit, true)
-    })
+    return runGameSearch(this.db, term, (executor, withSimilarity) =>
+      selectGamesByTerm(executor, term, limit, withSimilarity)
+    )
   }
 
   async findPopular({ limit, now }: FindPopularGamesInput): Promise<PopularGames> {
@@ -295,6 +241,15 @@ export class DrizzleGameRepository implements IGameRepository {
       throw new Error('Failed to upsert game')
     }
     return mapRowToEntity(row)
+  }
+
+  async countListed(): Promise<number> {
+    const [row] = await this.executor
+      .select({ total: sql<number>`count(*)::int` })
+      .from(games)
+      .where(eq(games.listed, true))
+
+    return row?.total ?? 0
   }
 
   async delistByIgdbIds(igdbIds: readonly number[]): Promise<number> {

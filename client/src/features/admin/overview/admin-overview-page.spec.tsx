@@ -14,6 +14,7 @@ import {
   type ActivityMetric,
   type ActivityResponse,
   type AuditEntryDto,
+  type CatalogImportRunDto,
   type OverviewPeriod,
   type OverviewResponse,
 } from '@squadzr/schemas'
@@ -38,10 +39,34 @@ const grant: AuditEntryDto = {
   createdAt: new Date().toISOString(),
 }
 
+const lastRun: CatalogImportRunDto = {
+  id: 'run-1',
+  trigger: 'scheduled',
+  requestedBy: null,
+  status: 'succeeded',
+  requestedAt: '2026-11-05T04:00:00.000Z',
+  startedAt: '2026-11-05T04:00:00.000Z',
+  finishedAt: '2026-11-05T04:03:12.000Z',
+  summary: {
+    created: 4,
+    updated: 30,
+    delisted: 2,
+    relisted: 1,
+    received: 1700,
+    dropped: 3,
+    invalid: 1,
+  },
+  listedGames: 1684,
+  errorMessage: null,
+}
+
+type CatalogImport = OverviewResponse['catalogImport']
+
 /** The Overview of a period; the 7-day one has its own numbers so a test can tell them apart. */
 function overview(
   period: OverviewPeriod,
-  recentAudit: AuditEntryDto[] | null = [grant]
+  recentAudit: AuditEntryDto[] | null = [grant],
+  catalogImport: CatalogImport = { lastRun }
 ): OverviewResponse {
   const week = period === 7
   return {
@@ -54,6 +79,7 @@ function overview(
       open: { current: 261, previous: 272 },
     },
     recentAudit,
+    catalogImport,
   }
 }
 
@@ -99,9 +125,12 @@ function cacheOverview(queryClient: QueryClient): void {
     queryClient.setQueryData(activityQueryKey(metric, 30), activity(metric, 30))
 }
 
-function serveOverview(recentAudit: AuditEntryDto[] | null = [grant]): void {
+function serveOverview(
+  recentAudit: AuditEntryDto[] | null = [grant],
+  catalogImport: CatalogImport = { lastRun }
+): void {
   onHttp('GET', '/api/admin/overview', ({ query }) =>
-    httpOk(overview(Number(query.get('period')) as OverviewPeriod, recentAudit))
+    httpOk(overview(Number(query.get('period')) as OverviewPeriod, recentAudit, catalogImport))
   )
   onHttp('GET', '/api/admin/activity', ({ query }) =>
     httpOk(
@@ -347,12 +376,60 @@ describe('admin overview', () => {
     )
   })
 
-  it('leaves the recent actions out for a moderator', async () => {
-    serveOverview(null)
+  it('leaves the recent actions and the last Catalog Import run out for a moderator', async () => {
+    serveOverview(null, null)
     renderOverview('/admin')
 
     await screen.findByText('Online users', { selector: 'dt' })
     expect(screen.queryByRole('region', { name: 'Recent actions' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Last run' })).not.toBeInTheDocument()
+  })
+
+  it('shows the last Catalog Import run with what it changed, linked to the Catalog page', async () => {
+    serveOverview()
+    renderOverview('/admin')
+
+    const card = await screen.findByRole('region', { name: 'Last run' })
+    expect(card).toHaveTextContent('Succeeded')
+    expect(card).toHaveTextContent('Scheduled')
+    expect(card).toHaveTextContent('3 min 12 s')
+    const count = (label: string) => screen.getByText(label, { selector: 'dt' }).nextElementSibling
+    expect(count('Created')).toHaveTextContent('4')
+    expect(count('Delisted')).toHaveTextContent('2')
+    expect(count('Relisted')).toHaveTextContent('1')
+    expect(count('Listed Games')).toHaveTextContent('1,684')
+    expect(within(card).getByRole('link', { name: 'View history' })).toHaveAttribute(
+      'href',
+      '/admin/catalog/runs'
+    )
+  })
+
+  it("shows a failed last run's error instead of its counts", async () => {
+    serveOverview([grant], {
+      lastRun: {
+        ...lastRun,
+        trigger: 'manual',
+        requestedBy: { id: 'user-caio', name: 'Caio' },
+        status: 'failed',
+        summary: null,
+        errorMessage: 'IGDB answered 503',
+      },
+    })
+    renderOverview('/admin')
+
+    const card = await screen.findByRole('region', { name: 'Last run' })
+    expect(card).toHaveTextContent('Failed')
+    expect(card).toHaveTextContent('Caio')
+    expect(card).toHaveTextContent('IGDB answered 503')
+    expect(within(card).queryByText('Created')).not.toBeInTheDocument()
+  })
+
+  it('says so when the Catalog Import never ran', async () => {
+    serveOverview([grant], { lastRun: null })
+    renderOverview('/admin')
+
+    const card = await screen.findByRole('region', { name: 'Last run' })
+    expect(card).toHaveTextContent('No run yet.')
   })
 
   it('renders a cached Overview at once, with no loading state', () => {

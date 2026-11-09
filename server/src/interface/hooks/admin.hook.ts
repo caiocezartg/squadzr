@@ -18,7 +18,7 @@ export async function requirePanelAccess(request: GuardedRequest): Promise<void>
 }
 
 /**
- * The per-route guard of the admin-or-owner routes (Audit, role changes, later Catalog Import): an admin
+ * The per-route guard of the admin-or-owner routes (Audit, role changes, Catalog Import): an admin
  * or the owner, so a moderator who got past the scope's guard is 403 `ADMIN_REQUIRED` here. Declare it
  * as the route's `preValidation`; it runs after the scope's guard and before the route's schema.
  */

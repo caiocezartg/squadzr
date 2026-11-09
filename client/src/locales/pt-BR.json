@@ -580,6 +580,12 @@
         "title": "Ações recentes",
         "viewAll": "Ver tudo",
         "empty": "Nenhuma ação de admin ainda."
+      },
+      "catalogImport": {
+        "caption": "Catalog Import",
+        "title": "Última execução",
+        "viewAll": "Ver histórico",
+        "empty": "Nenhuma execução ainda. A primeira aparece aqui assim que começar."
       }
     },
     "squads": {
@@ -767,8 +773,190 @@
       }
     },
     "catalog": {
-      "title": "Catalog Import",
-      "description": "Sincroniza o catálogo de jogos com a IGDB."
+      "tableLabel": "Execuções do Catalog Import",
+      "columns": {
+        "started": "Início",
+        "origin": "Origem",
+        "status": "Status",
+        "duration": "Duração",
+        "created": "Adicionados",
+        "delisted": "Retirados",
+        "relisted": "Recolocados",
+        "listedGames": "No catálogo"
+      },
+      "scheduled": "Agendada",
+      "manual": "Manual",
+      "statuses": {
+        "requested": "Na fila",
+        "running": "Em andamento",
+        "succeeded": "Concluída",
+        "safety_stop": "Parada de segurança",
+        "failed": "Falhou",
+        "interrupted": "Interrompida"
+      },
+      "duration": {
+        "seconds": "{seconds} s",
+        "minutes": "{minutes} min {seconds} s",
+        "hours": "{hours} h {minutes} min"
+      },
+      "empty": {
+        "title": "Nenhuma execução ainda",
+        "description": "O Catalog Import roda todo dia; cada execução aparece aqui com o que mudou."
+      },
+      "pastEnd": {
+        "title": "Nenhuma execução nesta página",
+        "action": "Ir para a primeira página"
+      },
+      "loading": "Carregando o histórico de execuções",
+      "loadError": "Não foi possível carregar o histórico de execuções.",
+      "retry": "Tentar de novo",
+      "panel": {
+        "caption": "Catalog Import",
+        "title": "Execução de {date}",
+        "status": "Status",
+        "origin": "Origem",
+        "requestedAt": "Solicitada",
+        "startedAt": "Iniciada",
+        "finishedAt": "Terminada",
+        "duration": "Duração",
+        "counts": "Contagens",
+        "summary": {
+          "created": "Adicionados",
+          "updated": "Atualizados",
+          "delisted": "Retirados",
+          "relisted": "Recolocados",
+          "received": "Recebidos",
+          "dropped": "Descartados (repetidos)",
+          "invalid": "Inválidos",
+          "listedGames": "No catálogo"
+        },
+        "error": "Erro",
+        "noErrorMessage": "A execução não deixou mensagem de erro.",
+        "interrupted": "Esta execução parou de responder antes de terminar, por exemplo quando um deploy reiniciou a API. Ela não deixou contagens nem mensagem de erro.",
+        "pending": "Esta execução ainda não terminou. As contagens aparecem quando ela terminar."
+      },
+      "header": {
+        "title": "Catálogo",
+        "description": "Os jogos que os jogadores podem escolher, sincronizados com a IGDB pelo Catalog Import."
+      },
+      "tabs": {
+        "label": "Seções do catálogo",
+        "games": "Jogos",
+        "runs": "Execuções"
+      },
+      "games": {
+        "tableLabel": "Jogos",
+        "loading": "Carregando os jogos",
+        "loadError": "Não foi possível carregar os jogos.",
+        "summaryLoadError": "Não foi possível carregar o resumo do catálogo.",
+        "players": "{min}–{max}",
+        "featuredRank": "#{rank}",
+        "summary": {
+          "label": "Jogos por status",
+          "loading": "Carregando o resumo do catálogo",
+          "listed": "Listados",
+          "listedNote": "Os jogadores podem escolher",
+          "delisted": "Removidos da lista",
+          "delistedNote": "Ocultos para os jogadores",
+          "featured": "Em destaque",
+          "featuredNote": "Destacados para os jogadores",
+          "lastImport": "Última importação",
+          "noImport": "Nenhuma importação terminou ainda.",
+          "entered": "Entraram",
+          "left": "Saíram",
+          "more": "+{count} outros"
+        },
+        "search": {
+          "label": "Buscar jogos",
+          "placeholder": "Nome ou apelido"
+        },
+        "status": {
+          "title": "Status",
+          "chip": "Status: {status}",
+          "all": "Todos",
+          "listed": "Listados",
+          "delisted": "Removidos da lista",
+          "featured": "Em destaque"
+        },
+        "sort": {
+          "title": "Ordenar",
+          "chip": "Ordem: {sort}",
+          "popularity": "Popularidade",
+          "name": "Nome",
+          "newest": "Mais recentes",
+          "openSquads": "Mais Squads abertos",
+          "completedSquads": "Mais Squads concluídos"
+        },
+        "columns": {
+          "game": "Jogo",
+          "platforms": "Plataformas",
+          "players": "Jogadores",
+          "popularity": "Popularidade",
+          "featured": "Destaque",
+          "status": "Status",
+          "openSquads": "Squads abertos",
+          "completedSquads": "Concluídos"
+        },
+        "badges": {
+          "listed": "Listado",
+          "delisted": "Removido da lista",
+          "featured": "Destaque #{rank}"
+        },
+        "empty": {
+          "title": "Nenhum jogo ainda",
+          "description": "O Catalog Import adiciona os jogos aqui quando roda."
+        },
+        "noMatch": {
+          "title": "Nenhum jogo encontrado",
+          "description": "Tente outra busca ou outro status.",
+          "action": "Limpar filtros"
+        },
+        "pastEnd": {
+          "title": "Nenhum jogo nesta página",
+          "action": "Ir para a primeira página"
+        },
+        "detail": {
+          "caption": "Catálogo · Jogo",
+          "back": "Voltar para Jogos",
+          "fallbackTitle": "Jogo",
+          "loading": "Carregando o jogo",
+          "loadError": "Não foi possível carregar este jogo.",
+          "notFound": {
+            "title": "Jogo não encontrado",
+            "description": "O catálogo não tem nenhum jogo com este endereço."
+          },
+          "fields": {
+            "caption": "Catálogo",
+            "title": "Campos",
+            "aliases": "Apelidos",
+            "genres": "Gêneros",
+            "platforms": "Plataformas",
+            "players": "Jogadores",
+            "popularity": "Popularidade",
+            "featuredRank": "Posição no destaque",
+            "slug": "Slug",
+            "igdb": "ID na IGDB",
+            "igdbLink": "Abrir na IGDB (nova aba)",
+            "createdAt": "Criado",
+            "updatedAt": "Atualizado"
+          },
+          "usage": {
+            "label": "Uso",
+            "openSquads": "Squads abertos",
+            "openSquadsNote": "Agora",
+            "completedSquads": "Squads concluídos",
+            "completedSquadsNote": "Desde sempre"
+          },
+          "openSquads": {
+            "caption": "Agora",
+            "title": "Squads abertos",
+            "empty": "Nenhum Squad aberto deste jogo agora.",
+            "meta": "{meta} · {host} · {members}/{max}",
+            "showing": "Mostrando os {shown} mais recentes de {total}.",
+            "viewAll": "Ver todos em Squads"
+          }
+        }
+      }
     },
     "audit": {
       "title": "Auditoria",

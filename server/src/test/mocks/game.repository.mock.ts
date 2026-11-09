@@ -44,6 +44,7 @@ export function createMockGameRepository(): MockGameRepository {
     findPopular: vi
       .fn<(input: FindPopularGamesInput) => Promise<PopularGames>>()
       .mockResolvedValue({ totalGames: 0, games: [] }),
+    countListed: vi.fn<() => Promise<number>>().mockResolvedValue(0),
     upsertByIgdbId: vi.fn<(input: UpsertGameInput) => Promise<Game>>().mockImplementation((input) =>
       Promise.resolve(
         createMockGame({

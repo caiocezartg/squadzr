@@ -13,6 +13,7 @@ import {
 import { GAME_CATALOG_IMPORT } from '@config/constants'
 import { createCatalogImportUseCase } from '@interface/factories/catalog-import.factory'
 import { CURATED_GAMES } from '@interface/catalog/curated-games'
+import { failAtRelist } from '@test/harness/failing-game-repository'
 import { createCandidate, FakeGameCatalogSource } from '@test/harness/game-catalog-source'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
@@ -89,21 +90,6 @@ function candidates(count: number, start = 2000) {
   })
 }
 
-/** Delegates every call to `inner`, except the relist, which fails after the delist. */
-function failAtRelist(inner: IGameRepository): IGameRepository {
-  return {
-    findById: (id) => inner.findById(id),
-    findAll: () => inner.findAll(),
-    search: (input) => inner.search(input),
-    findPopular: (input) => inner.findPopular(input),
-    upsertByIgdbId: (input) => inner.upsertByIgdbId(input),
-    delistByIgdbIds: (igdbIds) => inner.delistByIgdbIds(igdbIds),
-    relistByIgdbIds: () => Promise.reject(new Error('relist failed after delist')),
-    acquireCatalogImportLock: () => inner.acquireCatalogImportLock(),
-    runInTransaction: (work) => inner.runInTransaction((tx) => work(failAtRelist(tx))),
-  }
-}
-
 interface LockGate {
   readonly onLocked: () => void
   readonly release: Promise<void>
@@ -116,6 +102,7 @@ function createGatedRepository(inner: IGameRepository, gate: LockGate): IGameRep
     findAll: () => inner.findAll(),
     search: (input) => inner.search(input),
     findPopular: (input) => inner.findPopular(input),
+    countListed: () => inner.countListed(),
     upsertByIgdbId: (input) => inner.upsertByIgdbId(input),
     delistByIgdbIds: (igdbIds) => inner.delistByIgdbIds(igdbIds),
     relistByIgdbIds: (igdbIds) => inner.relistByIgdbIds(igdbIds),

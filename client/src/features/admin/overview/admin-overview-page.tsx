@@ -5,6 +5,7 @@ import type { OverviewPeriod, OverviewResponse } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
 import { AdminPageHeader } from '../shell/admin-page-header'
 import { ActivityPanel } from './activity-panel'
+import { CatalogImportPanel } from './catalog-import-panel'
 import { useOverview } from './overview-query'
 import { OverviewStats } from './overview-stats'
 import { OverviewLoadError, OverviewSkeleton } from './overview-states'
@@ -13,10 +14,11 @@ import { RecentAuditPanel } from './recent-audit-panel'
 import { useOverviewPeriod } from './use-overview-period'
 
 /**
- * The admin Overview page: the live numbers with what the period brought, the Activity chart and the
- * latest admin actions, for the period the URL holds as `?period=`. A period the server or an earlier
- * visit read renders at once, with no skeleton; the skeleton is only for a period the cache has never
- * held. Moving to another period keeps the previous numbers on screen, dimmed, until the new ones land.
+ * The admin Overview page: the live numbers with what the period brought, the Activity chart, the last
+ * Catalog Import run and the latest admin actions, for the period the URL holds as `?period=`. A
+ * period the server or an earlier visit read renders at once, with no skeleton; the skeleton is only
+ * for a period the cache has never held. Moving to another period keeps the previous numbers on
+ * screen, dimmed, until the new ones land.
  */
 export function AdminOverviewPage() {
   const t = useTranslations('admin.overview')
@@ -55,7 +57,15 @@ function OverviewContent({ overview, period, busy }: OverviewContentProps) {
         <OverviewStats overview={overview} />
       </div>
       <ActivityPanel period={period} />
-      {overview.recentAudit && <RecentAuditPanel entries={overview.recentAudit} />}
+      {/* A moderator has neither panel; an admin has both, side by side from 1024px up. */}
+      {(overview.catalogImport || overview.recentAudit) && (
+        <div className="grid items-start gap-4.5 lg:grid-cols-2">
+          {overview.catalogImport && (
+            <CatalogImportPanel lastRun={overview.catalogImport.lastRun} />
+          )}
+          {overview.recentAudit && <RecentAuditPanel entries={overview.recentAudit} />}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { auditEntrySchema } from './admin'
+import { catalogImportRunSchema } from './admin-catalog'
 
 // The admin panel's Overview contracts (#120). Later tickets add to them without breaking a client:
 // a metric joins `ACTIVITY_METRICS` and the `metrics` map (#121 added peak online and peak Open Squads),
@@ -94,7 +95,8 @@ export const overviewLiveSchema = z.object({
 export type OverviewLiveDto = z.infer<typeof overviewLiveSchema>
 
 // `recentAudit` is the latest entries for an admin or the owner and null for a moderator, who may not
-// read the audit.
+// read the audit. `catalogImport` follows the same rule: null for a moderator, and `{ lastRun: null }`
+// for an admin before any run was recorded.
 export const overviewResponseSchema = z.object({
   period: overviewPeriodSchema,
   live: overviewLiveSchema,
@@ -105,6 +107,7 @@ export const overviewResponseSchema = z.object({
     open: peakComparisonSchema,
   }),
   recentAudit: z.array(auditEntrySchema).nullable(),
+  catalogImport: z.object({ lastRun: catalogImportRunSchema.nullable() }).nullable(),
 })
 
 export type OverviewResponse = z.infer<typeof overviewResponseSchema>

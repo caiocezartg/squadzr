@@ -3,14 +3,24 @@ import type { IActivitySampleRepository } from '@domain/repositories/activity-sa
 import type { IAdminStatsRepository } from '@domain/repositories/admin-stats.repository'
 import type { AuditEntry } from '@domain/entities/audit-entry.entity'
 import type { IAuditEntryRepository } from '@domain/repositories/audit-entry.repository'
+import type { CatalogImportRun } from '@domain/entities/catalog-import-run.entity'
 import type { OnlinePresence } from '@domain/services/online-presence.interface'
-import { createMockClock } from '@test/mocks'
+import {
+  createMockCatalogImportRun,
+  createMockCatalogImportRunRepository,
+  createMockClock,
+} from '@test/mocks'
 import { GetAdminActivityUseCase } from './get-admin-activity.use-case'
 import { GetAdminOverviewUseCase } from './get-admin-overview.use-case'
 
 // 2026-11-05 12:00 in Sao Paulo.
 const NOW = new Date('2026-11-05T15:00:00.000Z')
 const TIME_ZONE = 'America/Sao_Paulo'
+
+const LAST_RUN: CatalogImportRun = createMockCatalogImportRun({
+  id: 'last',
+  status: 'succeeded',
+})
 
 function entry(id: string): AuditEntry {
   return {
@@ -43,6 +53,8 @@ function setup(
   const list = vi.fn(() => Promise.resolve({ entries: [entry('a'), entry('b')], total: 2 }))
   const audit: IAuditEntryRepository = { list }
   const presence: OnlinePresence = { countOnlineUsers: () => 3, isUserOnline: () => false }
+  const runs = createMockCatalogImportRunRepository()
+  runs.findLatest.mockResolvedValue(LAST_RUN)
   const clock = createMockClock(startsAt)
   const activity = new GetAdminActivityUseCase(stats, clock, TIME_ZONE, samples)
 
@@ -51,8 +63,9 @@ function setup(
     samples,
     clock,
     list,
+    runs,
     activity,
-    overview: new GetAdminOverviewUseCase(stats, audit, activity, presence, clock),
+    overview: new GetAdminOverviewUseCase(stats, audit, runs, activity, presence, clock),
   }
 }
 
@@ -163,5 +176,30 @@ describe('GetAdminOverviewUseCase', () => {
       expect((await overview.execute({ period: 7, viewerRole })).recentAudit).toBeNull()
     }
     expect(list).not.toHaveBeenCalled()
+  })
+
+  it('shows the last Catalog Import Run to an admin and the owner only', async () => {
+    const { overview, runs } = setup()
+
+    for (const viewerRole of ['admin', 'owner']) {
+      expect((await overview.execute({ period: 7, viewerRole })).catalogImport).toEqual({
+        lastRun: LAST_RUN,
+      })
+    }
+
+    runs.findLatest.mockClear()
+    for (const viewerRole of ['moderator', 'user', undefined]) {
+      expect((await overview.execute({ period: 7, viewerRole })).catalogImport).toBeNull()
+    }
+    expect(runs.findLatest).not.toHaveBeenCalled()
+  })
+
+  it('shows an admin an empty card before any run was recorded', async () => {
+    const { overview, runs } = setup()
+    runs.findLatest.mockResolvedValue(null)
+
+    expect((await overview.execute({ period: 7, viewerRole: 'admin' })).catalogImport).toEqual({
+      lastRun: null,
+    })
   })
 })
