@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { catalogImportRunStatusSchema } from './admin-catalog'
 import { isoDateTimeSchema } from './date'
 import { adminSquadSchema } from './admin-squads'
 import { gameGenreSchema } from './game'
@@ -127,16 +128,17 @@ export const adminGameChangeSchema = z.object({
 
 export type AdminGameChangeDto = z.infer<typeof adminGameChangeSchema>
 
-// The Games tab's header. `lastImport` is the most recent succeeded Catalog Import Run, with the games
-// created (`entered`) and delisted (`left`) inside its started-to-finished window; null before any run
-// succeeded.
+// The Games tab's header. `lastImport` is the most recent finished Catalog Import Run (any terminal status),
+// with the games created (`entered`) and delisted (`left`) inside its started-to-finished window; null
+// before any run finished.
 export const adminGamesSummarySchema = z.object({
   listed: countSchema,
   delisted: countSchema,
   featured: countSchema,
   lastImport: z
     .object({
-      runId: z.string(),
+      runId: z.uuid(),
+      status: catalogImportRunStatusSchema,
       finishedAt: isoDateTimeSchema,
       entered: adminGameChangeSchema,
       left: adminGameChangeSchema,

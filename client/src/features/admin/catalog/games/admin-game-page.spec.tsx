@@ -57,8 +57,8 @@ function detail(overrides: Partial<AdminGameDetailResponse['game']> = {}): Admin
   }
 }
 
-function renderGame(queryClient: QueryClient = createTestQueryClient()) {
-  createHarnessNavigation(`/admin/catalog/games/${GAME_ID}`)
+function renderGame(queryClient: QueryClient = createTestQueryClient(), search = '') {
+  createHarnessNavigation(`/admin/catalog/games/${GAME_ID}${search}`)
   render(
     <EnglishIntlProvider>
       <QueryClientProvider client={queryClient}>
@@ -152,6 +152,40 @@ describe('admin catalog game page', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Game not found' })).toBeVisible()
     expect(screen.getAllByRole('link', { name: 'Back to Games' })[0]).toHaveAttribute(
+      'href',
+      '/admin/catalog'
+    )
+  })
+
+  it('leads back to the list it was opened from, with its search, filters, sort and page', async () => {
+    onHttp('GET', '/api/admin/catalog/games/:id', () => httpOk(detail()))
+    renderGame(createTestQueryClient(), `?from=${encodeURIComponent('q=val&status=listed&page=2')}`)
+
+    await screen.findByRole('heading', { level: 1, name: 'Valorant' })
+    expect(screen.getByRole('link', { name: 'Back to Games' })).toHaveAttribute(
+      'href',
+      '/admin/catalog?q=val&status=listed&page=2'
+    )
+  })
+
+  it('leads back to the list from a game the catalog does not hold, too', async () => {
+    onHttp('GET', '/api/admin/catalog/games/:id', () =>
+      httpError(404, { error: 'GAME_NOT_FOUND', message: 'Game not found' })
+    )
+    renderGame(createTestQueryClient(), `?from=${encodeURIComponent('q=val&page=3')}`)
+
+    await screen.findByRole('heading', { level: 1, name: 'Game not found' })
+    for (const link of screen.getAllByRole('link', { name: 'Back to Games' })) {
+      expect(link).toHaveAttribute('href', '/admin/catalog?q=val&page=3')
+    }
+  })
+
+  it('never leads anywhere but the Games list, whatever `from` holds', async () => {
+    onHttp('GET', '/api/admin/catalog/games/:id', () => httpOk(detail()))
+    renderGame(createTestQueryClient(), `?from=${encodeURIComponent('//evil.test/path?q=x')}`)
+
+    await screen.findByRole('heading', { level: 1, name: 'Valorant' })
+    expect(screen.getByRole('link', { name: 'Back to Games' })).toHaveAttribute(
       'href',
       '/admin/catalog'
     )

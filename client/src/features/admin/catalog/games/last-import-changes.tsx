@@ -3,16 +3,17 @@
 import { useTranslations } from 'next-intl'
 import type { AdminGameChangeDto, AdminGamesSummaryDto } from '@squadzr/schemas'
 import { AppLink } from '@/components/layout/app-link'
-import { RunInstant } from '../run-parts'
+import { RunInstant, RunStatusPill } from '../run-parts'
 import { adminGameHref } from './game-links'
+import { useGamesListQuery } from './game-list-links'
 import { GameCount } from './game-parts'
 
 type LastImport = NonNullable<AdminGamesSummaryDto['lastImport']>
 
 /**
- * What the last succeeded Catalog Import changed: when it finished, then the games that entered and
- * left the catalog, each a count with the first few names as links, or a line saying no import has
- * succeeded yet.
+ * What the last finished Catalog Import changed: how it ended and when, then the games that entered
+ * and left the catalog in its window, each a count with the first few names as links, or a line
+ * saying no import has finished yet.
  */
 export function LastImportChanges({ lastImport }: { readonly lastImport: LastImport | null }) {
   const t = useTranslations('admin.catalog.games.summary')
@@ -27,7 +28,8 @@ export function LastImportChanges({ lastImport }: { readonly lastImport: LastImp
           {t('lastImport')}
         </h2>
         {lastImport && (
-          <span className="text-muted text-[12.5px] font-medium">
+          <span className="text-muted flex items-center gap-2 text-[12.5px] font-medium">
+            <RunStatusPill status={lastImport.status} />
             <RunInstant at={lastImport.finishedAt} />
           </span>
         )}
@@ -52,6 +54,7 @@ function GameChange({
   readonly change: AdminGameChangeDto
 }) {
   const t = useTranslations('admin.catalog.games.summary')
+  const listQuery = useGamesListQuery()
   const more = change.total - change.games.length
 
   return (
@@ -66,7 +69,7 @@ function GameChange({
             {change.games.map((game) => (
               <li key={game.id}>
                 <AppLink
-                  href={adminGameHref(game.id)}
+                  href={adminGameHref(game.id, listQuery)}
                   className="hover-fine:text-text focus-visible:outline-mint break-words underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
                   {game.name}

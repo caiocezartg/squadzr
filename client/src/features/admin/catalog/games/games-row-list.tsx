@@ -6,6 +6,7 @@ import type { AdminGameDto } from '@squadzr/schemas'
 import { AppLink } from '@/components/layout/app-link'
 import { SquadThumb } from '../../squads/squad-parts'
 import { adminGameHref } from './game-links'
+import { useGamesListQuery } from './game-list-links'
 import { FeaturedRank, GameCount, GamePlatforms, GamePlayers, GameStatusBadge } from './game-parts'
 
 /**
@@ -14,24 +15,31 @@ import { FeaturedRank, GameCount, GamePlatforms, GamePlayers, GameStatusBadge } 
  */
 export function GamesRowList({ games }: { readonly games: readonly AdminGameDto[] }) {
   const t = useTranslations('admin.catalog.games')
+  const listQuery = useGamesListQuery()
 
   return (
     <ul aria-label={t('tableLabel')} className="flex flex-col gap-2">
       {games.map((game) => (
         <li key={game.id}>
-          <GameCard game={game} />
+          <GameCard game={game} listQuery={listQuery} />
         </li>
       ))}
     </ul>
   )
 }
 
-function GameCard({ game }: { readonly game: AdminGameDto }) {
+function GameCard({
+  game,
+  listQuery,
+}: {
+  readonly game: AdminGameDto
+  readonly listQuery: string
+}) {
   const t = useTranslations('admin.catalog.games.columns')
 
   return (
     <AppLink
-      href={adminGameHref(game.id)}
+      href={adminGameHref(game.id, listQuery)}
       className="bg-panel press hover-fine:bg-raised focus-visible:outline-mint flex w-full items-start gap-3 p-3.5 text-left text-[13px] font-medium shadow-[inset_0_0_0_1px_var(--color-line)] focus-visible:outline-2 focus-visible:-outline-offset-2"
     >
       <SquadThumb url={game.coverThumbUrl} />

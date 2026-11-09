@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
-import { ADMIN_GAMES_HREF } from './game-links'
+import { useGamesListHref } from './game-list-links'
 import { GamesEmpty } from './games-states'
 
 /** The page's loading state, only for a game nobody read before: the two panels' places. */
@@ -20,11 +20,12 @@ export function GamePageSkeleton() {
 /** The game is not in the catalog: says so and leads back to the list. */
 export function GameNotFound() {
   const t = useTranslations('admin.catalog.games.detail')
+  const listHref = useGamesListHref()
 
   return (
     <div className="flex flex-col items-center gap-4">
       <GamesEmpty title={t('notFound.title')} description={t('notFound.description')} />
-      <Button href={ADMIN_GAMES_HREF} variant="secondary">
+      <Button href={listHref} variant="secondary">
         {t('back')}
       </Button>
     </div>

@@ -5,6 +5,7 @@ import type { AdminGameDto } from '@squadzr/schemas'
 import { AppLink } from '@/components/layout/app-link'
 import { SquadThumb } from '../../squads/squad-parts'
 import { adminGameHref } from './game-links'
+import { useGamesListQuery } from './game-list-links'
 import { FeaturedRank, GameCount, GamePlatforms, GamePlayers, GameStatusBadge } from './game-parts'
 
 const HEADER_CELL = 'type-label text-faint px-3 pb-2.5 text-left whitespace-nowrap'
@@ -19,6 +20,7 @@ const NUMBER_CELL = `${CELL} text-right`
  */
 export function GamesTable({ games }: { readonly games: readonly AdminGameDto[] }) {
   const t = useTranslations('admin.catalog.games')
+  const listQuery = useGamesListQuery()
 
   return (
     <table className="w-full border-collapse text-[13.5px] font-medium">
@@ -53,21 +55,27 @@ export function GamesTable({ games }: { readonly games: readonly AdminGameDto[] 
       </thead>
       <tbody className="text-text-2">
         {games.map((game) => (
-          <GamesTableRow key={game.id} game={game} />
+          <GamesTableRow key={game.id} game={game} listQuery={listQuery} />
         ))}
       </tbody>
     </table>
   )
 }
 
-function GamesTableRow({ game }: { readonly game: AdminGameDto }) {
+function GamesTableRow({
+  game,
+  listQuery,
+}: {
+  readonly game: AdminGameDto
+  readonly listQuery: string
+}) {
   return (
     <tr className="hover-fine:bg-raised relative h-11">
       <td className={CELL}>
         <span className="flex items-center gap-2.5">
           <SquadThumb url={game.coverThumbUrl} />
           <AppLink
-            href={adminGameHref(game.id)}
+            href={adminGameHref(game.id, listQuery)}
             className="text-text focus-visible:outline-mint min-w-0 font-bold break-words after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             {game.name}

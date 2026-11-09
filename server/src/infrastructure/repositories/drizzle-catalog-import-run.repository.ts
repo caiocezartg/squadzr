@@ -1,4 +1,5 @@
-import { and, count, desc, eq, lt, or, sql } from 'drizzle-orm'
+import type { CatalogImportRunStatus } from '@squadzr/schemas'
+import { and, count, desc, eq, inArray, isNotNull, lt, or, sql } from 'drizzle-orm'
 import type {
   CatalogImportRun,
   CatalogImportRunOutcome,
@@ -13,6 +14,14 @@ import {
   catalogImportRuns,
   type CatalogImportRunRow,
 } from '@infrastructure/database/schema/catalog-import-runs'
+
+/** The terminal statuses: a run in one of them has stopped and has a `finished_at`. */
+const FINISHED_STATUSES: CatalogImportRunStatus[] = [
+  'succeeded',
+  'safety_stop',
+  'failed',
+  'interrupted',
+]
 
 function mapRowToEntity(row: CatalogImportRunRow): CatalogImportRun {
   const hasSummary =
@@ -142,11 +151,16 @@ export class DrizzleCatalogImportRunRepository implements ICatalogImportRunRepos
     return row ? mapRowToEntity(row) : null
   }
 
-  async findLatestSucceeded(): Promise<CatalogImportRun | null> {
+  async findLatestFinished(): Promise<CatalogImportRun | null> {
     const rows = await this.db
       .select()
       .from(catalogImportRuns)
-      .where(eq(catalogImportRuns.status, 'succeeded'))
+      .where(
+        and(
+          inArray(catalogImportRuns.status, FINISHED_STATUSES),
+          isNotNull(catalogImportRuns.finishedAt)
+        )
+      )
       .orderBy(desc(catalogImportRuns.finishedAt), desc(catalogImportRuns.id))
       .limit(1)
 

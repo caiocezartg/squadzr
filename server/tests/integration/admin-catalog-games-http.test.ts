@@ -281,7 +281,11 @@ describe('GET /api/admin/catalog/games/summary', () => {
     return adminGamesSummarySchema.parse(response.json())
   }
 
-  async function addRun(status: 'succeeded' | 'failed', startedAt: Date, finishedAt: Date) {
+  async function addRun(
+    status: 'succeeded' | 'failed' | 'interrupted',
+    startedAt: Date,
+    finishedAt: Date
+  ) {
     const [run] = await server.app.db
       .insert(catalogImportRuns)
       .values({ trigger: 'scheduled', status, requestedAt: startedAt, startedAt, finishedAt })
@@ -307,7 +311,7 @@ describe('GET /api/admin/catalog/games/summary', () => {
     expect(await summary()).toMatchObject({ listed: 2, delisted: 2, featured: 1, lastImport: null })
   })
 
-  it('names the games that entered and left in the last succeeded run’s window', async () => {
+  it('names the games that entered and left in the last finished run’s window', async () => {
     const run = await addRun('succeeded', STARTED, FINISHED)
     const entered = await addGame({ name: 'Entered' })
     const stale = await addGame({ name: 'Stale' })
@@ -324,6 +328,7 @@ describe('GET /api/admin/catalog/games/summary', () => {
 
     expect(body.lastImport).toEqual({
       runId: run.id,
+      status: 'succeeded',
       finishedAt: FINISHED.toISOString(),
       entered: { total: 1, games: [{ id: entered.id, name: 'Entered' }] },
       left: { total: 1, games: [{ id: left.id, name: 'Left' }] },
@@ -349,15 +354,57 @@ describe('GET /api/admin/catalog/games/summary', () => {
     ])
   })
 
-  it('reads the latest succeeded run, not a later failed one', async () => {
-    const succeeded = await addRun('succeeded', STARTED, FINISHED)
-    await addRun(
-      'failed',
-      new Date('2026-11-06T04:00:00.000Z'),
-      new Date('2026-11-06T04:00:04.000Z')
-    )
+  it.each(['failed', 'interrupted'] as const)(
+    'reads the latest finished run, a later %s one, not the older succeeded one',
+    async (status) => {
+      await addRun('succeeded', STARTED, FINISHED)
+      const later = await addRun(
+        status,
+        new Date('2026-11-06T04:00:00.000Z'),
+        new Date('2026-11-06T04:00:04.000Z')
+      )
+      const old = await addGame({ name: 'Entered by the older run' })
+      await stamp(old.id, INSIDE, INSIDE)
 
-    expect((await summary()).lastImport?.runId).toBe(succeeded.id)
+      const lastImport = (await summary()).lastImport
+
+      expect(lastImport).toMatchObject({ runId: later.id, status })
+      expect(lastImport?.entered.total).toBe(0)
+      expect(lastImport?.left.total).toBe(0)
+    }
+  )
+
+  it('reads an interrupted run that never started from its request time', async () => {
+    const requestedAt = new Date('2026-11-06T04:00:00.000Z')
+    const [run] = await server.app.db
+      .insert(catalogImportRuns)
+      .values({
+        trigger: 'scheduled',
+        status: 'interrupted',
+        requestedAt,
+        finishedAt: new Date('2026-11-06T04:00:10.000Z'),
+      })
+      .returning()
+    if (!run) throw new Error('Failed to insert run')
+    const entered = await addGame({ name: 'Entered while queued' })
+    await stamp(entered.id, new Date('2026-11-06T04:00:05.000Z'), INSIDE)
+
+    const lastImport = (await summary()).lastImport
+
+    expect(lastImport).toMatchObject({ runId: run.id, status: 'interrupted' })
+    expect(lastImport?.entered.games).toEqual([{ id: entered.id, name: 'Entered while queued' }])
+  })
+
+  it('ignores a queued or running run', async () => {
+    const finished = await addRun('succeeded', STARTED, FINISHED)
+    await server.app.db.insert(catalogImportRuns).values({
+      trigger: 'manual',
+      status: 'running',
+      requestedAt: new Date('2026-11-06T04:00:00.000Z'),
+      startedAt: new Date('2026-11-06T04:00:01.000Z'),
+    })
+
+    expect((await summary()).lastImport?.runId).toBe(finished.id)
   })
 })
 

@@ -861,7 +861,7 @@
           "featured": "Em destaque",
           "featuredNote": "Destacados para os jogadores",
           "lastImport": "Última importação",
-          "noImport": "Nenhuma importação foi concluída ainda.",
+          "noImport": "Nenhuma importação terminou ainda.",
           "entered": "Entraram",
           "left": "Saíram",
           "more": "+{count} outros"

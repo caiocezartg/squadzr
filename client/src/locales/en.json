@@ -861,7 +861,7 @@
           "featured": "Featured",
           "featuredNote": "Highlighted for players",
           "lastImport": "Last import",
-          "noImport": "No import has succeeded yet.",
+          "noImport": "No import has finished yet.",
           "entered": "Entered",
           "left": "Left",
           "more": "+{count} more"

@@ -1,18 +1,19 @@
-import { ADMIN_GAME_CHANGE_NAMES_LIMIT } from '@squadzr/schemas'
+import { ADMIN_GAME_CHANGE_NAMES_LIMIT, type CatalogImportRunStatus } from '@squadzr/schemas'
 import type { AdminGameChange, AdminGameCounts } from '@domain/entities/admin-game.entity'
 import type { IAdminGameRepository } from '@domain/repositories/admin-game.repository'
 import type { ICatalogImportRunRepository } from '@domain/repositories/catalog-import-run.repository'
 
-/** The games that entered and left the catalog in the last succeeded Catalog Import Run. */
+/** The games that entered and left the catalog in the last finished Catalog Import Run. */
 export interface LastImportChanges {
   readonly runId: string
+  readonly status: CatalogImportRunStatus
   readonly finishedAt: Date
   readonly entered: AdminGameChange
   readonly left: AdminGameChange
 }
 
 export interface GetAdminGamesSummaryOutput extends AdminGameCounts {
-  /** Null before any run succeeded. */
+  /** Null before any run finished. */
   readonly lastImport: LastImportChanges | null
 }
 
@@ -21,8 +22,10 @@ export interface IGetAdminGamesSummaryUseCase {
 }
 
 /**
- * The Games tab's header: the catalog's size by state and what the last succeeded import changed. The
- * changes are the Games created (entered) or delisted (left) between that run's start and finish.
+ * The Games tab's header: the catalog's size by state and what the last finished import changed. The
+ * changes are the Games created (entered) or delisted (left) between that run's start and finish; a
+ * run that did not succeed shows whatever it committed before it stopped, often nothing. A run that
+ * never started (interrupted while still requested) is read from its request time.
  */
 export class GetAdminGamesSummaryUseCase implements IGetAdminGamesSummaryUseCase {
   constructor(
@@ -33,12 +36,12 @@ export class GetAdminGamesSummaryUseCase implements IGetAdminGamesSummaryUseCase
   async execute(): Promise<GetAdminGamesSummaryOutput> {
     const [counts, run] = await Promise.all([
       this.adminGameRepository.count(),
-      this.catalogImportRunRepository.findLatestSucceeded(),
+      this.catalogImportRunRepository.findLatestFinished(),
     ])
-    if (!run?.startedAt || !run.finishedAt) return { ...counts, lastImport: null }
+    if (!run?.finishedAt) return { ...counts, lastImport: null }
 
     const changes = await this.adminGameRepository.findChanges(
-      { from: run.startedAt, to: run.finishedAt },
+      { from: run.startedAt ?? run.requestedAt, to: run.finishedAt },
       ADMIN_GAME_CHANGE_NAMES_LIMIT
     )
 
@@ -46,6 +49,7 @@ export class GetAdminGamesSummaryUseCase implements IGetAdminGamesSummaryUseCase
       ...counts,
       lastImport: {
         runId: run.id,
+        status: run.status,
         finishedAt: run.finishedAt,
         entered: changes.entered,
         left: changes.left,

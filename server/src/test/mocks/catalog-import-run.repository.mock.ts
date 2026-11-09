@@ -35,8 +35,8 @@ export function createMockCatalogImportRunRepository(): MockCatalogImportRunRepo
     finish: vi.fn<ICatalogImportRunRepository['finish']>().mockResolvedValue(undefined),
     list: vi.fn<ICatalogImportRunRepository['list']>().mockResolvedValue({ runs: [], total: 0 }),
     findLatest: vi.fn<ICatalogImportRunRepository['findLatest']>().mockResolvedValue(null),
-    findLatestSucceeded: vi
-      .fn<ICatalogImportRunRepository['findLatestSucceeded']>()
+    findLatestFinished: vi
+      .fn<ICatalogImportRunRepository['findLatestFinished']>()
       .mockResolvedValue(null),
   }
 }

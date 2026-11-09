@@ -74,7 +74,8 @@ describe('admin games summary', () => {
       delisted: 12,
       featured: 8,
       lastImport: {
-        runId: 'run-1',
+        runId: '0b1f3b0e-6f3c-4c55-9e3a-5a1d1f6a7c01',
+        status: 'succeeded',
         finishedAt: '2026-11-05T04:00:04.000Z',
         entered: { total: 7, games: [{ id: game.id, name: game.name }] },
         left: { total: 0, games: [] },
@@ -84,7 +85,24 @@ describe('admin games summary', () => {
     expect(adminGamesSummarySchema.parse(summary)).toEqual(summary)
   })
 
-  it('has no last import before a run succeeded', () => {
+  it('rejects a run id that is not a uuid', () => {
+    const summary = {
+      listed: 0,
+      delisted: 0,
+      featured: 0,
+      lastImport: {
+        runId: 'run-1',
+        status: 'failed',
+        finishedAt: '2026-11-05T04:00:04.000Z',
+        entered: { total: 0, games: [] },
+        left: { total: 0, games: [] },
+      },
+    }
+
+    expect(adminGamesSummarySchema.safeParse(summary).success).toBe(false)
+  })
+
+  it('has no last import before a run finished', () => {
     const summary = { listed: 0, delisted: 0, featured: 0, lastImport: null }
 
     expect(adminGamesSummarySchema.parse(summary)).toEqual(summary)

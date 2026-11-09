@@ -42,6 +42,7 @@ export function toAdminGamesSummaryDto(summary: GetAdminGamesSummaryOutput): Adm
     featured: summary.featured,
     lastImport: lastImport && {
       runId: lastImport.runId,
+      status: lastImport.status,
       finishedAt: lastImport.finishedAt.toISOString(),
       entered: {
         total: lastImport.entered.total,

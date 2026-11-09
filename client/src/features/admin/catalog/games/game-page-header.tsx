@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
-import { ADMIN_GAMES_HREF } from './game-links'
+import { useGamesListHref } from './game-list-links'
 
 interface GamePageHeaderProps {
   /** The game's name, or what the page holds instead of it (loading, not found). */
@@ -15,10 +15,11 @@ interface GamePageHeaderProps {
 
 /**
  * The header of a game's page: the "Admin · Catalog" caption, the cover, the title with the game's
- * badges, and the way back to the Games list.
+ * badges, and the way back to the Games list the game was opened from.
  */
 export function GamePageHeader({ title, cover, badges }: GamePageHeaderProps) {
   const t = useTranslations('admin.catalog.games.detail')
+  const listHref = useGamesListHref()
 
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
@@ -31,7 +32,7 @@ export function GamePageHeader({ title, cover, badges }: GamePageHeaderProps) {
         </div>
       </div>
       <Button
-        href={ADMIN_GAMES_HREF}
+        href={listHref}
         variant="ghost"
         size="sm"
         icon={<ArrowLeft />}

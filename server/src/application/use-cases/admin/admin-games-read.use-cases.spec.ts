@@ -69,7 +69,7 @@ describe('GetAdminGameUseCase', () => {
 })
 
 describe('GetAdminGamesSummaryUseCase', () => {
-  it('has no last import before a run succeeded', async () => {
+  it('has no last import before a run finished', async () => {
     const games = createAdminGameRepository()
     const runs = createMockCatalogImportRunRepository()
 
@@ -79,12 +79,12 @@ describe('GetAdminGamesSummaryUseCase', () => {
     expect(games.findChanges).not.toHaveBeenCalled()
   })
 
-  it('reads the changes inside the last succeeded run’s window, capped to five names', async () => {
+  it('reads the changes inside the last finished run’s window, capped to five names', async () => {
     const games = createAdminGameRepository()
     const runs = createMockCatalogImportRunRepository()
     const startedAt = new Date('2026-11-05T04:00:00.000Z')
     const finishedAt = new Date('2026-11-05T04:00:04.000Z')
-    runs.findLatestSucceeded.mockResolvedValue(
+    runs.findLatestFinished.mockResolvedValue(
       createMockCatalogImportRun({ id: 'run-9', status: 'succeeded', startedAt, finishedAt })
     )
 
@@ -94,6 +94,50 @@ describe('GetAdminGamesSummaryUseCase', () => {
       { from: startedAt, to: finishedAt },
       ADMIN_GAME_CHANGE_NAMES_LIMIT
     )
-    expect(output.lastImport).toMatchObject({ runId: 'run-9', finishedAt })
+    expect(output.lastImport).toMatchObject({ runId: 'run-9', status: 'succeeded', finishedAt })
+  })
+
+  it.each(['failed', 'safety_stop', 'interrupted'] as const)(
+    'reads a %s run’s window and reports its status',
+    async (status) => {
+      const games = createAdminGameRepository()
+      const runs = createMockCatalogImportRunRepository()
+      const startedAt = new Date('2026-11-06T04:00:00.000Z')
+      const finishedAt = new Date('2026-11-06T04:00:04.000Z')
+      runs.findLatestFinished.mockResolvedValue(
+        createMockCatalogImportRun({ id: 'run-10', status, startedAt, finishedAt })
+      )
+
+      const output = await new GetAdminGamesSummaryUseCase(games, runs).execute()
+
+      expect(games.findChanges).toHaveBeenCalledWith(
+        { from: startedAt, to: finishedAt },
+        ADMIN_GAME_CHANGE_NAMES_LIMIT
+      )
+      expect(output.lastImport).toMatchObject({ runId: 'run-10', status, finishedAt })
+    }
+  )
+
+  it('falls back to the request time for an interrupted run that never started', async () => {
+    const games = createAdminGameRepository()
+    const runs = createMockCatalogImportRunRepository()
+    const requestedAt = new Date('2026-11-06T04:00:00.000Z')
+    const finishedAt = new Date('2026-11-06T04:00:10.000Z')
+    runs.findLatestFinished.mockResolvedValue(
+      createMockCatalogImportRun({
+        id: 'run-11',
+        status: 'interrupted',
+        requestedAt,
+        startedAt: null,
+        finishedAt,
+      })
+    )
+
+    await new GetAdminGamesSummaryUseCase(games, runs).execute()
+
+    expect(games.findChanges).toHaveBeenCalledWith(
+      { from: requestedAt, to: finishedAt },
+      ADMIN_GAME_CHANGE_NAMES_LIMIT
+    )
   })
 })

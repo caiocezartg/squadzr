@@ -100,16 +100,17 @@ export class DrizzleAdminGameRepository implements IAdminGameRepository {
   }
 
   async findById(id: string): Promise<AdminGame | null> {
-    const [rows, openRows, completedRows] = await Promise.all([
-      this.db.select().from(games).where(eq(games.id, id)).limit(1),
+    const rows = await this.db.select().from(games).where(eq(games.id, id)).limit(1)
+    const row = rows[0]
+    if (!row) return null
+
+    const [openRows, completedRows] = await Promise.all([
       this.db
         .select({ total: count() })
         .from(rooms)
         .where(and(eq(rooms.gameId, id), validOpenRoomCondition(this.clock.now()))),
       this.db.select({ total: count() }).from(squadRecords).where(eq(squadRecords.gameId, id)),
     ])
-    const row = rows[0]
-    if (!row) return null
 
     return mapRow(row, openRows[0]?.total ?? 0, completedRows[0]?.total ?? 0)
   }

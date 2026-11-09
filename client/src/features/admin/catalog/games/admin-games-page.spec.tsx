@@ -52,7 +52,8 @@ const summary: AdminGamesSummaryDto = {
   delisted: 41,
   featured: 8,
   lastImport: {
-    runId: 'run-1',
+    runId: '0b1f3b0e-6f3c-4c55-9e3a-5a1d1f6a7c01',
+    status: 'succeeded',
     finishedAt: '2026-11-08T04:03:12.000Z',
     entered: {
       total: 7,
@@ -142,16 +143,51 @@ describe('admin catalog games list', () => {
       '/admin/catalog/games/3b7c0d2e-4f5a-4b6c-9d7e-8f9a0b1c2d3e'
     )
     expect(lastImport).toHaveTextContent('+5 more')
+    expect(lastImport).toHaveTextContent('Succeeded')
   })
 
-  it('says so when no import has succeeded yet', async () => {
+  it('shows how a failed last import ended', async () => {
+    serveGames([valorant])
+    onHttp('GET', '/api/admin/catalog/games/summary', () =>
+      httpOk({
+        ...summary,
+        lastImport: {
+          ...summary.lastImport,
+          status: 'failed',
+          entered: { total: 0, games: [] },
+          left: { total: 0, games: [] },
+        },
+      })
+    )
+    renderGames()
+
+    const lastImport = await screen.findByRole('region', { name: 'Last import' })
+    expect(await within(lastImport).findByText('Failed')).toBeVisible()
+  })
+
+  it('opens a game with the list’s search, filter, sort and page, to lead back to them', async () => {
+    serveGames([valorant, quake], 45)
+    renderGames('/admin/catalog?q=val&status=listed&sort=name&page=2')
+
+    const [first] = await tableRows()
+    const link = within(first as HTMLElement).getByRole('link', { name: 'Valorant' })
+    expect(link).toHaveAttribute(
+      'href',
+      `/admin/catalog/games/${valorant.id}?from=${encodeURIComponent('q=val&status=listed&sort=name&page=2')}`
+    )
+    expect(
+      within(screen.getByRole('list', { name: 'Games' })).getAllByRole('link')[0]
+    ).toHaveAttribute('href', link.getAttribute('href'))
+  })
+
+  it('says so when no import has finished yet', async () => {
     serveGames([valorant])
     onHttp('GET', '/api/admin/catalog/games/summary', () =>
       httpOk({ ...summary, lastImport: null })
     )
     renderGames()
 
-    expect(await screen.findByText('No import has succeeded yet.')).toBeVisible()
+    expect(await screen.findByText('No import has finished yet.')).toBeVisible()
   })
 
   it('marks the Games tab as the current one', async () => {
