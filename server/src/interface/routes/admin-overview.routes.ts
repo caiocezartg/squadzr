@@ -22,7 +22,7 @@ export async function adminOverviewRoutes(fastify: FastifyInstance): Promise<voi
       tags: ['Admin'],
       summary: 'Get the admin overview',
       description:
-        'Returns the live numbers (online users, total users, Open Squads, completed Squads), the completed Squads and sign-ups of the last 7, 30 or 90 days (default 30) and the peak online users and peak Open Squads from the Activity Samples of those days (null when the period has none), each beside the previous period of the same length, and the latest 5 audit entries. Days are calendar days in America/Sao_Paulo. `recentAudit` is null for a moderator, who may not read the audit. Requires the moderator, admin or owner role.',
+        'Returns the live numbers (online users, total users, Open Squads, completed Squads), the completed Squads and sign-ups of the last 7, 30 or 90 days (default 30) and the peak online users and peak Open Squads from the Activity Samples of those days (null when the period has none), each beside the previous period of the same length, and, for an admin or the owner, the latest 5 audit entries and the last Catalog Import Run. Days are calendar days in America/Sao_Paulo. `recentAudit` and `catalogImport` are null for a moderator, who may not read the audit or the Catalog Import; `catalogImport.lastRun` is null before any run was recorded. Requires the moderator, admin or owner role.',
       security: [{ session: [] }],
       querystring: overviewQuerySchema,
       response: {

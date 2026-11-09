@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { requirePanelAccess } from '@interface/hooks/admin.hook'
 import { adminAuditRoutes } from './admin-audit.routes'
+import { adminCatalogRoutes } from './admin-catalog.routes'
 import { adminOverviewRoutes } from './admin-overview.routes'
 import { adminUsersRoutes } from './admin-users.routes'
 import { adminSquadsRoutes } from './admin-squads.routes'
@@ -20,4 +21,5 @@ export async function adminRoutes(fastify: FastifyInstance): Promise<void> {
   await fastify.register(adminUsersRoutes)
   await fastify.register(adminOverviewRoutes)
   await fastify.register(adminSquadsRoutes)
+  await fastify.register(adminCatalogRoutes)
 }

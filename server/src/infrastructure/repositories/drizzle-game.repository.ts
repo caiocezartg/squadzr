@@ -297,6 +297,15 @@ export class DrizzleGameRepository implements IGameRepository {
     return mapRowToEntity(row)
   }
 
+  async countListed(): Promise<number> {
+    const [row] = await this.executor
+      .select({ total: sql<number>`count(*)::int` })
+      .from(games)
+      .where(eq(games.listed, true))
+
+    return row?.total ?? 0
+  }
+
   async delistByIgdbIds(igdbIds: readonly number[]): Promise<number> {
     if (igdbIds.length === 0) return 0
 

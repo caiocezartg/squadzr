@@ -104,8 +104,9 @@ describe('PostgreSQL 16 harness', () => {
     // #114 adds 0009 (Squad Records and their backfill);
     // #117 adds 0010 (the user role and the Audit Entry table) and 0011 (the audit trail is append-only);
     // #118 adds 0012 (the moderator and owner roles, at most one owner);
-    // #121 adds 0013 (Activity Samples).
-    expect(Number(migrations.rows[0]?.total)).toBe(14)
+    // #121 adds 0013 (Activity Samples);
+    // #122 adds 0014 (Catalog Import Runs).
+    expect(Number(migrations.rows[0]?.total)).toBe(15)
     expect(gameCount?.total).toBe(0)
   })
 

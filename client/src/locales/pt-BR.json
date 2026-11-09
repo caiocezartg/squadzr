@@ -580,6 +580,12 @@
         "title": "Ações recentes",
         "viewAll": "Ver tudo",
         "empty": "Nenhuma ação de admin ainda."
+      },
+      "catalogImport": {
+        "caption": "Catalog Import",
+        "title": "Última execução",
+        "viewAll": "Ver histórico",
+        "empty": "Nenhuma execução ainda. A primeira aparece aqui assim que começar."
       }
     },
     "squads": {
@@ -768,7 +774,68 @@
     },
     "catalog": {
       "title": "Catalog Import",
-      "description": "Sincroniza o catálogo de jogos com a IGDB."
+      "description": "Sincroniza o catálogo de jogos com a IGDB.",
+      "tableLabel": "Execuções do Catalog Import",
+      "columns": {
+        "started": "Início",
+        "origin": "Origem",
+        "status": "Status",
+        "duration": "Duração",
+        "created": "Adicionados",
+        "delisted": "Retirados",
+        "relisted": "Recolocados",
+        "listedGames": "No catálogo"
+      },
+      "scheduled": "Agendada",
+      "statuses": {
+        "requested": "Na fila",
+        "running": "Em andamento",
+        "succeeded": "Concluída",
+        "safety_stop": "Parada de segurança",
+        "failed": "Falhou",
+        "interrupted": "Interrompida"
+      },
+      "duration": {
+        "seconds": "{seconds} s",
+        "minutes": "{minutes} min {seconds} s",
+        "hours": "{hours} h {minutes} min"
+      },
+      "empty": {
+        "title": "Nenhuma execução ainda",
+        "description": "O Catalog Import roda todo dia; cada execução aparece aqui com o que mudou."
+      },
+      "pastEnd": {
+        "title": "Nenhuma execução nesta página",
+        "action": "Ir para a primeira página"
+      },
+      "loading": "Carregando o histórico de execuções",
+      "loadError": "Não foi possível carregar o histórico de execuções.",
+      "retry": "Tentar de novo",
+      "panel": {
+        "caption": "Catalog Import",
+        "title": "Execução de {date}",
+        "status": "Status",
+        "origin": "Origem",
+        "requestedAt": "Solicitada",
+        "startedAt": "Iniciada",
+        "finishedAt": "Terminada",
+        "duration": "Duração",
+        "counts": "Contagens",
+        "summary": {
+          "created": "Adicionados",
+          "updated": "Atualizados",
+          "delisted": "Retirados",
+          "relisted": "Recolocados",
+          "received": "Recebidos",
+          "dropped": "Descartados (repetidos)",
+          "invalid": "Inválidos",
+          "listedGames": "No catálogo"
+        },
+        "error": "Erro",
+        "noErrorMessage": "A execução não deixou mensagem de erro.",
+        "interrupted": "Esta execução parou de responder antes de terminar, por exemplo quando um deploy reiniciou a API. Ela não deixou contagens nem mensagem de erro.",
+        "pending": "Esta execução ainda não terminou. As contagens aparecem quando ela terminar."
+      }
     },
     "audit": {
       "title": "Auditoria",

@@ -580,6 +580,12 @@
         "title": "Recent actions",
         "viewAll": "View all",
         "empty": "No admin actions yet."
+      },
+      "catalogImport": {
+        "caption": "Catalog Import",
+        "title": "Last run",
+        "viewAll": "View history",
+        "empty": "No run yet. The first one shows up here once it starts."
       }
     },
     "squads": {
@@ -768,7 +774,68 @@
     },
     "catalog": {
       "title": "Catalog Import",
-      "description": "Syncs the game catalog with IGDB."
+      "description": "Syncs the game catalog with IGDB.",
+      "tableLabel": "Catalog Import runs",
+      "columns": {
+        "started": "Started",
+        "origin": "Origin",
+        "status": "Status",
+        "duration": "Duration",
+        "created": "Created",
+        "delisted": "Delisted",
+        "relisted": "Relisted",
+        "listedGames": "Listed Games"
+      },
+      "scheduled": "Scheduled",
+      "statuses": {
+        "requested": "Queued",
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "safety_stop": "Safety stop",
+        "failed": "Failed",
+        "interrupted": "Interrupted"
+      },
+      "duration": {
+        "seconds": "{seconds} s",
+        "minutes": "{minutes} min {seconds} s",
+        "hours": "{hours} h {minutes} min"
+      },
+      "empty": {
+        "title": "No runs yet",
+        "description": "The Catalog Import runs every day; each run shows up here with what it changed."
+      },
+      "pastEnd": {
+        "title": "No runs on this page",
+        "action": "Go to the first page"
+      },
+      "loading": "Loading the run history",
+      "loadError": "Couldn't load the run history.",
+      "retry": "Try again",
+      "panel": {
+        "caption": "Catalog Import",
+        "title": "Run of {date}",
+        "status": "Status",
+        "origin": "Origin",
+        "requestedAt": "Requested",
+        "startedAt": "Started",
+        "finishedAt": "Finished",
+        "duration": "Duration",
+        "counts": "Counts",
+        "summary": {
+          "created": "Created",
+          "updated": "Updated",
+          "delisted": "Delisted",
+          "relisted": "Relisted",
+          "received": "Received",
+          "dropped": "Dropped (repeated)",
+          "invalid": "Invalid",
+          "listedGames": "Listed Games"
+        },
+        "error": "Error",
+        "noErrorMessage": "The run left no error message.",
+        "interrupted": "This run stopped answering before it finished, for example when a deploy restarted the API. It left no counts and no error message.",
+        "pending": "This run has not finished yet. Its counts show up once it does."
+      }
     },
     "audit": {
       "title": "Audit",

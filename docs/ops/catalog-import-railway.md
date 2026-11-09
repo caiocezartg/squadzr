@@ -36,6 +36,22 @@ PostgreSQL is pinned to major version 16 to match the `postgres:16-alpine` servi
 suite runs against. Railway's PostgreSQL template already ships 18, so the service uses the 16 tag of
 the same image.
 
+## Run history
+
+Every run is recorded as a Catalog Import Run in the `catalog_import_runs` table, and admins read the
+history on the panel's Catalog page and the last run on its Overview, so a night's outcome no longer
+needs the Railway logs. The cron claims the run slot as `scheduled`, writes its outcome (`succeeded`
+with the counts, `safety_stop` or `failed` with the error message) in statements outside the import's
+transaction, and keeps its exit code: `0` on success, `1` on a safety stop or a failure.
+
+**The cron skips while a run is active.** At most one run is `requested` or `running` at a time. When
+the slot is taken the cron logs `Catalog Import skipped: another run is requested or running`, exits
+`0` and records nothing (a skipped night is not a failure, so Railway does not report `CRASHED`). A run
+abandoned by a crash or a deploy frees the slot by itself: before every claim, a `running` run whose
+heartbeat (written every 30 seconds) is older than 2 minutes, or a `requested` run nobody claimed
+within 10 minutes, is marked `interrupted`. If the hosted API is not deployed yet, the migration that
+creates the table still runs in the cron service's pre-deploy command, like every other migration.
+
 ## Apply a config change
 
 The Infrastructure as Code engine ships in the Railway CLI, so use version 5.42.1 or newer

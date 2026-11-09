@@ -46,6 +46,7 @@ function captureLogger(): {
     errors,
     logger: {
       info: (summary) => summaries.push(summary),
+      skipped: () => undefined,
       error: (error) => errors.push(error),
     },
   }

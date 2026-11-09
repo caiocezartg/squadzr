@@ -32,6 +32,8 @@ export interface IGameRepository {
    * popularity and name, with their Open Squad count and most used tags.
    */
   findPopular(input: FindPopularGamesInput): Promise<PopularGames>
+  /** How many Games are listed right now. */
+  countListed(): Promise<number>
   /** Inserts or updates an imported game by its IGDB id. Slugs are not unique. */
   upsertByIgdbId(input: UpsertGameInput): Promise<Game>
   /** Delists the listed imported games with these IGDB ids; returns how many changed. */

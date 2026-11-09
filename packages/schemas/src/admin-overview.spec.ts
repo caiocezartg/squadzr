@@ -28,6 +28,28 @@ const overview = {
     open: { current: null, previous: null },
   },
   recentAudit: [auditEntry],
+  catalogImport: {
+    lastRun: {
+      id: 'run-1',
+      trigger: 'scheduled',
+      requestedBy: null,
+      status: 'succeeded',
+      requestedAt: '2026-11-05T04:00:00.000Z',
+      startedAt: '2026-11-05T04:00:00.000Z',
+      finishedAt: '2026-11-05T04:00:04.000Z',
+      summary: {
+        created: 1,
+        updated: 2,
+        delisted: 0,
+        relisted: 0,
+        received: 3,
+        dropped: 0,
+        invalid: 0,
+      },
+      listedGames: 1675,
+      errorMessage: null,
+    },
+  },
 }
 
 describe('overview query', () => {
@@ -64,6 +86,15 @@ describe('overview response', () => {
 
   it('allows no recent audit for a moderator', () => {
     expect(overviewResponseSchema.safeParse({ ...overview, recentAudit: null }).success).toBe(true)
+  })
+
+  it('allows no catalog import for a moderator and no run yet for an admin', () => {
+    expect(overviewResponseSchema.safeParse({ ...overview, catalogImport: null }).success).toBe(
+      true
+    )
+    expect(
+      overviewResponseSchema.safeParse({ ...overview, catalogImport: { lastRun: null } }).success
+    ).toBe(true)
   })
 
   it('allows a peak that is null for a period without Activity Samples', () => {

@@ -25,3 +25,14 @@ export const GAME_CATALOG_IMPORT = {
   /** Absolute candidate floor of every run, including the first one. */
   MINIMUM_CANDIDATES: 10,
 } as const
+
+export const CATALOG_IMPORT_RUN = {
+  /** A running import proves it is alive this often. */
+  HEARTBEAT_INTERVAL_MS: 30_000,
+  /** A `running` run silent for longer than this was abandoned (a crash or a deploy). */
+  STALE_HEARTBEAT_MS: 2 * 60_000,
+  /** A `requested` run nobody claimed within this long was abandoned. */
+  STALE_REQUESTED_MS: 10 * 60_000,
+  /** The longest error message a run keeps. */
+  ERROR_MESSAGE_MAX_LENGTH: 2000,
+} as const
