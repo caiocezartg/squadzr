@@ -359,6 +359,51 @@ describe('the executor', () => {
     }
   })
 
+  it('starts a requested run left by a restart even when it is older than the staleness window', async () => {
+    const bare = await buildTestServer()
+    try {
+      const bareAdmin = await signIn(bare, 'Bare Admin', { role: 'admin' })
+      const requestedAt = new Date(Date.now() - 3 * 60 * 60_000)
+      const [left] = await bare.app.db
+        .insert(catalogImportRuns)
+        .values({
+          trigger: 'manual',
+          status: 'requested',
+          requestedAt,
+          requestedById: bareAdmin.id,
+          requestedByName: 'Bare Admin',
+        })
+        .returning()
+
+      const restarted = await buildApp({
+        env: createTestEnv({ DATABASE_URL: bare.databaseUrl }),
+        discordPreviews: KNOWN_INVITES,
+        catalogSource: new FakeGameCatalogSource().withCandidates(candidates(12)),
+      })
+      try {
+        await restarted.ready()
+
+        const finished = await vi.waitFor(
+          async () => {
+            const [row] = await bare.app.db
+              .select()
+              .from(catalogImportRuns)
+              .where(eq(catalogImportRuns.id, left!.id))
+            expect(row?.status).toBe('succeeded')
+            return row!
+          },
+          { timeout: 10_000, interval: 25 }
+        )
+        expect(finished.requestedById).toBe(bareAdmin.id)
+        expect(finished.startedAt).not.toBeNull()
+      } finally {
+        await restarted.close()
+      }
+    } finally {
+      await bare.close()
+    }
+  })
+
   it('never lets two executors run the same row: of concurrent claims exactly one wins', async () => {
     const bare = await buildTestServer()
     try {

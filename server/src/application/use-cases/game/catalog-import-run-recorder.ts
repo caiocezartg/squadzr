@@ -87,7 +87,10 @@ export class CatalogImportRunRecorder implements ICatalogImportRunRecorder {
 
   async runNextRequested(): Promise<RecordedRequestedCatalogImportRun> {
     const now = this.clock.now()
-    await this.interruptStale(now)
+    // A queued run is claimed whatever its age (an API outage longer than the requested staleness must
+    // not drop it), so only abandoned `running` runs are freed here. Queued runs still go stale for the
+    // cron's `run()`, which has to free the slot when no executor claims them.
+    await this.interruptStale(now, { includeRequested: false })
 
     const run = await this.runRepository.claimRequested(now)
     if (!run) return { kind: 'idle' }
@@ -95,11 +98,16 @@ export class CatalogImportRunRecorder implements ICatalogImportRunRecorder {
     return this.runClaimed(run.id, false)
   }
 
-  private async interruptStale(now: Date): Promise<void> {
+  private async interruptStale(
+    now: Date,
+    { includeRequested }: { includeRequested: boolean } = { includeRequested: true }
+  ): Promise<void> {
     await this.runRepository.interruptStale(
       {
         heartbeatBefore: new Date(now.getTime() - this.config.staleHeartbeatMs),
-        requestedBefore: new Date(now.getTime() - this.config.staleRequestedMs),
+        ...(includeRequested && {
+          requestedBefore: new Date(now.getTime() - this.config.staleRequestedMs),
+        }),
       },
       now
     )

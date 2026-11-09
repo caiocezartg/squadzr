@@ -10,8 +10,11 @@ import type {
 export interface CatalogImportRunStaleness {
   /** A `running` run whose heartbeat is older than this instant is abandoned. */
   readonly heartbeatBefore: Date
-  /** A `requested` run nobody claimed since this instant is abandoned. */
-  readonly requestedBefore: Date
+  /**
+   * A `requested` run nobody claimed since this instant is abandoned. Omitted: queued runs are never
+   * abandoned, which is how the executor, the one claimer of queued runs, frees the slot.
+   */
+  readonly requestedBefore?: Date
 }
 
 /**

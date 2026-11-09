@@ -308,6 +308,20 @@ describe('CatalogImportRunRecorder.runNextRequested', () => {
     )
   })
 
+  it('frees only abandoned running runs, so a queued run of any age is claimed, not interrupted', async () => {
+    runs.claimRequested.mockResolvedValue(createMockCatalogImportRun(queued))
+
+    await recorder.runNextRequested()
+
+    expect(runs.interruptStale).toHaveBeenCalledWith(
+      { heartbeatBefore: new Date(FIXED_NOW.getTime() - 120_000) },
+      FIXED_NOW
+    )
+    expect(runs.interruptStale.mock.invocationCallOrder[0]).toBeLessThan(
+      runs.claimRequested.mock.invocationCallOrder[0] ?? 0
+    )
+  })
+
   it('never lets the fraction check be bypassed', async () => {
     runs.claimRequested.mockResolvedValue(createMockCatalogImportRun(queued))
 

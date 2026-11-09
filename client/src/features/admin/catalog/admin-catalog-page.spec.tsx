@@ -415,8 +415,41 @@ describe('admin catalog manual run', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
+  it('reads the history once at the instant the 24 h window ends, and enables the button', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-11-09T18:41:00.000Z'))
+    let reads = 0
+    onHttp('GET', RUNS, () => {
+      reads += 1
+      return httpOk(
+        runsPage(
+          [succeeded],
+          1,
+          1,
+          reads === 1
+            ? { manualRun: { available: false, availableAt: '2026-11-09T18:42:00.000Z' } }
+            : {}
+        )
+      )
+    })
+    renderCatalog()
+
+    expect(await screen.findByText(/^Available again at/)).toBeVisible()
+    expect(await runButton()).toBeDisabled()
+    await act(() => vi.advanceTimersByTimeAsync(30_000))
+    expect(reads).toBe(1)
+    await act(() => vi.advanceTimersByTimeAsync(31_000))
+    expect(reads).toBe(2)
+    await vi.waitFor(async () => expect(await runButton()).toBeEnabled())
+
+    await act(() => vi.advanceTimersByTimeAsync(ACTIVE_RUN_POLL_MS * 3))
+    expect(reads).toBe(2)
+  })
+
   it('reads the history again while a run is active and stops at its final status', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    // Before the window ends, so the end of the window is not what this test is about.
+    vi.setSystemTime(new Date('2026-11-09T18:00:00.000Z'))
     const finished: CatalogImportRunDto = {
       ...running,
       status: 'succeeded',

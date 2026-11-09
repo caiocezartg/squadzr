@@ -67,24 +67,24 @@ export class DrizzleCatalogImportRunRepository implements ICatalogImportRunRepos
   constructor(private readonly db: Database) {}
 
   async interruptStale(staleness: CatalogImportRunStaleness, now: Date): Promise<number> {
+    const staleRunning = and(
+      eq(catalogImportRuns.status, 'running'),
+      lt(
+        sql`coalesce(${catalogImportRuns.heartbeatAt}, ${catalogImportRuns.startedAt}, ${catalogImportRuns.requestedAt})`,
+        staleness.heartbeatBefore
+      )
+    )
+    const staleRequested = staleness.requestedBefore
+      ? and(
+          eq(catalogImportRuns.status, 'requested'),
+          lt(catalogImportRuns.requestedAt, staleness.requestedBefore)
+        )
+      : undefined
+
     const rows = await this.db
       .update(catalogImportRuns)
       .set({ status: 'interrupted', finishedAt: now })
-      .where(
-        or(
-          and(
-            eq(catalogImportRuns.status, 'running'),
-            lt(
-              sql`coalesce(${catalogImportRuns.heartbeatAt}, ${catalogImportRuns.startedAt}, ${catalogImportRuns.requestedAt})`,
-              staleness.heartbeatBefore
-            )
-          ),
-          and(
-            eq(catalogImportRuns.status, 'requested'),
-            lt(catalogImportRuns.requestedAt, staleness.requestedBefore)
-          )
-        )
-      )
+      .where(or(staleRunning, staleRequested))
       .returning({ id: catalogImportRuns.id })
 
     return rows.length

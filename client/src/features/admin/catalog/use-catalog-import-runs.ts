@@ -12,6 +12,9 @@ import { catalogRunsQueryKey } from './catalog-query'
 /** How often the history is read again while a run is queued or running. */
 export const ACTIVE_RUN_POLL_MS = 3_000
 
+/** The longest delay `setTimeout` takes; a later instant is simply not waited for. */
+const MAX_TIMER_MS = 2_147_483_647
+
 function readCatalogImportRuns(page: number) {
   return api.get(`/api/admin/catalog-import/runs?page=${page}`, catalogImportRunsResponseSchema)
 }
@@ -42,6 +45,19 @@ export function useCatalogImportRuns(page: number) {
     }
     wasActive.current = isActive
   }, [isActive, queryClient])
+
+  const availableAt =
+    query.data?.manualRun.available === false ? query.data.manualRun.availableAt : null
+  const { refetch } = query
+  // Left open across the end of the 24 h window, the panel would keep showing a past instant: read the
+  // history once more at that instant, then the fresh answer says it is available. No polling in between.
+  useEffect(() => {
+    if (!availableAt) return
+    const delay = new Date(availableAt).getTime() - Date.now()
+    if (delay > MAX_TIMER_MS) return
+    const timer = setTimeout(() => void refetch(), Math.max(delay, 0))
+    return () => clearTimeout(timer)
+  }, [availableAt, refetch])
 
   return query
 }
