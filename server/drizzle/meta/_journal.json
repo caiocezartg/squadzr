@@ -92,6 +92,13 @@
       "when": 1793925495786,
       "tag": "0012_owner_moderator_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794193380291,
+      "tag": "0013_activity_samples",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,12 @@ import { hasFullAdminAccess, OVERVIEW_AUDIT_LIMIT, type OverviewPeriod } from '@
 import type { AuditEntry } from '@domain/entities/audit-entry.entity'
 import type { IAdminStatsRepository } from '@domain/repositories/admin-stats.repository'
 import type { IAuditEntryRepository } from '@domain/repositories/audit-entry.repository'
-import { totalPeriods, type PeriodTotals } from '@domain/services/activity-period'
+import {
+  peakPeriods,
+  totalPeriods,
+  type PeriodPeaks,
+  type PeriodTotals,
+} from '@domain/services/activity-period'
 import type { Clock } from '@domain/services/clock.interface'
 import type { OnlinePresence } from '@domain/services/online-presence.interface'
 import type { IGetAdminActivityUseCase } from './get-admin-activity.use-case'
@@ -24,6 +29,9 @@ export interface GetAdminOverviewOutput {
   readonly metrics: {
     readonly completed: PeriodTotals
     readonly signups: PeriodTotals
+    /** The highest day of Activity Samples; null with none in the period. */
+    readonly online: PeriodPeaks
+    readonly open: PeriodPeaks
   }
   /** The latest audit entries; null when the viewer may not read the audit. */
   readonly recentAudit: AuditEntry[] | null
@@ -35,8 +43,8 @@ export interface IGetAdminOverviewUseCase {
 
 /**
  * The Overview: the live numbers, the period totals of completed Squads and sign-ups beside those of
- * the previous period (sums of the same series the chart draws, so they always agree) and, for an
- * admin or the owner, the latest audit entries.
+ * the previous period (sums of the same series the chart draws, so they always agree), the peak online
+ * and peak Open Squads of both periods and, for an admin or the owner, the latest audit entries.
  */
 export class GetAdminOverviewUseCase implements IGetAdminOverviewUseCase {
   constructor(
@@ -49,15 +57,17 @@ export class GetAdminOverviewUseCase implements IGetAdminOverviewUseCase {
 
   async execute(input: GetAdminOverviewInput): Promise<GetAdminOverviewOutput> {
     const { period } = input
-    // One read: the live count and both series must agree on what today is.
+    // One read: the live count and the four series must agree on what today is.
     const now = this.clock.now()
-    const [totalUsers, openSquads, completedSquads, completed, signups, recentAudit] =
+    const [totalUsers, openSquads, completedSquads, completed, signups, online, open, recentAudit] =
       await Promise.all([
         this.statsRepository.countUsers(),
         this.statsRepository.countOpenSquads(now),
         this.statsRepository.countCompletedSquads(),
         this.activity.execute({ metric: 'completed', period, now }),
         this.activity.execute({ metric: 'signups', period, now }),
+        this.activity.execute({ metric: 'online', period, now }),
+        this.activity.execute({ metric: 'open', period, now }),
         hasFullAdminAccess(input.viewerRole)
           ? this.auditEntryRepository.list(0, OVERVIEW_AUDIT_LIMIT).then((page) => page.entries)
           : Promise.resolve(null),
@@ -71,7 +81,12 @@ export class GetAdminOverviewUseCase implements IGetAdminOverviewUseCase {
         openSquads,
         completedSquads,
       },
-      metrics: { completed: totalPeriods(completed.rows), signups: totalPeriods(signups.rows) },
+      metrics: {
+        completed: totalPeriods(completed.rows),
+        signups: totalPeriods(signups.rows),
+        online: peakPeriods(online.rows),
+        open: peakPeriods(open.rows),
+      },
       recentAudit,
     }
   }

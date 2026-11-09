@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { IActivitySampleRepository } from '@domain/repositories/activity-sample.repository'
 import type { IAdminStatsRepository } from '@domain/repositories/admin-stats.repository'
 import type { AuditEntry } from '@domain/entities/audit-entry.entity'
 import type { IAuditEntryRepository } from '@domain/repositories/audit-entry.repository'
@@ -24,21 +25,30 @@ function entry(id: string): AuditEntry {
   }
 }
 
-function setup(counts: Record<string, Record<string, number>> = {}, startsAt: Date = NOW) {
+function setup(
+  counts: Record<string, Record<string, number>> = {},
+  startsAt: Date = NOW,
+  peaks: Record<string, Record<string, number>> = {}
+) {
   const stats: IAdminStatsRepository = {
     countUsers: () => Promise.resolve(40),
     countOpenSquads: () => Promise.resolve(6),
     countCompletedSquads: () => Promise.resolve(25),
     countByDay: vi.fn((metric) => Promise.resolve(new Map(Object.entries(counts[metric] ?? {})))),
   }
+  const samples: IActivitySampleRepository = {
+    record: () => Promise.resolve(),
+    peakByDay: vi.fn((metric) => Promise.resolve(new Map(Object.entries(peaks[metric] ?? {})))),
+  }
   const list = vi.fn(() => Promise.resolve({ entries: [entry('a'), entry('b')], total: 2 }))
   const audit: IAuditEntryRepository = { list }
   const presence: OnlinePresence = { countOnlineUsers: () => 3, isUserOnline: () => false }
   const clock = createMockClock(startsAt)
-  const activity = new GetAdminActivityUseCase(stats, clock, TIME_ZONE)
+  const activity = new GetAdminActivityUseCase(stats, clock, TIME_ZONE, samples)
 
   return {
     stats,
+    samples,
     clock,
     list,
     activity,
@@ -47,6 +57,17 @@ function setup(counts: Record<string, Record<string, number>> = {}, startsAt: Da
 }
 
 describe('GetAdminActivityUseCase', () => {
+  it('reads a sampled metric from the samples, with null for a day without any', async () => {
+    const { activity, stats, samples } = setup({}, NOW, { open: { '2026-11-05': 4 } })
+
+    const result = await activity.execute({ metric: 'open', period: 7 })
+
+    expect(samples.peakByDay).toHaveBeenCalledWith('open', '2026-10-23', '2026-11-05', TIME_ZONE)
+    expect(stats.countByDay).not.toHaveBeenCalled()
+    expect(result.rows[0]).toEqual({ date: '2026-10-30', current: null, previous: null })
+    expect(result.rows[6]).toEqual({ date: '2026-11-05', current: 4, previous: null })
+  })
+
   it('asks for the two periods in one range, in the panel zone', async () => {
     const { activity, stats } = setup()
 
@@ -62,7 +83,8 @@ describe('GetAdminActivityUseCase', () => {
     const late = new GetAdminActivityUseCase(
       setup().stats,
       createMockClock(new Date('2026-11-06T01:00:00.000Z')),
-      TIME_ZONE
+      TIME_ZONE,
+      setup().samples
     )
 
     expect((await late.execute({ metric: 'completed', period: 7 })).rows.at(-1)?.date).toBe(
@@ -91,12 +113,26 @@ describe('GetAdminOverviewUseCase', () => {
     expect(result.metrics).toEqual({
       completed: { current: 3, previous: 4 },
       signups: { current: 1, previous: 5 },
+      online: { current: null, previous: null },
+      open: { current: null, previous: null },
     })
+  })
+
+  it('returns the highest day of each sampled metric for both periods, null with no samples', async () => {
+    const { overview } = setup({}, NOW, {
+      online: { '2026-11-05': 12, '2026-11-01': 20, '2026-10-29': 7 },
+      open: {},
+    })
+
+    const result = await overview.execute({ period: 7, viewerRole: 'moderator' })
+
+    expect(result.metrics.online).toEqual({ current: 20, previous: 7 })
+    expect(result.metrics.open).toEqual({ current: null, previous: null })
   })
 
   it('reads the clock once, so a day rolling over mid-request cannot split the series', async () => {
     // 23:59:59 in Sao Paulo on Nov 5: the next read would already be Nov 6.
-    const { overview, stats, clock } = setup({}, new Date('2026-11-06T02:59:59.000Z'))
+    const { overview, stats, samples, clock } = setup({}, new Date('2026-11-06T02:59:59.000Z'))
     vi.mocked(stats.countByDay).mockImplementation(() => {
       clock.set(new Date('2026-11-06T03:00:01.000Z'))
       return Promise.resolve(new Map())
@@ -107,6 +143,10 @@ describe('GetAdminOverviewUseCase', () => {
     expect(clock.now).toHaveBeenCalledTimes(1)
     const ranges = vi.mocked(stats.countByDay).mock.calls.map(([, from, to]) => [from, to])
     expect(ranges).toEqual([
+      ['2026-10-23', '2026-11-05'],
+      ['2026-10-23', '2026-11-05'],
+    ])
+    expect(vi.mocked(samples.peakByDay).mock.calls.map(([, from, to]) => [from, to])).toEqual([
       ['2026-10-23', '2026-11-05'],
       ['2026-10-23', '2026-11-05'],
     ])

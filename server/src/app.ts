@@ -22,9 +22,11 @@ import authPlugin from '@infrastructure/plugins/auth.plugin'
 import swaggerPlugin from '@infrastructure/plugins/swagger.plugin'
 import wsPlugin from '@infrastructure/websocket/ws.plugin'
 import roomCleanupPlugin from '@infrastructure/plugins/room-cleanup.plugin'
+import activitySamplerPlugin from '@infrastructure/plugins/activity-sampler.plugin'
 import type { DiscordInviteRateLimit } from '@interface/routes/discord.routes'
 import { registerRoutes } from '@interface/routes'
 import { createDiscordInvitePreviews } from '@interface/factories/discord-preview.factory'
+import { createRunActivitySampleUseCase } from '@interface/factories/activity-sampler.factory'
 import { createRealtime } from '@interface/factories/realtime.factory'
 import { createRoomCleanupUseCase } from '@interface/factories/room-cleanup.factory'
 
@@ -166,6 +168,13 @@ export async function buildApp({
   })
   await fastify.register(roomCleanupPlugin, {
     deleteExpiredRoomsUseCase: createRoomCleanupUseCase(fastify.db, fastify.clock),
+  })
+  await fastify.register(activitySamplerPlugin, {
+    runActivitySampleUseCase: createRunActivitySampleUseCase(
+      fastify.db,
+      fastify.clock,
+      fastify.realtime.manager
+    ),
   })
   await registerRoutes(fastify, { discord: { rateLimit: discordInviteRateLimit } })
 

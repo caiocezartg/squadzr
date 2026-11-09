@@ -502,7 +502,7 @@
       "users": "Users",
       "catalog": "Catalog",
       "audit": "Audit",
-      "back": "Back to Squadzr"
+      "board": "All squads"
     },
     "overview": {
       "title": "Overview",
@@ -516,12 +516,11 @@
       },
       "stats": {
         "online": "Online users",
-        "onlineNow": "Connected right now",
         "users": "Registered users",
         "open": "Open squads",
-        "openNow": "Open right now",
         "completed": "Completed squads",
-        "inPeriod": "{count, plural, =0 {<figure>0</figure> in the period} other {<figure>+#</figure> in the period}}"
+        "inPeriod": "{count, plural, =0 {<figure>0</figure> in the period} other {<figure>+#</figure> in the period}}",
+        "peak": "Peak in the period: <figure>{value}</figure>"
       },
       "change": {
         "up": "Up",
@@ -529,26 +528,34 @@
         "flat": "No change",
         "new": "new",
         "none": "No change",
-        "versus": "vs {count, plural, one {the previous day} other {# previous days}}"
+        "versus": "vs {count, plural, one {the previous day} other {# previous days}}",
+        "noComparison": "No data to compare"
       },
       "activity": {
         "caption": "Activity",
         "tabsLabel": "Metric",
         "tabs": {
           "completed": "Completed",
-          "signups": "Sign-ups"
+          "signups": "Sign-ups",
+          "online": "Peak online",
+          "open": "Open Squads"
         },
         "titles": {
           "completed": "Squads completed per day",
-          "signups": "Sign-ups per day"
+          "signups": "Sign-ups per day",
+          "online": "Peak online users per day",
+          "open": "Peak Open Squads per day"
         },
         "notes": {
           "completed": "Full history: each Squad Record keeps the moment its squad got ready.",
-          "signups": "Full history: from each account's creation date."
+          "signups": "Full history: from each account's creation date.",
+          "online": "Sampled every 5 minutes. Peak history starts with the first deploy of the sampler; days before it show no data.",
+          "open": "Sampled every 5 minutes. Peak history starts with the first deploy of the sampler; days before it show no data."
         },
         "legend": {
           "current": "{count, plural, one {Last day} other {Last # days}}",
-          "previous": "{count, plural, one {Previous day} other {# previous days}}"
+          "previous": "{count, plural, one {Previous day} other {# previous days}}",
+          "noData": "No data"
         },
         "current": "Current",
         "previous": "Previous period",
@@ -563,7 +570,10 @@
           "table": "Table"
         },
         "loading": "Loading the chart",
-        "loadError": "Couldn't load the chart."
+        "loadError": "Couldn't load the chart.",
+        "peakTotal": "{value} peak",
+        "noData": "No data",
+        "empty": "No data in this period yet."
       },
       "recentAudit": {
         "caption": "Audit",

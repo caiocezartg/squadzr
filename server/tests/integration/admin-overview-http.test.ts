@@ -8,9 +8,11 @@ import {
   type ActivityMetric,
   type OverviewPeriod,
 } from '@squadzr/schemas'
-import { squadRecords, user } from '@infrastructure/database/schema'
+import { activitySamples, squadRecords, user } from '@infrastructure/database/schema'
+import { runActivitySample } from '@infrastructure/plugins/activity-sampler.plugin'
+import { createRunActivitySampleUseCase } from '@interface/factories/activity-sampler.factory'
 import { insertAuditEntry } from '@infrastructure/repositories/audit-entry-writer'
-import { createMockClock } from '@test/mocks'
+import { createMockClock, type MockClock } from '@test/mocks'
 import { signIn, type TestUser } from '@test/harness/auth'
 import { connect, type RealtimeSession } from '@test/harness/realtime'
 import { createRoom, get, insertGame, setRoomLifecycle } from '@test/harness/rooms'
@@ -43,12 +45,14 @@ const EVENTS = [
 ]
 
 let server: TestServer
+let clock: MockClock
 let admin: TestUser
 let moderator: TestUser
 const sessions: RealtimeSession[] = []
 
 beforeEach(async () => {
-  server = await buildTestServer({}, { clock: createMockClock(NOW) })
+  clock = createMockClock(NOW)
+  server = await buildTestServer({}, { clock })
   admin = await signIn(server, 'Admin', { role: 'admin' })
   moderator = await signIn(server, 'Moderator', { role: 'moderator' })
   await setCreatedAt(admin, LONG_AGO)
@@ -87,8 +91,8 @@ async function overview(period: OverviewPeriod | string, as: TestUser = admin) {
   return overviewResponseSchema.parse(response.json())
 }
 
-async function activity(metric: ActivityMetric, period: OverviewPeriod) {
-  const response = await get(server, `/api/admin/activity?metric=${metric}&period=${period}`, admin)
+async function activity(metric: ActivityMetric, period: OverviewPeriod, as: TestUser = admin) {
+  const response = await get(server, `/api/admin/activity?metric=${metric}&period=${period}`, as)
   expect(response.statusCode, response.body).toBe(200)
   return activityResponseSchema.parse(response.json())
 }
@@ -274,13 +278,153 @@ describe('GET /api/admin/activity', () => {
   })
 })
 
+// #121: the peaks come from Activity Samples taken by `runActivitySample` (the timer is not involved).
+describe('the peaks of the sampled metrics', () => {
+  const day = (iso: string) => new Date(iso)
+
+  async function sampleAt(instant: Date): Promise<void> {
+    clock.set(instant)
+    await runActivitySample(
+      server.app.log,
+      createRunActivitySampleUseCase(server.app.db, server.app.clock, server.app.realtime.manager)
+    )
+  }
+
+  async function disconnect(session: RealtimeSession): Promise<void> {
+    session.client.terminate()
+    sessions.splice(sessions.indexOf(session), 1)
+    await server.app.realtime.drain()
+    await new Promise<void>((resolve) => setTimeout(resolve, 50))
+  }
+
+  /**
+   * Six samples across the periods (Sao Paulo days in brackets):
+   *   Oct 29 12:00Z [Oct 29]  0 online, 0 open
+   *   Nov  1 12:00Z [Nov 1]   1 online, 0 open
+   *   Nov  4 12:00Z [Nov 4]   2 online, 1 open
+   *   Nov  5 02:59:59Z [Nov 4] 3 online, 1 open
+   *   Nov  5 03:00Z [Nov 5]   3 online, 2 open
+   *   Nov  5 14:00Z [Nov 5]   2 online, 1 open (the first Squad has been idle for 26 hours)
+   */
+  async function seedSamples(): Promise<void> {
+    const [first, second, third, host, otherHost] = await Promise.all(
+      ['One', 'Two', 'Three', 'Host', 'Other host'].map((name) => signIn(server, name))
+    )
+    const game = await insertGame(server)
+
+    await sampleAt(day('2026-10-29T12:00:00.000Z'))
+    sessions.push(await connect(server, first!))
+    await sampleAt(day('2026-11-01T12:00:00.000Z'))
+
+    clock.set(day('2026-11-04T12:00:00.000Z'))
+    await createRoom(server, host!, { gameId: game.id })
+    sessions.push(await connect(server, second!))
+    await sampleAt(day('2026-11-04T12:00:00.000Z'))
+
+    const lastToConnect = await connect(server, third!)
+    sessions.push(lastToConnect)
+    await sampleAt(day('2026-11-05T02:59:59.000Z'))
+
+    clock.set(day('2026-11-05T03:00:00.000Z'))
+    await createRoom(server, otherHost!, { gameId: game.id })
+    await sampleAt(day('2026-11-05T03:00:00.000Z'))
+
+    await disconnect(lastToConnect)
+    await sampleAt(day('2026-11-05T14:00:00.000Z'))
+  }
+
+  it('stores one sample per run with the current counts', async () => {
+    await seedSamples()
+
+    const rows = await server.app.db.select().from(activitySamples)
+
+    expect(rows).toHaveLength(6)
+    expect(
+      rows
+        .map((row) => [row.sampledAt.toISOString(), row.onlineUsers, row.openSquads])
+        .sort(([a], [b]) => String(a).localeCompare(String(b)))
+    ).toEqual([
+      ['2026-10-29T12:00:00.000Z', 0, 0],
+      ['2026-11-01T12:00:00.000Z', 1, 0],
+      ['2026-11-04T12:00:00.000Z', 2, 1],
+      ['2026-11-05T02:59:59.000Z', 3, 1],
+      ['2026-11-05T03:00:00.000Z', 3, 2],
+      ['2026-11-05T14:00:00.000Z', 2, 1],
+    ])
+  })
+
+  it('returns the highest sample of each Sao Paulo day and null for days without samples', async () => {
+    await seedSamples()
+
+    const { rows } = await activity('online', 7)
+    const byDate = new Map(rows.map((row) => [row.date, row]))
+
+    expect(rows).toHaveLength(7)
+    expect(byDate.get('2026-10-30')).toEqual({ date: '2026-10-30', current: null, previous: null })
+    expect(byDate.get('2026-11-01')).toEqual({ date: '2026-11-01', current: 1, previous: null })
+    // The 02:59:59Z sample (3) is still Nov 4 in Sao Paulo, above the 12:00Z one (2).
+    expect(byDate.get('2026-11-04')).toEqual({ date: '2026-11-04', current: 3, previous: null })
+    // Nov 5 keeps its 03:00Z peak of 3 though the 14:00Z sample is lower, and pairs with Oct 29's 0.
+    expect(byDate.get('2026-11-05')).toEqual({ date: '2026-11-05', current: 3, previous: 0 })
+
+    const open = await activity('open', 7)
+    expect(open.rows.filter((row) => row.current !== null)).toEqual([
+      { date: '2026-11-01', current: 0, previous: null },
+      { date: '2026-11-04', current: 1, previous: null },
+      { date: '2026-11-05', current: 2, previous: 0 },
+    ])
+  })
+
+  it('compares the peak of the period with the one before it in the overview', async () => {
+    await seedSamples()
+
+    expect((await overview(7)).metrics).toMatchObject({
+      online: { current: 3, previous: 0 },
+      open: { current: 2, previous: 0 },
+    })
+    // No samples at all before Oct 7, so the previous 30 days have no peak.
+    expect((await overview(30)).metrics).toMatchObject({
+      online: { current: 3, previous: null },
+      open: { current: 2, previous: null },
+    })
+  })
+
+  it('has no peak and only null days before the sampler has run', async () => {
+    expect((await overview(7)).metrics).toMatchObject({
+      online: { current: null, previous: null },
+      open: { current: null, previous: null },
+    })
+    const { rows } = await activity('online', 7)
+
+    expect(rows).toHaveLength(7)
+    expect(rows.every((row) => row.current === null && row.previous === null)).toBe(true)
+  })
+
+  it('shows a moderator the same peaks and series', async () => {
+    await seedSamples()
+
+    const asModerator = await overview(7, moderator)
+    expect(asModerator.metrics).toMatchObject({
+      online: { current: 3, previous: 0 },
+      open: { current: 2, previous: 0 },
+    })
+    expect((await activity('online', 7, moderator)).rows.at(-1)).toEqual({
+      date: '2026-11-05',
+      current: 3,
+      previous: 0,
+    })
+  })
+})
+
 describe('who may read the Overview', () => {
-  it.each(['/api/admin/overview', '/api/admin/activity?metric=signups'])(
-    'lets a moderator read %s',
-    async (url) => {
-      expect((await get(server, url, moderator)).statusCode).toBe(200)
-    }
-  )
+  it.each([
+    '/api/admin/overview',
+    '/api/admin/activity?metric=signups',
+    '/api/admin/activity?metric=online',
+    '/api/admin/activity?metric=open',
+  ])('lets a moderator read %s', async (url) => {
+    expect((await get(server, url, moderator)).statusCode).toBe(200)
+  })
 
   it.each(['/api/admin/overview', '/api/admin/activity?metric=signups'])(
     'answers 401 to a signed-out visitor and 403 to a user on %s',

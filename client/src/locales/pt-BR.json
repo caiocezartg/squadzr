@@ -502,7 +502,7 @@
       "users": "Usuários",
       "catalog": "Catálogo",
       "audit": "Auditoria",
-      "back": "Voltar ao Squadzr"
+      "board": "Todos os squads"
     },
     "overview": {
       "title": "Visão geral",
@@ -516,12 +516,11 @@
       },
       "stats": {
         "online": "Usuários online",
-        "onlineNow": "Conectados agora",
         "users": "Usuários cadastrados",
         "open": "Squads abertos",
-        "openNow": "Abertos agora",
         "completed": "Squads completados",
-        "inPeriod": "{count, plural, =0 {<figure>0</figure> no período} other {<figure>+#</figure> no período}}"
+        "inPeriod": "{count, plural, =0 {<figure>0</figure> no período} other {<figure>+#</figure> no período}}",
+        "peak": "Pico no período: <figure>{value}</figure>"
       },
       "change": {
         "up": "Alta de",
@@ -529,26 +528,34 @@
         "flat": "Sem variação",
         "new": "novo",
         "none": "Sem variação",
-        "versus": "vs {count, plural, one {o dia anterior} other {# dias anteriores}}"
+        "versus": "vs {count, plural, one {o dia anterior} other {# dias anteriores}}",
+        "noComparison": "Sem dados para comparar"
       },
       "activity": {
         "caption": "Atividade",
         "tabsLabel": "Métrica",
         "tabs": {
           "completed": "Completados",
-          "signups": "Cadastros"
+          "signups": "Cadastros",
+          "online": "Pico online",
+          "open": "Squads abertos"
         },
         "titles": {
           "completed": "Squads completados por dia",
-          "signups": "Cadastros por dia"
+          "signups": "Cadastros por dia",
+          "online": "Pico de usuários online por dia",
+          "open": "Pico de Squads abertos por dia"
         },
         "notes": {
           "completed": "Histórico completo: cada Squad Record guarda o instante em que o squad ficou pronto.",
-          "signups": "Histórico completo: vem da data de criação de cada conta."
+          "signups": "Histórico completo: vem da data de criação de cada conta.",
+          "online": "Amostrado a cada 5 min. O histórico de pico começa no primeiro deploy do amostrador; os dias anteriores aparecem sem dados.",
+          "open": "Amostrado a cada 5 min. O histórico de pico começa no primeiro deploy do amostrador; os dias anteriores aparecem sem dados."
         },
         "legend": {
           "current": "{count, plural, one {Último dia} other {Últimos # dias}}",
-          "previous": "{count, plural, one {Dia anterior} other {# dias anteriores}}"
+          "previous": "{count, plural, one {Dia anterior} other {# dias anteriores}}",
+          "noData": "Sem dados"
         },
         "current": "Atual",
         "previous": "Período anterior",
@@ -563,7 +570,10 @@
           "table": "Tabela"
         },
         "loading": "Carregando o gráfico",
-        "loadError": "Não foi possível carregar o gráfico."
+        "loadError": "Não foi possível carregar o gráfico.",
+        "peakTotal": "{value} pico",
+        "noData": "Sem dados",
+        "empty": "Ainda não há dados neste período."
       },
       "recentAudit": {
         "caption": "Auditoria",

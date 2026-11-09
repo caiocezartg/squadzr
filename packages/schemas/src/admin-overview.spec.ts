@@ -24,6 +24,8 @@ const overview = {
   metrics: {
     completed: { current: 12, previous: 9 },
     signups: { current: 20, previous: 0 },
+    online: { current: 14, previous: null },
+    open: { current: null, previous: null },
   },
   recentAudit: [auditEntry],
 }
@@ -49,7 +51,9 @@ describe('activity query', () => {
       period: DEFAULT_OVERVIEW_PERIOD,
     })
     expect(activityQuerySchema.safeParse({}).success).toBe(false)
-    expect(activityQuerySchema.safeParse({ metric: 'online' }).success).toBe(false)
+    expect(activityQuerySchema.parse({ metric: 'online' }).metric).toBe('online')
+    expect(activityQuerySchema.parse({ metric: 'open' }).metric).toBe('open')
+    expect(activityQuerySchema.safeParse({ metric: 'peak' }).success).toBe(false)
   })
 })
 
@@ -60,6 +64,17 @@ describe('overview response', () => {
 
   it('allows no recent audit for a moderator', () => {
     expect(overviewResponseSchema.safeParse({ ...overview, recentAudit: null }).success).toBe(true)
+  })
+
+  it('allows a peak that is null for a period without Activity Samples', () => {
+    const noPeaks = { current: null, previous: null }
+
+    expect(
+      overviewResponseSchema.safeParse({
+        ...overview,
+        metrics: { ...overview.metrics, online: noPeaks, open: noPeaks },
+      }).success
+    ).toBe(true)
   })
 
   it('rejects a negative count and an unknown period', () => {

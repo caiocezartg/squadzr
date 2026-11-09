@@ -1,4 +1,4 @@
-import type { ActivityMetric } from '@squadzr/schemas'
+import type { CountedActivityMetric } from '@domain/services/activity-period'
 
 /** The counts the admin Overview reads. */
 export interface IAdminStatsRepository {
@@ -13,7 +13,7 @@ export interface IAdminStatsRepository {
    * days in `timeZone`: Squad Records by Ready instant, users by creation. Days with none are absent.
    */
   countByDay(
-    metric: ActivityMetric,
+    metric: CountedActivityMetric,
     fromDay: string,
     toDay: string,
     timeZone: string

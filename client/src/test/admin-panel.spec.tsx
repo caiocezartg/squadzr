@@ -1,5 +1,5 @@
 /**
- * The admin panel (#117): its shell (the five sections, the current one, "Back to Squadzr") and the
+ * The admin panel (#117): its shell (the five sections, the current one, the "All squads" way out, the language switch) and the
  * Audit page (newest-first entries with their actor, action, target and reason, the pages held in the
  * URL, the empty and failed reads). The route's gate is covered in lib/server/admin-gate.spec.ts; the
  * panel's look is checked in the browser.
@@ -19,6 +19,7 @@ import {
 } from '@squadzr/schemas'
 import { AdminShell } from '@/features/admin'
 import { AdminAuditPage, AdminOverviewPage } from '@/features/admin/page'
+import { LOCALE_COOKIE } from '@/i18n/locales'
 import { createTestQueryClient } from './harness'
 import { countHttpCalls, getHttpLog, httpError, httpOk, onHttp } from './http-router'
 import { EnglishIntlProvider } from './intl'
@@ -223,15 +224,31 @@ describe('admin shell', () => {
     )
   })
 
-  it('leads back to the app and keeps the account at the foot', () => {
+  it('leads to the Squad Board below the sections and keeps the account at the foot', () => {
     renderAdmin('/admin')
     const sidebar = within(screen.getByRole('complementary', { name: 'Admin menu' }))
+    const board = sidebar.getByRole('link', { name: 'All squads' })
 
-    expect(sidebar.getByRole('link', { name: 'Back to Squadzr' })).toHaveAttribute(
-      'href',
-      '/squads'
-    )
+    expect(board).toHaveAttribute('href', '/squads')
+    expect(board).not.toHaveAttribute('aria-current')
+    expect(within(sections()).queryByRole('link', { name: 'All squads' })).not.toBeInTheDocument()
+    expect(sidebar.queryByRole('link', { name: 'Back to Squadzr' })).not.toBeInTheDocument()
     expect(sidebar.getByRole('button', { name: 'Caio' })).toBeInTheDocument()
+  })
+
+  it('switches the language from the foot and stays on the same page', async () => {
+    const { user, navigation } = renderAdmin('/admin?period=30d')
+    const sidebar = within(screen.getByRole('complementary', { name: 'Admin menu' }))
+    const language = within(sidebar.getByRole('group', { name: 'Language' }))
+
+    expect(language.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(language.getByRole('button', { name: 'PT' }))
+
+    const cookie = document.cookie
+    document.cookie = `${LOCALE_COOKIE}=; path=/; max-age=0`
+
+    expect(cookie).toContain(`${LOCALE_COOKIE}=pt-BR`)
+    expect(navigation.calls).toEqual([{ method: 'refresh' }])
   })
 })
 

@@ -9,12 +9,13 @@ import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import type {
-  ActivityMetric,
-  ActivityResponse,
-  AuditEntryDto,
-  OverviewPeriod,
-  OverviewResponse,
+import {
+  ACTIVITY_METRICS,
+  type ActivityMetric,
+  type ActivityResponse,
+  type AuditEntryDto,
+  type OverviewPeriod,
+  type OverviewResponse,
 } from '@squadzr/schemas'
 import { createTestQueryClient } from '@/test/harness'
 import { httpError, httpOk, onHttp } from '@/test/http-router'
@@ -49,23 +50,53 @@ function overview(
     metrics: {
       completed: week ? { current: 50, previous: 100 } : { current: 2131, previous: 1991 },
       signups: week ? { current: 7, previous: 0 } : { current: 1204, previous: 1020 },
+      online: { current: 488, previous: 448 },
+      open: { current: 261, previous: 272 },
     },
     recentAudit,
   }
 }
 
-/** A series of `period` days ending 5 November 2026; Completed counts 3 a day, Sign-ups 1. */
+const dateOf = (period: number, index: number) =>
+  new Date(LAST_DAY - (period - 1 - index) * DAY_MS).toISOString().slice(0, 10)
+
+/**
+ * A series of `period` days ending 5 November 2026; Completed counts 3 a day, Sign-ups 1. The sampled
+ * metrics (peak online, Open Squads) have data only on the last three days (10, 20, 30) and none in the
+ * previous period, as before the sampler's first deploy.
+ */
 function activity(metric: ActivityMetric, period: OverviewPeriod): ActivityResponse {
+  const sampled = metric === 'online' || metric === 'open'
   const perDay = metric === 'completed' ? 3 : 1
   return {
     metric,
     period,
     rows: Array.from({ length: period }, (_, index) => ({
-      date: new Date(LAST_DAY - (period - 1 - index) * DAY_MS).toISOString().slice(0, 10),
-      current: perDay,
-      previous: perDay - 1,
+      date: dateOf(period, index),
+      current: sampled ? (index < period - 3 ? null : 10 * (index - period + 4)) : perDay,
+      previous: sampled ? null : perDay - 1,
     })),
   }
+}
+
+/** A sampled series of the given days, oldest first, with no data in the previous period. */
+function sampledSeries(metric: ActivityMetric, values: (number | null)[]): ActivityResponse {
+  const period = values.length as OverviewPeriod
+  return {
+    metric,
+    period,
+    rows: values.map((current, index) => ({
+      date: dateOf(period, index),
+      current,
+      previous: null,
+    })),
+  }
+}
+
+function cacheOverview(queryClient: QueryClient): void {
+  queryClient.setQueryData(overviewQueryKey(30), overview(30))
+  for (const metric of ACTIVITY_METRICS)
+    queryClient.setQueryData(activityQueryKey(metric, 30), activity(metric, 30))
 }
 
 function serveOverview(recentAudit: AuditEntryDto[] | null = [grant]): void {
@@ -116,7 +147,11 @@ describe('admin overview', () => {
     onHttp('GET', '/api/admin/overview', () =>
       httpOk({
         ...overview(30),
-        metrics: { completed: { current: 0, previous: 4 }, signups: { current: 12, previous: 3 } },
+        metrics: {
+          ...overview(30).metrics,
+          completed: { current: 0, previous: 4 },
+          signups: { current: 12, previous: 3 },
+        },
       })
     )
     onHttp('GET', '/api/admin/activity', ({ query }) =>
@@ -161,7 +196,11 @@ describe('admin overview', () => {
     onHttp('GET', '/api/admin/overview', () =>
       httpOk({
         ...overview(30),
-        metrics: { completed: { current: 0, previous: 4 }, signups: { current: 3, previous: 3 } },
+        metrics: {
+          ...overview(30).metrics,
+          completed: { current: 0, previous: 4 },
+          signups: { current: 3, previous: 3 },
+        },
       })
     )
     onHttp('GET', '/api/admin/activity', ({ query }) =>
@@ -212,7 +251,7 @@ describe('admin overview', () => {
     expect(screen.getByRole('heading', { name: 'Sign-ups per day' })).toBeVisible()
     expect(await screen.findByText('7', { selector: 'span' })).toBeVisible()
 
-    await user.keyboard('{ArrowRight}')
+    await user.keyboard('{ArrowLeft}')
     expect(screen.getByRole('tab', { name: 'Completed' })).toHaveFocus()
     expect(screen.getByRole('tab', { name: 'Completed' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel', { name: 'Completed' })).toBeVisible()
@@ -292,7 +331,7 @@ describe('admin overview', () => {
     await user.click(screen.getByRole('button', { name: 'Table' }))
 
     const [, latest] = within(screen.getByRole('table')).getAllByRole('row')
-    expect(latest).toHaveTextContent('None')
+    expect(latest).toHaveTextContent('No data')
   })
 
   it('lists the latest admin actions, linked to the Audit page', async () => {
@@ -318,9 +357,7 @@ describe('admin overview', () => {
 
   it('renders a cached Overview at once, with no loading state', () => {
     const queryClient = createTestQueryClient()
-    queryClient.setQueryData(overviewQueryKey(30), overview(30))
-    queryClient.setQueryData(activityQueryKey('completed', 30), activity('completed', 30))
-    queryClient.setQueryData(activityQueryKey('signups', 30), activity('signups', 30))
+    cacheOverview(queryClient)
 
     renderOverview('/admin', queryClient)
 
@@ -332,9 +369,7 @@ describe('admin overview', () => {
 
   it('draws the lines in only where motion is allowed, without holding the chart back', () => {
     const queryClient = createTestQueryClient()
-    queryClient.setQueryData(overviewQueryKey(30), overview(30))
-    queryClient.setQueryData(activityQueryKey('completed', 30), activity('completed', 30))
-    queryClient.setQueryData(activityQueryKey('signups', 30), activity('signups', 30))
+    cacheOverview(queryClient)
 
     renderOverview('/admin', queryClient)
 
@@ -356,6 +391,170 @@ describe('admin overview', () => {
     await screen.findByText('7', { selector: 'span' })
 
     expect(screen.getByTestId('activity-lines')).not.toBe(first)
+  })
+
+  it("shows the period's peak under the live numbers, against the previous period", async () => {
+    serveOverview()
+    renderOverview('/admin')
+
+    await screen.findByText('Online users', { selector: 'dt' })
+    expect(tile('Online users')).not.toHaveTextContent('Connected right now')
+    expect(tile('Online users')).toHaveTextContent('Peak in the period: 488')
+    expect(tile('Online users')).toHaveTextContent('Up 9%')
+    expect(within(tile('Online users')).getByText('488', { selector: 'strong' })).toBeVisible()
+    expect(tile('Open squads')).not.toHaveTextContent('Open right now')
+    expect(tile('Open squads')).toHaveTextContent('Peak in the period: 261')
+    expect(tile('Open squads')).toHaveTextContent('Down 4%')
+    expect(within(tile('Open squads')).getByText('vs 30 previous days')).toHaveClass(
+      'max-sm:sr-only'
+    )
+  })
+
+  it('shows no peak for a period without samples, and no change without an earlier one', async () => {
+    onHttp('GET', '/api/admin/overview', () =>
+      httpOk({
+        ...overview(30),
+        metrics: {
+          ...overview(30).metrics,
+          online: { current: null, previous: null },
+          open: { current: 14, previous: null },
+        },
+      })
+    )
+    onHttp('GET', '/api/admin/activity', ({ query }) =>
+      httpOk(activity(query.get('metric') as ActivityMetric, 30))
+    )
+    renderOverview('/admin')
+
+    await screen.findByText('Online users', { selector: 'dt' })
+    expect(tile('Online users')).toHaveTextContent('Peak in the period: —None')
+    expect(tile('Online users')).not.toHaveTextContent('vs 30 previous days')
+    expect(tile('Open squads')).toHaveTextContent('Peak in the period: 14')
+    expect(tile('Open squads')).toHaveTextContent('No data to compare')
+    expect(tile('Open squads')).not.toHaveTextContent('%')
+  })
+
+  it('adds the peak online and Open Squads tabs after the counted ones, on the arrow keys', async () => {
+    serveOverview()
+    const { user } = renderOverview('/admin?period=7')
+    await screen.findByText('Last 7 days')
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Completed',
+      'Sign-ups',
+      'Peak online',
+      'Open Squads',
+    ])
+
+    act(() => screen.getByRole('tab', { name: 'Completed' }).focus())
+    await user.keyboard('{ArrowLeft}')
+    expect(screen.getByRole('tab', { name: 'Open Squads' })).toHaveFocus()
+    expect(screen.getByRole('heading', { name: 'Peak Open Squads per day' })).toBeVisible()
+    await user.keyboard('{ArrowLeft}')
+    expect(screen.getByRole('tab', { name: 'Peak online' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(screen.getByRole('heading', { name: 'Peak online users per day' })).toBeVisible()
+    expect(
+      screen.getByText(/Peak history starts with the first deploy of the sampler/)
+    ).toBeVisible()
+  })
+
+  it('sums up a sampled metric by its peak day, not by adding the days', async () => {
+    serveOverview()
+    const { user } = renderOverview('/admin?period=7')
+    await screen.findByText('Last 7 days')
+
+    await user.click(screen.getByRole('tab', { name: 'Peak online' }))
+
+    // The last three days peak at 10, 20 and 30; the days before have no data.
+    expect(await screen.findByText('30 peak')).toBeVisible()
+    expect(screen.queryByText('60')).not.toBeInTheDocument()
+    expect(screen.getByText('No data to compare')).toBeInTheDocument()
+  })
+
+  it('reads a sampled day with no data in the previous period as no data', async () => {
+    serveOverview()
+    const { user } = renderOverview('/admin?period=7')
+    await screen.findByText('Last 7 days')
+    await user.click(screen.getByRole('tab', { name: 'Open Squads' }))
+    const chart = await screen.findByRole('group', { name: /Daily chart/ })
+
+    act(() => chart.focus())
+    const card = within(chart).getByRole('status')
+    expect(card).toHaveTextContent('Current30')
+    expect(card).toHaveTextContent('Previous periodNo data')
+
+    await user.click(screen.getByRole('button', { name: 'Table' }))
+    const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1)
+    expect(rows[0]).toHaveTextContent('30No data')
+    expect(rows[6]).toHaveTextContent('No dataNo data')
+  })
+
+  it('draws a day with no data as a gap in the line and a lone day as a dot', async () => {
+    serveOverview()
+    onHttp('GET', '/api/admin/activity', ({ query }) =>
+      httpOk(sampledSeries(query.get('metric') as ActivityMetric, [5, null, 7, 8, null, null, 2]))
+    )
+    renderOverview('/admin?period=7')
+    await screen.findByText('Last 7 days')
+
+    const lines = screen.getByTestId('activity-lines')
+    const paths = [...lines.querySelectorAll('path:not([data-testid^="activity-bridges"])')].map(
+      (path) => path.getAttribute('d') ?? ''
+    )
+    // The previous period has no data: the current line's two-day run, and its two lone days.
+    expect(paths).toHaveLength(2)
+    expect(paths[0]?.match(/M/g)).toHaveLength(1)
+    expect(paths[0]?.match(/L/g)).toHaveLength(1)
+    expect(
+      screen.getByTestId('activity-dots-current').getAttribute('d')?.match(/h0/g)
+    ).toHaveLength(2)
+    expect(screen.queryByText('No data in this period yet.')).not.toBeInTheDocument()
+  })
+
+  it('hatches the days with no data, bridges each inner gap and names the hatch in the legend', async () => {
+    serveOverview()
+    onHttp('GET', '/api/admin/activity', ({ query }) =>
+      httpOk(
+        sampledSeries(query.get('metric') as ActivityMetric, [null, 5, null, 7, null, null, 2])
+      )
+    )
+    renderOverview('/admin?period=7')
+    await screen.findByText('Last 7 days')
+
+    // Three runs of days with no data, each a band; the leading one has no day before it to bridge from.
+    expect(screen.getByTestId('activity-no-data').querySelectorAll('rect')).toHaveLength(3)
+    expect(
+      screen.getByTestId('activity-bridges-current').getAttribute('d')?.match(/M/g)
+    ).toHaveLength(2)
+    expect(screen.queryByTestId('activity-bridges-previous')).not.toBeInTheDocument()
+    expect(screen.getByText('No data', { selector: 'li' })).toBeVisible()
+  })
+
+  it('leaves a counted series without bands, bridges or the no-data legend', async () => {
+    serveOverview()
+    onHttp('GET', '/api/admin/activity', ({ query }) =>
+      httpOk(activity(query.get('metric') as ActivityMetric, 7))
+    )
+    renderOverview('/admin?period=7')
+    await screen.findByText('Last 7 days')
+
+    expect(screen.queryByTestId('activity-no-data')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('activity-bridges-current')).not.toBeInTheDocument()
+    expect(screen.queryByText('No data', { selector: 'li' })).not.toBeInTheDocument()
+  })
+
+  it('says so over an empty grid when no day of either period has data', async () => {
+    serveOverview()
+    onHttp('GET', '/api/admin/activity', ({ query }) =>
+      httpOk(sampledSeries(query.get('metric') as ActivityMetric, Array(7).fill(null)))
+    )
+    renderOverview('/admin?period=7')
+
+    expect(await screen.findByText('No data in this period yet.')).toBeVisible()
+    expect(screen.getByTestId('activity-lines').querySelectorAll('path')).toHaveLength(0)
+    expect(screen.getByRole('group', { name: /Daily chart/ })).toBeVisible()
   })
 
   it('shows a failed read with a retry that reads the Overview again', async () => {

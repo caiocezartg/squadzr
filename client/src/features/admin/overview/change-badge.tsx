@@ -5,8 +5,9 @@ import { cn } from '@/lib/utils'
 import { periodChange, type PeriodChange } from './period-change'
 
 interface ChangeBadgeProps {
-  readonly current: number
-  readonly previous: number
+  /** `null` is a period with no data, which leaves nothing to compare. */
+  readonly current: number | null
+  readonly previous: number | null
   /** The length of both periods, in days. */
   readonly period: number
   /** Where the comparison is written out: always, or from the sm width up (read aloud below it). */
@@ -40,6 +41,8 @@ function useChangeView(): (change: PeriodChange) => ChangeView {
         return { tone: 'text-mint', mark: '▲', spoken: '', value: t('new') }
       case 'none':
         return { tone: 'text-muted', mark: '—', spoken: t('none'), value: null }
+      case 'unknown':
+        return { tone: 'text-muted', mark: '—', spoken: t('noComparison'), value: null }
     }
   }
 }
@@ -47,7 +50,7 @@ function useChangeView(): (change: PeriodChange) => ChangeView {
 /**
  * A total's change against the previous period (reference, Admin panel, Overview): ▲ in mint or ▼ in
  * danger with the percentage, "new" when the previous period had none and a neutral dash when neither
- * had any, then what it compares with, which a tile on a phone leaves to screen readers.
+ * had any (or either period has no data), then what it compares with, which a tile on a phone leaves to screen readers.
  */
 export function ChangeBadge({
   current,

@@ -1,4 +1,14 @@
-import type { OverviewPeriod } from '@squadzr/schemas'
+import type { ActivityMetric, OverviewPeriod } from '@squadzr/schemas'
+
+/** The metrics counted from events (a day nothing happened on is 0). */
+export type CountedActivityMetric = Extract<ActivityMetric, 'completed' | 'signups'>
+
+/** The metrics read from Activity Samples (a day without samples has no data, which is not 0). */
+export type SampledActivityMetric = Extract<ActivityMetric, 'online' | 'open'>
+
+export function isSampledMetric(metric: ActivityMetric): metric is SampledActivityMetric {
+  return metric === 'online' || metric === 'open'
+}
 
 /** One day of an Activity series. `null` is a day with no data. */
 export interface ActivityRow {
@@ -72,4 +82,39 @@ export function totalPeriods(rows: readonly ActivityRow[]): PeriodTotals {
     }),
     { current: 0, previous: 0 }
   )
+}
+
+/**
+ * The series of a sampled metric: the peak of each day of the period beside the same day of the
+ * previous one. A day with no Activity Sample is null, never 0.
+ */
+export function buildSampledRows(
+  days: PeriodDays,
+  peaks: ReadonlyMap<string, number>
+): ActivityRow[] {
+  return days.current.map((date, index) => ({
+    date,
+    current: peaks.get(date) ?? null,
+    previous: peaks.get(days.previous[index] ?? '') ?? null,
+  }))
+}
+
+export interface PeriodPeaks {
+  readonly current: number | null
+  readonly previous: number | null
+}
+
+function peakOf(values: readonly (number | null)[]): number | null {
+  return values.reduce<number | null>(
+    (peak, value) => (value === null ? peak : Math.max(peak ?? value, value)),
+    null
+  )
+}
+
+/** The highest day of a sampled series over the period and over the one before it; null with no data. */
+export function peakPeriods(rows: readonly ActivityRow[]): PeriodPeaks {
+  return {
+    current: peakOf(rows.map((row) => row.current)),
+    previous: peakOf(rows.map((row) => row.previous)),
+  }
 }
