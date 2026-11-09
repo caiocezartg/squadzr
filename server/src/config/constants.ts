@@ -15,6 +15,8 @@ export const ROOM = {
 export const ADMIN = {
   /** The calendar the panel's days and periods follow: every per-day series buckets in this zone. */
   TIME_ZONE: 'America/Sao_Paulo',
+  /** How often the sampler records an Activity Sample. */
+  ACTIVITY_SAMPLE_INTERVAL_MS: 5 * 60_000,
 } as const
 
 export const GAME_CATALOG_IMPORT = {

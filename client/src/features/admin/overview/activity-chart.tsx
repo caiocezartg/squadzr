@@ -4,7 +4,17 @@ import { useTranslations } from 'next-intl'
 import type { ActivityMetric, ActivityRowDto } from '@squadzr/schemas'
 import { ActivityTooltip } from './activity-tooltip'
 import { XAxisLabels, YAxisLabels } from './chart-axes'
-import { CHART_HEIGHT, CHART_WIDTH, linePath, xAt, yAt, Y_STEPS, yStep } from './chart-scale'
+import {
+  CHART_HEIGHT,
+  CHART_WIDTH,
+  dotPath,
+  hasNoData,
+  linePath,
+  xAt,
+  yAt,
+  Y_STEPS,
+  yStep,
+} from './chart-scale'
 import { useChartCursor } from './use-chart-cursor'
 
 interface ActivityChartProps {
@@ -38,8 +48,57 @@ function CursorDot({
 }
 
 /**
+ * One series drawn on the chart: its line, broken at every day with no data, and a dot for each lone
+ * day between such gaps, which has no line to be part of.
+ */
+function SeriesLine({
+  values,
+  max,
+  stroke,
+  width,
+  dashed = false,
+}: {
+  readonly values: readonly (number | null)[]
+  readonly max: number
+  readonly stroke: string
+  readonly width: number
+  readonly dashed?: boolean
+}) {
+  const line = linePath(values, max)
+  const dots = dotPath(values, max)
+
+  return (
+    <>
+      {line && (
+        <path
+          d={line}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={width}
+          strokeDasharray={dashed ? '5 4' : undefined}
+          strokeLinejoin={dashed ? undefined : 'round'}
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
+      {dots && (
+        <path
+          data-testid="activity-dots"
+          d={dots}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={width * 3}
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
+    </>
+  )
+}
+
+/**
  * The Activity chart (reference, Admin panel, Overview), drawn by hand in SVG: the period in a 2px mint
- * line over the previous period's dashed muted one, on a five-line grid. Pointing at a day, touching it
+ * line over the previous period's dashed muted one, on a five-line grid. A day with no data is a gap in
+ * its line, never a zero; with no data on any day the chart says so over an empty grid. Pointing at a day, touching it
  * or focusing the chart and using the arrow keys stands a crosshair on it with a card of both values.
  * The same days are in the table view, which is how a screen reader reads them. The lines draw in from
  * the left over the grid whenever a series lands, never holding the chart back.
@@ -92,29 +151,25 @@ export function ActivityChart({ rows, period, metric }: ActivityChartProps) {
           aria-hidden="true"
           className="motion-safe:animate-line-draw pointer-events-none absolute inset-0 block h-60 w-full overflow-visible"
         >
-          <path
-            d={linePath(
-              rows.map((row) => row.previous),
-              max
-            )}
-            fill="none"
+          <SeriesLine
+            values={rows.map((row) => row.previous)}
+            max={max}
             stroke="var(--color-muted)"
-            strokeWidth={1.5}
-            strokeDasharray="5 4"
-            vectorEffect="non-scaling-stroke"
+            width={1.5}
+            dashed
           />
-          <path
-            d={linePath(
-              rows.map((row) => row.current),
-              max
-            )}
-            fill="none"
+          <SeriesLine
+            values={rows.map((row) => row.current)}
+            max={max}
             stroke="var(--color-mint)"
-            strokeWidth={2}
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
+            width={2}
           />
         </svg>
+        {hasNoData(rows) && (
+          <p className="text-muted pointer-events-none absolute inset-0 grid place-items-center px-4 text-center text-[12.5px] font-medium">
+            {t('empty')}
+          </p>
+        )}
         {activeRow && (
           <>
             <div

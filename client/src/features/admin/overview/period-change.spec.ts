@@ -25,4 +25,14 @@ describe('periodChange', () => {
   it('falls the whole way when the current period has none', () => {
     expect(periodChange(0, 25)).toEqual({ trend: 'down', ratio: 1 })
   })
+
+  it('is unknown when either period has no data', () => {
+    expect(periodChange(14, null)).toEqual({ trend: 'unknown' })
+    expect(periodChange(null, 9)).toEqual({ trend: 'unknown' })
+    expect(periodChange(null, null)).toEqual({ trend: 'unknown' })
+  })
+
+  it('compares a period with no data apart from one with none counted', () => {
+    expect(periodChange(0, 0)).not.toEqual(periodChange(0, null))
+  })
 })

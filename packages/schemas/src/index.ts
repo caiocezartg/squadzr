@@ -184,6 +184,7 @@ export {
   overviewQuerySchema,
   overviewResponseSchema,
   periodComparisonSchema,
+  peakComparisonSchema,
   type ActivityMetric,
   type ActivityQuery,
   type ActivityResponse,
@@ -193,6 +194,7 @@ export {
   type OverviewQuery,
   type OverviewResponse,
   type PeriodComparisonDto,
+  type PeakComparisonDto,
 } from './admin-overview'
 export {
   ADMIN_CLOSURE_REASON_MAX,

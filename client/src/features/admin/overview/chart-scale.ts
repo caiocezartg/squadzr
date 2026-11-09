@@ -37,24 +37,64 @@ export function yAt(value: number, max: number): number {
   return CHART_HEIGHT - (value / max) * PLOT_HEIGHT
 }
 
+/** A day of a series that has a value, at its place in the series. */
+export interface SeriesPoint {
+  readonly index: number
+  readonly value: number
+}
+
 /**
- * The line through a series' values. A day with no value breaks the line, which starts again at the
- * next day that has one.
+ * The runs of consecutive days that have a value, in order: a day with no value ends a run, so a line
+ * drawn per run leaves a gap there instead of falling to zero.
+ */
+export function continuousSegments(values: readonly (number | null)[]): SeriesPoint[][] {
+  const segments: SeriesPoint[][] = []
+  let run: SeriesPoint[] = []
+  values.forEach((value, index) => {
+    if (value === null) {
+      if (run.length > 0) segments.push(run)
+      run = []
+      return
+    }
+    run.push({ index, value })
+  })
+  if (run.length > 0) segments.push(run)
+  return segments
+}
+
+function pointAt(point: SeriesPoint, count: number, max: number): string {
+  return `${xAt(point.index, count).toFixed(1)} ${yAt(point.value, max).toFixed(1)}`
+}
+
+/**
+ * The line through a series' values, one subpath per run of days that have one: a day with no value
+ * breaks the line. A lone day between gaps has no line to be part of; `dotPath` marks it.
  */
 export function linePath(values: readonly (number | null)[], max: number): string {
-  let drawing = false
-  return values
-    .map((value, index) => {
-      if (value === null) {
-        drawing = false
-        return ''
-      }
-      const command = drawing ? 'L' : 'M'
-      drawing = true
-      return `${command}${xAt(index, values.length).toFixed(1)} ${yAt(value, max).toFixed(1)}`
-    })
-    .filter(Boolean)
+  return continuousSegments(values)
+    .filter((segment) => segment.length > 1)
+    .map((segment) =>
+      segment
+        .map((point, at) => `${at === 0 ? 'M' : 'L'}${pointAt(point, values.length, max)}`)
+        .join(' ')
+    )
     .join(' ')
+}
+
+/**
+ * The lone days of a series (a value with no value on either side), each a zero-length subpath that a
+ * round line cap draws as a dot.
+ */
+export function dotPath(values: readonly (number | null)[], max: number): string {
+  return continuousSegments(values)
+    .filter((segment) => segment.length === 1)
+    .map(([point]) => (point ? `M${pointAt(point, values.length, max)} h0` : ''))
+    .join(' ')
+}
+
+/** Whether a series pair has no value on any day, in either period. */
+export function hasNoData(rows: readonly ActivityRowDto[]): boolean {
+  return rows.every((row) => row.current === null && row.previous === null)
 }
 
 /**

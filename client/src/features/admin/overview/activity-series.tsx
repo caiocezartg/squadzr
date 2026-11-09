@@ -1,9 +1,11 @@
 'use client'
 
 import { useFormatter, useTranslations } from 'next-intl'
-import type { ActivityResponse } from '@squadzr/schemas'
+import type { ActivityMetric, ActivityResponse } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
+import { NoValue } from '../shared/no-value'
 import { ActivityChart } from './activity-chart'
+import { isPeakMetric, seriesSummary } from './activity-summary'
 import { ActivityTable } from './activity-table'
 import { ChangeBadge } from './change-badge'
 import { CurrentSwatch, PreviousSwatch } from './series-swatch'
@@ -17,26 +19,43 @@ interface ActivitySeriesProps {
   readonly busy: boolean
 }
 
-function total(values: readonly (number | null)[]): number {
-  return values.reduce<number>((sum, value) => sum + (value ?? 0), 0)
+/** The period's figure: a count's total, a peak's highest day followed by the word, or a dash. */
+function SummaryFigure({
+  metric,
+  value,
+}: {
+  readonly metric: ActivityMetric
+  readonly value: number | null
+}) {
+  const t = useTranslations('admin.overview.activity')
+  const format = useFormatter()
+
+  if (value === null) return <NoValue />
+  if (isPeakMetric(metric)) return <>{t('peakTotal', { value: format.number(value) })}</>
+  return <>{format.number(value)}</>
 }
 
 /**
- * One metric's series: its total over the period with the change against the previous period, the
- * legend naming both lines, and the chart or the table of the days.
+ * One metric's series: its total over the period (or, for a sampled metric, its peak) with the change
+ * against the previous period, the legend naming both lines, and the chart or the table of the days.
  */
 export function ActivitySeries({ data, view, caption, busy }: ActivitySeriesProps) {
   const t = useTranslations('admin.overview.activity')
-  const format = useFormatter()
-  const current = total(data.rows.map((row) => row.current))
-  const previous = total(data.rows.map((row) => row.previous))
+  const current = seriesSummary(
+    data.metric,
+    data.rows.map((row) => row.current)
+  )
+  const previous = seriesSummary(
+    data.metric,
+    data.rows.map((row) => row.previous)
+  )
 
   return (
     <div aria-busy={busy} className={cn('motion-safe:transition-opacity', busy && 'opacity-60')}>
       <div className="mb-3.5 flex flex-wrap items-end justify-between gap-3">
         <p className="flex flex-wrap items-baseline gap-2.5">
           <span className="font-display text-[40px] leading-none font-extrabold tabular-nums">
-            {format.number(current)}
+            <SummaryFigure metric={data.metric} value={current} />
           </span>
           <ChangeBadge current={current} previous={previous} period={data.period} />
         </p>

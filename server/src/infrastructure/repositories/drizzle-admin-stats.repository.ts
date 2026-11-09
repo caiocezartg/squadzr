@@ -1,6 +1,6 @@
 import { between, count, sql, type SQL } from 'drizzle-orm'
-import type { ActivityMetric } from '@squadzr/schemas'
 import type { IAdminStatsRepository } from '@domain/repositories/admin-stats.repository'
+import type { CountedActivityMetric } from '@domain/services/activity-period'
 import type { Database } from '@infrastructure/database/drizzle'
 import { user } from '@infrastructure/database/schema/auth'
 import { rooms } from '@infrastructure/database/schema/rooms'
@@ -47,7 +47,7 @@ export class DrizzleAdminStatsRepository implements IAdminStatsRepository {
   }
 
   async countByDay(
-    metric: ActivityMetric,
+    metric: CountedActivityMetric,
     fromDay: string,
     toDay: string,
     timeZone: string

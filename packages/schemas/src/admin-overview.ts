@@ -2,8 +2,8 @@ import { z } from 'zod'
 import { auditEntrySchema } from './admin'
 
 // The admin panel's Overview contracts (#120). Later tickets add to them without breaking a client:
-// a metric joins `ACTIVITY_METRICS` and the `metrics` map (peak online, peak Open Squads), and a field
-// joins the overview object (the last Catalog Import Run).
+// a metric joins `ACTIVITY_METRICS` and the `metrics` map (#121 added peak online and peak Open Squads),
+// and a field joins the overview object (the last Catalog Import Run).
 
 /** The periods the Overview compares, in days. */
 export const OVERVIEW_PERIODS = [7, 30, 90] as const
@@ -28,7 +28,7 @@ export const overviewQuerySchema = z.object({
 export type OverviewQuery = z.infer<typeof overviewQuerySchema>
 
 /** The metrics the Activity chart plots. */
-export const ACTIVITY_METRICS = ['completed', 'signups'] as const
+export const ACTIVITY_METRICS = ['completed', 'signups', 'online', 'open'] as const
 
 export const activityMetricSchema = z.enum(ACTIVITY_METRICS)
 
@@ -73,6 +73,17 @@ export const periodComparisonSchema = z.object({
 
 export type PeriodComparisonDto = z.infer<typeof periodComparisonSchema>
 
+/**
+ * A sampled metric's peak for the chosen period and for the one before it. `null` is a period with no
+ * Activity Samples (the sampler had not run yet), which is not the same as a peak of 0.
+ */
+export const peakComparisonSchema = z.object({
+  current: z.number().int().nonnegative().nullable(),
+  previous: z.number().int().nonnegative().nullable(),
+})
+
+export type PeakComparisonDto = z.infer<typeof peakComparisonSchema>
+
 export const overviewLiveSchema = z.object({
   onlineUsers: z.number().int().nonnegative(),
   totalUsers: z.number().int().nonnegative(),
@@ -90,6 +101,8 @@ export const overviewResponseSchema = z.object({
   metrics: z.object({
     completed: periodComparisonSchema,
     signups: periodComparisonSchema,
+    online: peakComparisonSchema,
+    open: peakComparisonSchema,
   }),
   recentAudit: z.array(auditEntrySchema).nullable(),
 })

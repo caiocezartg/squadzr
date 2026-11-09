@@ -1,15 +1,21 @@
 'use client'
 
-import { useFormatter } from 'next-intl'
+import { useFormatter, useTranslations } from 'next-intl'
 import type { ActivityRowDto } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
 import { NoValue } from '../shared/no-value'
 
-/** A day's count, or a dash for a day with no data. */
+/** A day's count, or "no data" for a day with none (a sampled metric before its sampler ran). */
 export function DayValue({ value }: { readonly value: number | null }) {
+  const t = useTranslations('admin.overview.activity')
   const format = useFormatter()
 
-  if (value === null) return <NoValue />
+  if (value === null)
+    return (
+      <span className="text-faint font-body text-xs font-medium whitespace-nowrap">
+        {t('noData')}
+      </span>
+    )
   return <>{format.number(value)}</>
 }
 

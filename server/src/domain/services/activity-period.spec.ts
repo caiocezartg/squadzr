@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   addDays,
   buildCountedRows,
+  buildSampledRows,
   calendarDayOf,
+  peakPeriods,
   periodDays,
   totalPeriods,
 } from './activity-period'
@@ -83,5 +85,39 @@ describe('buildCountedRows and totalPeriods', () => {
         { date: '2026-11-05', current: 5, previous: null },
       ])
     ).toEqual({ current: 5, previous: 2 })
+  })
+})
+
+describe('buildSampledRows and peakPeriods', () => {
+  const days = periodDays('2026-11-05', 7)
+  const peaks = new Map([
+    ['2026-11-05', 12],
+    ['2026-11-03', 0],
+    ['2026-10-29', 30],
+    ['2026-10-01', 99],
+  ])
+
+  it('leaves a day without samples null, never 0', () => {
+    const rows = buildSampledRows(days, peaks)
+
+    expect(rows).toHaveLength(7)
+    expect(rows[0]).toEqual({ date: '2026-10-30', current: null, previous: null })
+    expect(rows[4]).toEqual({ date: '2026-11-03', current: 0, previous: null })
+    expect(rows[6]).toEqual({ date: '2026-11-05', current: 12, previous: 30 })
+  })
+
+  it('takes the highest day of each period and keeps a peak of 0 apart from no data', () => {
+    expect(peakPeriods(buildSampledRows(days, peaks))).toEqual({ current: 12, previous: 30 })
+    expect(peakPeriods(buildSampledRows(days, new Map([['2026-11-03', 0]])))).toEqual({
+      current: 0,
+      previous: null,
+    })
+  })
+
+  it('has no peak when no day has data', () => {
+    expect(peakPeriods(buildSampledRows(days, new Map()))).toEqual({
+      current: null,
+      previous: null,
+    })
   })
 })
