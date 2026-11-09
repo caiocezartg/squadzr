@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { AppLink } from '@/components/layout/app-link'
+import { LanguageToggle } from '@/components/layout/language-toggle'
 import { UserMenu } from '@/components/layout/user-menu'
 import { useSession } from '@/hooks/use-session'
 import { cn } from '@/lib/utils'
@@ -32,7 +33,7 @@ interface AdminSidebarContentProps {
 
 /**
  * What the admin sidebar holds, top to bottom (reference, Admin panel): the logo with the ADMIN mark,
- * the panel's sections the viewer opens, "Back to Squadzr" and the account button. The fixed column and the drawer both
+ * the panel's sections the viewer opens, "Back to Squadzr", the language switch and the account button. The fixed column and the drawer both
  * render it.
  */
 export function AdminSidebarContent({ onNavigate }: AdminSidebarContentProps) {
@@ -83,6 +84,7 @@ export function AdminSidebarContent({ onNavigate }: AdminSidebarContentProps) {
           <ArrowLeft aria-hidden className="size-3.5 shrink-0" strokeWidth={2.4} />
           {t('nav.back')}
         </AppLink>
+        <LanguageToggle />
         <UserMenu />
       </div>
     </div>
