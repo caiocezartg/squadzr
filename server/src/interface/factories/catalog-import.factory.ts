@@ -7,7 +7,12 @@ import { CatalogImportRunRecorder } from '@application/use-cases/game/catalog-im
 import { DrizzleCatalogImportRunRepository } from '@infrastructure/repositories/drizzle-catalog-import-run.repository'
 import { DrizzleGameRepository } from '@infrastructure/repositories/drizzle-game.repository'
 import { IgdbGameCatalogSource } from '@infrastructure/igdb/igdb-game-catalog-source'
+import type { Env } from '@config/env'
 import { CATALOG_IMPORT_RUN, GAME_CATALOG_IMPORT } from '@config/constants'
+import {
+  CatalogImportExecutor,
+  type CatalogImportExecutorLog,
+} from '@infrastructure/services/catalog-import-executor'
 import { CURATED_GAMES } from '@interface/catalog/curated-games'
 import { GAME_ALIASES } from '@interface/catalog/game-aliases'
 
@@ -78,5 +83,49 @@ export function createIgdbGameCatalogSource(
     ...config,
     curatedIgdbIds: CURATED_GAMES.map((game) => game.igdbId),
     clock,
+  })
+}
+
+/**
+ * The API's Game Catalog Source from its optional IGDB settings, or null when the credentials are not
+ * both set: the manual Catalog Import is then unavailable and the cron keeps its own environment.
+ */
+export function createApiGameCatalogSource(
+  env: Pick<
+    Env,
+    'IGDB_CLIENT_ID' | 'IGDB_CLIENT_SECRET' | 'IGDB_POPULARITY_THRESHOLD' | 'IGDB_HYPE_THRESHOLD'
+  >,
+  clock: Clock
+): IgdbGameCatalogSource | null {
+  if (!env.IGDB_CLIENT_ID || !env.IGDB_CLIENT_SECRET) return null
+
+  return createIgdbGameCatalogSource(
+    {
+      clientId: env.IGDB_CLIENT_ID,
+      clientSecret: env.IGDB_CLIENT_SECRET,
+      popularityThreshold: env.IGDB_POPULARITY_THRESHOLD,
+      hypeThreshold: env.IGDB_HYPE_THRESHOLD,
+    },
+    clock
+  )
+}
+
+/**
+ * The executor inside the API: the run recorder over the API's own connection with the API's source.
+ * It runs queued runs only; the fraction-check override is not reachable from it.
+ */
+export function createCatalogImportExecutor(
+  db: Database,
+  clock: Clock,
+  source: IGameCatalogSource,
+  log: CatalogImportExecutorLog & { warn(context: { err: unknown }, message: string): void }
+): CatalogImportExecutor {
+  const recorder = createCatalogImportRunRecorder(db, clock, source, (error) =>
+    log.warn({ err: error }, 'Catalog Import heartbeat could not be written')
+  )
+
+  return new CatalogImportExecutor(recorder, log, {
+    pollIntervalMs: CATALOG_IMPORT_RUN.EXECUTOR_POLL_INTERVAL_MS,
+    shutdownGraceMs: CATALOG_IMPORT_RUN.EXECUTOR_SHUTDOWN_GRACE_MS,
   })
 }

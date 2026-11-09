@@ -454,6 +454,9 @@
     "CANNOT_CHANGE_OWNER": "O papel do dono não pode ser alterado.",
     "ROLE_CHANGE_FORBIDDEN": "O seu papel não permite esta alteração.",
     "ROOM_NOT_OPEN": "Este squad já está completo ou expirou, então não pode mais ser fechado.",
+    "CATALOG_IMPORT_UNAVAILABLE": "O import do catálogo não está configurado neste servidor, então não dá para rodá-lo daqui.",
+    "CATALOG_IMPORT_MANUAL_LIMIT": "Já houve um import manual do catálogo nas últimas 24 horas.",
+    "CATALOG_IMPORT_RUNNING": "Já existe um import do catálogo na fila ou em andamento.",
     "DEFAULT": "Algo deu errado. Por favor, tente novamente."
   },
   "playerProfile": {
@@ -955,6 +958,24 @@
             "showing": "Mostrando os {shown} mais recentes de {total}.",
             "viewAll": "Ver todos em Squads"
           }
+        }
+      },
+      "runImport": {
+        "caption": "Execução manual",
+        "title": "Rodar agora",
+        "hint": "Executa o mesmo import do cron, com as mesmas checagens de segurança. Uma execução manual a cada 24 h; o cron não conta.",
+        "action": "Rodar import",
+        "availableAt": "Disponível de novo em {at}",
+        "active": {
+          "requested": "Uma execução está na fila.",
+          "running": "Uma execução está em andamento."
+        },
+        "dialog": {
+          "title": "Rodar o Catalog Import agora?",
+          "body": "O import sincroniza o catálogo com a IGDB, com as mesmas checagens de segurança do cron. A próxima execução manual só fica disponível 24 h depois desta.",
+          "cancel": "Cancelar",
+          "confirm": "Rodar import",
+          "confirming": "Solicitando…"
         }
       }
     },

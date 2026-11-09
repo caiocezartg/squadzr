@@ -1,4 +1,15 @@
 import { z } from 'zod'
+import {
+  igdbClientIdSchema,
+  igdbClientSecretSchema,
+  igdbHypeThresholdSchema,
+  igdbPopularityThresholdSchema,
+} from './catalog-import-env'
+
+// An unset variable and an empty one both mean "not configured".
+function optionalIgdbCredential<Schema extends z.ZodType>(schema: Schema) {
+  return z.preprocess((value) => (value === '' ? undefined : value), schema.optional())
+}
 
 // A bare parent domain such as `squadzr.app`: DNS labels, at least two, ending in a
 // letter-only TLD.
@@ -33,6 +44,14 @@ const envSchema = z.object({
   // Discord OAuth
   DISCORD_CLIENT_ID: z.string().min(1, 'DISCORD_CLIENT_ID is required'),
   DISCORD_CLIENT_SECRET: z.string().min(1, 'DISCORD_CLIENT_SECRET is required'),
+
+  // IGDB, for the manual Catalog Import run from the admin panel. Optional: without the credentials the
+  // API boots and answers 503 `CATALOG_IMPORT_UNAVAILABLE`, while the cron keeps its own environment.
+  // Same rules as the cron's (`catalog-import-env.ts`), same thresholds.
+  IGDB_CLIENT_ID: optionalIgdbCredential(igdbClientIdSchema),
+  IGDB_CLIENT_SECRET: optionalIgdbCredential(igdbClientSecretSchema),
+  IGDB_POPULARITY_THRESHOLD: igdbPopularityThresholdSchema,
+  IGDB_HYPE_THRESHOLD: igdbHypeThresholdSchema,
 })
 
 export type Env = z.infer<typeof envSchema>

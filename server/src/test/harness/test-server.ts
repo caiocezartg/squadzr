@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyServerOptions } from 'fastify'
 import { inject } from 'vitest'
 import { buildApp } from '@/app'
 import type { Clock } from '@domain/services/clock.interface'
+import type { IGameCatalogSource } from '@domain/services/game-catalog-source.interface'
 import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
 import type { DiscordInviteRateLimit } from '@interface/routes/discord.routes'
 import { parseEnv, type Env } from '@config/env'
@@ -48,6 +49,8 @@ export interface BuildTestServerOptions {
    * server logs through `defaultLogger(env)`, which stays quiet at the test level.
    */
   logger?: FastifyServerOptions['logger']
+  /** The Catalog Import source behind the manual run; omitted, the server has none and answers 503. */
+  catalogSource?: IGameCatalogSource
 }
 
 export function createTestEnv(overrides: Partial<Env> & Pick<Env, 'DATABASE_URL'>): Env {
@@ -82,6 +85,7 @@ export async function buildTestServer(
       clock: options.clock,
       discordPreviews: options.discordPreviews ?? KNOWN_INVITES,
       discordInviteRateLimit: options.discordInviteRateLimit,
+      catalogSource: options.catalogSource,
     })
     await app.ready()
   } catch (error) {

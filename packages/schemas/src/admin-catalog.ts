@@ -70,6 +70,30 @@ export const catalogImportRunSchema = z.object({
 
 export type CatalogImportRunDto = z.infer<typeof catalogImportRunSchema>
 
-export const catalogImportRunsResponseSchema = paginatedResponseSchema(catalogImportRunSchema)
+/** How long a manual run, once requested, keeps the next one away: every request counts, whatever its outcome. */
+export const MANUAL_CATALOG_IMPORT_LIMIT_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Whether an admin may request a manual run now: available, or the instant it becomes available (24 hours
+ * after the last manual request). It says nothing about the run slot; `activeRun` carries that.
+ */
+export const manualCatalogImportAvailabilitySchema = z.discriminatedUnion('available', [
+  z.object({ available: z.literal(true) }),
+  z.object({ available: z.literal(false), availableAt: isoDateTimeSchema }),
+])
+
+export type ManualCatalogImportAvailability = z.infer<typeof manualCatalogImportAvailabilitySchema>
+
+// The history page also carries what the Run import panel needs on any page: the manual-run
+// availability and the run holding the slot (`requested` or `running`), null when none does.
+export const catalogImportRunsResponseSchema = paginatedResponseSchema(
+  catalogImportRunSchema
+).extend({
+  manualRun: manualCatalogImportAvailabilitySchema,
+  activeRun: catalogImportRunSchema.nullable(),
+})
+
+/** The 202 of `POST /api/admin/catalog-import/runs`: the run that was queued. */
+export const requestCatalogImportRunResponseSchema = catalogImportRunSchema
 
 export type CatalogImportRunsResponse = z.infer<typeof catalogImportRunsResponseSchema>

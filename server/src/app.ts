@@ -12,6 +12,7 @@ import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod
 import { WS_MAX_PAYLOAD_BYTES } from '@squadzr/schemas/ws'
 import type { Env } from '@config/env'
 import type { Clock } from '@domain/services/clock.interface'
+import type { IGameCatalogSource } from '@domain/services/game-catalog-source.interface'
 import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
 import { RateLimitedError } from '@application/errors'
 import { SystemClock } from '@infrastructure/services/system-clock'
@@ -23,12 +24,17 @@ import swaggerPlugin from '@infrastructure/plugins/swagger.plugin'
 import wsPlugin from '@infrastructure/websocket/ws.plugin'
 import roomCleanupPlugin from '@infrastructure/plugins/room-cleanup.plugin'
 import activitySamplerPlugin from '@infrastructure/plugins/activity-sampler.plugin'
+import catalogImportExecutorPlugin from '@infrastructure/plugins/catalog-import-executor.plugin'
 import type { DiscordInviteRateLimit } from '@interface/routes/discord.routes'
 import { registerRoutes } from '@interface/routes'
 import { createDiscordInvitePreviews } from '@interface/factories/discord-preview.factory'
 import { createRunActivitySampleUseCase } from '@interface/factories/activity-sampler.factory'
 import { createRealtime } from '@interface/factories/realtime.factory'
 import { createRoomCleanupUseCase } from '@interface/factories/room-cleanup.factory'
+import {
+  createApiGameCatalogSource,
+  createCatalogImportExecutor,
+} from '@interface/factories/catalog-import.factory'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -49,6 +55,11 @@ export interface BuildAppOptions {
   discordPreviews?: DiscordInvitePreviewProvider
   /** Replaces the limit on the Discord invite check; tests shrink its window so none of them waits a minute. */
   discordInviteRateLimit?: DiscordInviteRateLimit
+  /**
+   * Replaces the IGDB source built from the environment; tests inject a fake so none reaches IGDB. Without
+   * it and without IGDB credentials the manual Catalog Import is unavailable (503).
+   */
+  catalogSource?: IGameCatalogSource
 }
 
 /**
@@ -111,6 +122,7 @@ export async function buildApp({
   clock,
   discordPreviews,
   discordInviteRateLimit,
+  catalogSource,
 }: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
     trustProxy: env.TRUST_PROXY_HOPS === 0 ? false : env.TRUST_PROXY_HOPS,
@@ -175,6 +187,12 @@ export async function buildApp({
       fastify.clock,
       fastify.realtime.manager
     ),
+  })
+  const manualImportSource = catalogSource ?? createApiGameCatalogSource(env, fastify.clock)
+  await fastify.register(catalogImportExecutorPlugin, {
+    executor: manualImportSource
+      ? createCatalogImportExecutor(fastify.db, fastify.clock, manualImportSource, fastify.log)
+      : null,
   })
   await registerRoutes(fastify, { discord: { rateLimit: discordInviteRateLimit } })
 

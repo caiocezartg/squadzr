@@ -53,7 +53,14 @@ async function list(page?: number) {
 
 describe('GET /api/admin/catalog-import/runs', () => {
   it('answers an empty first page with the real total when nothing was recorded', async () => {
-    expect(await list()).toEqual({ items: [], page: 1, pageSize: PAGE_SIZE, total: 0 })
+    expect(await list()).toEqual({
+      items: [],
+      page: 1,
+      pageSize: PAGE_SIZE,
+      total: 0,
+      manualRun: { available: true },
+      activeRun: null,
+    })
   })
 
   it('lists the runs newest first with the shared pagination envelope', async () => {
