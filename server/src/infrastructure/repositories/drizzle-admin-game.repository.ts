@@ -18,6 +18,12 @@ import { games, type GameRow } from '@infrastructure/database/schema/games'
 import { rooms } from '@infrastructure/database/schema/rooms'
 import { squadRecords } from '@infrastructure/database/schema/squad-records'
 import { mapRowToEntity } from './drizzle-game.repository'
+import {
+  gameSearchMatch,
+  gameSearchRelevance,
+  runGameSearch,
+  type SearchExecutor,
+} from './game-search-sql'
 import { validOpenRoomCondition } from './open-room-rules'
 
 /** The Listed Games with a featured rank: the highlights players see. */
@@ -30,10 +36,10 @@ function statusCondition(status: AdminGameStatus): SQL | undefined {
   return undefined
 }
 
-/** The folded term as a `LIKE` over the trigram-indexed search text; nothing when no term is left. */
-function searchCondition(search: string | undefined): SQL | undefined {
+/** The folded search term, or `undefined` when no term is left. */
+function searchTerm(search: string | undefined): string | undefined {
   const term = search === undefined ? '' : normalizeSearchText(search)
-  return term === '' ? undefined : sql`${games.searchText} LIKE ${`%${term}%`}`
+  return term === '' ? undefined : term
 }
 
 function mapRow(row: GameRow, openSquads: number, completedSquads: number): AdminGame {
@@ -65,32 +71,56 @@ export class DrizzleAdminGameRepository implements IAdminGameRepository {
   }
 
   async list(query: ListAdminGamesQuery): Promise<AdminGamePage> {
-    const where = and(statusCondition(query.status), searchCondition(query.search))
+    const term = searchTerm(query.search)
+    // The same terms and the same ranking as the player search; a delisted Game is searched too.
+    return term === undefined
+      ? this.selectPage(query, this.db, undefined, [])
+      : runGameSearch(this.db, term, (executor, withSimilarity) =>
+          this.selectPage(
+            query,
+            executor,
+            gameSearchMatch(term, withSimilarity),
+            gameSearchRelevance(term)
+          )
+        )
+  }
+
+  /**
+   * One page of Games and the total of the filtered ones. `relevance` is the search ranking, empty
+   * without a term: it leads the default popularity order and breaks a tie of any other sort.
+   */
+  private async selectPage(
+    query: ListAdminGamesQuery,
+    executor: SearchExecutor,
+    match: SQL | undefined,
+    relevance: readonly SQL[]
+  ): Promise<AdminGamePage> {
+    const where = and(statusCondition(query.status), match)
     const open = this.openUsage()
     const completed = this.completedUsage()
     const openCount = sql<number>`coalesce(${open.openSquads}, 0)::int`
     const completedCount = sql<number>`coalesce(${completed.completedSquads}, 0)::int`
 
-    // Each order ends on the Game id, which no two rows share, so a page boundary never splits a tie.
     const orderings: Record<AdminGameSort, readonly SQL[]> = {
-      popularity: [desc(games.popularity), asc(games.name), asc(games.id)],
-      name: [asc(games.name), asc(games.id)],
-      newest: [desc(games.createdAt), asc(games.id)],
-      openSquads: [desc(openCount), desc(games.popularity), asc(games.id)],
-      completedSquads: [desc(completedCount), desc(games.popularity), asc(games.id)],
+      popularity: [...relevance, desc(games.popularity), asc(games.name)],
+      name: [asc(games.name), ...relevance],
+      newest: [desc(games.createdAt), ...relevance],
+      openSquads: [desc(openCount), desc(games.popularity), ...relevance],
+      completedSquads: [desc(completedCount), desc(games.popularity), ...relevance],
     }
 
     const [rows, totals] = await Promise.all([
-      this.db
+      executor
         .select({ game: games, openSquads: openCount, completedSquads: completedCount })
         .from(games)
         .leftJoin(open, eq(open.gameId, games.id))
         .leftJoin(completed, eq(completed.gameId, games.id))
         .where(where)
-        .orderBy(...orderings[query.sort])
+        // Each order ends on the Game id, which no two rows share, so a page boundary never splits a tie.
+        .orderBy(...orderings[query.sort], asc(games.id))
         .limit(query.limit)
         .offset(query.offset),
-      this.db.select({ total: count() }).from(games).where(where),
+      executor.select({ total: count() }).from(games).where(where),
     ])
 
     return {

@@ -167,11 +167,33 @@ describe('GET /api/admin/catalog/games', () => {
 
     it('matches the name, ignoring case, accents and punctuation, in delisted games too', async () => {
       expect(names(await list('?q=COUNTER'))).toEqual(['Counter-Strike 2', 'Counter Hidden'])
-      expect(names(await list('?q=counter%20strike'))).toEqual(['Counter-Strike 2'])
+      // "Counter Hidden" is similar enough, as it is for a player, and ranks after the text match.
+      expect(names(await list('?q=counter%20strike'))).toEqual([
+        'Counter-Strike 2',
+        'Counter Hidden',
+      ])
     })
 
     it('matches an alias', async () => {
       expect(names(await list('?q=lol'))).toEqual(['League of Legends'])
+    })
+
+    it('matches what the player search matches, delisted games too, ranking the closest first', async () => {
+      await addGame({ name: 'EA Sports FC 24', aliases: ['ea fc 2024'], popularity: 1 })
+      await addGame({ name: 'EA Sports FC 25', popularity: 50 })
+      await addGame({ name: 'EA Sports FC 26', popularity: 40 })
+      await addGame({ name: 'EA Sports FC 23', popularity: 30, listed: false })
+
+      // FC 25, 26 and 23 only match by word similarity; FC 24 matches by text, so it leads
+      // despite the lowest popularity, and the rest follow by popularity.
+      const body = await list('?q=EA%20FC')
+      expect(names(body)).toEqual([
+        'EA Sports FC 24',
+        'EA Sports FC 25',
+        'EA Sports FC 26',
+        'EA Sports FC 23',
+      ])
+      expect(body.total).toBe(4)
     })
 
     it('treats a blank search as no filter and an unmatched one as empty', async () => {
