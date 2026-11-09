@@ -6,7 +6,9 @@
 
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { NextIntlClientProvider } from 'next-intl'
 import { describe, expect, it, vi } from 'vitest'
+import ptBR from '@/locales/pt-BR.json'
 import type { UserNotification } from '@/types'
 import {
   hostTransferredNotification,
@@ -305,6 +307,27 @@ describe('a room_closed_by_admin row', () => {
     expect(row).toHaveTextContent('“Offensive squad name”')
     expect(screen.getByText(SQUAD)).toHaveClass('line-through')
     expect(container.querySelector('.lucide-shield-alert')).toBeInTheDocument()
+  })
+
+  it('says it in Brazilian Portuguese, with the reason quoted', () => {
+    render(
+      <NextIntlClientProvider locale="pt-BR" messages={ptBR}>
+        <ul>
+          <NotificationItem
+            notification={{ ...roomClosedByAdminNotification, createdAt: new Date().toISOString() }}
+            onOpen={vi.fn()}
+            onDismiss={vi.fn()}
+          />
+        </ul>
+      </NextIntlClientProvider>
+    )
+
+    const row = screen.getByRole('link', {
+      name: `${SQUAD} foi fechado pela moderação: Offensive squad name, Não lida`,
+    })
+    expect(row).toHaveTextContent('Fechado pela moderação')
+    expect(row).toHaveTextContent('Este squad foi fechado pela moderação do Squadzr.')
+    expect(row).toHaveTextContent('“Offensive squad name”')
   })
 
   it('leads to the Squad Board, because the Lobby no longer exists', () => {

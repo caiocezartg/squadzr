@@ -177,6 +177,17 @@ describe('admin squads list', () => {
     expect(await screen.findByRole('button', { name: 'Ranked 5x5 friday' })).toBeVisible()
   })
 
+  it('names the Game the URL keeps even when no Squad matches it', async () => {
+    serveSquads([ranked])
+    onHttp('GET', '/api/games/:id', () => httpOk({ game: gameLol }))
+    renderSquads(`/admin/squads?gameId=${gameLol.id}`)
+
+    expect(
+      await screen.findByRole('heading', { name: 'No squads match the filters' })
+    ).toBeVisible()
+    expect(await screen.findByRole('button', { name: 'Game: League of Legends' })).toBeVisible()
+  })
+
   it('pushes a page change to the URL', async () => {
     const many = Array.from({ length: PAGE_SIZE }, (_, index) => ({
       ...ranked,
@@ -305,6 +316,9 @@ describe('admin close squad dialog', () => {
       .toEqual({ reason: 'ab use of slurs' })
     expect(await screen.findByText('“Ranked 5x5 friday” was closed.')).toBeVisible()
     expect(navigation.history.location.search).toBe('')
+    expect(
+      getHttpLog().filter((request) => request.path === `/api/admin/squads/${RANKED_ID}`)
+    ).toHaveLength(1)
   })
 
   it.each([

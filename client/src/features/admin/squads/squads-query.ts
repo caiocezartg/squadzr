@@ -74,8 +74,8 @@ export function useAdminSquad(id: string | null) {
 
 /**
  * Closes an Open Squad with a reason. On success the panel's reads are marked stale (the lists, the
- * overview's counts, the Audit entry); the closed Squad's own detail is left as it is, since reading it
- * again would only answer 404.
+ * overview's counts, the Audit entry); the closed Squad's own detail is removed from the cache first,
+ * since reading it again would only answer 404.
  */
 export function useCloseSquad(id: string) {
   const queryClient = useQueryClient()
@@ -83,10 +83,9 @@ export function useCloseSquad(id: string) {
   return useMutation({
     mutationFn: (reason: string) =>
       api.post(`/api/admin/squads/${encodeURIComponent(id)}/close`, { reason }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: ['admin'],
-        predicate: (query) => query.queryHash !== JSON.stringify(adminSquadQueryKey(id)),
-      }),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: adminSquadQueryKey(id) })
+      return queryClient.invalidateQueries({ queryKey: ['admin'] })
+    },
   })
 }

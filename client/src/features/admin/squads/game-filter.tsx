@@ -11,8 +11,8 @@ interface GameFilterProps {
   /** The Game the URL keeps; empty is every Game. */
   readonly gameId: string
   /**
-   * The kept Game's name when the page knows it without a pick (the first row's Game), for a filter
-   * the URL brought.
+   * The kept Game's name when the page knows it without a pick (the first row's Game, else a lookup
+   * by id), for a filter the URL brought.
    */
   readonly knownName: string | null
   readonly onChange: (gameId: string) => void

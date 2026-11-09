@@ -11,6 +11,7 @@ import { SquadPanel } from './squad-panel'
 import { SquadsResults } from './squads-results'
 import { SquadsLoadError, SquadsSkeleton } from './squads-states'
 import { useAdminSquads } from './squads-query'
+import { useFilteredGameName } from './use-game-name'
 import { useSelectedSquad } from './use-selected-squad'
 import { useSquadsSearch } from './use-squads-search'
 
@@ -31,7 +32,8 @@ export function AdminSquadsPage() {
   const items = query.data?.items
   const row = items?.find((squad) => squad.id === selection.squadId) ?? null
   const firstGame = items?.[0]?.game
-  const knownGameName = firstGame && firstGame.id === filters.gameId ? firstGame.name : null
+  const rowGameName = firstGame && firstGame.id === filters.gameId ? firstGame.name : null
+  const knownGameName = useFilteredGameName(filters.gameId, rowGameName)
 
   const open = (squad: AdminSquadDto, element: HTMLElement) => {
     opener.current = element

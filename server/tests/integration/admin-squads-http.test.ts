@@ -462,7 +462,7 @@ describe('POST /api/admin/squads/:id/close', () => {
     expect(again.id).not.toBe(room.id)
   })
 
-  it('keeps the closure notifications when the member is later deleted from the table', async () => {
+  it('keeps the closure notifications after the Squad is deleted', async () => {
     const host = await signIn(server, 'Host')
     const room = await squadWith(host)
     await closeSquad(room.id, admin)
