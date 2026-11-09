@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowLeft } from 'lucide-react'
+import { ArrowUpRight, House } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { AppLink } from '@/components/layout/app-link'
@@ -33,8 +33,8 @@ interface AdminSidebarContentProps {
 
 /**
  * What the admin sidebar holds, top to bottom (reference, Admin panel): the logo with the ADMIN mark,
- * the panel's sections the viewer opens, "Back to Squadzr", the language switch and the account button. The fixed column and the drawer both
- * render it.
+ * the panel's sections the viewer opens, then past a thin line "Squad Board" (out of the panel, to the board), the
+ * language switch and the account button. The fixed column and the drawer both render it.
  */
 export function AdminSidebarContent({ onNavigate }: AdminSidebarContentProps) {
   const t = useTranslations('admin')
@@ -75,15 +75,20 @@ export function AdminSidebarContent({ onNavigate }: AdminSidebarContentProps) {
         })}
       </nav>
 
-      <div className="mt-auto flex flex-col gap-2.5 pt-6">
+      {/* Out of the panel: the same row as a section, never current, with a glyph that says it leaves. */}
+      <div className="mt-2 pt-2 shadow-[inset_0_1px_0_#16171b]">
         <AppLink
           href="/squads"
           onClick={onNavigate}
-          className="type-ui text-muted hover-fine:text-text focus-visible:outline-mint flex min-h-11 items-center gap-2 px-3 text-[13px] shadow-[inset_0_1px_0_#16171b] transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2"
+          className="type-ui text-text-3 hover-fine:bg-card hover-fine:text-text focus-visible:outline-mint flex min-h-11 items-center gap-2.5 px-3 text-sm focus-visible:outline-2 focus-visible:-outline-offset-2"
         >
-          <ArrowLeft aria-hidden className="size-3.5 shrink-0" strokeWidth={2.4} />
-          {t('nav.back')}
+          <House aria-hidden className="size-4 shrink-0" strokeWidth={2.2} />
+          {t('nav.board')}
+          <ArrowUpRight aria-hidden className="ml-auto size-3.5 shrink-0" strokeWidth={2.4} />
         </AppLink>
+      </div>
+
+      <div className="mt-auto flex flex-col gap-2.5 pt-6">
         <LanguageToggle />
         <UserMenu />
       </div>
@@ -91,14 +96,14 @@ export function AdminSidebarContent({ onNavigate }: AdminSidebarContentProps) {
   )
 }
 
-/** The admin sidebar of 1024px and up: a fixed 232px column. Below that the drawer takes its place. */
+/** The admin sidebar of 1024px and up: a fixed 260px column, the board sidebar's width. Below that the drawer takes its place. */
 export function AdminSidebar() {
   const t = useTranslations('admin')
 
   return (
     <aside
       aria-label={t('menu')}
-      className="bg-menu fixed inset-y-0 left-0 z-30 hidden w-58 overflow-y-auto shadow-[inset_-1px_0_0_#16171b] lg:block"
+      className="bg-menu fixed inset-y-0 left-0 z-30 hidden w-65 overflow-y-auto shadow-[inset_-1px_0_0_#16171b] lg:block"
     >
       <AdminSidebarContent />
     </aside>
