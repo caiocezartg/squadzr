@@ -318,6 +318,11 @@ describe('notification pushes of every type', () => {
       type: 'room_closed',
       payload: { ...squad, previousHost: person, reason: 'no_eligible_host' },
     },
+    {
+      ...base,
+      type: 'room_closed_by_admin',
+      payload: { ...squad, reason: 'Offensive name' },
+    },
   ]
 
   it.each(pushes.map((push) => [push.type, push] as const))('accepts a %s push', (_type, push) => {

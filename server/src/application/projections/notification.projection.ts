@@ -89,5 +89,13 @@ export function toUserNotificationDto(
         },
       }
     }
+    case 'room_closed_by_admin': {
+      const { payload } = notification
+      return {
+        ...base,
+        type: 'room_closed_by_admin',
+        payload: { ...squadFields(payload), reason: payload.reason },
+      }
+    }
   }
 }

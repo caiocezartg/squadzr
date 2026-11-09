@@ -6,11 +6,14 @@
 
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { NextIntlClientProvider } from 'next-intl'
 import { describe, expect, it, vi } from 'vitest'
+import ptBR from '@/locales/pt-BR.json'
 import type { UserNotification } from '@/types'
 import {
   hostTransferredNotification,
   memberLeftNotification,
+  roomClosedByAdminNotification,
   roomClosedNotification,
   squadReadyNotification,
 } from '@/test/fixtures'
@@ -55,6 +58,7 @@ describe('the eyebrow of each type', () => {
     [hostTransferredNotification, "You're the new owner", 'text-amber'],
     [memberLeftNotification, 'Member left', 'text-discord-soft'],
     [roomClosedNotification, 'Squad closed', 'text-danger'],
+    [roomClosedByAdminNotification, 'Closed by moderation', 'text-danger'],
   ] as const)('labels a %#th type in its tone', (notification, eyebrow, tone) => {
     renderItem(notification)
 
@@ -287,6 +291,47 @@ describe('a room_closed row', () => {
 
   it('leads to the Squad Board, because the Lobby no longer exists', () => {
     renderItem(roomClosedNotification)
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/squads')
+  })
+})
+
+describe('a room_closed_by_admin row', () => {
+  it('says moderation closed the Squad and quotes the reason, naming no admin', () => {
+    const { container } = renderItem(roomClosedByAdminNotification)
+
+    const row = screen.getByRole('link', {
+      name: `${SQUAD} was closed by moderation: Offensive squad name, Unread`,
+    })
+    expect(row).toHaveTextContent('This squad was closed by Squadzr moderation.')
+    expect(row).toHaveTextContent('“Offensive squad name”')
+    expect(screen.getByText(SQUAD)).toHaveClass('line-through')
+    expect(container.querySelector('.lucide-shield-alert')).toBeInTheDocument()
+  })
+
+  it('says it in Brazilian Portuguese, with the reason quoted', () => {
+    render(
+      <NextIntlClientProvider locale="pt-BR" messages={ptBR}>
+        <ul>
+          <NotificationItem
+            notification={{ ...roomClosedByAdminNotification, createdAt: new Date().toISOString() }}
+            onOpen={vi.fn()}
+            onDismiss={vi.fn()}
+          />
+        </ul>
+      </NextIntlClientProvider>
+    )
+
+    const row = screen.getByRole('link', {
+      name: `${SQUAD} foi fechado pela moderação: Offensive squad name, Não lida`,
+    })
+    expect(row).toHaveTextContent('Fechado pela moderação')
+    expect(row).toHaveTextContent('Este squad foi fechado pela moderação do Squadzr.')
+    expect(row).toHaveTextContent('“Offensive squad name”')
+  })
+
+  it('leads to the Squad Board, because the Lobby no longer exists', () => {
+    renderItem(roomClosedByAdminNotification)
 
     expect(screen.getByRole('link')).toHaveAttribute('href', '/squads')
   })

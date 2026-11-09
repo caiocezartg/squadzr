@@ -6,6 +6,8 @@ import { platformSchema } from './platform'
 
 export const roomLanguageSchema = z.enum(['en', 'pt-br'])
 
+export type RoomLanguage = z.infer<typeof roomLanguageSchema>
+
 // The most members a Squad's preview carries.
 export const MEMBER_PREVIEW_LIMIT = 5
 

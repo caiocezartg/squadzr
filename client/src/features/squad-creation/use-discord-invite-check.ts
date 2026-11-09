@@ -6,7 +6,7 @@ import {
 } from '@squadzr/schemas'
 import { api } from '@/lib/api'
 import { checkDiscordLink } from './discord-link'
-import { useDebouncedValue } from './use-debounced-value'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 
 /** How long the player pauses typing before Discord is asked about the invite. */
 const DEBOUNCE_MS = 400

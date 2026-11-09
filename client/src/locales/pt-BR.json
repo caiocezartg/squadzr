@@ -187,7 +187,8 @@
         "room_ready": "Squad completo",
         "host_transferred": "Você é o novo dono",
         "member_left": "Membro saiu",
-        "room_closed": "Squad encerrado"
+        "room_closed": "Squad encerrado",
+        "room_closed_by_admin": "Fechado pela moderação"
       },
       "roomReady": "Todo mundo chegou. O convite do Discord está liberado.",
       "leftSquads": "Você saiu de {count, plural, one {1 squad} other {# squads}}",
@@ -196,10 +197,13 @@
       "memberLeftTitle": "{name} saiu de <chip>{squad}</chip>",
       "memberLeft": "Ele entrou em outro squad que completou. Abriu uma vaga.",
       "roomClosed": "O dono, <b>{name}</b>, saiu e ninguém que ficou podia assumir.",
+      "roomClosedByAdmin": "Este squad foi fechado pela moderação do Squadzr.",
+      "reason": "“{reason}”",
       "label": {
         "hostTransferred": "Você é o novo dono de {squad}",
         "memberLeft": "{name} saiu de {squad}",
-        "roomClosed": "{squad} foi encerrado"
+        "roomClosed": "{squad} foi encerrado",
+        "roomClosedByAdmin": "{squad} foi fechado pela moderação: {reason}"
       },
       "unread": "Não lida",
       "dismiss": "Dispensar notificação de {squad}",
@@ -449,6 +453,7 @@
     "CANNOT_CHANGE_OWN_ROLE": "Você não pode alterar o seu próprio papel.",
     "CANNOT_CHANGE_OWNER": "O papel do dono não pode ser alterado.",
     "ROLE_CHANGE_FORBIDDEN": "O seu papel não permite esta alteração.",
+    "ROOM_NOT_OPEN": "Este squad já está completo ou expirou, então não pode mais ser fechado.",
     "DEFAULT": "Algo deu errado. Por favor, tente novamente."
   },
   "playerProfile": {
@@ -569,7 +574,93 @@
     },
     "squads": {
       "title": "Squads abertos",
-      "description": "Todos os squads abertos, do mais novo ao mais antigo."
+      "description": "Todos os squads abertos, do mais novo ao mais antigo.",
+      "count": "{count} formando agora",
+      "countFiltered": "{count, plural, =0 {Nenhum squad corresponde aos filtros} one {# squad corresponde aos filtros} other {# squads correspondem aos filtros}}",
+      "search": {
+        "label": "Buscar squads",
+        "placeholder": "Buscar por nome, código ou host"
+      },
+      "gameFilter": {
+        "title": "Filtrar por jogo",
+        "chip": "Jogo: {game}",
+        "all": "Todos os jogos",
+        "chipAll": "todos",
+        "oneGame": "1 jogo",
+        "search": "Buscar jogos",
+        "results": "Jogos",
+        "noGames": "Nenhum jogo encontrado."
+      },
+      "sort": {
+        "title": "Ordenar a lista",
+        "chip": "Ordem: {sort}",
+        "stale": "Sem atividade há mais tempo",
+        "fullest": "Mais cheios"
+      },
+      "tableLabel": "Squads abertos",
+      "columns": {
+        "squad": "Squad",
+        "code": "Código",
+        "host": "Host",
+        "slots": "Vagas",
+        "created": "Criado",
+        "lastActivity": "Atividade"
+      },
+      "slotsLabel": "{count} de {max} vagas ocupadas",
+      "hostedBy": "Host: {name}",
+      "createdLabel": "Criado",
+      "activityLabel": "Ativo",
+      "empty": {
+        "title": "Nenhum squad aberto agora",
+        "description": "Os squads aparecem aqui assim que alguém cria um."
+      },
+      "noMatch": {
+        "title": "Nenhum squad corresponde aos filtros",
+        "description": "Tente outro nome, código, host ou jogo.",
+        "action": "Limpar filtros"
+      },
+      "pastEnd": {
+        "title": "Nenhum squad nesta página",
+        "action": "Ir para a primeira página"
+      },
+      "loading": "Carregando squads",
+      "loadError": "Não foi possível carregar os squads.",
+      "retry": "Tentar de novo",
+      "closed": "“{name}” foi fechado.",
+      "panel": {
+        "fallbackTitle": "Squad",
+        "loading": "Carregando o squad",
+        "loadError": "Não foi possível carregar este squad.",
+        "slots": "Vagas",
+        "language": "Idioma",
+        "languages": {
+          "en": "Inglês",
+          "ptBr": "Português"
+        },
+        "created": "Criado",
+        "lastActivity": "Última atividade",
+        "discord": "Discord",
+        "members": "Membros · {count}",
+        "host": "Host",
+        "joined": "entrou {time}",
+        "openInApp": "Abrir no app",
+        "closeSquad": "Fechar squad",
+        "gone": {
+          "title": "Este squad não está mais aberto",
+          "description": "Ele foi fechado, lotou ou expirou depois que a lista foi carregada.",
+          "action": "Fechar o painel"
+        }
+      },
+      "closeDialog": {
+        "eyebrow": "Ação irreversível",
+        "title": "Fechar “{name}”?",
+        "body": "O squad é apagado agora. {count, plural, one {O <members># membro</members> sai} other {Os <members># membros</members> saem}} do lobby na hora e {count, plural, one {recebe} other {recebem}} uma notificação com o motivo abaixo.",
+        "reasonLabel": "Motivo (visível aos membros)",
+        "required": "Obrigatório",
+        "cancel": "Cancelar",
+        "confirm": "Fechar squad",
+        "confirming": "Fechando…"
+      }
     },
     "users": {
       "title": "Usuários",

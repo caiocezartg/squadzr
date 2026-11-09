@@ -3,6 +3,7 @@ import { requirePanelAccess } from '@interface/hooks/admin.hook'
 import { adminAuditRoutes } from './admin-audit.routes'
 import { adminOverviewRoutes } from './admin-overview.routes'
 import { adminUsersRoutes } from './admin-users.routes'
+import { adminSquadsRoutes } from './admin-squads.routes'
 
 /**
  * Every `/api/admin/*` route. The guard is a hook of this plugin's scope, so a route added to it is
@@ -18,4 +19,5 @@ export async function adminRoutes(fastify: FastifyInstance): Promise<void> {
   await fastify.register(adminAuditRoutes)
   await fastify.register(adminUsersRoutes)
   await fastify.register(adminOverviewRoutes)
+  await fastify.register(adminSquadsRoutes)
 }

@@ -181,6 +181,7 @@ describe('transport dates', () => {
       host_transferred: { ...squad, previousHost: person, reason: 'squad_completed' },
       member_left: { ...squad, member: person, reason: 'squad_completed' },
       room_closed: { ...squad, previousHost: person, reason: 'no_eligible_host' },
+      room_closed_by_admin: { ...squad, reason: 'Offensive name' },
     } as const
 
     it.each(Object.entries(byType))(

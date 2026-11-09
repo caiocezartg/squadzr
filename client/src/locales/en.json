@@ -187,7 +187,8 @@
         "room_ready": "Squad complete",
         "host_transferred": "You're the new owner",
         "member_left": "Member left",
-        "room_closed": "Squad closed"
+        "room_closed": "Squad closed",
+        "room_closed_by_admin": "Closed by moderation"
       },
       "roomReady": "Everyone's in. The Discord invite is unlocked.",
       "leftSquads": "You left {count, plural, one {1 squad} other {# squads}}",
@@ -196,10 +197,13 @@
       "memberLeftTitle": "{name} left <chip>{squad}</chip>",
       "memberLeft": "They joined another squad that filled. A slot opened up.",
       "roomClosed": "The owner, <b>{name}</b>, left and nobody who stayed could take over.",
+      "roomClosedByAdmin": "This squad was closed by Squadzr moderation.",
+      "reason": "“{reason}”",
       "label": {
         "hostTransferred": "You are the new owner of {squad}",
         "memberLeft": "{name} left {squad}",
-        "roomClosed": "{squad} was closed"
+        "roomClosed": "{squad} was closed",
+        "roomClosedByAdmin": "{squad} was closed by moderation: {reason}"
       },
       "unread": "Unread",
       "dismiss": "Dismiss notification for {squad}",
@@ -449,6 +453,7 @@
     "CANNOT_CHANGE_OWN_ROLE": "You cannot change your own role.",
     "CANNOT_CHANGE_OWNER": "The owner's role cannot be changed.",
     "ROLE_CHANGE_FORBIDDEN": "Your role does not allow this change.",
+    "ROOM_NOT_OPEN": "This squad is already full or has expired, so it can no longer be closed.",
     "DEFAULT": "Something went wrong. Please try again."
   },
   "playerProfile": {
@@ -569,7 +574,93 @@
     },
     "squads": {
       "title": "Open squads",
-      "description": "Every Open Squad, newest first."
+      "description": "Every Open Squad, newest first.",
+      "count": "{count} forming now",
+      "countFiltered": "{count, plural, =0 {No squads match the filters} one {# squad matches the filters} other {# squads match the filters}}",
+      "search": {
+        "label": "Search squads",
+        "placeholder": "Search by name, code or host"
+      },
+      "gameFilter": {
+        "title": "Filter by game",
+        "chip": "Game: {game}",
+        "all": "All games",
+        "chipAll": "all",
+        "oneGame": "1 game",
+        "search": "Search games",
+        "results": "Games",
+        "noGames": "No games found."
+      },
+      "sort": {
+        "title": "Sort the list",
+        "chip": "Sort: {sort}",
+        "stale": "Least recent activity",
+        "fullest": "Most full"
+      },
+      "tableLabel": "Open squads",
+      "columns": {
+        "squad": "Squad",
+        "code": "Code",
+        "host": "Host",
+        "slots": "Slots",
+        "created": "Created",
+        "lastActivity": "Last activity"
+      },
+      "slotsLabel": "{count} of {max} slots taken",
+      "hostedBy": "Host: {name}",
+      "createdLabel": "Created",
+      "activityLabel": "Active",
+      "empty": {
+        "title": "No open squads right now",
+        "description": "Squads show up here as soon as someone creates one."
+      },
+      "noMatch": {
+        "title": "No squads match the filters",
+        "description": "Try another name, code, host or game.",
+        "action": "Clear filters"
+      },
+      "pastEnd": {
+        "title": "No squads on this page",
+        "action": "Go to the first page"
+      },
+      "loading": "Loading squads",
+      "loadError": "Couldn't load the squads.",
+      "retry": "Try again",
+      "closed": "“{name}” was closed.",
+      "panel": {
+        "fallbackTitle": "Squad",
+        "loading": "Loading the squad",
+        "loadError": "Couldn't load this squad.",
+        "slots": "Slots",
+        "language": "Language",
+        "languages": {
+          "en": "English",
+          "ptBr": "Portuguese"
+        },
+        "created": "Created",
+        "lastActivity": "Last activity",
+        "discord": "Discord",
+        "members": "Members · {count}",
+        "host": "Host",
+        "joined": "joined {time}",
+        "openInApp": "Open in the app",
+        "closeSquad": "Close squad",
+        "gone": {
+          "title": "This squad is no longer open",
+          "description": "It was closed, filled up or expired after the list was read.",
+          "action": "Close the panel"
+        }
+      },
+      "closeDialog": {
+        "eyebrow": "Irreversible action",
+        "title": "Close “{name}”?",
+        "body": "The squad is deleted now. {count, plural, one {The <members># member</members> leaves} other {The <members># members</members> leave}} the lobby at once and get a notification with the reason below.",
+        "reasonLabel": "Reason (visible to members)",
+        "required": "Required",
+        "cancel": "Cancel",
+        "confirm": "Close squad",
+        "confirming": "Closing…"
+      }
     },
     "users": {
       "title": "Users",

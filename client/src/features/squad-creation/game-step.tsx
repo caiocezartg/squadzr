@@ -7,8 +7,8 @@ import { SearchField } from '@/components/ds/search-field'
 import { GAME_SEARCH_MAX_LENGTH } from '@squadzr/schemas'
 import type { Game } from '@/types'
 import { GameOption } from './game-option'
-import { searchGames } from './search-games'
-import { useDebouncedValue } from './use-debounced-value'
+import { searchGames } from '@/lib/search-games'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 
 /** How long the player's typing settles before the search asks the server. */
 const SEARCH_DEBOUNCE_MS = 250

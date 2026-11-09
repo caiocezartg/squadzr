@@ -197,3 +197,33 @@ export function RoomClosedNotification({ notification, ...actions }: VariantProp
     />
   )
 }
+
+/** The viewer's Squad was closed by an admin: the row quotes the reason, never the admin. */
+export function RoomClosedByAdminNotification({
+  notification,
+  ...actions
+}: VariantProps<'room_closed_by_admin'>) {
+  const t = useTranslations('ds.notifications')
+  const facts = rowFacts(notification)
+
+  return (
+    <NotificationRow
+      {...facts}
+      {...actions}
+      label={t('label.roomClosedByAdmin', {
+        squad: facts.squadName,
+        reason: notification.payload.reason,
+      })}
+      media={
+        <NotificationMedia type="room_closed_by_admin">
+          <NotificationCover coverUrl={notification.payload.gameCoverUrl} className="grayscale" />
+        </NotificationMedia>
+      }
+      message={t('roomClosedByAdmin')}
+    >
+      <span className="border-danger text-text-2 mt-0.5 block border-l-2 pl-2 text-[12.75px] leading-[1.45] wrap-anywhere">
+        {t('reason', { reason: notification.payload.reason })}
+      </span>
+    </NotificationRow>
+  )
+}

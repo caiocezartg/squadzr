@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { Crown, DoorClosed, UserMinus, Users, type LucideIcon } from 'lucide-react'
+import { Crown, DoorClosed, ShieldAlert, UserMinus, Users, type LucideIcon } from 'lucide-react'
 import { DiscordIcon } from '@/components/ui/icons'
 import type { UserNotification } from '@/types'
 
@@ -63,5 +63,14 @@ export const NOTIFICATION_TONES: Record<NotificationType, NotificationTone> = {
     title: 'text-text-3 line-through decoration-danger/60',
     Icon: DoorClosed,
     BadgeIcon: DoorClosed,
+  },
+  room_closed_by_admin: {
+    edge: 'shadow-[inset_3px_0_0_var(--color-danger)]',
+    text: 'text-danger',
+    badge: 'bg-danger text-mint-ink',
+    tint: 'bg-danger/13',
+    title: 'text-text-3 line-through decoration-danger/60',
+    Icon: ShieldAlert,
+    BadgeIcon: ShieldAlert,
   },
 }

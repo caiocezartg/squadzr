@@ -9,5 +9,7 @@ export const BOARD_HREF = '/squads'
  * Squad Board; every other one opens the Lobby of its Squad.
  */
 export function notificationHref(notification: UserNotification): string {
-  return notification.type === 'room_closed' ? BOARD_HREF : lobbyHref(notification.payload.roomCode)
+  return notification.type === 'room_closed' || notification.type === 'room_closed_by_admin'
+    ? BOARD_HREF
+    : lobbyHref(notification.payload.roomCode)
 }

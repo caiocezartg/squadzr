@@ -43,6 +43,11 @@ const notifications: UserNotification[] = [
     type: 'room_closed',
     payload: { ...squad, previousHost: person, reason: 'no_eligible_host' },
   },
+  {
+    ...base,
+    type: 'room_closed_by_admin',
+    payload: { ...squad, reason: 'Offensive name' },
+  },
 ]
 
 describe('toUserNotificationDto', () => {
@@ -74,6 +79,17 @@ describe('toUserNotificationDto', () => {
     expect(
       toUserNotificationDto({ ...withLeft, payload: legacyPayload }, null).payload
     ).not.toHaveProperty('leftSquads')
+  })
+
+  it('keeps the reason of a room_closed_by_admin and names nobody', () => {
+    const closed = notifications.find(
+      (notification) => notification.type === 'room_closed_by_admin'
+    )
+    if (!closed) throw new Error('fixture')
+
+    const dto = toUserNotificationDto(closed, INVITE)
+
+    expect(dto.payload).toEqual({ ...squad, reason: 'Offensive name' })
   })
 
   it('serializes readAt as an ISO instant', () => {
