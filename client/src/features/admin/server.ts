@@ -9,3 +9,4 @@ export { prefetchAdminUserAndWait, prefetchAdminUsersAndWait } from './users/pre
 export { prefetchAdminOverviewAndWait } from './overview/prefetch-overview'
 export { prefetchAdminSquadsAndWait } from './squads/prefetch-squads'
 export { prefetchCatalogImportRunsAndWait } from './catalog/prefetch-catalog'
+export { prefetchAdminGameAndWait, prefetchAdminGamesAndWait } from './catalog/games/prefetch-games'

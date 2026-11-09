@@ -101,7 +101,10 @@ function serveRuns(items: readonly CatalogImportRunDto[], total = items.length):
   )
 }
 
-function renderCatalog(url = '/admin/catalog', queryClient: QueryClient = createTestQueryClient()) {
+function renderCatalog(
+  url = '/admin/catalog/runs',
+  queryClient: QueryClient = createTestQueryClient()
+) {
   const navigation = createHarnessNavigation(url)
   render(
     <EnglishIntlProvider>
@@ -277,7 +280,7 @@ describe('admin catalog run history', () => {
     const queryClient = createTestQueryClient()
     queryClient.setQueryData(catalogRunsQueryKey(1), runsPage([succeeded]))
 
-    renderCatalog('/admin/catalog', queryClient)
+    renderCatalog('/admin/catalog/runs', queryClient)
 
     expect(screen.getByRole('table', { name: 'Catalog Import runs' })).toBeInTheDocument()
     expect(

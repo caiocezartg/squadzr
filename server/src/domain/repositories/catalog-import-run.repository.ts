@@ -32,4 +32,6 @@ export interface ICatalogImportRunRepository {
   list(offset: number, limit: number): Promise<{ runs: CatalogImportRun[]; total: number }>
   /** The newest run, or null before any was recorded. */
   findLatest(): Promise<CatalogImportRun | null>
+  /** The run that most recently finished as `succeeded`, or null before any did. */
+  findLatestSucceeded(): Promise<CatalogImportRun | null>
 }

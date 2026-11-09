@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { HydrationBoundary } from '@tanstack/react-query'
-import { AdminCatalogPage, catalogPageFrom } from '@/features/admin/page'
-import { prefetchCatalogImportRunsAndWait } from '@/features/admin/server'
+import { AdminGamesPage, adminGamesParamsFrom } from '@/features/admin/page'
+import { prefetchAdminGamesAndWait } from '@/features/admin/server'
 import { prefetchRoute } from '@/lib/query-client'
 import { requireFullAdminSession } from '@/lib/server/admin-gate'
 import { adminMetadata } from '@/lib/server/admin-metadata'
@@ -13,28 +13,30 @@ export function generateMetadata(): Promise<Metadata> {
   return adminMetadata({ title: 'Catalog' }, 'full')
 }
 
-interface AdminCatalogRouteProps {
+interface AdminCatalogGamesRouteProps {
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 /**
- * The Catalog page. Catalog Import is for an admin or the owner: a moderator passes the layout's gate
- * and is stopped here with not-found, before the read is sent. The page of the run history the URL asks
- * for (`?page=`, the first when absent or invalid) is read on the server and waited for, so a hard load
- * has the table in its HTML and needs no skeleton; a read that fails or takes over two seconds is left
- * to the browser. Later moves between pages happen in the browser, without a server render.
+ * The Catalog page's Games tab, for an admin or the owner: a moderator passes the layout's gate and is
+ * stopped here with not-found, before the read is sent. The page of games the URL asks for
+ * (`?q=&status=&sort=&page=`) and the tab's summary are read on the server and waited for, so a hard
+ * load has them in its HTML and needs no skeleton; a read that fails or takes over two seconds is left
+ * to the browser. Later searches, filters and pages happen in the browser, without a server render.
  */
-export default async function AdminCatalogRoute({ searchParams }: AdminCatalogRouteProps) {
+export default async function AdminCatalogGamesRoute({
+  searchParams,
+}: AdminCatalogGamesRouteProps) {
   await requireFullAdminSession()
-  const page = catalogPageFrom((await searchParams).page)
+  const params = adminGamesParamsFrom(await searchParams)
   const viewer = await getRequestViewer()
   const state = await prefetchRoute((queryClient) =>
-    prefetchCatalogImportRunsAndWait(queryClient, viewer, page)
+    prefetchAdminGamesAndWait(queryClient, viewer, params)
   )
 
   return (
     <HydrationBoundary state={state}>
-      <AdminCatalogPage />
+      <AdminGamesPage />
     </HydrationBoundary>
   )
 }

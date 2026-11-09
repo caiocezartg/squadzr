@@ -836,6 +836,128 @@
         "noErrorMessage": "The run left no error message.",
         "interrupted": "This run stopped answering before it finished, for example when a deploy restarted the API. It left no counts and no error message.",
         "pending": "This run has not finished yet. Its counts show up once it does."
+      },
+      "header": {
+        "title": "Catalog",
+        "description": "The games players pick from, kept in sync with IGDB by the Catalog Import."
+      },
+      "tabs": {
+        "label": "Catalog sections",
+        "games": "Games",
+        "runs": "Import runs"
+      },
+      "games": {
+        "tableLabel": "Games",
+        "loading": "Loading the games",
+        "loadError": "Couldn't load the games.",
+        "summaryLoadError": "Couldn't load the catalog summary.",
+        "players": "{min}–{max}",
+        "featuredRank": "#{rank}",
+        "summary": {
+          "label": "Games by status",
+          "loading": "Loading the catalog summary",
+          "listed": "Listed",
+          "listedNote": "Players can pick them",
+          "delisted": "Delisted",
+          "delistedNote": "Hidden from players",
+          "featured": "Featured",
+          "featuredNote": "Highlighted for players",
+          "lastImport": "Last import",
+          "noImport": "No import has succeeded yet.",
+          "entered": "Entered",
+          "left": "Left",
+          "more": "+{count} more"
+        },
+        "search": {
+          "label": "Search games",
+          "placeholder": "Name or alias"
+        },
+        "status": {
+          "title": "Status",
+          "chip": "Status: {status}",
+          "all": "All",
+          "listed": "Listed",
+          "delisted": "Delisted",
+          "featured": "Featured"
+        },
+        "sort": {
+          "title": "Sort",
+          "chip": "Sort: {sort}",
+          "popularity": "Popularity",
+          "name": "Name",
+          "newest": "Newest",
+          "openSquads": "Most open Squads",
+          "completedSquads": "Most completed Squads"
+        },
+        "columns": {
+          "game": "Game",
+          "platforms": "Platforms",
+          "players": "Players",
+          "popularity": "Popularity",
+          "featured": "Featured",
+          "status": "Status",
+          "openSquads": "Open Squads",
+          "completedSquads": "Completed"
+        },
+        "badges": {
+          "listed": "Listed",
+          "delisted": "Delisted",
+          "featured": "Featured #{rank}"
+        },
+        "empty": {
+          "title": "No games yet",
+          "description": "The Catalog Import adds games here once it runs."
+        },
+        "noMatch": {
+          "title": "No games match",
+          "description": "Try another search or status.",
+          "action": "Clear filters"
+        },
+        "pastEnd": {
+          "title": "No games on this page",
+          "action": "Go to the first page"
+        },
+        "detail": {
+          "caption": "Catalog · Game",
+          "back": "Back to Games",
+          "fallbackTitle": "Game",
+          "loading": "Loading the game",
+          "loadError": "Couldn't load this game.",
+          "notFound": {
+            "title": "Game not found",
+            "description": "The catalog has no game with this address."
+          },
+          "fields": {
+            "caption": "Catalog",
+            "title": "Fields",
+            "aliases": "Aliases",
+            "genres": "Genres",
+            "platforms": "Platforms",
+            "players": "Players",
+            "popularity": "Popularity",
+            "featuredRank": "Featured rank",
+            "slug": "Slug",
+            "igdb": "IGDB id",
+            "igdbLink": "Open on IGDB (new tab)",
+            "createdAt": "Created",
+            "updatedAt": "Updated"
+          },
+          "usage": {
+            "label": "Usage",
+            "openSquads": "Open Squads",
+            "openSquadsNote": "Right now",
+            "completedSquads": "Completed Squads",
+            "completedSquadsNote": "All time"
+          },
+          "openSquads": {
+            "caption": "Now",
+            "title": "Open Squads",
+            "empty": "No open Squad for this game right now.",
+            "meta": "{meta} · {host} · {members}/{max}",
+            "showing": "Showing the newest {shown} of {total}.",
+            "viewAll": "View all in Squads"
+          }
+        }
       }
     },
     "audit": {

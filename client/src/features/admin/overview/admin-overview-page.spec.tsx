@@ -400,7 +400,7 @@ describe('admin overview', () => {
     expect(count('Listed Games')).toHaveTextContent('1,684')
     expect(within(card).getByRole('link', { name: 'View history' })).toHaveAttribute(
       'href',
-      '/admin/catalog'
+      '/admin/catalog/runs'
     )
   })
 

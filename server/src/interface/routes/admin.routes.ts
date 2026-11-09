@@ -5,6 +5,7 @@ import { adminCatalogRoutes } from './admin-catalog.routes'
 import { adminOverviewRoutes } from './admin-overview.routes'
 import { adminUsersRoutes } from './admin-users.routes'
 import { adminSquadsRoutes } from './admin-squads.routes'
+import { adminCatalogGamesRoutes } from './admin-catalog-games.routes'
 
 /**
  * Every `/api/admin/*` route. The guard is a hook of this plugin's scope, so a route added to it is
@@ -22,4 +23,5 @@ export async function adminRoutes(fastify: FastifyInstance): Promise<void> {
   await fastify.register(adminOverviewRoutes)
   await fastify.register(adminSquadsRoutes)
   await fastify.register(adminCatalogRoutes)
+  await fastify.register(adminCatalogGamesRoutes)
 }

@@ -141,4 +141,16 @@ export class DrizzleCatalogImportRunRepository implements ICatalogImportRunRepos
     const row = rows[0]
     return row ? mapRowToEntity(row) : null
   }
+
+  async findLatestSucceeded(): Promise<CatalogImportRun | null> {
+    const rows = await this.db
+      .select()
+      .from(catalogImportRuns)
+      .where(eq(catalogImportRuns.status, 'succeeded'))
+      .orderBy(desc(catalogImportRuns.finishedAt), desc(catalogImportRuns.id))
+      .limit(1)
+
+    const row = rows[0]
+    return row ? mapRowToEntity(row) : null
+  }
 }

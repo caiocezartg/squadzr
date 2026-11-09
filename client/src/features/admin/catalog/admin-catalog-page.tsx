@@ -10,7 +10,7 @@ import {
 import { Pagination } from '@/components/ds/pagination'
 // The page parameter works the same on every paginated admin list.
 import { useAuditPage as useCatalogPage } from '../audit/use-audit-page'
-import { AdminPageHeader } from '../shell/admin-page-header'
+import { CatalogHeader } from './catalog-header'
 import { useCatalogImportRuns } from './catalog-query'
 import { CatalogEmpty, CatalogLoadError, CatalogSkeleton } from './catalog-states'
 import { RunPanel } from './run-panel'
@@ -18,19 +18,18 @@ import { RunsRowList } from './runs-row-list'
 import { RunsTable, type OpenRun } from './runs-table'
 
 /**
- * The admin Catalog page: the Catalog Import Run history, newest first, 20 per page, the page held in
+ * The admin Catalog page's Import runs tab (`/admin/catalog/runs`): the Catalog Import Run history, newest first, 20 per page, the page held in
  * the URL as `?page=`. A page the server or an earlier visit read renders at once, with no skeleton;
  * the skeleton is only for a page the cache has never held. Moving between pages keeps the previous
  * page on screen until the next one lands. A row opens the run's detail in a side panel.
  */
 export function AdminCatalogPage() {
-  const t = useTranslations('admin.catalog')
   const [page, goTo] = useCatalogPage()
   const query = useCatalogImportRuns(page)
 
   return (
     <>
-      <AdminPageHeader title={t('title')} description={t('description')} />
+      <CatalogHeader current="runs" />
       {query.data ? (
         <CatalogResults data={query.data} page={page} onPageChange={goTo} />
       ) : query.isError ? (

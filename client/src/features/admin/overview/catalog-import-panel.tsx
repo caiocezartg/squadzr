@@ -38,7 +38,7 @@ export function CatalogImportPanel({ lastRun }: { readonly lastRun: CatalogImpor
           </h2>
         </div>
         <Button
-          href="/admin/catalog"
+          href="/admin/catalog/runs"
           variant="ghost"
           size="sm"
           className="shadow-[inset_0_0_0_1px_var(--color-line)]"
