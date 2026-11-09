@@ -19,13 +19,23 @@ describe('admin Squads read use cases', () => {
       repository.listOpen.mockResolvedValue({ squads: [], total: 41 })
       const useCase = new ListAdminSquadsUseCase(repository as unknown as IAdminSquadRepository)
 
-      const result = await useCase.execute({ page: 3, q: 'vlr', gameId: 'game-1' })
+      const result = await useCase.execute({
+        page: 3,
+        q: 'vlr',
+        gameId: 'game-1',
+        platform: 'ps5',
+        language: 'en',
+        sort: 'stale',
+      })
 
       expect(repository.listOpen).toHaveBeenCalledWith({
         offset: 2 * PAGE_SIZE,
         limit: PAGE_SIZE,
+        sort: 'stale',
         search: 'vlr',
         gameId: 'game-1',
+        platform: 'ps5',
+        language: 'en',
       })
       expect(result).toEqual({ squads: [], page: 3, pageSize: PAGE_SIZE, total: 41 })
     })
@@ -36,7 +46,11 @@ describe('admin Squads read use cases', () => {
 
       await useCase.execute({ page: 1 })
 
-      expect(repository.listOpen).toHaveBeenCalledWith({ offset: 0, limit: PAGE_SIZE })
+      expect(repository.listOpen).toHaveBeenCalledWith({
+        offset: 0,
+        limit: PAGE_SIZE,
+        sort: 'newest',
+      })
     })
   })
 

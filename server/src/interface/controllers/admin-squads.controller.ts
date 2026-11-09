@@ -29,8 +29,15 @@ export class AdminSquadsController {
     request: FastifyRequest<{ Querystring: SquadsQuery }>,
     reply: FastifyReply
   ): Promise<void> {
-    const { page, q, gameId } = request.query
-    const result = await this.deps.listAdminSquadsUseCase.execute({ page, q, gameId })
+    const { page, q, gameId, platform, language, sort } = request.query
+    const result = await this.deps.listAdminSquadsUseCase.execute({
+      page,
+      q,
+      gameId,
+      platform,
+      language,
+      sort,
+    })
 
     await reply.send({
       items: result.squads.map(toAdminSquadDto),

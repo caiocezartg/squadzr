@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
+import type { AdminSquadSort } from '@squadzr/schemas'
 import type {
   AdminSquad,
   AdminSquadDetail,
@@ -72,6 +73,17 @@ function searchCondition(search: string | undefined): SQL | undefined {
   return or(ilike(rooms.name, pattern), ilike(rooms.code, pattern), ilike(user.name, pattern))
 }
 
+/** Members over slots, as an exact decimal so equal ratios (2/4, 1/2) tie. */
+const fillRatio = sql`${memberCountColumn}::numeric / ${rooms.maxPlayers}`
+
+// Each order ends on the Squad id, which no two rows share, so a page boundary never splits a tie.
+const ORDERINGS: Record<AdminSquadSort, readonly SQL[]> = {
+  newest: [desc(rooms.createdAt), desc(rooms.id)],
+  oldest: [asc(rooms.createdAt), asc(rooms.id)],
+  stale: [asc(rooms.lastActivityAt), asc(rooms.id)],
+  fullest: [desc(fillRatio), desc(rooms.createdAt), desc(rooms.id)],
+}
+
 export class DrizzleAdminSquadRepository implements IAdminSquadRepository {
   constructor(
     private readonly db: Database,
@@ -82,7 +94,9 @@ export class DrizzleAdminSquadRepository implements IAdminSquadRepository {
     const where = and(
       validOpenRoomCondition(this.clock.now()),
       query.gameId === undefined ? undefined : eq(rooms.gameId, query.gameId),
-      searchCondition(query.search)
+      searchCondition(query.search),
+      query.platform === undefined ? undefined : eq(rooms.platform, query.platform),
+      query.language === undefined ? undefined : eq(rooms.language, query.language)
     )
 
     const [rows, totals] = await Promise.all([
@@ -92,7 +106,7 @@ export class DrizzleAdminSquadRepository implements IAdminSquadRepository {
         .innerJoin(games, eq(games.id, rooms.gameId))
         .innerJoin(user, eq(user.id, rooms.hostId))
         .where(where)
-        .orderBy(desc(rooms.createdAt), desc(rooms.id))
+        .orderBy(...ORDERINGS[query.sort])
         .limit(query.limit)
         .offset(query.offset),
       this.db

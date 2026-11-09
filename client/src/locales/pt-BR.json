@@ -591,6 +591,12 @@
         "results": "Jogos",
         "noGames": "Nenhum jogo encontrado."
       },
+      "sort": {
+        "title": "Ordenar a lista",
+        "chip": "Ordem: {sort}",
+        "stale": "Sem atividade há mais tempo",
+        "fullest": "Mais cheios"
+      },
       "tableLabel": "Squads abertos",
       "columns": {
         "squad": "Squad",

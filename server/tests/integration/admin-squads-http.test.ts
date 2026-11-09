@@ -14,6 +14,7 @@ import { roomMembers, userNotifications } from '@infrastructure/database/schema'
 import { signIn, type TestUser } from '@test/harness/auth'
 import {
   createRoom,
+  type CreateRoomBody,
   findRoomRow,
   get,
   insertGame,
@@ -66,7 +67,7 @@ async function notificationsOf(user: TestUser): Promise<UserNotificationDto[]> {
     .notifications.map((notification) => userNotificationSchema.parse(notification))
 }
 
-async function squadWith(host: TestUser, options: { name?: string; maxPlayers?: number } = {}) {
+async function squadWith(host: TestUser, options: Omit<CreateRoomBody, 'gameId'> = {}) {
   return createRoom(server, host, { gameId, maxPlayers: 5, ...options })
 }
 
@@ -223,6 +224,174 @@ describe('GET /api/admin/squads', () => {
     expect((await list(`?gameId=${gameId}&q=dota`)).total).toBe(0)
   })
 
+  describe('sort', () => {
+    const HOUR = 60 * 60 * 1000
+    const ago = (hours: number) => new Date(Date.now() - hours * HOUR)
+
+    const ids = (body: { items: { id: string }[] }) => body.items.map((item) => item.id)
+
+    async function squadAt(
+      host: TestUser,
+      times: { created: number; activity?: number },
+      options: { name?: string; maxPlayers?: number } = {}
+    ) {
+      const room = await squadWith(host, options)
+      await setRoomLifecycle(server, room.id, {
+        createdAt: ago(times.created),
+        lastActivityAt: ago(times.activity ?? times.created),
+        readyAt: null,
+      })
+      return room
+    }
+
+    async function threeHosts() {
+      const [h1, h2, h3] = await Promise.all(['H1', 'H2', 'H3'].map((n) => signIn(server, n)))
+      return [h1!, h2!, h3!] as const
+    }
+
+    it('keeps newest first as the default and as sort=newest', async () => {
+      const [h1, h2, h3] = await threeHosts()
+      const a = await squadAt(h1, { created: 9 })
+      const b = await squadAt(h2, { created: 3 })
+      const c = await squadAt(h3, { created: 6 })
+
+      expect(ids(await list())).toEqual([b.id, c.id, a.id])
+      expect(ids(await list('?sort=newest'))).toEqual([b.id, c.id, a.id])
+      expect(ids(await list('?sort='))).toEqual([b.id, c.id, a.id])
+    })
+
+    it('sorts oldest first by creation', async () => {
+      const [h1, h2, h3] = await threeHosts()
+      const a = await squadAt(h1, { created: 9 })
+      const b = await squadAt(h2, { created: 3 })
+      const c = await squadAt(h3, { created: 6 })
+
+      expect(ids(await list('?sort=oldest'))).toEqual([a.id, c.id, b.id])
+    })
+
+    it('sorts the least recent activity first with sort=stale', async () => {
+      const [h1, h2, h3] = await threeHosts()
+      const a = await squadAt(h1, { created: 10, activity: 1 })
+      const b = await squadAt(h2, { created: 9, activity: 8 })
+      const c = await squadAt(h3, { created: 3, activity: 2 })
+
+      expect(ids(await list('?sort=stale'))).toEqual([b.id, c.id, a.id])
+    })
+
+    it('sorts the highest members to slots ratio first with sort=fullest, ties newest first', async () => {
+      const hosts = await Promise.all(['H1', 'H2', 'H3', 'H4', 'H5'].map((n) => signIn(server, n)))
+      const joiners = await Promise.all(['J1', 'J2', 'J3'].map((n) => signIn(server, n)))
+      const [h1, h2, h3, h4, h5] = hosts as [TestUser, TestUser, TestUser, TestUser, TestUser]
+      const [j1, j2, j3] = joiners as [TestUser, TestUser, TestUser]
+      const twoOfFive = await squadWithMembers(h1, [j1], { maxPlayers: 5 })
+      const fourOfFive = await squadWithMembers(h2, [j1, j2, j3], { maxPlayers: 5 })
+      const twoOfFour = await squadWithMembers(h3, [j1], { maxPlayers: 4 })
+      const olderLone = await squadAt(h4, { created: 5 }, { maxPlayers: 5 })
+      const newerLone = await squadAt(h5, { created: 1 }, { maxPlayers: 5 })
+
+      expect(ids(await list('?sort=fullest'))).toEqual([
+        fourOfFive.id,
+        twoOfFour.id,
+        twoOfFive.id,
+        newerLone.id,
+        olderLone.id,
+      ])
+    })
+
+    it.each([
+      ['newest', (a: string, b: string) => (a < b ? 1 : -1)],
+      ['oldest', (a: string, b: string) => (a < b ? -1 : 1)],
+      ['stale', (a: string, b: string) => (a < b ? -1 : 1)],
+      ['fullest', (a: string, b: string) => (a < b ? 1 : -1)],
+    ] as const)(
+      'breaks ties on the id, so sort=%s never repeats or skips a Squad across pages',
+      async (sort, byId) => {
+        const hosts = await Promise.all(
+          Array.from({ length: 25 }, (_, index) => signIn(server, `Host ${index + 1}`))
+        )
+        const rooms: string[] = []
+        for (const host of hosts) rooms.push((await squadWith(host)).id)
+        // One instant for every Squad, so only the id can tell them apart.
+        const tiedAt = ago(2)
+        for (const id of rooms) {
+          await setRoomLifecycle(server, id, {
+            createdAt: tiedAt,
+            lastActivityAt: tiedAt,
+            readyAt: null,
+          })
+        }
+
+        const first = await list(`?sort=${sort}&page=1`)
+        const second = await list(`?sort=${sort}&page=2`)
+        const sequence = [...ids(first), ...ids(second)]
+
+        expect(first.items).toHaveLength(20)
+        expect(second.items).toHaveLength(5)
+        expect(new Set(sequence).size).toBe(25)
+        expect(sequence).toEqual([...rooms].sort(byId))
+        expect(ids(await list(`?sort=${sort}&page=1`))).toEqual(ids(first))
+      }
+    )
+  })
+
+  describe('platform and language filters', () => {
+    const sortedIds = (body: { items: { id: string }[] }) => body.items.map((i) => i.id).sort()
+
+    async function mixedSquads() {
+      const crossGame = await insertGame(server, { name: 'Cross play', platforms: ['pc', 'ps5'] })
+      const otherGame = await insertGame(server, { name: 'Dota 2', platforms: ['ps5'] })
+      const hosts = await Promise.all(['H1', 'H2', 'H3', 'H4'].map((n) => signIn(server, n)))
+      const [h1, h2, h3, h4] = hosts as [TestUser, TestUser, TestUser, TestUser]
+      const onCross = (host: TestUser, body: Omit<CreateRoomBody, 'gameId'>) =>
+        createRoom(server, host, { gameId: crossGame.id, maxPlayers: 5, ...body })
+      const pcEn = await onCross(h1, { name: 'Ranked pc en', platform: 'pc', language: 'en' })
+      const ps5Pt = await onCross(h2, { name: 'Ranked ps5 pt', platform: 'ps5', language: 'pt-br' })
+      const ps5En = await createRoom(server, h3, {
+        gameId: otherGame.id,
+        maxPlayers: 5,
+        name: 'Flex ps5 en',
+        platform: 'ps5',
+        language: 'en',
+      })
+      // Valorant lists no platform, so its Squads have none.
+      const bare = await squadWith(h4, { name: 'Casual', language: 'pt-br' })
+      return { otherGame, pcEn, ps5Pt, ps5En, bare }
+    }
+
+    it('keeps only the Squads on one platform and reports the filtered total', async () => {
+      const { pcEn, ps5Pt, ps5En } = await mixedSquads()
+
+      const ps5 = await list('?platform=ps5')
+      expect(sortedIds(ps5)).toEqual([ps5Pt.id, ps5En.id].sort())
+      expect(ps5.total).toBe(2)
+      expect(sortedIds(await list('?platform=pc'))).toEqual([pcEn.id])
+      expect((await list('?platform=switch')).total).toBe(0)
+      expect((await list('?platform=')).total).toBe(4)
+    })
+
+    it('keeps only the Squads in one language', async () => {
+      const { pcEn, ps5Pt, ps5En, bare } = await mixedSquads()
+
+      expect(sortedIds(await list('?language=en'))).toEqual([pcEn.id, ps5En.id].sort())
+      expect(sortedIds(await list('?language=pt-br'))).toEqual([ps5Pt.id, bare.id].sort())
+      expect((await list('?language=')).total).toBe(4)
+    })
+
+    it('combines the filters with each other, the search, the game, the sort and the page', async () => {
+      const { otherGame, ps5Pt, ps5En } = await mixedSquads()
+
+      expect(sortedIds(await list('?platform=ps5&language=en'))).toEqual([ps5En.id])
+      expect(sortedIds(await list('?platform=ps5&q=ranked'))).toEqual([ps5Pt.id])
+      expect(sortedIds(await list(`?platform=ps5&gameId=${otherGame.id}`))).toEqual([ps5En.id])
+      expect((await list(`?language=pt-br&gameId=${otherGame.id}`)).total).toBe(0)
+      expect((await list('?platform=pc&language=pt-br')).total).toBe(0)
+
+      const oldestFirst = await list('?platform=ps5&sort=oldest')
+      expect(oldestFirst.items.map((item) => item.id)).toEqual([ps5Pt.id, ps5En.id])
+      expect(await list('?platform=ps5&sort=oldest&page=2')).toMatchObject({ items: [], total: 2 })
+    })
+  })
+
   it('carries no email of anybody', async () => {
     const host = await signIn(server, 'Host')
     await squadWith(host)
@@ -236,6 +405,13 @@ describe('GET /api/admin/squads', () => {
     expect((await get(server, '/api/admin/squads?gameId=valorant', admin)).statusCode).toBe(400)
     expect((await get(server, '/api/admin/squads?page=0', admin)).statusCode).toBe(400)
   })
+
+  it.each(['sort=popular', 'platform=atari', 'language=fr', 'sort=NEWEST', 'platform=PC'])(
+    'refuses %s with 400 for an admin',
+    async (query) => {
+      expect((await get(server, `/api/admin/squads?${query}`, admin)).statusCode).toBe(400)
+    }
+  )
 
   it('answers 401 signed out and 403 for a player, before validating the query', async () => {
     expect((await get(server, '/api/admin/squads?page=0')).statusCode).toBe(401)

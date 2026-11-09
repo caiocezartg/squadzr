@@ -1,3 +1,4 @@
+import type { AdminSquadSort, Platform, RoomLanguage } from '@squadzr/schemas'
 import type { AdminSquad, AdminSquadDetail, ClosedSquad } from '@domain/entities/admin-squad.entity'
 import type { NewAuditEntry } from '@domain/entities/audit-entry.entity'
 import type {
@@ -6,11 +7,15 @@ import type {
 } from '@domain/entities/user-notification.entity'
 
 export interface ListOpenSquadsQuery {
+  /** How the page is ordered; every order ends on the Squad id, so pages never repeat or skip a row. */
+  readonly sort: AdminSquadSort
   readonly offset: number
   readonly limit: number
   /** Matches the Squad's name or code, or the host's name; blank or absent is no filter. */
   readonly search?: string
   readonly gameId?: string
+  readonly platform?: Platform
+  readonly language?: RoomLanguage
 }
 
 export interface OpenSquadPage {
@@ -42,7 +47,7 @@ export type CloseOpenSquadOutcome =
   | { readonly status: 'not_open' }
 
 export interface IAdminSquadRepository {
-  /** Open Squads (the validity rule of the Squad Limits) newest first. */
+  /** Open Squads (the validity rule of the Squad Limits) in the asked order. */
   listOpen(query: ListOpenSquadsQuery): Promise<OpenSquadPage>
   /** The Open Squad with that id, or null when it is unknown, Ready or expired. */
   findOpenById(id: string): Promise<AdminSquadDetail | null>

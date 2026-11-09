@@ -2,16 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { adminSquadsParamsFrom } from './squads-query'
+import type { AdminSquadSort, Platform, RoomLanguage } from '@squadzr/schemas'
+import { adminSquadsParamsFrom, type AdminSquadsParams } from './squads-query'
 
 /** How long the field waits after the last keystroke before it searches. */
 export const SEARCH_DEBOUNCE_MS = 300
 
-interface SquadsFilters {
-  readonly search: string
-  readonly gameId: string
-  readonly page: number
-}
+type SquadsFilters = Omit<AdminSquadsParams, 'search'> & { readonly search: string }
 
 export interface SquadsSearch extends SquadsFilters {
   /** What the field shows, which reaches the URL once typing pauses. */
@@ -21,25 +18,36 @@ export interface SquadsSearch extends SquadsFilters {
   readonly clearSearch: () => void
   /** Keeps one Game, or every Game for an empty id. */
   readonly setGame: (gameId: string) => void
-  /** Drops the search and the Game together. */
+  /** Keeps one platform, or every platform for an empty value. */
+  readonly setPlatform: (platform: Platform | '') => void
+  /** Keeps one Squad language, or every language for an empty value. */
+  readonly setLanguage: (language: RoomLanguage | '') => void
+  readonly setSort: (sort: AdminSquadSort) => void
+  /** Whether any of the search, Game, platform or language is narrowing the list. */
+  readonly filtered: boolean
+  /** Drops the search, Game, platform and language together; the sort stays. */
   readonly clearFilters: () => void
   readonly goTo: (page: number) => void
 }
 
 /**
- * The Squads list's search, Game and page, held in the URL as `?q=&gameId=&page=`. The field starts
- * from the URL and writes to it 300ms after typing stops; a new search or Game goes back to the first
- * page, and an empty value drops its parameter. The writes go through `window.history`, which the App
- * Router follows in `useSearchParams` without a navigation, so the previous results stay on screen while
- * the next ones are read. A filter replaces the history entry, a page is a new one. Other parameters
- * (the open Squad) are kept.
+ * The Squads list's search, filters, sort and page, held in the URL as
+ * `?q=&gameId=&platform=&language=&sort=&page=`. The field starts from the URL and writes to it 300ms
+ * after typing stops; a new search, filter or sort goes back to the first page, and a default value
+ * (empty, or `newest`) drops its parameter. The writes go through `window.history`, which the App
+ * Router follows in `useSearchParams` without a navigation, so the previous results stay on screen
+ * while the next ones are read. A filter replaces the history entry, a page is a new one. Other
+ * parameters (the open Squad) are kept.
  */
 export function useSquadsSearch(): SquadsSearch {
   const pathname = usePathname()
   const params = useSearchParams()
-  const { search, gameId, page } = adminSquadsParamsFrom({
+  const { search, gameId, platform, language, sort, page } = adminSquadsParamsFrom({
     q: params.get('q'),
     gameId: params.get('gameId'),
+    platform: params.get('platform'),
+    language: params.get('language'),
+    sort: params.get('sort'),
     page: params.get('page'),
   })
   const [draft, setDraft] = useState(search)
@@ -56,6 +64,9 @@ export function useSquadsSearch(): SquadsSearch {
       const query = new URLSearchParams(window.location.search)
       setOrDelete(query, 'q', next.search)
       setOrDelete(query, 'gameId', next.gameId)
+      setOrDelete(query, 'platform', next.platform)
+      setOrDelete(query, 'language', next.language)
+      setOrDelete(query, 'sort', next.sort === 'newest' ? '' : next.sort)
       setOrDelete(query, 'page', next.page > 1 ? String(next.page) : '')
       const value = query.toString()
       const url = value ? `${pathname}?${value}` : pathname
@@ -65,41 +76,57 @@ export function useSquadsSearch(): SquadsSearch {
     [pathname]
   )
 
+  // Any change but a page starts again from the first one.
+  const change = useCallback(
+    (patch: Partial<SquadsFilters>) =>
+      write({ search, gameId, platform, language, sort, page: 1, ...patch }, 'replace'),
+    [write, search, gameId, platform, language, sort]
+  )
+
   useEffect(() => {
     const term = draft.trim()
     if (term === search) return
-    const timer = setTimeout(
-      () => write({ search: term, gameId, page: 1 }, 'replace'),
-      SEARCH_DEBOUNCE_MS
-    )
+    const timer = setTimeout(() => change({ search: term }), SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [draft, search, gameId, write])
+  }, [draft, search, change])
 
   const clearSearch = useCallback(() => {
     setDraft('')
-    write({ search: '', gameId, page: 1 }, 'replace')
-  }, [gameId, write])
-
-  const setGame = useCallback(
-    (next: string) => write({ search, gameId: next, page: 1 }, 'replace'),
-    [search, write]
-  )
+    change({ search: '' })
+  }, [change])
 
   const clearFilters = useCallback(() => {
     setDraft('')
-    write({ search: '', gameId: '', page: 1 }, 'replace')
-  }, [write])
+    change({ search: '', gameId: '', platform: '', language: '' })
+  }, [change])
 
   const goTo = useCallback(
     (next: number) => {
-      write({ search, gameId, page: next }, 'push')
+      write({ search, gameId, platform, language, sort, page: next }, 'push')
       // The pages sit under the table, so the next page starts from the top.
       document.documentElement.scrollTop = 0
     },
-    [search, gameId, write]
+    [write, search, gameId, platform, language, sort]
   )
 
-  return { search, gameId, page, draft, setDraft, clearSearch, setGame, clearFilters, goTo }
+  return {
+    search,
+    gameId,
+    platform,
+    language,
+    sort,
+    page,
+    draft,
+    setDraft,
+    clearSearch,
+    setGame: (gameId) => change({ gameId }),
+    setPlatform: (platform) => change({ platform }),
+    setLanguage: (language) => change({ language }),
+    setSort: (sort) => change({ sort }),
+    filtered: search !== '' || gameId !== '' || platform !== '' || language !== '',
+    clearFilters,
+    goTo,
+  }
 }
 
 function setOrDelete(query: URLSearchParams, key: string, value: string): void {

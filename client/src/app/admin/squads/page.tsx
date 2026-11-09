@@ -18,17 +18,17 @@ interface AdminSquadsRouteProps {
 }
 
 /**
- * The Squads page. The search, game and page the URL asks for (`?q=&gameId=&page=`) are read on the
+ * The Squads page. The search, filters, sort and page the URL asks for (`?q=&gameId=&platform=&language=&sort=&page=`) are read on the
  * server and waited for, so a hard load has the table in its HTML and needs no skeleton; a read that
  * fails or takes over two seconds is left to the browser. A moderator, an admin and the owner may open
  * it; the page passes the gate itself because it renders beside the layout, not after it.
  */
 export default async function AdminSquadsRoute({ searchParams }: AdminSquadsRouteProps) {
   await requireAdminSession()
-  const { search, gameId, page } = adminSquadsParamsFrom(await searchParams)
+  const params = adminSquadsParamsFrom(await searchParams)
   const viewer = await getRequestViewer()
   const state = await prefetchRoute((queryClient) =>
-    prefetchAdminSquadsAndWait(queryClient, viewer, search, gameId, page)
+    prefetchAdminSquadsAndWait(queryClient, viewer, params)
   )
 
   return (

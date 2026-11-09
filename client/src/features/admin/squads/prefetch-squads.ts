@@ -2,7 +2,7 @@ import 'server-only'
 import type { QueryClient } from '@tanstack/react-query'
 import { loadAdminSquads } from '@/lib/server/admin-squads'
 import type { RequestViewer } from '@/lib/server/viewer'
-import { adminSquadsQueryKey } from './squads-query'
+import { adminSquadsQueryKey, type AdminSquadsParams } from './squads-query'
 
 /**
  * Reads one page of the Open Squads in the request's query client and settles when the read has, so the
@@ -12,15 +12,13 @@ import { adminSquadsQueryKey } from './squads-query'
 export function prefetchAdminSquadsAndWait(
   queryClient: QueryClient,
   viewer: RequestViewer,
-  search: string,
-  gameId: string,
-  page: number
+  params: AdminSquadsParams
 ): Promise<void> {
   return queryClient.prefetchQuery({
-    queryKey: adminSquadsQueryKey(search, gameId, page),
+    queryKey: adminSquadsQueryKey(params),
     queryFn: async () => {
       try {
-        return await loadAdminSquads(viewer, search, gameId, page)
+        return await loadAdminSquads(viewer, params)
       } catch (error) {
         console.error('Squads read failed; the browser reads it instead:', error)
         throw error

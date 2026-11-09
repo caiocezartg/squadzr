@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ADMIN_CLOSURE_REASON_MAX,
   ADMIN_CLOSURE_REASON_MIN,
+  ADMIN_SQUAD_SORTS,
   PAGE_SIZE,
   adminSquadDetailResponseSchema,
   adminSquadSchema,
@@ -61,8 +62,23 @@ describe('adminSquadsQuerySchema', () => {
     expect(adminSquadsQuerySchema.parse({ q: '  ', gameId: '' })).toEqual({ page: 1 })
   })
 
+  it('reads the sort, platform and language, and an empty value as absent', () => {
+    expect(
+      adminSquadsQuerySchema.parse({ sort: 'fullest', platform: 'ps5', language: 'en' })
+    ).toEqual({ page: 1, sort: 'fullest', platform: 'ps5', language: 'en' })
+    expect(adminSquadsQuerySchema.parse({ sort: '', platform: '', language: '' })).toEqual({
+      page: 1,
+    })
+    for (const sort of ADMIN_SQUAD_SORTS) {
+      expect(adminSquadsQuerySchema.parse({ sort }).sort).toBe(sort)
+    }
+  })
+
   it.each([
     ['a game that is not a uuid', { gameId: 'valorant' }],
+    ['an unknown sort', { sort: 'popular' }],
+    ['an unknown platform', { platform: 'atari' }],
+    ['an unknown language', { language: 'fr' }],
     ['a search over 100 characters', { q: 'x'.repeat(101) }],
     ['a page below 1', { page: '0' }],
   ])('rejects %s', (_label, query) => {

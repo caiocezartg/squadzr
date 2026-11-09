@@ -1,6 +1,6 @@
 import 'server-only'
 import { adminSquadsResponseSchema, type AdminSquadsResponse } from '@squadzr/schemas'
-import { adminSquadsPath } from '@/lib/admin-squads-path'
+import { adminSquadsPath, type AdminSquadsParams } from '@/lib/admin-squads-path'
 import { serverApi } from './api'
 import type { RequestViewer } from './viewer'
 
@@ -13,12 +13,10 @@ const ADMIN_SQUADS_TIMEOUT_MS = 2_000
  */
 export function loadAdminSquads(
   viewer: RequestViewer,
-  search: string,
-  gameId: string,
-  page: number
+  params: AdminSquadsParams
 ): Promise<AdminSquadsResponse> {
   return serverApi.get(
-    adminSquadsPath(search, gameId, page),
+    adminSquadsPath(params),
     adminSquadsResponseSchema,
     { credentials: 'viewer', caching: 'uncached', cookie: viewer.cookie },
     { timeoutMs: ADMIN_SQUADS_TIMEOUT_MS }

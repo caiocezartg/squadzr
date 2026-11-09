@@ -591,6 +591,12 @@
         "results": "Games",
         "noGames": "No games found."
       },
+      "sort": {
+        "title": "Sort the list",
+        "chip": "Sort: {sort}",
+        "stale": "Least recent activity",
+        "fullest": "Most full"
+      },
       "tableLabel": "Open squads",
       "columns": {
         "squad": "Squad",

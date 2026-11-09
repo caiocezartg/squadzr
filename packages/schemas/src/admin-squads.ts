@@ -13,7 +13,22 @@ export const ADMIN_CLOSURE_REASON_MAX = 280
 // same length.
 export const ADMIN_SQUAD_SEARCH_MAX_LENGTH = 100
 
-// Query values arrive as strings: a blank search or an empty game filter means "no filter".
+// How the admin Squads list is ordered. Absent is `newest`; every order ends on the Squad id, so a page
+// never repeats or skips a row.
+//  - newest / oldest: by creation.
+//  - stale: least recent activity first, to find abandoned Squads.
+//  - fullest: highest members / max players ratio first, ties newest first.
+export const ADMIN_SQUAD_SORTS = ['newest', 'oldest', 'stale', 'fullest'] as const
+
+export const adminSquadSortSchema = z.enum(ADMIN_SQUAD_SORTS)
+
+export type AdminSquadSort = z.infer<typeof adminSquadSortSchema>
+
+function emptyAsAbsent<T extends z.ZodType>(schema: T) {
+  return z.union([z.literal('').transform(() => undefined), schema]).optional()
+}
+
+// Query values arrive as strings: a blank search or an empty filter means "no filter".
 export const adminSquadsQuerySchema = pageQuerySchema.extend({
   q: z
     .string()
@@ -22,6 +37,9 @@ export const adminSquadsQuerySchema = pageQuerySchema.extend({
     .transform((value) => (value === '' ? undefined : value))
     .optional(),
   gameId: z.union([z.literal('').transform(() => undefined), z.uuid()]).optional(),
+  sort: emptyAsAbsent(adminSquadSortSchema),
+  platform: emptyAsAbsent(platformSchema),
+  language: emptyAsAbsent(roomLanguageSchema),
 })
 
 export type AdminSquadsQuery = z.infer<typeof adminSquadsQuerySchema>

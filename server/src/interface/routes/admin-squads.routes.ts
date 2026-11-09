@@ -24,7 +24,7 @@ export async function adminSquadsRoutes(fastify: FastifyInstance): Promise<void>
       tags: ['Admin'],
       summary: 'List Open Squads',
       description:
-        'Returns the Open Squads (the validity rule of the Squad Limits) newest first, 20 per page. `q` matches the Squad name, its code or the host name, ignoring case; `gameId` keeps one Game. A page past the end gives no items and the real total. Requires the moderator, admin or owner role.',
+        'Returns the Open Squads (the validity rule of the Squad Limits), 20 per page. `sort` is `newest` (default), `oldest` (by creation), `stale` (least recent activity first) or `fullest` (highest members to slots ratio first, ties newest first); every order ends on the Squad id. `q` matches the Squad name, its code or the host name, ignoring case; `gameId`, `platform` and `language` each keep one value and combine. A page past the end gives no items and the real total. Requires the moderator, admin or owner role.',
       security: [{ session: [] }],
       querystring: adminSquadsQuerySchema,
       response: {

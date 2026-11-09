@@ -122,7 +122,17 @@ async function openRanked(user: ReturnType<typeof userEvent.setup>) {
 describe('admin squads list', () => {
   it('renders a page the cache already holds at once, with no loading state or read', () => {
     const queryClient = createTestQueryClient()
-    queryClient.setQueryData(adminSquadsQueryKey('', '', 1), squadsPage([ranked, flex]))
+    queryClient.setQueryData(
+      adminSquadsQueryKey({
+        search: '',
+        gameId: '',
+        platform: '',
+        language: '',
+        sort: 'newest',
+        page: 1,
+      }),
+      squadsPage([ranked, flex])
+    )
     renderSquads('/admin/squads', queryClient)
 
     expect(screen.getByRole('table', { name: 'Open squads' })).toBeInTheDocument()
@@ -240,6 +250,106 @@ describe('admin squads list', () => {
     await user.click(screen.getByRole('button', { name: 'Try again' }))
 
     expect(await screen.findByRole('table', { name: 'Open squads' })).toBeVisible()
+  })
+})
+
+describe('admin squads sort and filters', () => {
+  it.each([
+    ['Oldest', 'oldest'],
+    ['Least recent activity', 'stale'],
+    ['Most full', 'fullest'],
+  ])('sorts by %s from the first page', async (label, sort) => {
+    serveSquads([ranked, flex])
+    const { user, navigation } = renderSquads('/admin/squads?page=2')
+
+    await user.click(await screen.findByRole('button', { name: 'Sort: Newest' }))
+    await user.click(await screen.findByRole('button', { name: label }))
+
+    expect(navigation.history.location.search).toBe(`?sort=${sort}`)
+    expect(await screen.findByRole('button', { name: `Sort: ${label}` })).toBeVisible()
+    await expect.poll(() => listReads()).toContain(`page=1&sort=${sort}`)
+  })
+
+  it('writes no sort to the URL for the default, newest first', async () => {
+    serveSquads([ranked, flex])
+    const { user, navigation } = renderSquads('/admin/squads?sort=stale&page=2')
+
+    await user.click(await screen.findByRole('button', { name: 'Sort: Least recent activity' }))
+    await user.click(await screen.findByRole('button', { name: 'Newest' }))
+
+    expect(navigation.history.location.search).toBe('')
+    await expect.poll(() => listReads()).toEqual(['page=2&sort=stale', 'page=1'])
+  })
+
+  it('keeps one platform from the first page', async () => {
+    serveSquads([ranked, flex])
+    const { user, navigation } = renderSquads('/admin/squads?page=2')
+
+    await user.click(await screen.findByRole('button', { name: 'Filters' }))
+    await user.click(await screen.findByRole('radio', { name: 'PS5' }))
+
+    expect(navigation.history.location.search).toBe('?platform=ps5')
+    expect(screen.getByRole('radio', { name: 'PS5' })).toBeChecked()
+    await expect.poll(() => listReads()).toContain('page=1&platform=ps5')
+  })
+
+  it('keeps one Squad language from the first page', async () => {
+    serveSquads([ranked, flex])
+    const { user, navigation } = renderSquads('/admin/squads?page=2')
+
+    await user.click(await screen.findByRole('button', { name: 'Filters' }))
+    await user.click(await screen.findByRole('button', { name: 'EN-US' }))
+
+    expect(navigation.history.location.search).toBe('?language=en')
+    expect(screen.getByRole('button', { name: 'EN-US' })).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(() => listReads()).toContain('page=1&language=en')
+  })
+
+  it('shows the sort, platform and language the URL keeps', async () => {
+    serveSquads([ranked, flex])
+    const { user } = renderSquads('/admin/squads?platform=ps5&language=en&sort=fullest')
+
+    await user.click(await screen.findByRole('button', { name: 'Sort: Most full' }))
+    expect(await screen.findByRole('button', { name: 'Most full' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await user.keyboard('{Escape}')
+
+    await user.click(screen.getByRole('button', { name: 'Filters 2 active' }))
+    expect(await screen.findByRole('radio', { name: 'PS5' })).toBeChecked()
+    expect(screen.getByRole('button', { name: 'EN-US' })).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(() => listReads()).toEqual(['page=1&platform=ps5&language=en&sort=fullest'])
+  })
+
+  it('names each control', async () => {
+    serveSquads([ranked, flex])
+    const { user } = renderSquads('/admin/squads')
+
+    await user.click(await screen.findByRole('button', { name: 'Sort: Newest' }))
+    expect(await screen.findByRole('group', { name: 'Sort by' })).toBeVisible()
+    await user.keyboard('{Escape}')
+
+    await user.click(screen.getByRole('button', { name: 'Filters' }))
+    const [language] = await screen.findAllByRole('group', { name: 'Language' })
+    if (!language) throw new Error('The filters have no language switch')
+    expect(within(language).getByRole('button', { name: 'All' })).toBeVisible()
+    expect(screen.getByRole('radiogroup', { name: 'Platform' })).toBeVisible()
+  })
+
+  it('clears the search, Game, platform and language, and keeps the sort', async () => {
+    serveSquads([ranked, flex])
+    const { user, navigation } = renderSquads(
+      `/admin/squads?q=ranked&gameId=${gameCs2.id}&platform=ps5&language=en&sort=oldest&page=2`
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Clear all' }))
+
+    expect(navigation.history.location.search).toBe('?sort=oldest')
+    expect(screen.getByRole('searchbox', { name: 'Search squads' })).toHaveValue('')
+    expect(screen.getByRole('button', { name: 'Filters' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Clear all' })).not.toBeInTheDocument()
+    await expect.poll(() => listReads()).toContain('page=1&sort=oldest')
   })
 })
 
