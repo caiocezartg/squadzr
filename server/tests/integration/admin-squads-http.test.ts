@@ -10,7 +10,7 @@ import {
   type RoomDto,
   type UserNotificationDto,
 } from '@squadzr/schemas'
-import { roomMembers, userNotifications } from '@infrastructure/database/schema'
+import { roomMembers, rooms, userNotifications } from '@infrastructure/database/schema'
 import { signIn, type TestUser } from '@test/harness/auth'
 import {
   createRoom,
@@ -298,6 +298,18 @@ describe('GET /api/admin/squads', () => {
       ])
     })
 
+    it('puts a Squad with no slots last with sort=fullest instead of failing the list', async () => {
+      const [h1, h2, h3] = await threeHosts()
+      const halfFull = await squadWithMembers(h1, [h3], { maxPlayers: 4 })
+      const noSlots = await squadAt(h2, { created: 1 })
+      await server.app.db.update(rooms).set({ maxPlayers: 0 }).where(eq(rooms.id, noSlots.id))
+
+      const body = await list('?sort=fullest')
+
+      expect(ids(body)).toEqual([halfFull.id, noSlots.id])
+      expect(body.total).toBe(2)
+    })
+
     it.each([
       ['newest', (a: string, b: string) => (a < b ? 1 : -1)],
       ['oldest', (a: string, b: string) => (a < b ? -1 : 1)],
@@ -385,6 +397,18 @@ describe('GET /api/admin/squads', () => {
       expect(sortedIds(await list(`?platform=ps5&gameId=${otherGame.id}`))).toEqual([ps5En.id])
       expect((await list(`?language=pt-br&gameId=${otherGame.id}`)).total).toBe(0)
       expect((await list('?platform=pc&language=pt-br')).total).toBe(0)
+
+      // Distinct creation instants, so the oldest order does not hang on the insert timing.
+      await setRoomLifecycle(server, ps5Pt.id, {
+        createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+        lastActivityAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+        readyAt: null,
+      })
+      await setRoomLifecycle(server, ps5En.id, {
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+        lastActivityAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+        readyAt: null,
+      })
 
       const oldestFirst = await list('?platform=ps5&sort=oldest')
       expect(oldestFirst.items.map((item) => item.id)).toEqual([ps5Pt.id, ps5En.id])

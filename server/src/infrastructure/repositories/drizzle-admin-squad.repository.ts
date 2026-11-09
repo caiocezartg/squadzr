@@ -73,15 +73,18 @@ function searchCondition(search: string | undefined): SQL | undefined {
   return or(ilike(rooms.name, pattern), ilike(rooms.code, pattern), ilike(user.name, pattern))
 }
 
-/** Members over slots, as an exact decimal so equal ratios (2/4, 1/2) tie. */
-const fillRatio = sql`${memberCountColumn}::numeric / ${rooms.maxPlayers}`
+/**
+ * Members over slots, as an exact decimal so equal ratios (2/4, 1/2) tie. A Squad with no slots has no
+ * ratio (NULL) rather than failing the whole query on a division by zero.
+ */
+const fillRatio = sql`${memberCountColumn}::numeric / nullif(${rooms.maxPlayers}, 0)`
 
 // Each order ends on the Squad id, which no two rows share, so a page boundary never splits a tie.
 const ORDERINGS: Record<AdminSquadSort, readonly SQL[]> = {
   newest: [desc(rooms.createdAt), desc(rooms.id)],
   oldest: [asc(rooms.createdAt), asc(rooms.id)],
   stale: [asc(rooms.lastActivityAt), asc(rooms.id)],
-  fullest: [desc(fillRatio), desc(rooms.createdAt), desc(rooms.id)],
+  fullest: [sql`${fillRatio} desc nulls last`, desc(rooms.createdAt), desc(rooms.id)],
 }
 
 export class DrizzleAdminSquadRepository implements IAdminSquadRepository {
@@ -112,6 +115,7 @@ export class DrizzleAdminSquadRepository implements IAdminSquadRepository {
       this.db
         .select({ total: count() })
         .from(rooms)
+        .innerJoin(games, eq(games.id, rooms.gameId))
         .innerJoin(user, eq(user.id, rooms.hostId))
         .where(where),
     ])

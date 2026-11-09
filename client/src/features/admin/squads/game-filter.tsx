@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Gamepad2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Popover } from '@/components/ds/popover'
 import { FilterChip } from './filter-chip'
@@ -48,6 +49,7 @@ export function GameFilter({ gameId, knownName, onChange }: GameFilterProps) {
           open={open}
           active={gameId !== ''}
           label={t('chip', { game: name ?? t('oneGame') })}
+          leading={<Gamepad2 aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.4} />}
         />
       }
     >

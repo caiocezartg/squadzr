@@ -351,6 +351,36 @@ describe('admin squads sort and filters', () => {
     expect(screen.queryByRole('button', { name: 'Clear all' })).not.toBeInTheDocument()
     await expect.poll(() => listReads()).toContain('page=1&sort=oldest')
   })
+
+  it('falls back to the defaults for a platform, language and sort the URL cannot hold', async () => {
+    serveSquads([ranked, flex])
+    renderSquads('/admin/squads?platform=atari&language=fr&sort=popular')
+
+    expect(await screen.findByRole('button', { name: 'Sort: Newest' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Filters' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: /Filters \d+ active/ })).not.toBeInTheDocument()
+    await expect.poll(() => listReads()).toEqual(['page=1'])
+  })
+
+  it('keeps the platform, language and sort of the URL when it changes page', async () => {
+    const many = Array.from({ length: PAGE_SIZE }, (_, index) => ({
+      ...ranked,
+      id: `a1b2c3d4-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      name: `Squad ${index}`,
+    }))
+    onHttp('GET', '/api/admin/squads', ({ query }) =>
+      httpOk({ ...squadsPage(many, Number(query.get('page'))), total: PAGE_SIZE * 2 })
+    )
+    const { user, navigation } = renderSquads('/admin/squads?platform=ps5&language=en&sort=fullest')
+
+    await screen.findByRole('table', { name: 'Open squads' })
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
+
+    expect(new URLSearchParams(navigation.history.location.search).toString()).toBe(
+      'platform=ps5&language=en&sort=fullest&page=2'
+    )
+    await expect.poll(() => listReads()).toContain('page=2&platform=ps5&language=en&sort=fullest')
+  })
 })
 
 describe('admin squad side panel', () => {
