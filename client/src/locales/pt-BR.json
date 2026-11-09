@@ -516,10 +516,8 @@
       },
       "stats": {
         "online": "Usuários online",
-        "onlineNow": "Conectados agora",
         "users": "Usuários cadastrados",
         "open": "Squads abertos",
-        "openNow": "Abertos agora",
         "completed": "Squads completados",
         "inPeriod": "{count, plural, =0 {<figure>0</figure> no período} other {<figure>+#</figure> no período}}",
         "peak": "Pico no período: <figure>{value}</figure>"

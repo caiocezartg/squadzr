@@ -57,7 +57,7 @@ export class GetAdminOverviewUseCase implements IGetAdminOverviewUseCase {
 
   async execute(input: GetAdminOverviewInput): Promise<GetAdminOverviewOutput> {
     const { period } = input
-    // One read: the live count and both series must agree on what today is.
+    // One read: the live count and the four series must agree on what today is.
     const now = this.clock.now()
     const [totalUsers, openSquads, completedSquads, completed, signups, online, open, recentAudit] =
       await Promise.all([

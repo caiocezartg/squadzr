@@ -298,7 +298,7 @@ describe('the peaks of the sampled metrics', () => {
   }
 
   /**
-   * Seven samples across the periods (Sao Paulo days in brackets):
+   * Six samples across the periods (Sao Paulo days in brackets):
    *   Oct 29 12:00Z [Oct 29]  0 online, 0 open
    *   Nov  1 12:00Z [Nov 1]   1 online, 0 open
    *   Nov  4 12:00Z [Nov 4]   2 online, 1 open

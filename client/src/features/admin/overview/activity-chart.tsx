@@ -52,12 +52,14 @@ function CursorDot({
  * day between such gaps, which has no line to be part of.
  */
 function SeriesLine({
+  name,
   values,
   max,
   stroke,
   width,
   dashed = false,
 }: {
+  readonly name: 'current' | 'previous'
   readonly values: readonly (number | null)[]
   readonly max: number
   readonly stroke: string
@@ -82,7 +84,7 @@ function SeriesLine({
       )}
       {dots && (
         <path
-          data-testid="activity-dots"
+          data-testid={`activity-dots-${name}`}
           d={dots}
           fill="none"
           stroke={stroke}
@@ -152,6 +154,7 @@ export function ActivityChart({ rows, period, metric }: ActivityChartProps) {
           className="motion-safe:animate-line-draw pointer-events-none absolute inset-0 block h-60 w-full overflow-visible"
         >
           <SeriesLine
+            name="previous"
             values={rows.map((row) => row.previous)}
             max={max}
             stroke="var(--color-muted)"
@@ -159,6 +162,7 @@ export function ActivityChart({ rows, period, metric }: ActivityChartProps) {
             dashed
           />
           <SeriesLine
+            name="current"
             values={rows.map((row) => row.current)}
             max={max}
             stroke="var(--color-mint)"

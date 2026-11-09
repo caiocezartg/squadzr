@@ -398,11 +398,11 @@ describe('admin overview', () => {
     renderOverview('/admin')
 
     await screen.findByText('Online users', { selector: 'dt' })
-    expect(tile('Online users')).toHaveTextContent('Connected right now')
+    expect(tile('Online users')).not.toHaveTextContent('Connected right now')
     expect(tile('Online users')).toHaveTextContent('Peak in the period: 488')
     expect(tile('Online users')).toHaveTextContent('Up 9%')
     expect(within(tile('Online users')).getByText('488', { selector: 'strong' })).toBeVisible()
-    expect(tile('Open squads')).toHaveTextContent('Open right now')
+    expect(tile('Open squads')).not.toHaveTextContent('Open right now')
     expect(tile('Open squads')).toHaveTextContent('Peak in the period: 261')
     expect(tile('Open squads')).toHaveTextContent('Down 4%')
     expect(within(tile('Open squads')).getByText('vs 30 previous days')).toHaveClass(
@@ -505,7 +505,9 @@ describe('admin overview', () => {
     expect(paths).toHaveLength(2)
     expect(paths[0]?.match(/M/g)).toHaveLength(1)
     expect(paths[0]?.match(/L/g)).toHaveLength(1)
-    expect(screen.getByTestId('activity-dots').getAttribute('d')?.match(/h0/g)).toHaveLength(2)
+    expect(
+      screen.getByTestId('activity-dots-current').getAttribute('d')?.match(/h0/g)
+    ).toHaveLength(2)
     expect(screen.queryByText('No data in this period yet.')).not.toBeInTheDocument()
   })
 

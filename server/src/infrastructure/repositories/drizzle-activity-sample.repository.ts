@@ -1,4 +1,4 @@
-import { between, max, sql } from 'drizzle-orm'
+import { and, gte, lt, max, sql } from 'drizzle-orm'
 import type {
   ActivitySample,
   IActivitySampleRepository,
@@ -28,10 +28,14 @@ export class DrizzleActivitySampleRepository implements IActivitySampleRepositor
   ): Promise<Map<string, number>> {
     const day = sql<string>`to_char(${activitySamples.sampledAt} at time zone ${timeZone}, ${DAY_FORMAT})`
     const column = metric === 'online' ? activitySamples.onlineUsers : activitySamples.openSquads
+    // The filter compares the raw instant against the zone's day boundaries, so the `sampled_at` index
+    // serves it; the day expression stays in the select list and the grouping.
+    const start = sql`(${fromDay}::date)::timestamp at time zone ${timeZone}`
+    const end = sql`(${toDay}::date + 1)::timestamp at time zone ${timeZone}`
     const rows = await this.db
       .select({ day, peak: max(column) })
       .from(activitySamples)
-      .where(between(day, fromDay, toDay))
+      .where(and(gte(activitySamples.sampledAt, start), lt(activitySamples.sampledAt, end)))
       // Grouped by position: the day expression carries its zone as a parameter, which Postgres does
       // not match against the select list's copy of it.
       .groupBy(sql`1`)
