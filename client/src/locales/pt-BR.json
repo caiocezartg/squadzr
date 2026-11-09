@@ -554,7 +554,8 @@
         },
         "legend": {
           "current": "{count, plural, one {Último dia} other {Últimos # dias}}",
-          "previous": "{count, plural, one {Dia anterior} other {# dias anteriores}}"
+          "previous": "{count, plural, one {Dia anterior} other {# dias anteriores}}",
+          "noData": "Sem dados"
         },
         "current": "Atual",
         "previous": "Período anterior",

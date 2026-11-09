@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  bridgePath,
   continuousSegments,
   dotPath,
   hasNoData,
   labelledIndexes,
   linePath,
+  noDataBands,
+  nullRuns,
   yStep,
 } from './chart-scale'
 
@@ -51,6 +54,32 @@ describe('chart scale', () => {
     expect(linePath([4, null, 4], 4)).toBe('')
     expect(dotPath([4, null, 4], 4)).toBe('M0.0 12.0 h0 M1000.0 12.0 h0')
     expect(dotPath([4, 4, null], 4)).toBe('')
+  })
+
+  it('finds the runs of consecutive days with no data', () => {
+    expect(nullRuns([null, 1, null, null, 2, null])).toEqual([
+      { start: 0, end: 0 },
+      { start: 2, end: 3 },
+      { start: 5, end: 5 },
+    ])
+    expect(nullRuns([1, 2])).toEqual([])
+  })
+
+  it('bridges a gap between two days with data, never a gap at either end', () => {
+    expect(bridgePath([4, null, null, 4, 4], 4)).toBe('M0.0 12.0 L750.0 12.0')
+    expect(bridgePath([null, 4, null, 4, null], 4)).toBe('M250.0 12.0 L750.0 12.0')
+    expect(bridgePath([4, 4, null], 4)).toBe('')
+    expect(bridgePath([null, null], 4)).toBe('')
+  })
+
+  it('bands each run of days with no data, half a day wide on each side, inside the plot', () => {
+    expect(noDataBands([4, null, null, 4, 4])).toEqual([{ left: 0.125, width: 0.5 }])
+    expect(noDataBands([null, 4, 4, 4, null])).toEqual([
+      { left: 0, width: 0.125 },
+      { left: 0.875, width: 0.125 },
+    ])
+    expect(noDataBands([null])).toEqual([{ left: 0, width: 1 }])
+    expect(noDataBands([4, 4])).toEqual([])
   })
 
   it('tells a pair of series with no data on any day', () => {

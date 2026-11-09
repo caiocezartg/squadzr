@@ -500,7 +500,9 @@ describe('admin overview', () => {
     await screen.findByText('Last 7 days')
 
     const lines = screen.getByTestId('activity-lines')
-    const paths = [...lines.querySelectorAll('path')].map((path) => path.getAttribute('d') ?? '')
+    const paths = [...lines.querySelectorAll('path:not([data-testid^="activity-bridges"])')].map(
+      (path) => path.getAttribute('d') ?? ''
+    )
     // The previous period has no data: the current line's two-day run, and its two lone days.
     expect(paths).toHaveLength(2)
     expect(paths[0]?.match(/M/g)).toHaveLength(1)
@@ -509,6 +511,38 @@ describe('admin overview', () => {
       screen.getByTestId('activity-dots-current').getAttribute('d')?.match(/h0/g)
     ).toHaveLength(2)
     expect(screen.queryByText('No data in this period yet.')).not.toBeInTheDocument()
+  })
+
+  it('hatches the days with no data, bridges each inner gap and names the hatch in the legend', async () => {
+    serveOverview()
+    onHttp('GET', '/api/admin/activity', ({ query }) =>
+      httpOk(
+        sampledSeries(query.get('metric') as ActivityMetric, [null, 5, null, 7, null, null, 2])
+      )
+    )
+    renderOverview('/admin?period=7')
+    await screen.findByText('Last 7 days')
+
+    // Three runs of days with no data, each a band; the leading one has no day before it to bridge from.
+    expect(screen.getByTestId('activity-no-data').querySelectorAll('rect')).toHaveLength(3)
+    expect(
+      screen.getByTestId('activity-bridges-current').getAttribute('d')?.match(/M/g)
+    ).toHaveLength(2)
+    expect(screen.queryByTestId('activity-bridges-previous')).not.toBeInTheDocument()
+    expect(screen.getByText('No data', { selector: 'li' })).toBeVisible()
+  })
+
+  it('leaves a counted series without bands, bridges or the no-data legend', async () => {
+    serveOverview()
+    onHttp('GET', '/api/admin/activity', ({ query }) =>
+      httpOk(activity(query.get('metric') as ActivityMetric, 7))
+    )
+    renderOverview('/admin?period=7')
+    await screen.findByText('Last 7 days')
+
+    expect(screen.queryByTestId('activity-no-data')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('activity-bridges-current')).not.toBeInTheDocument()
+    expect(screen.queryByText('No data', { selector: 'li' })).not.toBeInTheDocument()
   })
 
   it('says so over an empty grid when no day of either period has data', async () => {

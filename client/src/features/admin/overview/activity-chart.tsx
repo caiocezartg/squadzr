@@ -1,15 +1,18 @@
 'use client'
 
+import { useId } from 'react'
 import { useTranslations } from 'next-intl'
 import type { ActivityMetric, ActivityRowDto } from '@squadzr/schemas'
 import { ActivityTooltip } from './activity-tooltip'
 import { XAxisLabels, YAxisLabels } from './chart-axes'
 import {
+  bridgePath,
   CHART_HEIGHT,
   CHART_WIDTH,
   dotPath,
   hasNoData,
   linePath,
+  noDataBands,
   xAt,
   yAt,
   Y_STEPS,
@@ -48,8 +51,48 @@ function CursorDot({
 }
 
 /**
- * One series drawn on the chart: its line, broken at every day with no data, and a dot for each lone
- * day between such gaps, which has no line to be part of.
+ * The hatched bands behind the grid that mark the current period's days with no data, in pixel space
+ * so the hatch keeps its angle at any width.
+ */
+function NoDataBands({ values }: { readonly values: readonly (number | null)[] }) {
+  const hatch = useId()
+  const bands = noDataBands(values)
+  if (bands.length === 0) return null
+
+  return (
+    <svg
+      data-testid="activity-no-data"
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 block h-60 w-full"
+    >
+      <defs>
+        <pattern
+          id={hatch}
+          width={6}
+          height={6}
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45)"
+        >
+          <line x1={0} y1={0} x2={0} y2={6} stroke="var(--color-track)" strokeWidth={2} />
+        </pattern>
+      </defs>
+      {bands.map((band) => (
+        <rect
+          key={band.left}
+          x={`${band.left * 100}%`}
+          width={`${band.width * 100}%`}
+          y={0}
+          height="100%"
+          fill={`url(#${hatch})`}
+        />
+      ))}
+    </svg>
+  )
+}
+
+/**
+ * One series drawn on the chart: its line, broken at every day with no data, a dot for each lone day
+ * between such gaps, and a faint dotted bridge over each gap that has a day with data on both sides.
  */
 function SeriesLine({
   name,
@@ -68,9 +111,23 @@ function SeriesLine({
 }) {
   const line = linePath(values, max)
   const dots = dotPath(values, max)
+  const bridges = bridgePath(values, max)
 
   return (
     <>
+      {bridges && (
+        <path
+          data-testid={`activity-bridges-${name}`}
+          d={bridges}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={width}
+          strokeDasharray="0 5"
+          strokeLinecap="round"
+          strokeOpacity={0.55}
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
       {line && (
         <path
           d={line}
@@ -99,8 +156,9 @@ function SeriesLine({
 
 /**
  * The Activity chart (reference, Admin panel, Overview), drawn by hand in SVG: the period in a 2px mint
- * line over the previous period's dashed muted one, on a five-line grid. A day with no data is a gap in
- * its line, never a zero; with no data on any day the chart says so over an empty grid. Pointing at a day, touching it
+ * line over the previous period's dashed muted one, on a five-line grid. A day with no data is never a
+ * zero: the current period's are hatched bands, and each line bridges them with faint dots; with no data
+ * on any day the chart says so over an empty grid. Pointing at a day, touching it
  * or focusing the chart and using the arrow keys stands a crosshair on it with a card of both values.
  * The same days are in the table view, which is how a screen reader reads them. The lines draw in from
  * the left over the grid whenever a series lands, never holding the chart back.
@@ -123,11 +181,12 @@ export function ActivityChart({ rows, period, metric }: ActivityChartProps) {
         {...handlers}
         className="focus-visible:outline-text relative h-60 touch-pan-y focus-visible:outline-2 focus-visible:outline-offset-4"
       >
+        <NoDataBands values={rows.map((row) => row.current)} />
         <svg
           viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
           preserveAspectRatio="none"
           aria-hidden="true"
-          className="block h-60 w-full overflow-visible"
+          className="relative block h-60 w-full overflow-visible"
         >
           {GRID_LEVELS.map((level) => {
             const y = yAt(level * step, max)

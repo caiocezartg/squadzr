@@ -8,7 +8,7 @@ import { ActivityChart } from './activity-chart'
 import { isPeakMetric, seriesSummary } from './activity-summary'
 import { ActivityTable } from './activity-table'
 import { ChangeBadge } from './change-badge'
-import { CurrentSwatch, PreviousSwatch } from './series-swatch'
+import { CurrentSwatch, NoDataSwatch, PreviousSwatch } from './series-swatch'
 
 interface ActivitySeriesProps {
   readonly data: ActivityResponse
@@ -37,7 +37,8 @@ function SummaryFigure({
 
 /**
  * One metric's series: its total over the period (or, for a sampled metric, its peak) with the change
- * against the previous period, the legend naming both lines, and the chart or the table of the days.
+ * against the previous period, the legend naming both lines (and the hatch, when a day has no data),
+ * and the chart or the table of the days.
  */
 export function ActivitySeries({ data, view, caption, busy }: ActivitySeriesProps) {
   const t = useTranslations('admin.overview.activity')
@@ -68,6 +69,12 @@ export function ActivitySeries({ data, view, caption, busy }: ActivitySeriesProp
             <PreviousSwatch className="w-4.5" />
             {t('legend.previous', { count: data.period })}
           </li>
+          {data.rows.some((row) => row.current === null) && (
+            <li className="flex items-center gap-2">
+              <NoDataSwatch className="w-4.5" />
+              {t('legend.noData')}
+            </li>
+          )}
         </ul>
       </div>
       {view === 'chart' ? (
