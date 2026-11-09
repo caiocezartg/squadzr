@@ -1,5 +1,5 @@
 /**
- * The admin panel (#117): its shell (the five sections, the current one, the "Squad Board" way out, the language switch) and the
+ * The admin panel (#117): its shell (the five sections, the current one, the "All squads" way out, the language switch) and the
  * Audit page (newest-first entries with their actor, action, target and reason, the pages held in the
  * URL, the empty and failed reads). The route's gate is covered in lib/server/admin-gate.spec.ts; the
  * panel's look is checked in the browser.
@@ -227,11 +227,11 @@ describe('admin shell', () => {
   it('leads to the Squad Board below the sections and keeps the account at the foot', () => {
     renderAdmin('/admin')
     const sidebar = within(screen.getByRole('complementary', { name: 'Admin menu' }))
-    const board = sidebar.getByRole('link', { name: 'Squad Board' })
+    const board = sidebar.getByRole('link', { name: 'All squads' })
 
     expect(board).toHaveAttribute('href', '/squads')
     expect(board).not.toHaveAttribute('aria-current')
-    expect(within(sections()).queryByRole('link', { name: 'Squad Board' })).not.toBeInTheDocument()
+    expect(within(sections()).queryByRole('link', { name: 'All squads' })).not.toBeInTheDocument()
     expect(sidebar.queryByRole('link', { name: 'Back to Squadzr' })).not.toBeInTheDocument()
     expect(sidebar.getByRole('button', { name: 'Caio' })).toBeInTheDocument()
   })
