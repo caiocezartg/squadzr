@@ -120,6 +120,15 @@ async function tableRows(): Promise<HTMLElement[]> {
 }
 
 describe('admin catalog run history', () => {
+  it('labels a manual run whose admin is unknown as Manual, never as Scheduled', async () => {
+    serveRuns([{ ...failed, id: 'run-unknown-admin', requestedBy: null }])
+    renderCatalog()
+
+    const [row] = await tableRows()
+    expect(row).toHaveTextContent('Manual')
+    expect(row).not.toHaveTextContent('Scheduled')
+  })
+
   it('lists each run with its origin, status, duration and counts', async () => {
     serveRuns([succeeded, failed, interrupted, queued])
     renderCatalog()

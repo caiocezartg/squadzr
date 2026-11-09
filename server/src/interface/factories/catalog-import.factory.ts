@@ -41,7 +41,8 @@ export function createCatalogImportUseCase(
 export function createCatalogImportRunRecorder(
   db: Database,
   clock: Clock,
-  source: IGameCatalogSource
+  source: IGameCatalogSource,
+  onHeartbeatError?: (error: unknown) => void
 ): CatalogImportRunRecorder {
   return new CatalogImportRunRecorder(
     new DrizzleCatalogImportRunRepository(db),
@@ -53,7 +54,8 @@ export function createCatalogImportRunRecorder(
       staleHeartbeatMs: CATALOG_IMPORT_RUN.STALE_HEARTBEAT_MS,
       staleRequestedMs: CATALOG_IMPORT_RUN.STALE_REQUESTED_MS,
       errorMessageMaxLength: CATALOG_IMPORT_RUN.ERROR_MESSAGE_MAX_LENGTH,
-    }
+    },
+    onHeartbeatError
   )
 }
 

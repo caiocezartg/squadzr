@@ -787,6 +787,7 @@
         "listedGames": "Listed Games"
       },
       "scheduled": "Scheduled",
+      "manual": "Manual",
       "statuses": {
         "requested": "Queued",
         "running": "Running",

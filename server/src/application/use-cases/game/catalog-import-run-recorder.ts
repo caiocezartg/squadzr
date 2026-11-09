@@ -45,7 +45,7 @@ export interface ICatalogImportRunRecorder {
 
 /**
  * Runs one Catalog Import and records it as a Catalog Import Run. It frees the slot of an abandoned run,
- * claims the slot, runs the import with a heartbeat, reads the Listed Games count afterwards (also after a
+ * claims the slot, keeps a heartbeat until the outcome is recorded, runs the import, reads the Listed Games count afterwards (also after a
  * safety stop or a failure) and records the outcome. Every run-row write is its own statement on the run
  * repository, outside the import's transaction, so the import's rollback never erases the outcome.
  */
@@ -55,7 +55,9 @@ export class CatalogImportRunRecorder implements ICatalogImportRunRecorder {
     private readonly gameRepository: IGameRepository,
     private readonly importUseCase: ICatalogImportUseCase,
     private readonly clock: Clock,
-    private readonly config: CatalogImportRunRecorderConfig
+    private readonly config: CatalogImportRunRecorderConfig,
+    /** Told when a heartbeat cannot be written; the run goes on, staleness handles a dead one. */
+    private readonly onHeartbeatError: (error: unknown) => void = () => undefined
   ) {}
 
   async run(input: RecordCatalogImportRunInput): Promise<RecordedCatalogImportRun> {
@@ -75,14 +77,28 @@ export class CatalogImportRunRecorder implements ICatalogImportRunRecorder {
     })
     if (!run) return { kind: 'busy' }
 
-    const result = await this.executeImport(run.id, input)
+    // The heartbeat covers the whole run, down to the outcome write, so a slow post-import step
+    // cannot let another claimer mark this run interrupted.
+    const stopHeartbeat = this.startHeartbeat(run.id)
+    try {
+      return await this.runAndRecord(run.id, input)
+    } finally {
+      stopHeartbeat()
+    }
+  }
+
+  private async runAndRecord(
+    runId: string,
+    input: RecordCatalogImportRunInput
+  ): Promise<RecordedCatalogImportRun> {
+    const result = await this.executeImport(input)
     const listedGames = await this.countListedGames()
     const finishedAt = this.clock.now()
 
     if (result.kind === 'succeeded') {
       const { created, updated, delisted, relisted, received, dropped, invalid } = result.summary
       await this.runRepository.finish(
-        run.id,
+        runId,
         {
           status: 'succeeded',
           summary: { created, updated, delisted, relisted, received, dropped, invalid },
@@ -91,24 +107,20 @@ export class CatalogImportRunRecorder implements ICatalogImportRunRecorder {
         finishedAt
       )
 
-      return { ...result, runId: run.id }
+      return { ...result, runId }
     }
 
     await this.runRepository.finish(
-      run.id,
+      runId,
       { status: result.kind, errorMessage: this.toMessage(result.error), listedGames },
       finishedAt
     )
 
-    return { ...result, runId: run.id }
+    return { ...result, runId }
   }
 
-  /** Runs the import under a heartbeat; whatever it throws becomes a result, never an exception. */
-  private async executeImport(
-    runId: string,
-    input: RecordCatalogImportRunInput
-  ): Promise<ImportResult> {
-    const stopHeartbeat = this.startHeartbeat(runId)
+  /** Whatever the import throws becomes a result, never an exception. */
+  private async executeImport(input: RecordCatalogImportRunInput): Promise<ImportResult> {
     try {
       const summary = await this.importUseCase.execute({
         overrideFractionCheck: input.overrideFractionCheck ?? false,
@@ -118,15 +130,13 @@ export class CatalogImportRunRecorder implements ICatalogImportRunRecorder {
       return error instanceof CatalogImportSafetyError
         ? { kind: 'safety_stop', error }
         : { kind: 'failed', error }
-    } finally {
-      stopHeartbeat()
     }
   }
 
-  /** A heartbeat that cannot be written must not take the import down; staleness handles a dead run. */
+  /** A heartbeat that cannot be written must not take the import down; it is reported, not thrown. */
   private startHeartbeat(runId: string): () => void {
     const timer = setInterval(() => {
-      this.runRepository.heartbeat(runId, this.clock.now()).catch(() => undefined)
+      this.runRepository.heartbeat(runId, this.clock.now()).catch(this.onHeartbeatError)
     }, this.config.heartbeatIntervalMs)
 
     return () => clearInterval(timer)

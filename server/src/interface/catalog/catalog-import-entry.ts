@@ -11,6 +11,8 @@ export interface CatalogImportLogger {
   /** The slot was taken by another run: nothing ran and nothing was recorded. */
   skipped(): void
   error(error: unknown): void
+  /** A heartbeat could not be written; the run goes on and staleness handles a dead one. */
+  heartbeatFailed(error: unknown): void
 }
 
 export interface CatalogImportEntryOptions {
@@ -25,6 +27,7 @@ const consoleLogger: CatalogImportLogger = {
   info: (summary) => console.log(JSON.stringify(summary)),
   skipped: () => console.log('Catalog Import skipped: another run is requested or running'),
   error: (error) => console.error('Catalog Import failed:', error),
+  heartbeatFailed: (error) => console.warn('Catalog Import heartbeat could not be written:', error),
 }
 
 /**
@@ -44,7 +47,8 @@ export async function runCatalogImport(options: CatalogImportEntryOptions): Prom
     const recorder = createCatalogImportRunRecorder(
       db,
       options.clock ?? new SystemClock(),
-      options.source
+      options.source,
+      (error) => logger.heartbeatFailed(error)
     )
     const result = await recorder.run({
       trigger: 'scheduled',

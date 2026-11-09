@@ -1,9 +1,21 @@
 import { afterEach, beforeEach, describe, expect, inject, it } from 'vitest'
 import pg from 'pg'
-import type { CatalogImportSummary } from '@application/use-cases/game/catalog-import.use-case'
+import {
+  CatalogImportUseCase,
+  type CatalogImportSummary,
+} from '@application/use-cases/game/catalog-import.use-case'
+import {
+  CatalogImportRunRecorder,
+  type RecordedCatalogImportRun,
+} from '@application/use-cases/game/catalog-import-run-recorder'
+import { CATALOG_IMPORT_RUN } from '@config/constants'
+import { createDatabase } from '@infrastructure/database/drizzle'
+import { DrizzleCatalogImportRunRepository } from '@infrastructure/repositories/drizzle-catalog-import-run.repository'
+import { DrizzleGameRepository } from '@infrastructure/repositories/drizzle-game.repository'
 import { runCatalogImport, type CatalogImportLogger } from '@interface/catalog/catalog-import-entry'
 import { createCandidate, FakeGameCatalogSource } from '@test/harness/game-catalog-source'
 import { FakeClock } from '@test/harness/clock'
+import { failAtRelist } from '@test/harness/failing-game-repository'
 import {
   createIsolatedDatabase,
   type IsolatedDatabase,
@@ -77,6 +89,7 @@ function captureLogger(): {
       info: (summary) => summaries.push(summary),
       skipped: () => skipped.push(1),
       error: (error) => errors.push(error),
+      heartbeatFailed: () => undefined,
     },
   }
 }
@@ -92,6 +105,11 @@ async function runs(): Promise<RunRow[]> {
   const { rows } = await client.query<RunRow>(
     'SELECT * FROM "catalog_import_runs" ORDER BY "requested_at", "id"'
   )
+  return rows
+}
+
+async function catalogRows() {
+  const { rows } = await client.query('SELECT * FROM "games" ORDER BY "igdb_id"')
   return rows
 }
 
@@ -190,6 +208,57 @@ describe('a cron run against the database', () => {
     ])
   })
 
+  it('records a failure after the import already wrote, with the catalog rolled back', async () => {
+    source.withCandidates(candidates(12))
+    await run({ logger: captureLogger().logger })
+    const before = await catalogRows()
+    // 7000 is updated and 7001 is absent from the candidates, so it is delisted; the relist then
+    // fails inside the transaction, after both writes.
+    source.withCandidates([
+      createCandidate({ igdbId: 7000, name: 'Game 7000 updated', slug: 'game-7000-updated' }),
+      createCandidate({ igdbId: 7100 }),
+    ])
+    const recorded = captureLogger()
+    const { db, close } = createDatabase(database.url)
+
+    let result: RecordedCatalogImportRun
+    try {
+      const recorder = new CatalogImportRunRecorder(
+        new DrizzleCatalogImportRunRepository(db),
+        new DrizzleGameRepository(db, clock),
+        new CatalogImportUseCase(
+          source,
+          failAtRelist(new DrizzleGameRepository(db, clock)),
+          [],
+          { minimumRetainedFraction: 0.1, minimumCandidates: 1 },
+          new Map()
+        ),
+        clock,
+        {
+          heartbeatIntervalMs: CATALOG_IMPORT_RUN.HEARTBEAT_INTERVAL_MS,
+          staleHeartbeatMs: CATALOG_IMPORT_RUN.STALE_HEARTBEAT_MS,
+          staleRequestedMs: CATALOG_IMPORT_RUN.STALE_REQUESTED_MS,
+          errorMessageMaxLength: CATALOG_IMPORT_RUN.ERROR_MESSAGE_MAX_LENGTH,
+        },
+        recorded.logger.heartbeatFailed
+      )
+      clock.advance(MINUTE)
+      result = await recorder.run({ trigger: 'scheduled', requestedBy: null })
+    } finally {
+      await close()
+    }
+
+    expect(result).toMatchObject({ kind: 'failed' })
+    expect(await catalogRows()).toEqual(before)
+    const failedRun = (await runs()).at(-1)
+    expect(failedRun).toMatchObject({
+      status: 'failed',
+      error_message: 'relist failed after delist',
+      listed_games: 12,
+      created: null,
+    })
+  })
+
   it('keeps the fraction-check override working for the cron', async () => {
     source.withCandidates(candidates(40))
     await run({ logger: captureLogger().logger })
@@ -269,6 +338,41 @@ describe('a cron run against the database', () => {
     const rows = await runs()
     expect(rows.find((row) => row.id === staleId)?.status).toBe('interrupted')
     expect(rows.at(-1)).toMatchObject({ trigger: 'scheduled', status: 'succeeded' })
+  })
+
+  it('marks a running run with no heartbeat ever written interrupted by its start instant', async () => {
+    source.withCandidates(candidates(12))
+    const staleId = await insertRun('running', {
+      requestedAt: new Date(NOW.getTime() - 10 * MINUTE),
+      startedAt: new Date(NOW.getTime() - 5 * MINUTE),
+      heartbeatAt: null,
+    })
+
+    const exitCode = await run({ logger: captureLogger().logger })
+
+    expect(exitCode).toBe(0)
+    const rows = await runs()
+    expect(rows.find((row) => row.id === staleId)).toMatchObject({
+      status: 'interrupted',
+      finished_at: NOW,
+    })
+    expect(rows.at(-1)).toMatchObject({ trigger: 'scheduled', status: 'succeeded' })
+  })
+
+  it('keeps a running run with no heartbeat that started less than 2 minutes ago', async () => {
+    source.withCandidates(candidates(12))
+    await insertRun('running', {
+      requestedAt: new Date(NOW.getTime() - 5 * MINUTE),
+      startedAt: new Date(NOW.getTime() - MINUTE),
+      heartbeatAt: null,
+    })
+    const recorded = captureLogger()
+
+    const exitCode = await run({ logger: recorded.logger })
+
+    expect(exitCode).toBe(0)
+    expect(recorded.skipped).toHaveLength(1)
+    expect((await runs()).map((row) => row.status)).toEqual(['running'])
   })
 
   it('keeps a running run whose heartbeat is exactly 2 minutes old', async () => {

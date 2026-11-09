@@ -1,4 +1,4 @@
-import { and, count, desc, eq, lt, or } from 'drizzle-orm'
+import { and, count, desc, eq, lt, or, sql } from 'drizzle-orm'
 import type {
   CatalogImportRun,
   CatalogImportRunOutcome,
@@ -62,7 +62,10 @@ export class DrizzleCatalogImportRunRepository implements ICatalogImportRunRepos
         or(
           and(
             eq(catalogImportRuns.status, 'running'),
-            lt(catalogImportRuns.heartbeatAt, staleness.heartbeatBefore)
+            lt(
+              sql`coalesce(${catalogImportRuns.heartbeatAt}, ${catalogImportRuns.startedAt}, ${catalogImportRuns.requestedAt})`,
+              staleness.heartbeatBefore
+            )
           ),
           and(
             eq(catalogImportRuns.status, 'requested'),

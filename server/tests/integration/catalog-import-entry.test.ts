@@ -48,6 +48,7 @@ function captureLogger(): {
       info: (summary) => summaries.push(summary),
       skipped: () => undefined,
       error: (error) => errors.push(error),
+      heartbeatFailed: () => undefined,
     },
   }
 }

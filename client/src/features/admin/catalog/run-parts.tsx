@@ -37,12 +37,15 @@ export function RunStatusPill({ status }: { readonly status: CatalogImportRunSta
   )
 }
 
-/** Who started the run: "Scheduled" for the daily cron, the admin's name for a manual run. */
+/** Who started the run: "Scheduled" for the daily cron; for a manual run the admin's name, or "Manual" when it is unknown. */
 export function RunOrigin({ run }: { readonly run: CatalogImportRunDto }) {
   const t = useTranslations('admin.catalog')
 
-  if (run.trigger === 'scheduled' || run.requestedBy === null) {
+  if (run.trigger === 'scheduled') {
     return <span className="text-text-3">{t('scheduled')}</span>
+  }
+  if (run.requestedBy === null) {
+    return <span className="text-text-3">{t('manual')}</span>
   }
   return <span className="text-text-2 break-words">{run.requestedBy.name}</span>
 }

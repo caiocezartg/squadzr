@@ -187,7 +187,65 @@ describe('CatalogImportRunRecorder', () => {
     expect(runs.heartbeat).toHaveBeenCalledTimes(2)
   })
 
-  it('survives a heartbeat that cannot be written', async () => {
+  it('keeps the heartbeat running until the outcome is recorded, then stops it', async () => {
+    vi.useFakeTimers()
+    let finishCount: (count: number) => void = () => undefined
+    games.countListed.mockReturnValue(
+      new Promise<number>((resolve) => {
+        finishCount = resolve
+      })
+    )
+
+    const running = recorder.run({ trigger: 'scheduled', requestedBy: null })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(execute).toHaveBeenCalled()
+    // The import is over; the post-import count is slow.
+    await vi.advanceTimersByTimeAsync(95_000)
+    expect(runs.heartbeat).toHaveBeenCalledTimes(3)
+
+    finishCount(1675)
+    await running
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(runs.heartbeat).toHaveBeenCalledTimes(3)
+  })
+
+  it('stops the heartbeat when the import fails, or when recording the outcome fails', async () => {
+    vi.useFakeTimers()
+    execute.mockRejectedValue(new Error('boom'))
+    runs.finish.mockRejectedValue(new Error('connection lost'))
+
+    await expect(recorder.run({ trigger: 'scheduled', requestedBy: null })).rejects.toThrow(
+      'connection lost'
+    )
+    await vi.advanceTimersByTimeAsync(120_000)
+
+    expect(runs.heartbeat).not.toHaveBeenCalled()
+  })
+
+  it('survives a heartbeat that cannot be written and reports it', async () => {
+    vi.useFakeTimers()
+    const failure = new Error('connection lost')
+    runs.heartbeat.mockRejectedValue(failure)
+    const onHeartbeatError = vi.fn()
+    const reporting = new CatalogImportRunRecorder(
+      runs,
+      games,
+      { execute },
+      clock,
+      CONFIG,
+      onHeartbeatError
+    )
+    const finishImport = holdImport()
+
+    const running = reporting.run({ trigger: 'scheduled', requestedBy: null })
+    await vi.advanceTimersByTimeAsync(31_000)
+    finishImport(SUMMARY)
+
+    await expect(running).resolves.toMatchObject({ kind: 'succeeded' })
+    expect(onHeartbeatError).toHaveBeenCalledWith(failure)
+  })
+
+  it('survives a heartbeat that cannot be written without a reporter', async () => {
     vi.useFakeTimers()
     runs.heartbeat.mockRejectedValue(new Error('connection lost'))
     const finishImport = holdImport()

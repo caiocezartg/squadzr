@@ -787,6 +787,7 @@
         "listedGames": "No catálogo"
       },
       "scheduled": "Agendada",
+      "manual": "Manual",
       "statuses": {
         "requested": "Na fila",
         "running": "Em andamento",
