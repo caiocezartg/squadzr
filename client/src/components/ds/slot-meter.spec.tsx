@@ -32,21 +32,27 @@ describe('SlotMeter', () => {
     }
   )
 
-  it('collapses more than ten slots into ten segments, each standing for several slots', () => {
-    const { container, rerender } = render(<SlotMeter filled={10} total={20} />)
-    expect(drawn(container)).toMatchObject({ segments: 10, lit: 5 })
-
-    rerender(<SlotMeter filled={20} total={20} />)
-    expect(drawn(container)).toMatchObject({ segments: 10, lit: 10 })
+  it('caps a bigger Squad at five segments with a proportional fill', () => {
+    const { container, rerender } = render(<SlotMeter filled={31} total={40} />)
+    expect(drawn(container)).toMatchObject({ segments: 5, lit: 4 })
 
     rerender(<SlotMeter filled={1} total={40} />)
-    expect(drawn(container)).toMatchObject({ segments: 10, lit: 0 })
+    expect(drawn(container)).toMatchObject({ segments: 5, lit: 1 })
+
+    rerender(<SlotMeter filled={39} total={40} />)
+    expect(drawn(container)).toMatchObject({ segments: 5, lit: 4 })
+
+    rerender(<SlotMeter filled={40} total={40} />)
+    expect(drawn(container)).toMatchObject({ segments: 5, lit: 5 })
   })
 
-  it('draws ten segments for exactly ten slots', () => {
-    const { container } = render(<SlotMeter filled={7} total={10} />)
+  it('draws every blocks segment at the same width whatever the Squad size', () => {
+    const small = render(<SlotMeter filled={2} total={5} />)
+    const big = render(<SlotMeter filled={2} total={40} />)
 
-    expect(drawn(container)).toMatchObject({ segments: 10, lit: 7 })
+    expect(small.container.querySelector('span > span')!.className).toContain('w-10')
+    expect(big.container.querySelector('span > span')!.className).toContain('w-10')
+    expect(big.container.querySelector('span > span')!.className).not.toContain('w-4.5')
   })
 
   it('keeps the lit segments within the segments drawn', () => {

@@ -1,10 +1,8 @@
 import { cn } from '@/lib/utils'
+import { computeSlotMeterFill } from './slot-meter-fill'
 
 export type SlotMeterVariant = 'blocks' | 'line' | 'pips'
 export type SlotMeterTone = 'mint' | 'discord' | 'amber'
-
-/** A squad of more than this many slots draws this many segments, each standing for several slots. */
-const MAX_SEGMENTS = 10
 
 /** The lit colour, which the segments take from the meter's `currentColor`. */
 const TONE_CLASSES: Record<SlotMeterTone, string> = {
@@ -33,9 +31,7 @@ interface SlotMeterProps {
  * the parent supplies the count as text.
  */
 export function SlotMeter({ filled, total, variant = 'blocks', tone = 'mint' }: SlotMeterProps) {
-  const slots = Math.max(1, total)
-  const segments = Math.min(slots, MAX_SEGMENTS)
-  const lit = Math.round((Math.min(slots, Math.max(0, filled)) / slots) * segments)
+  const { segments, lit } = computeSlotMeterFill(filled, total)
   const classes = VARIANT_CLASSES[variant]
 
   return (
@@ -47,7 +43,7 @@ export function SlotMeter({ filled, total, variant = 'blocks', tone = 'mint' }: 
           className={cn(
             'bg-track transition-colors duration-200 data-filled:bg-current',
             classes.segment,
-            variant === 'blocks' && (slots > 5 ? 'w-4.5' : 'w-10')
+            variant === 'blocks' && 'w-10'
           )}
         />
       ))}
