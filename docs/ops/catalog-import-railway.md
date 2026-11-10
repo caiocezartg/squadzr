@@ -1,23 +1,23 @@
 # Catalog Import on Railway
 
 The Catalog Import runs as the `games-import` cron service of the `squadzr` Railway project, in the
-`staging` environment. One run a day brings the hosted Game Catalog in line with IGDB; the API is
-not hosted yet, so this service is the only hosted consumer of the database.
+`production` environment. One run a day brings the hosted Game Catalog in line with IGDB. The API
+runs next to it as the `api` service and owns the schema migrations (see "The `api` service").
 
 ## Project and services
 
 |                |                                                                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Project        | `squadzr`                                                                                                                                |
-| Environment    | `staging`                                                                                                                                |
+| Environment    | `production` (the only one; it was called `staging` until #133)                                                                          |
 | Database       | `postgres`, PostgreSQL 16 (`ghcr.io/railwayapp-templates/postgres-ssl:16`), volume `postgres-data` mounted at `/var/lib/postgresql/data` |
+| API service    | `api`, deployed from `caiocezartg/squadzr` branch `development` during bring-up, at `https://api.squadzr.app`                            |
 | Cron service   | `games-import`, deployed from `caiocezartg/squadzr` branch `development`                                                                 |
 | Config as code | `.railway/railway.ts` (Railway Infrastructure as Code)                                                                                   |
 
 The authoring file owns the whole environment: the build installs the Bun workspace from the
 repository root (`bun install --frozen-lockfile`), the start command runs the import from `server/`
-(`bun --no-env-file src/interface/scripts/import-games.ts`), the pre-deploy command runs the runtime
-migration (`bun --no-env-file src/interface/scripts/migrate.ts`), and the schedule is `0 4 * * *`
+(`bun --no-env-file src/interface/scripts/import-games.ts`), and the schedule is `0 4 * * *`
 (04:00 UTC every day). Watch patterns are limited to `server/**` and `packages/**`, so client-only
 changes never deploy or run the import. Railway runs cron schedules in UTC.
 
@@ -49,8 +49,7 @@ the slot is taken the cron logs `Catalog Import skipped: another run is requeste
 `0` and records nothing (a skipped night is not a failure, so Railway does not report `CRASHED`). A run
 abandoned by a crash or a deploy frees the slot by itself: before every claim, a `running` run whose
 heartbeat (written every 30 seconds) is older than 2 minutes, or a `requested` run nobody claimed
-within 10 minutes, is marked `interrupted`. If the hosted API is not deployed yet, the migration that
-creates the table still runs in the cron service's pre-deploy command, like every other migration.
+within 10 minutes, is marked `interrupted`.
 
 ## Manual run from the panel
 
@@ -74,7 +73,7 @@ The Infrastructure as Code engine ships in the Railway CLI, so use version 5.42.
 Link the repository once, then plan before applying:
 
 ```sh
-railway link --project squadzr --environment staging
+railway link --project squadzr --environment production
 railway config plan --detailed-exit-code
 railway config apply --yes
 ```
@@ -93,7 +92,7 @@ Repo), which needs the Railway GitHub App installed with access to `caiocezartg/
 with:
 
 ```sh
-railway api 'query { deploymentTriggers(projectId: "<project id>", environmentId: "<staging id>", serviceId: "<games-import id>") { edges { node { branch checkSuites } } } }'
+railway api 'query { deploymentTriggers(projectId: "<project id>", environmentId: "<production id>", serviceId: "<games-import id>") { edges { node { branch checkSuites } } } }'
 ```
 
 An empty list means pushes do not deploy, and the cron keeps running the last deployed commit.
@@ -113,7 +112,7 @@ The service receives exactly three variables:
 | `IGDB_CLIENT_ID`     | Twitch application client id (owner-set)                          |
 | `IGDB_CLIENT_SECRET` | Twitch application client secret (owner-set)                      |
 
-Set the two credentials in Railway under `squadzr` → `staging` → `games-import` → Variables. A
+Set the two credentials in Railway under `squadzr` → `production` → `games-import` → Variables. A
 variable change redeploys the service; the next cron run uses the new values. The names are exact:
 a key entered as ` IGDB_CLIENT_ID` (leading space) is a different variable, so the import still reads
 `IGDB_CLIENT_ID` as undefined and the run exits 1 with `Invalid catalog import environment
@@ -140,7 +139,7 @@ once in Railway and no secret enters the repository.
 Link the repository once, then trigger the cron service:
 
 ```sh
-railway link --project squadzr --environment staging
+railway link --project squadzr --environment production
 railway cron run --service games-import --yes
 ```
 
@@ -244,6 +243,29 @@ railway api 'query { volumeInstanceBackupScheduleList(volumeInstanceId: "<volume
 `railway volume list --json` names the volume (`postgres-data`) and its volume instance id; the Daily
 entry must be listed for the backup requirement to hold.
 
+## The `api` service
+
+The `api` service runs the Fastify server (`cd server && bun --no-env-file src/index.ts`) from the same
+repository, built with `bun install --frozen-lockfile`. It is reachable at `https://api.squadzr.app`
+(a DNS-only CNAME in Cloudflare until the edge ticket proxies it); `/health/ready` is its health
+check, and a deployment that does not answer it never takes traffic.
+
+- **Deploys.** A push to `development` deploys it only after the push's GitHub checks pass (`checkSuites`),
+  and only when it touches `server/**`, `packages/**`, `package.json` or `bun.lock`: a push that touches
+  only `client/` does not. The go-live ticket switches the branch to `main`.
+- **Failed migration.** The pre-deploy command (`bun --no-env-file src/interface/scripts/migrate.ts`)
+  runs before the new container starts. If it exits non-zero the deployment fails and the previous
+  one keeps serving.
+- **Draining.** `RAILWAY_DEPLOYMENT_DRAINING_SECONDS=60` gives SIGTERM time to close sockets and let a
+  running manual Catalog Import finish.
+- **Limits.** `api` and `postgres` are capped at 1 vCPU and 512 MiB each (`limitOverride`). They are
+  ceilings: Railway bills what the services use.
+- **Variables.** `NODE_ENV`, `LOG_LEVEL`, `CORS_ORIGIN`, `BETTER_AUTH_URL`, `BETTER_AUTH_COOKIE_DOMAIN`,
+  `TRUST_PROXY_HOPS=1` and `DATABASE_URL` (a reference to `postgres`) are in the authoring file, and the
+  IGDB credentials are references to the `games-import` ones. `BETTER_AUTH_SECRET`, `DISCORD_CLIENT_ID`
+  and `DISCORD_CLIENT_SECRET` are `preserve()`d: they exist only in Railway, never in the repository.
+  The Discord application needs `https://api.squadzr.app/api/auth/callback/discord` as a redirect URI.
+
 ## Migrations
 
 The pre-deploy command applies the checked-in migrations with the runtime entry point
@@ -255,8 +277,9 @@ After a deploy whose migration touches Game Search, such as `0007` (issue #100),
 `[:alnum:]`, which does not cover multibyte letters under the `C` locale, so games with Cyrillic or
 CJK names stay unsearchable until the import rewrites their rows with `normalizeSearchText`.
 
-When the API is hosted on Railway, the migrations move to the API service's pre-deploy command and
-the `preDeployCommand` entry leaves this authoring file: exactly one service owns schema changes.
+The `api` service's pre-deploy command runs them, and `games-import` has none: exactly one service owns
+schema changes. The cron therefore runs against whatever schema the last API deploy left, so a code
+change that needs a new column deploys the API first.
 
 ## Make the first admin
 

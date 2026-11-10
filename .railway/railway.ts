@@ -1,9 +1,12 @@
 import { defineRailway, github, image, preserve, project, service, volume } from 'railway/iac'
 
+const MIB = 1024 * 1024
+
 /**
- * The hosted Catalog Import (CCC-91): one Railway project, one `staging`
- * environment with the PostgreSQL 16 database the import writes to and the
- * `games-import` cron service that runs it every day.
+ * The hosted backend (CCC-91, #133): one Railway project, one `production`
+ * environment with the PostgreSQL 16 database, the `api` service that serves the
+ * app and owns the schema migrations, and the `games-import` cron service that
+ * runs the Catalog Import every day.
  *
  * Railway reads this file through the CLI (`railway config plan` and
  * `railway config apply`), from the repository root, so the environment is
@@ -33,6 +36,10 @@ export default defineRailway(() => {
       SSL_CERT_DAYS: '820',
       RAILWAY_DEPLOYMENT_DRAINING_SECONDS: '60',
     },
+    deploy: {
+      // A ceiling, not a reservation: Railway bills what the service uses, and the limit caps the worst case.
+      limitOverride: { containers: { cpu: 1, memoryBytes: 512 * MIB } },
+    },
     volumeMounts: {
       '/var/lib/postgresql/data': postgresData,
     },
@@ -48,7 +55,6 @@ export default defineRailway(() => {
     },
     deploy: {
       startCommand: 'cd server && bun --no-env-file src/interface/scripts/import-games.ts',
-      preDeployCommand: ['cd server && bun --no-env-file src/interface/scripts/migrate.ts'],
       cronSchedule: '0 4 * * *',
       restartPolicyType: 'NEVER',
     },
@@ -60,5 +66,46 @@ export default defineRailway(() => {
     },
   })
 
-  return project('squadzr', { resources: [postgres, postgresData, gamesImport] })
+  const api = service('api', {
+    // checkSuites is Railway's "Wait for CI". The branch is `development` while the app is brought
+    // up; the go-live ticket switches it to `main`.
+    source: github('caiocezartg/squadzr', { branch: 'development', checkSuites: true }),
+    build: {
+      builder: 'RAILPACK',
+      buildCommand: 'bun install --frozen-lockfile',
+      watchPatterns: ['server/**', 'packages/**', 'package.json', 'bun.lock'],
+    },
+    deploy: {
+      startCommand: 'cd server && bun --no-env-file src/index.ts',
+      // The one service that owns schema changes: a failing migration stops the deploy and the
+      // previous deployment keeps serving.
+      preDeployCommand: ['cd server && bun --no-env-file src/interface/scripts/migrate.ts'],
+      healthcheckPath: '/health/ready',
+      limitOverride: { containers: { cpu: 1, memoryBytes: 512 * MIB } },
+    },
+    networking: {
+      customDomains: { 'api.squadzr.app': {} },
+    },
+    env: {
+      NODE_ENV: 'production',
+      LOG_LEVEL: 'info',
+      CORS_ORIGIN: 'https://squadzr.app',
+      BETTER_AUTH_URL: 'https://api.squadzr.app',
+      BETTER_AUTH_COOKIE_DOMAIN: 'squadzr.app',
+      // Railway's edge is the one proxy in front of the API until Cloudflare joins it (then 2).
+      TRUST_PROXY_HOPS: '1',
+      // SIGTERM closes the sockets and lets a running Catalog Import finish before the kill.
+      RAILWAY_DEPLOYMENT_DRAINING_SECONDS: '60',
+      DATABASE_URL: postgres.env.DATABASE_URL,
+      // None of the secrets is in the repository: the owner sets them in Railway.
+      BETTER_AUTH_SECRET: preserve(),
+      DISCORD_CLIENT_ID: preserve(),
+      DISCORD_CLIENT_SECRET: preserve(),
+      // The manual Catalog Import from the admin panel reads the same IGDB credentials as the cron.
+      IGDB_CLIENT_ID: gamesImport.env.IGDB_CLIENT_ID,
+      IGDB_CLIENT_SECRET: gamesImport.env.IGDB_CLIENT_SECRET,
+    },
+  })
+
+  return project('squadzr', { resources: [postgres, postgresData, api, gamesImport] })
 })
