@@ -2,7 +2,7 @@ import { bindings, defineConfig, defineWorker } from 'cf/config'
 
 export default defineConfig({
   worker: defineWorker({
-    name: 'squadzr-web-spike',
+    name: 'squadzr-web',
     entrypoint: 'vinext/server/fetch-handler',
     compatibilityDate: '2026-11-10',
     compatibilityFlags: ['nodejs_compat'],
