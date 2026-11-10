@@ -13,7 +13,7 @@ export function OverviewSkeleton() {
 
   return (
     <div role="status" aria-label={t('loading')} className="flex flex-col gap-4.5">
-      <div aria-hidden="true" className="grid grid-cols-2 gap-px min-[900px]:grid-cols-4">
+      <div aria-hidden="true" className="grid grid-cols-2 gap-px xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div key={index} className="bg-card h-32.5 animate-pulse" />
         ))}

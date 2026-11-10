@@ -10,7 +10,7 @@ export function UserPageSkeleton() {
   const t = useTranslations('admin.users.detail')
 
   return (
-    <div role="status" aria-label={t('loading')} className="grid gap-4.5 lg:grid-cols-[1fr_1.3fr]">
+    <div role="status" aria-label={t('loading')} className="grid gap-4.5 xl:grid-cols-[1fr_1.3fr]">
       <div aria-hidden="true" className="bg-card h-96 animate-pulse" />
       <div aria-hidden="true" className="bg-card h-96 animate-pulse" />
     </div>

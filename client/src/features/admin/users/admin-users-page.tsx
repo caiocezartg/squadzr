@@ -110,7 +110,7 @@ function UsersResults({
   return (
     <div className="flex flex-col gap-3.5">
       {/* Both layouts are in the HTML, so the server render fits every width; CSS shows one. */}
-      <div className="hidden sm:block">
+      <div className="hidden min-w-0 overflow-x-auto sm:block">
         <UsersTable users={data.items} />
       </div>
       <div className="sm:hidden">

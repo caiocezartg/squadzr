@@ -40,9 +40,10 @@ function PeriodLine({
 }
 
 /**
- * The Overview's four numbers (reference, Admin panel, Overview), in one hairline box: four across,
- * two by two below 900px. Online users and Open Squads are live counts with the period's sampled peak;
- * registered users and completed Squads add what the period brought.
+ * The Overview's four numbers (reference, Admin panel, Overview), in one hairline box: four across from
+ * 1280px, two by two below, so each label keeps one line at laptop widths. Online users and Open
+ * Squads are live counts with the period's sampled peak; registered users and completed Squads add
+ * what the period brought.
  */
 export function OverviewStats({ overview }: { readonly overview: OverviewResponse }) {
   const t = useTranslations('admin.overview.stats')
@@ -50,7 +51,7 @@ export function OverviewStats({ overview }: { readonly overview: OverviewRespons
   const { live, metrics, period } = overview
 
   return (
-    <dl className="bg-line grid grid-cols-2 gap-px p-px min-[900px]:grid-cols-4">
+    <dl className="bg-line grid grid-cols-2 gap-px p-px xl:grid-cols-4">
       <StatTile label={t('online')} value={format.number(live.onlineUsers)} live>
         <PeakLine comparison={metrics.online} period={period} />
       </StatTile>

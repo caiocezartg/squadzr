@@ -57,9 +57,9 @@ function OverviewContent({ overview, period, busy }: OverviewContentProps) {
         <OverviewStats overview={overview} />
       </div>
       <ActivityPanel period={period} />
-      {/* A moderator has neither panel; an admin has both, side by side from 1024px up. */}
+      {/* A moderator has neither panel; an admin has both, side by side from 1280px up, stacked below. */}
       {(overview.catalogImport || overview.recentAudit) && (
-        <div className="grid items-start gap-4.5 lg:grid-cols-2">
+        <div className="grid items-start gap-4.5 xl:grid-cols-2">
           {overview.catalogImport && (
             <CatalogImportPanel lastRun={overview.catalogImport.lastRun} />
           )}

@@ -58,7 +58,7 @@ function UserDetail({ user }: { readonly user: AdminUserDetailDto }) {
   return (
     <>
       <UserPageHeader title={user.name} />
-      <div className="grid items-start gap-4.5 lg:grid-cols-[1fr_1.3fr]">
+      <div className="grid items-start gap-4.5 xl:grid-cols-[1fr_1.3fr]">
         <section aria-label={user.name} className={PANEL}>
           <UserIdentity user={user} />
           {hasFullAdminAccess(viewer?.role) ? (
