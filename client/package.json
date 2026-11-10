@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint --max-warnings=0 src",
-    "lint:fix": "eslint --max-warnings=0 src --fix"
+    "lint:fix": "eslint --max-warnings=0 src --fix",
+    "dev:vinext": "vite dev --port 3001",
+    "build:vinext": "vite build",
+    "start:vinext": "vite preview",
+    "deploy:vinext": "vinext-cloudflare deploy"
   },
   "dependencies": {
     "@base-ui-components/react": "1.0.0-rc.0",
@@ -18,21 +22,25 @@
     "@squadzr/schemas": "workspace:*",
     "@tanstack/query-core": "5.90.20",
     "@tanstack/react-query": "5.90.20",
+    "@vinext/cloudflare": "1.3.3",
     "better-auth": "1.4.18",
     "clsx": "2.1.1",
     "lucide-react": "0.564.0",
     "motion": "12.33.0",
     "next": "16.4.3",
     "next-intl": "4.14.9",
-    "react": "^19",
-    "react-dom": "^19",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "react-hook-form": "7.71.1",
+    "react-server-dom-webpack": "19.3.1",
     "server-only": "0.0.1",
     "sonner": "2.0.7",
     "tailwind-merge": "3.4.0",
+    "vinext": "1.4.4",
     "zod": "4.3.6"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.13",
     "@squadzr/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "4.3.3",
     "@testing-library/dom": "^10.4.0",
@@ -42,10 +50,14 @@
     "@types/node": "25.2.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "6.3.0",
+    "@vitejs/plugin-rsc": "0.5.39",
+    "cf": "1.0.0-beta.28",
     "jsdom": "^26.1.0",
     "postcss": "^8.4.0",
     "tailwindcss": "4.3.3",
     "typescript": "^5.6.0",
+    "vite": "8.3.0",
     "vitest": "^2.1.0"
   }
 }
