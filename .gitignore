@@ -7,6 +7,8 @@ build/
 .output/
 out/
 .next/
+.vinext/
+.cloudflare/
 
 # Environment files
 .env
