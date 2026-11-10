@@ -1,3 +1,4 @@
+import type { NewAuditEntry } from './audit-entry.entity'
 import type {
   CatalogImportRunStatus,
   CatalogImportRunSummaryDto,
@@ -41,3 +42,20 @@ export interface ClaimCatalogImportRunInput {
   readonly requestedBy: { readonly id: string; readonly name: string } | null
   readonly now: Date
 }
+
+export interface RequestManualCatalogImportRunInput {
+  readonly requestedBy: { readonly id: string; readonly name: string }
+  readonly now: Date
+  /** A manual run requested after this instant refuses the request. */
+  readonly requestedAfter: Date
+  /** The `catalog_import_requested` Audit Entry, written with the run in the same transaction. */
+  readonly buildAuditEntry: (run: CatalogImportRun, requestedAt: Date) => NewAuditEntry
+}
+
+/** How asking for a manual run ended; only `requested` queued a run. */
+export type RequestManualCatalogImportRunOutcome =
+  | { readonly status: 'requested'; readonly run: CatalogImportRun }
+  /** A manual run was already requested inside the window, whatever became of it. */
+  | { readonly status: 'limit'; readonly lastRequestedAt: Date }
+  /** Another run is `requested` or `running`: the partial unique index refused the insert. */
+  | { readonly status: 'slot_taken' }

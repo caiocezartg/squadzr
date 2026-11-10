@@ -29,7 +29,7 @@ function GamesSummaryView({ summary }: { readonly summary: AdminGamesSummaryDto 
   const format = useFormatter()
 
   return (
-    <div className="grid gap-px lg:grid-cols-[3fr_2fr]">
+    <div className="grid gap-px xl:grid-cols-[3fr_2fr]">
       <dl
         aria-label={t('label')}
         className="bg-line grid grid-cols-3 gap-px p-px max-[480px]:grid-cols-1"

@@ -223,6 +223,9 @@ export {
   ACTIVE_CATALOG_IMPORT_RUN_STATUSES,
   CATALOG_IMPORT_RUN_STATUSES,
   CATALOG_IMPORT_RUN_TRIGGERS,
+  MANUAL_CATALOG_IMPORT_LIMIT_MS,
+  manualCatalogImportAvailabilitySchema,
+  requestCatalogImportRunResponseSchema,
   catalogImportRunSchema,
   catalogImportRunStatusSchema,
   catalogImportRunSummarySchema,
@@ -233,6 +236,7 @@ export {
   type CatalogImportRunSummaryDto,
   type CatalogImportRunTrigger,
   type CatalogImportRunsResponse,
+  type ManualCatalogImportAvailability,
 } from './admin-catalog'
 export {
   ADMIN_GAME_CHANGE_NAMES_LIMIT,

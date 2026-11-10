@@ -52,18 +52,26 @@ export function RunOrigin({ run }: { readonly run: CatalogImportRunDto }) {
 
 /** A moment of the run as its date and time in the viewer's zone, or a dash when it has not come. */
 export function RunInstant({ at }: { readonly at: string | null }) {
-  const format = useFormatter()
+  const label = useInstantLabel()
 
   if (at === null) return <NoValue />
   return (
     <time dateTime={at} className="whitespace-nowrap">
-      {format.dateTime(new Date(at), {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-        timeZone: VIEWER_TIME_ZONE,
-      })}
+      {label(at)}
     </time>
   )
+}
+
+/** An ISO instant as its date and time in the viewer's locale and zone, as the run history writes it. */
+export function useInstantLabel(): (at: string) => string {
+  const format = useFormatter()
+
+  return (at) =>
+    format.dateTime(new Date(at), {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: VIEWER_TIME_ZONE,
+    })
 }
 
 /** When the run started, or when it was asked for while it waits in the queue. */

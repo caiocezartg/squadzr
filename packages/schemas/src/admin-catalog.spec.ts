@@ -3,6 +3,8 @@ import {
   CATALOG_IMPORT_RUN_STATUSES,
   catalogImportRunSchema,
   catalogImportRunsResponseSchema,
+  MANUAL_CATALOG_IMPORT_LIMIT_MS,
+  manualCatalogImportAvailabilitySchema,
 } from './index'
 
 const succeeded = {
@@ -75,9 +77,46 @@ describe('catalog import run', () => {
 })
 
 describe('catalog import runs response', () => {
-  it('is a shared page of runs', () => {
-    const page = { items: [succeeded], page: 1, pageSize: 20, total: 1 }
+  const available = { available: true } as const
+
+  it('is a shared page of runs with the manual-run availability and no active run', () => {
+    const page = {
+      items: [succeeded],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+      manualRun: available,
+      activeRun: null,
+    }
 
     expect(catalogImportRunsResponseSchema.parse(page)).toEqual(page)
+  })
+
+  it('carries the instant the next manual run becomes available and the run holding the slot', () => {
+    const queued = {
+      ...succeeded,
+      status: 'requested',
+      startedAt: null,
+      finishedAt: null,
+      summary: null,
+      listedGames: null,
+    }
+    const page = {
+      items: [queued],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+      manualRun: { available: false, availableAt: '2026-11-06T04:00:00.000Z' },
+      activeRun: queued,
+    }
+
+    expect(catalogImportRunsResponseSchema.parse(page)).toEqual(page)
+  })
+
+  it('refuses an unavailable manual run without its instant', () => {
+    expect(manualCatalogImportAvailabilitySchema.safeParse({ available: false }).success).toBe(
+      false
+    )
+    expect(MANUAL_CATALOG_IMPORT_LIMIT_MS).toBe(86_400_000)
   })
 })

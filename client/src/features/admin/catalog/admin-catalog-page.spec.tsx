@@ -5,20 +5,22 @@
  */
 
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   PAGE_SIZE,
   type CatalogImportRunDto,
   type CatalogImportRunsResponse,
+  type ManualCatalogImportAvailability,
 } from '@squadzr/schemas'
 import { createTestQueryClient } from '@/test/harness'
-import { httpError, httpOk, onHttp } from '@/test/http-router'
+import { countHttpCalls, httpError, httpOk, onHttp } from '@/test/http-router'
 import { EnglishIntlProvider } from '@/test/intl'
 import { createHarnessNavigation } from '@/test/navigation'
 import { AdminCatalogPage } from './admin-catalog-page'
 import { catalogRunsQueryKey } from './catalog-query'
+import { ACTIVE_RUN_POLL_MS } from './use-catalog-import-runs'
 
 const succeeded: CatalogImportRunDto = {
   id: 'run-succeeded',
@@ -87,17 +89,28 @@ const queued: CatalogImportRunDto = {
 
 const running: CatalogImportRunDto = { ...queued, id: 'run-running', status: 'running' }
 
+/** The manual run's state on a page of the history: free, by default, with no run holding the slot. */
+interface RunSlot {
+  readonly manualRun?: ManualCatalogImportAvailability
+  readonly activeRun?: CatalogImportRunDto | null
+}
+
 function runsPage(
   items: readonly CatalogImportRunDto[],
   total = items.length,
-  page = 1
+  page = 1,
+  { manualRun = { available: true }, activeRun = null }: RunSlot = {}
 ): CatalogImportRunsResponse {
-  return { items: [...items], page, pageSize: PAGE_SIZE, total }
+  return { items: [...items], page, pageSize: PAGE_SIZE, total, manualRun, activeRun }
 }
 
-function serveRuns(items: readonly CatalogImportRunDto[], total = items.length): void {
+function serveRuns(
+  items: readonly CatalogImportRunDto[],
+  total = items.length,
+  slot: RunSlot = {}
+): void {
   onHttp('GET', '/api/admin/catalog-import/runs', ({ query }) =>
-    httpOk(runsPage(items, total, Number(query.get('page') ?? 1)))
+    httpOk(runsPage(items, total, Number(query.get('page') ?? 1), slot))
   )
 }
 
@@ -286,5 +299,185 @@ describe('admin catalog run history', () => {
     expect(
       screen.queryByRole('status', { name: 'Loading the run history' })
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('admin catalog manual run', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const RUNS = '/api/admin/catalog-import/runs'
+
+  /** The panel's Run import button, outside the confirmation. */
+  async function runButton(): Promise<HTMLElement> {
+    const panel = await screen.findByRole('region', { name: 'Run now' })
+    return within(panel).getByRole('button', { name: 'Run import' })
+  }
+
+  it('asks before running, and Cancel sends nothing', async () => {
+    serveRuns([succeeded])
+    const { user } = renderCatalog()
+
+    await user.click(await runButton())
+    const dialog = await screen.findByRole('dialog', { name: 'Run the Catalog Import now?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(countHttpCalls('POST', RUNS)).toBe(0)
+  })
+
+  it('requests the run on confirmation and closes the dialog', async () => {
+    serveRuns([succeeded])
+    onHttp('POST', RUNS, () => ({ status: 202, body: queued }))
+    const { user } = renderCatalog()
+
+    await user.click(await runButton())
+    const dialog = await screen.findByRole('dialog', { name: 'Run the Catalog Import now?' })
+    serveRuns([queued, succeeded], 2, { manualRun: { available: true }, activeRun: queued })
+    await user.click(within(dialog).getByRole('button', { name: 'Run import' }))
+
+    expect(countHttpCalls('POST', RUNS)).toBe(1)
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(await screen.findByText('A run is queued.')).toBeVisible()
+    expect(await runButton()).toBeDisabled()
+  })
+
+  it('says when the next manual run is available', async () => {
+    serveRuns([succeeded], 1, {
+      manualRun: { available: false, availableAt: '2026-11-09T18:42:00.000Z' },
+    })
+    renderCatalog()
+
+    const button = await runButton()
+    expect(button).toBeDisabled()
+    const line = document.getElementById(button.getAttribute('aria-describedby') ?? '')
+    expect(line).toHaveTextContent(/^Available again at Nov \d{1,2}, 2026/)
+  })
+
+  it.each([
+    ['Queued', queued, 'A run is queued.'],
+    ['Running', running, 'A run is in progress.'],
+  ])('disables the button while a run is %s', async (pill, run, text) => {
+    serveRuns([run, succeeded], 2, {
+      // The active run comes first, over the 24 h window.
+      manualRun: { available: false, availableAt: '2026-11-09T18:42:00.000Z' },
+      activeRun: run,
+    })
+    renderCatalog()
+
+    const button = await runButton()
+    expect(button).toBeDisabled()
+    const line = document.getElementById(button.getAttribute('aria-describedby') ?? '')
+    expect(line).toHaveTextContent(pill)
+    expect(line).toHaveTextContent(text)
+    expect(line).not.toHaveTextContent('Available again')
+  })
+
+  it('shows the panel on an empty history', async () => {
+    serveRuns([])
+    renderCatalog()
+
+    expect(await screen.findByRole('heading', { name: 'No runs yet' })).toBeVisible()
+    expect(await runButton()).toBeEnabled()
+  })
+
+  it('shows the panel on a page past the end', async () => {
+    serveRuns([], 3)
+    renderCatalog('/admin/catalog/runs?page=4')
+
+    expect(await screen.findByRole('heading', { name: 'No runs on this page' })).toBeVisible()
+    expect(await runButton()).toBeEnabled()
+  })
+
+  it.each([
+    [
+      503,
+      'CATALOG_IMPORT_UNAVAILABLE',
+      'The catalog import is not set up on this server, so it cannot be run from here.',
+    ],
+    [
+      422,
+      'CATALOG_IMPORT_MANUAL_LIMIT',
+      'A manual catalog import was already requested in the last 24 hours.',
+    ],
+    [422, 'CATALOG_IMPORT_RUNNING', 'A catalog import is already queued or running.'],
+  ])('shows a %i %s refusal in the dialog', async (status, code, message) => {
+    serveRuns([succeeded])
+    onHttp('POST', RUNS, () => httpError(status, { error: code, message: 'Refused' }))
+    const { user } = renderCatalog()
+
+    await user.click(await runButton())
+    const dialog = await screen.findByRole('dialog', { name: 'Run the Catalog Import now?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Run import' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(message)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('reads the history once at the instant the 24 h window ends, and enables the button', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date('2026-11-09T18:41:00.000Z'))
+    let reads = 0
+    onHttp('GET', RUNS, () => {
+      reads += 1
+      return httpOk(
+        runsPage(
+          [succeeded],
+          1,
+          1,
+          reads === 1
+            ? { manualRun: { available: false, availableAt: '2026-11-09T18:42:00.000Z' } }
+            : {}
+        )
+      )
+    })
+    renderCatalog()
+
+    expect(await screen.findByText(/^Available again at/)).toBeVisible()
+    expect(await runButton()).toBeDisabled()
+    await act(() => vi.advanceTimersByTimeAsync(30_000))
+    expect(reads).toBe(1)
+    await act(() => vi.advanceTimersByTimeAsync(31_000))
+    expect(reads).toBe(2)
+    await vi.waitFor(async () => expect(await runButton()).toBeEnabled())
+
+    await act(() => vi.advanceTimersByTimeAsync(ACTIVE_RUN_POLL_MS * 3))
+    expect(reads).toBe(2)
+  })
+
+  it('reads the history again while a run is active and stops at its final status', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    // Before the window ends, so the end of the window is not what this test is about.
+    vi.setSystemTime(new Date('2026-11-09T18:00:00.000Z'))
+    const finished: CatalogImportRunDto = {
+      ...running,
+      status: 'succeeded',
+      startedAt: running.requestedAt,
+      finishedAt: '2026-11-08T04:03:12.000Z',
+    }
+    let reads = 0
+    onHttp('GET', RUNS, () => {
+      reads += 1
+      return reads < 3
+        ? httpOk(runsPage([running], 1, 1, { activeRun: running }))
+        : httpOk(
+            runsPage([finished], 1, 1, {
+              manualRun: { available: false, availableAt: '2026-11-09T18:42:00.000Z' },
+            })
+          )
+    })
+    renderCatalog()
+
+    expect(await screen.findByText('A run is in progress.')).toBeVisible()
+    await act(() => vi.advanceTimersByTimeAsync(ACTIVE_RUN_POLL_MS))
+    expect(reads).toBe(2)
+    await act(() => vi.advanceTimersByTimeAsync(ACTIVE_RUN_POLL_MS))
+    expect(reads).toBe(3)
+    expect(await screen.findByText(/^Available again at/)).toBeVisible()
+    expect(screen.queryByText('A run is in progress.')).not.toBeInTheDocument()
+
+    await act(() => vi.advanceTimersByTimeAsync(ACTIVE_RUN_POLL_MS * 3))
+    expect(reads).toBe(3)
   })
 })

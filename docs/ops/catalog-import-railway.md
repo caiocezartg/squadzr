@@ -52,6 +52,20 @@ heartbeat (written every 30 seconds) is older than 2 minutes, or a `requested` r
 within 10 minutes, is marked `interrupted`. If the hosted API is not deployed yet, the migration that
 creates the table still runs in the cron service's pre-deploy command, like every other migration.
 
+## Manual run from the panel
+
+An admin or the owner can run the same import from the Catalog page's Import runs tab, at most once
+every 24 hours (every manual request counts, failed and interrupted ones included; the cron never
+does). The API only queues the run (`POST /api/admin/catalog-import/runs`, no body); an executor
+inside the API starts it right away and on a 15-second poll, so a run requested just before a restart
+still starts after it, and runs it through the same recorder as the cron, without the fraction-check
+override (that stays the cron's alone).
+
+The API needs the IGDB credentials for this. They are optional: without `IGDB_CLIENT_ID` and
+`IGDB_CLIENT_SECRET` the API boots normally and the request answers 503 `CATALOG_IMPORT_UNAVAILABLE`.
+Set the same two variables (and, if you changed them for the cron, `IGDB_POPULARITY_THRESHOLD` and
+`IGDB_HYPE_THRESHOLD`) on the API service to turn it on; the cron service keeps its own copy.
+
 ## Apply a config change
 
 The Infrastructure as Code engine ships in the Railway CLI, so use version 5.42.1 or newer

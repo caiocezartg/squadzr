@@ -34,6 +34,12 @@ export type RecordedCatalogImportRun =
     }
   | { readonly kind: 'failed'; readonly runId: string; readonly error: unknown }
 
+/** A run that was claimed and ran to an outcome. */
+export type ExecutedCatalogImportRun = Exclude<RecordedCatalogImportRun, { readonly kind: 'busy' }>
+
+/** What starting the next queued run came to; `idle` means nothing was queued for this executor. */
+export type RecordedRequestedCatalogImportRun = { readonly kind: 'idle' } | ExecutedCatalogImportRun
+
 type ImportResult =
   | { readonly kind: 'succeeded'; readonly summary: CatalogImportSummary }
   | { readonly kind: 'safety_stop'; readonly error: CatalogImportSafetyError }
@@ -41,6 +47,11 @@ type ImportResult =
 
 export interface ICatalogImportRunRecorder {
   run(input: RecordCatalogImportRunInput): Promise<RecordedCatalogImportRun>
+  /**
+   * Starts the oldest queued (`requested`) run and runs it. It takes no input: a queued run never
+   * carries the fraction-check override, which stays the cron's alone.
+   */
+  runNextRequested(): Promise<RecordedRequestedCatalogImportRun>
 }
 
 /**
@@ -62,13 +73,7 @@ export class CatalogImportRunRecorder implements ICatalogImportRunRecorder {
 
   async run(input: RecordCatalogImportRunInput): Promise<RecordedCatalogImportRun> {
     const now = this.clock.now()
-    await this.runRepository.interruptStale(
-      {
-        heartbeatBefore: new Date(now.getTime() - this.config.staleHeartbeatMs),
-        requestedBefore: new Date(now.getTime() - this.config.staleRequestedMs),
-      },
-      now
-    )
+    await this.interruptStale(now)
 
     const run = await this.runRepository.claim({
       trigger: input.trigger,
@@ -77,11 +82,46 @@ export class CatalogImportRunRecorder implements ICatalogImportRunRecorder {
     })
     if (!run) return { kind: 'busy' }
 
+    return this.runClaimed(run.id, input.overrideFractionCheck ?? false)
+  }
+
+  async runNextRequested(): Promise<RecordedRequestedCatalogImportRun> {
+    const now = this.clock.now()
+    // A queued run is claimed whatever its age (an API outage longer than the requested staleness must
+    // not drop it), so only abandoned `running` runs are freed here. Queued runs still go stale for the
+    // cron's `run()`, which has to free the slot when no executor claims them.
+    await this.interruptStale(now, { includeRequested: false })
+
+    const run = await this.runRepository.claimRequested(now)
+    if (!run) return { kind: 'idle' }
+
+    return this.runClaimed(run.id, false)
+  }
+
+  private async interruptStale(
+    now: Date,
+    { includeRequested }: { includeRequested: boolean } = { includeRequested: true }
+  ): Promise<void> {
+    await this.runRepository.interruptStale(
+      {
+        heartbeatBefore: new Date(now.getTime() - this.config.staleHeartbeatMs),
+        ...(includeRequested && {
+          requestedBefore: new Date(now.getTime() - this.config.staleRequestedMs),
+        }),
+      },
+      now
+    )
+  }
+
+  private async runClaimed(
+    runId: string,
+    overrideFractionCheck: boolean
+  ): Promise<ExecutedCatalogImportRun> {
     // The heartbeat covers the whole run, down to the outcome write, so a slow post-import step
     // cannot let another claimer mark this run interrupted.
-    const stopHeartbeat = this.startHeartbeat(run.id)
+    const stopHeartbeat = this.startHeartbeat(runId)
     try {
-      return await this.runAndRecord(run.id, input)
+      return await this.runAndRecord(runId, overrideFractionCheck)
     } finally {
       stopHeartbeat()
     }
@@ -89,9 +129,9 @@ export class CatalogImportRunRecorder implements ICatalogImportRunRecorder {
 
   private async runAndRecord(
     runId: string,
-    input: RecordCatalogImportRunInput
-  ): Promise<RecordedCatalogImportRun> {
-    const result = await this.executeImport(input)
+    overrideFractionCheck: boolean
+  ): Promise<ExecutedCatalogImportRun> {
+    const result = await this.executeImport(overrideFractionCheck)
     const listedGames = await this.countListedGames()
     const finishedAt = this.clock.now()
 
@@ -120,11 +160,9 @@ export class CatalogImportRunRecorder implements ICatalogImportRunRecorder {
   }
 
   /** Whatever the import throws becomes a result, never an exception. */
-  private async executeImport(input: RecordCatalogImportRunInput): Promise<ImportResult> {
+  private async executeImport(overrideFractionCheck: boolean): Promise<ImportResult> {
     try {
-      const summary = await this.importUseCase.execute({
-        overrideFractionCheck: input.overrideFractionCheck ?? false,
-      })
+      const summary = await this.importUseCase.execute({ overrideFractionCheck })
       return { kind: 'succeeded', summary }
     } catch (error) {
       return error instanceof CatalogImportSafetyError

@@ -25,3 +25,8 @@ export {
   RoleChangeForbiddenError,
 } from './role-change.error'
 export { RoomNotOpenError } from './room-not-open.error'
+export {
+  CatalogImportManualLimitError,
+  CatalogImportRunningError,
+  CatalogImportUnavailableError,
+} from './catalog-import.error'

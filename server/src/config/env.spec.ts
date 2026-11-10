@@ -67,3 +67,50 @@ describe('loadEnv', () => {
     expect(exit).toHaveBeenCalledWith(1)
   })
 })
+
+describe('IGDB settings of the manual Catalog Import', () => {
+  it('boots without them, with the cron thresholds as defaults', () => {
+    const env = parseEnv(REQUIRED_ENV)
+
+    expect(env.IGDB_CLIENT_ID).toBeUndefined()
+    expect(env.IGDB_CLIENT_SECRET).toBeUndefined()
+    expect(env.IGDB_POPULARITY_THRESHOLD).toBe(50)
+    expect(env.IGDB_HYPE_THRESHOLD).toBe(50)
+  })
+
+  it('reads the credentials and the thresholds', () => {
+    const env = parseEnv({
+      ...REQUIRED_ENV,
+      IGDB_CLIENT_ID: 'twitch-id',
+      IGDB_CLIENT_SECRET: 'twitch-secret',
+      IGDB_POPULARITY_THRESHOLD: '80',
+      IGDB_HYPE_THRESHOLD: '0',
+    })
+
+    expect(env).toMatchObject({
+      IGDB_CLIENT_ID: 'twitch-id',
+      IGDB_CLIENT_SECRET: 'twitch-secret',
+      IGDB_POPULARITY_THRESHOLD: 80,
+      IGDB_HYPE_THRESHOLD: 0,
+    })
+  })
+
+  it('treats empty credentials like unset ones and empty thresholds like the defaults', () => {
+    const env = parseEnv({
+      ...REQUIRED_ENV,
+      IGDB_CLIENT_ID: '',
+      IGDB_CLIENT_SECRET: '',
+      IGDB_POPULARITY_THRESHOLD: '',
+      IGDB_HYPE_THRESHOLD: '',
+    })
+
+    expect(env.IGDB_CLIENT_ID).toBeUndefined()
+    expect(env.IGDB_POPULARITY_THRESHOLD).toBe(50)
+    expect(env.IGDB_HYPE_THRESHOLD).toBe(50)
+  })
+
+  it.each(['-1', '1.5', 'many'])('refuses the threshold %j like the cron does', (value) => {
+    expect(() => parseEnv({ ...REQUIRED_ENV, IGDB_POPULARITY_THRESHOLD: value })).toThrow()
+    expect(() => parseEnv({ ...REQUIRED_ENV, IGDB_HYPE_THRESHOLD: value })).toThrow()
+  })
+})

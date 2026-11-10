@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import {
+  createMockCatalogImportRun,
   createMockCatalogImportRunRepository,
   createMockClock,
   createMockGameRepository,
@@ -263,5 +264,96 @@ describe('CatalogImportRunRecorder', () => {
     await expect(recorder.run({ trigger: 'scheduled', requestedBy: null })).rejects.toThrow(
       'connection lost'
     )
+  })
+})
+
+describe('CatalogImportRunRecorder.runNextRequested', () => {
+  const queued = { trigger: 'manual', status: 'running' } as const
+
+  it('is idle and imports nothing when no run is queued or another executor took it', async () => {
+    runs.claimRequested.mockResolvedValue(null)
+
+    const result = await recorder.runNextRequested()
+
+    expect(result).toEqual({ kind: 'idle' })
+    expect(execute).not.toHaveBeenCalled()
+    expect(runs.claim).not.toHaveBeenCalled()
+    expect(runs.finish).not.toHaveBeenCalled()
+  })
+
+  it('frees abandoned runs, claims the queued run and records the outcome like any run', async () => {
+    runs.claimRequested.mockResolvedValue(createMockCatalogImportRun({ ...queued, id: 'run-7' }))
+
+    const result = await recorder.runNextRequested()
+
+    expect(result).toEqual({ kind: 'succeeded', runId: 'run-7', summary: SUMMARY })
+    expect(runs.interruptStale).toHaveBeenCalledOnce()
+    expect(runs.claimRequested).toHaveBeenCalledWith(FIXED_NOW)
+    expect(runs.finish).toHaveBeenCalledWith(
+      'run-7',
+      {
+        status: 'succeeded',
+        summary: {
+          created: 4,
+          updated: 10,
+          delisted: 1,
+          relisted: 2,
+          received: 16,
+          dropped: 1,
+          invalid: 3,
+        },
+        listedGames: 1675,
+      },
+      FIXED_NOW
+    )
+  })
+
+  it('frees only abandoned running runs, so a queued run of any age is claimed, not interrupted', async () => {
+    runs.claimRequested.mockResolvedValue(createMockCatalogImportRun(queued))
+
+    await recorder.runNextRequested()
+
+    expect(runs.interruptStale).toHaveBeenCalledWith(
+      { heartbeatBefore: new Date(FIXED_NOW.getTime() - 120_000) },
+      FIXED_NOW
+    )
+    expect(runs.interruptStale.mock.invocationCallOrder[0]).toBeLessThan(
+      runs.claimRequested.mock.invocationCallOrder[0] ?? 0
+    )
+  })
+
+  it('never lets the fraction check be bypassed', async () => {
+    runs.claimRequested.mockResolvedValue(createMockCatalogImportRun(queued))
+
+    await recorder.runNextRequested()
+
+    expect(execute).toHaveBeenCalledWith({ overrideFractionCheck: false })
+  })
+
+  it('records a safety stop and a failure instead of throwing', async () => {
+    runs.claimRequested.mockResolvedValue(createMockCatalogImportRun({ ...queued, id: 'run-8' }))
+    execute.mockRejectedValueOnce(new Error('IGDB is unavailable'))
+
+    const result = await recorder.runNextRequested()
+
+    expect(result).toMatchObject({ kind: 'failed', runId: 'run-8' })
+    expect(runs.finish).toHaveBeenCalledWith(
+      'run-8',
+      { status: 'failed', errorMessage: 'IGDB is unavailable', listedGames: 1675 },
+      FIXED_NOW
+    )
+  })
+
+  it('keeps the heartbeat running for the claimed run', async () => {
+    vi.useFakeTimers()
+    runs.claimRequested.mockResolvedValue(createMockCatalogImportRun({ ...queued, id: 'run-9' }))
+    const finish = holdImport()
+
+    const pending = recorder.runNextRequested()
+    await vi.advanceTimersByTimeAsync(CONFIG.heartbeatIntervalMs)
+    expect(runs.heartbeat).toHaveBeenCalledWith('run-9', FIXED_NOW)
+
+    finish(SUMMARY)
+    await pending
   })
 })

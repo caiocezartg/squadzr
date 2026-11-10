@@ -12,9 +12,12 @@ import {
   runStartOf,
 } from './run-parts'
 
-const HEADER_CELL = 'type-label text-faint px-3 pb-2.5 text-left whitespace-nowrap'
-const NUMBER_HEADER_CELL = 'type-label text-faint px-3 pb-2.5 text-right whitespace-nowrap'
-const CELL = 'px-3 py-3 align-middle shadow-[inset_0_1px_0_#16171b]'
+const HEADER_CELL =
+  'type-label text-faint px-2.5 pb-2.5 text-left align-bottom whitespace-nowrap xl:px-3'
+// Below xl the long count labels may take two lines, so the counts fit beside the run at laptop widths.
+const NUMBER_HEADER_CELL =
+  'type-label text-faint px-2.5 pb-2.5 text-right align-bottom xl:px-3 xl:whitespace-nowrap'
+const CELL = 'px-2.5 py-3 align-middle xl:px-3 shadow-[inset_0_1px_0_#16171b]'
 const NUMBER_CELL = `${CELL} text-right`
 
 /** Opens a run's detail; the element is where focus returns when it closes. */
@@ -49,7 +52,7 @@ export function RunsTable({ runs, selectedId, onOpen }: RunsListProps) {
           <th scope="col" className={HEADER_CELL}>
             {t('columns.status')}
           </th>
-          <th scope="col" className={`${HEADER_CELL} max-md:hidden`}>
+          <th scope="col" className={`${HEADER_CELL} max-xl:hidden`}>
             {t('columns.duration')}
           </th>
           <th scope="col" className={NUMBER_HEADER_CELL}>
@@ -58,7 +61,7 @@ export function RunsTable({ runs, selectedId, onOpen }: RunsListProps) {
           <th scope="col" className={NUMBER_HEADER_CELL}>
             {t('columns.delisted')}
           </th>
-          <th scope="col" className={NUMBER_HEADER_CELL}>
+          <th scope="col" className={`${NUMBER_HEADER_CELL} max-xl:hidden`}>
             {t('columns.relisted')}
           </th>
           <th scope="col" className={NUMBER_HEADER_CELL}>
@@ -94,13 +97,13 @@ function RunsTableRow({ run, selected, onOpen }: RunsTableRowProps) {
           <RunInstant at={runStartOf(run)} />
         </button>
       </td>
-      <td className={CELL}>
+      <td className={`${CELL} whitespace-nowrap`}>
         <RunOrigin run={run} />
       </td>
       <td className={CELL}>
         <RunStatusPill status={run.status} />
       </td>
-      <td className={`${CELL} text-muted max-md:hidden`}>
+      <td className={`${CELL} text-muted max-xl:hidden`}>
         <RunDurationView run={run} />
       </td>
       <td className={NUMBER_CELL}>
@@ -109,7 +112,7 @@ function RunsTableRow({ run, selected, onOpen }: RunsTableRowProps) {
       <td className={NUMBER_CELL}>
         <RunCount value={run.summary?.delisted} />
       </td>
-      <td className={NUMBER_CELL}>
+      <td className={`${NUMBER_CELL} max-xl:hidden`}>
         <RunCount value={run.summary?.relisted} />
       </td>
       <td className={NUMBER_CELL}>

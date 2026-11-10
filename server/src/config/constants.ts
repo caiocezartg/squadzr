@@ -33,6 +33,10 @@ export const CATALOG_IMPORT_RUN = {
   STALE_HEARTBEAT_MS: 2 * 60_000,
   /** A `requested` run nobody claimed within this long was abandoned. */
   STALE_REQUESTED_MS: 10 * 60_000,
+  /** The API's executor looks for a queued run this often besides being woken by a request. */
+  EXECUTOR_POLL_INTERVAL_MS: 15_000,
+  /** On shutdown the executor waits this long for the run in flight before letting go of it. */
+  EXECUTOR_SHUTDOWN_GRACE_MS: 10_000,
   /** The longest error message a run keeps. */
   ERROR_MESSAGE_MAX_LENGTH: 2000,
 } as const

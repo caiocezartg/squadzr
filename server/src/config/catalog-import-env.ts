@@ -32,20 +32,31 @@ const optionalOverride = z.preprocess(
 )
 
 /**
+ * The IGDB settings, shared by the cron's environment and the API's optional copy of it, so both
+ * validate them by the same rules.
+ */
+export const igdbClientIdSchema = z.string().min(1, 'IGDB_CLIENT_ID is required')
+export const igdbClientSecretSchema = z.string().min(1, 'IGDB_CLIENT_SECRET is required')
+export const igdbPopularityThresholdSchema = optionalThresholdSchema(
+  DEFAULT_IGDB_POPULARITY_THRESHOLD
+)
+/**
+ * 0 means no hype floor among the games that have `hypes`: a release without
+ * `hypes` fails `hypes >= 0` in IGDB and enters only through the rating count.
+ */
+export const igdbHypeThresholdSchema = optionalThresholdSchema(DEFAULT_IGDB_HYPE_THRESHOLD)
+
+/**
  * The whole environment of the Catalog Import. It deliberately shares nothing
  * with the API's schema: the hosted job gets the database URL and the Twitch
  * app credentials, and none of the auth or Discord variables.
  */
 const catalogImportEnvSchema = z.object({
   DATABASE_URL: z.url(),
-  IGDB_CLIENT_ID: z.string().min(1, 'IGDB_CLIENT_ID is required'),
-  IGDB_CLIENT_SECRET: z.string().min(1, 'IGDB_CLIENT_SECRET is required'),
-  IGDB_POPULARITY_THRESHOLD: optionalThresholdSchema(DEFAULT_IGDB_POPULARITY_THRESHOLD),
-  /**
-   * 0 means no hype floor among the games that have `hypes`: a release without
-   * `hypes` fails `hypes >= 0` in IGDB and enters only through the rating count.
-   */
-  IGDB_HYPE_THRESHOLD: optionalThresholdSchema(DEFAULT_IGDB_HYPE_THRESHOLD),
+  IGDB_CLIENT_ID: igdbClientIdSchema,
+  IGDB_CLIENT_SECRET: igdbClientSecretSchema,
+  IGDB_POPULARITY_THRESHOLD: igdbPopularityThresholdSchema,
+  IGDB_HYPE_THRESHOLD: igdbHypeThresholdSchema,
   CATALOG_IMPORT_OVERRIDE_FRACTION_CHECK: optionalOverride,
 })
 

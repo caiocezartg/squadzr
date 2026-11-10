@@ -454,6 +454,9 @@
     "CANNOT_CHANGE_OWNER": "The owner's role cannot be changed.",
     "ROLE_CHANGE_FORBIDDEN": "Your role does not allow this change.",
     "ROOM_NOT_OPEN": "This squad is already full or has expired, so it can no longer be closed.",
+    "CATALOG_IMPORT_UNAVAILABLE": "The catalog import is not set up on this server, so it cannot be run from here.",
+    "CATALOG_IMPORT_MANUAL_LIMIT": "A manual catalog import was already requested in the last 24 hours.",
+    "CATALOG_IMPORT_RUNNING": "A catalog import is already queued or running.",
     "DEFAULT": "Something went wrong. Please try again."
   },
   "playerProfile": {
@@ -955,6 +958,24 @@
             "showing": "Showing the newest {shown} of {total}.",
             "viewAll": "View all in Squads"
           }
+        }
+      },
+      "runImport": {
+        "caption": "Manual run",
+        "title": "Run now",
+        "hint": "Runs the same import as the cron, with the same safety checks. One manual run every 24 h; the cron does not count.",
+        "action": "Run import",
+        "availableAt": "Available again at {at}",
+        "active": {
+          "requested": "A run is queued.",
+          "running": "A run is in progress."
+        },
+        "dialog": {
+          "title": "Run the Catalog Import now?",
+          "body": "The import syncs the catalog with IGDB, with the same safety checks as the cron. The next manual run is only available 24 h after this one.",
+          "cancel": "Cancel",
+          "confirm": "Run import",
+          "confirming": "Requesting…"
         }
       }
     },
