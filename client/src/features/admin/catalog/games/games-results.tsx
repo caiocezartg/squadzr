@@ -61,7 +61,7 @@ export function GamesResults({
   return (
     <div className="flex flex-col gap-3.5">
       {/* Both layouts are in the HTML, so the server render fits every width; CSS shows one. */}
-      <div className="hidden sm:block">
+      <div className="hidden min-w-0 overflow-x-auto sm:block">
         <GamesTable games={data.items} />
       </div>
       <div className="sm:hidden">

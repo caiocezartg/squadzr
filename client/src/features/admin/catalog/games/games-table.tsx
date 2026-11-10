@@ -8,9 +8,12 @@ import { adminGameHref } from './game-links'
 import { useGamesListQuery } from './game-list-links'
 import { FeaturedRank, GameCount, GamePlatforms, GamePlayers, GameStatusBadge } from './game-parts'
 
-const HEADER_CELL = 'type-label text-faint px-3 pb-2.5 text-left whitespace-nowrap'
-const NUMBER_HEADER_CELL = 'type-label text-faint px-3 pb-2.5 text-right whitespace-nowrap'
-const CELL = 'px-3 py-3 align-middle shadow-[inset_0_1px_0_#16171b]'
+const HEADER_CELL =
+  'type-label text-faint px-2.5 pb-2.5 text-left align-bottom whitespace-nowrap xl:px-3'
+// Below xl the long count labels may take two lines, so the table fits the laptop width.
+const NUMBER_HEADER_CELL =
+  'type-label text-faint px-2.5 pb-2.5 text-right align-bottom xl:px-3 xl:whitespace-nowrap'
+const CELL = 'px-2.5 py-3 align-middle xl:px-3 shadow-[inset_0_1px_0_#16171b]'
 const NUMBER_CELL = `${CELL} text-right`
 
 /**
@@ -30,13 +33,13 @@ export function GamesTable({ games }: { readonly games: readonly AdminGameDto[] 
           <th scope="col" className={HEADER_CELL}>
             {t('columns.game')}
           </th>
-          <th scope="col" className={`${HEADER_CELL} max-lg:hidden`}>
+          <th scope="col" className={`${HEADER_CELL} max-xl:hidden`}>
             {t('columns.platforms')}
           </th>
           <th scope="col" className={HEADER_CELL}>
             {t('columns.players')}
           </th>
-          <th scope="col" className={`${NUMBER_HEADER_CELL} max-lg:hidden`}>
+          <th scope="col" className={`${NUMBER_HEADER_CELL} max-xl:hidden`}>
             {t('columns.popularity')}
           </th>
           <th scope="col" className={NUMBER_HEADER_CELL}>
@@ -82,13 +85,13 @@ function GamesTableRow({
           </AppLink>
         </span>
       </td>
-      <td className={`${CELL} max-lg:hidden`}>
+      <td className={`${CELL} max-xl:hidden`}>
         <GamePlatforms platforms={game.platforms} />
       </td>
       <td className={CELL}>
         <GamePlayers min={game.minPlayers} max={game.maxPlayers} />
       </td>
-      <td className={`${NUMBER_CELL} max-lg:hidden`}>
+      <td className={`${NUMBER_CELL} max-xl:hidden`}>
         <GameCount value={game.popularity} />
       </td>
       <td className={NUMBER_CELL}>
