@@ -8,7 +8,7 @@
       --screenshot="%CD%\public\og-landing.png" "file:///%CD%/og/landing-preview.html"
 
   (Any Chromium works; on macOS or Linux use $PWD.) The fonts are the site's own, loaded from Google Fonts.
-  The content sits in the middle 630px column, so the image still reads when WhatsApp crops it to a square.
+  The content sits in the middle 600px column (15px inside the 630px square), so the image still reads when WhatsApp crops it to a square.
 -->
 <html lang="en">
   <head>
@@ -85,7 +85,7 @@
       }
       .slots {
         margin-top: auto;
-        align-self: flex-end;
+        align-self: flex-start;
         display: flex;
         gap: 14px;
       }
@@ -103,8 +103,8 @@
       }
       .slot.open {
         background: var(--card);
-        border: 3px dashed var(--faint);
-        color: var(--faint);
+        border: 3px dashed rgba(201, 203, 209, 0.6);
+        color: rgba(201, 203, 209, 0.75);
       }
       .slot svg {
         width: 34px;

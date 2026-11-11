@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_PREVIEW, ROOT_METADATA, SITE_DESCRIPTION, SITE_TITLE } from './site-metadata'
+import {
+  DEFAULT_PREVIEW,
+  LANDING_METADATA,
+  ROOT_METADATA,
+  SITE_DESCRIPTION,
+  SITE_TITLE,
+} from './site-metadata'
 
 const image = {
   url: '/og-landing.png',
@@ -19,7 +25,6 @@ describe('the default metadata', () => {
     expect(ROOT_METADATA.openGraph).toEqual({
       siteName: 'Squadzr',
       type: 'website',
-      url: '/',
       title: SITE_TITLE,
       description: SITE_DESCRIPTION,
       images: [image],
@@ -43,5 +48,11 @@ describe('the default metadata', () => {
 
   it('shares the preview with pages that fall back to it', () => {
     expect(ROOT_METADATA).toMatchObject(DEFAULT_PREVIEW)
+  })
+
+  it('declares og:url only on the landing, so an inheriting page never claims its address', () => {
+    expect(DEFAULT_PREVIEW.openGraph).not.toHaveProperty('url')
+    expect(LANDING_METADATA.title).toBe(SITE_TITLE)
+    expect(LANDING_METADATA.openGraph).toEqual({ ...DEFAULT_PREVIEW.openGraph, url: '/' })
   })
 })

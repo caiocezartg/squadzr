@@ -34,7 +34,6 @@ export const DEFAULT_PREVIEW = {
   description: SITE_DESCRIPTION,
   openGraph: {
     ...SITE_OPEN_GRAPH,
-    url: '/',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     images: [SITE_PREVIEW_IMAGE],
@@ -45,6 +44,15 @@ export const DEFAULT_PREVIEW = {
     description: SITE_DESCRIPTION,
     images: [SITE_PREVIEW_IMAGE],
   },
+} satisfies Metadata
+
+/**
+ * The landing's own metadata. Only the landing declares `og:url`: a page that inherits the default preview
+ * must not claim the landing's address, which Facebook and LinkedIn read as the canonical one.
+ */
+export const LANDING_METADATA = {
+  title: SITE_TITLE,
+  openGraph: { ...DEFAULT_PREVIEW.openGraph, url: '/' },
 } satisfies Metadata
 
 /** The root layout's metadata: the base URL, the title template, the default preview and the icons. */

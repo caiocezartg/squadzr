@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { API_INTERNAL_URL } from '@/env.server'
-import { DEFAULT_PREVIEW } from '@/lib/site-metadata'
+import { DEFAULT_PREVIEW, SITE_TITLE } from '@/lib/site-metadata'
 import { lobbySquad } from '@/test/fixtures'
 import { lobbyMetadata } from './lobby-metadata'
 
@@ -39,7 +39,7 @@ afterEach(() => {
 })
 
 /** The landing's preview, never Squad details. */
-const GENERIC = { title: { absolute: 'Squadzr' }, ...DEFAULT_PREVIEW }
+const GENERIC = { title: { absolute: SITE_TITLE }, ...DEFAULT_PREVIEW }
 
 describe('lobbyMetadata', () => {
   it('gives an Open Squad the full invite preview: name and game, size, language, tags and cover', async () => {
