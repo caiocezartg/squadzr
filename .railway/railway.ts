@@ -47,7 +47,7 @@ export default defineRailway(() => {
 
   const gamesImport = service('games-import', {
     // checkSuites is Railway's "Wait for CI": a push deploys only after its GitHub checks pass.
-    source: github('caiocezartg/squadzr', { branch: 'development', checkSuites: true }),
+    source: github('caiocezartg/squadzr', { branch: 'main', checkSuites: true }),
     build: {
       builder: 'RAILPACK',
       buildCommand: 'bun install --frozen-lockfile',
@@ -67,9 +67,9 @@ export default defineRailway(() => {
   })
 
   const api = service('api', {
-    // checkSuites is Railway's "Wait for CI". The branch is `development` while the app is brought
-    // up; the go-live ticket switches it to `main`.
-    source: github('caiocezartg/squadzr', { branch: 'development', checkSuites: true }),
+    // checkSuites is Railway's "Wait for CI". `main` is the release branch: `development` only
+    // pre-tests changes and reaches production through the promotion pull request.
+    source: github('caiocezartg/squadzr', { branch: 'main', checkSuites: true }),
     build: {
       builder: 'RAILPACK',
       buildCommand: 'bun install --frozen-lockfile',

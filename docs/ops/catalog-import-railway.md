@@ -11,8 +11,8 @@ runs next to it as the `api` service and owns the schema migrations (see "The `a
 | Project        | `squadzr`                                                                                                                                |
 | Environment    | `production` (the only one; it was called `staging` until #133)                                                                          |
 | Database       | `postgres`, PostgreSQL 16 (`ghcr.io/railwayapp-templates/postgres-ssl:16`), volume `postgres-data` mounted at `/var/lib/postgresql/data` |
-| API service    | `api`, deployed from `caiocezartg/squadzr` branch `development` during bring-up, at `https://api.squadzr.app`                            |
-| Cron service   | `games-import`, deployed from `caiocezartg/squadzr` branch `development`                                                                 |
+| API service    | `api`, deployed from `caiocezartg/squadzr` branch `main`, at `https://api.squadzr.app`                            |
+| Cron service   | `games-import`, deployed from `caiocezartg/squadzr` branch `main`                                                                        |
 | Config as code | `.railway/railway.ts` (Railway Infrastructure as Code)                                                                                   |
 
 The authoring file owns the whole environment: the build installs the Bun workspace from the
@@ -84,7 +84,7 @@ pending, which is how CI can gate on drift. A config change does not need a code
 apply` changes the service settings and redeploys it. The `railway/iac` package requires Railway
 CLI 5.42.1 or newer for `config plan` and `config apply`.
 
-Code pushes to `development` deploy `games-import` through its deployment trigger, once the push's
+Code pushes to `main` (the promotion pull request from `development`) deploy `games-import` through its deployment trigger, once the push's
 GitHub checks pass (`checkSuites: true`, "Wait for CI" in the dashboard); the watch patterns drop
 pushes that touch only `client/`. `config apply` sets the source but does not create the trigger:
 Railway creates it when the repository is connected in the dashboard (service → Settings → Source
@@ -250,9 +250,9 @@ repository, built with `bun install --frozen-lockfile`. It is reachable at `http
 (a DNS-only CNAME in Cloudflare until the edge ticket proxies it); `/health/ready` is its health
 check, and a deployment that does not answer it never takes traffic.
 
-- **Deploys.** A push to `development` deploys it only after the push's GitHub checks pass (`checkSuites`),
+- **Deploys.** A push to `main` deploys it only after the push's GitHub checks pass (`checkSuites`),
   and only when it touches `server/**`, `packages/**`, `package.json` or `bun.lock`: a push that touches
-  only `client/` does not. The go-live ticket switches the branch to `main`.
+  only `client/` does not. `development` is the pre-test branch: it is not deployed, and reaches production only through the promotion pull request.
 - **Failed migration.** The pre-deploy command (`bun --no-env-file src/interface/scripts/migrate.ts`)
   runs before the new container starts. If it exits non-zero the deployment fails and the previous
   one keeps serving.
