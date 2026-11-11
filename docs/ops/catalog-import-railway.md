@@ -261,7 +261,7 @@ check, and a deployment that does not answer it never takes traffic.
 - **Limits.** `api` and `postgres` are capped at 1 vCPU and 512 MiB each (`limitOverride`). They are
   ceilings: Railway bills what the services use.
 - **Variables.** `NODE_ENV`, `LOG_LEVEL`, `CORS_ORIGIN`, `BETTER_AUTH_URL`, `BETTER_AUTH_COOKIE_DOMAIN`,
-  `TRUST_PROXY_HOPS=2` (Cloudflare, then Railway's edge) and `DATABASE_URL` (a reference to `postgres`) are in the authoring file, and the
+  `TRUST_PROXY_HOPS=1` (Railway's edge, see "The edge") and `DATABASE_URL` (a reference to `postgres`) are in the authoring file, and the
   IGDB credentials are references to the `games-import` ones. `BETTER_AUTH_SECRET`, `DISCORD_CLIENT_ID`
   and `DISCORD_CLIENT_SECRET` are `preserve()`d: they exist only in Railway, never in the repository.
   The Discord application needs `https://api.squadzr.app/api/auth/callback/discord` as a redirect URI.
@@ -290,9 +290,20 @@ changed together, and the Worker's secret with them.
 At `LOG_LEVEL=debug` each request logs `Edge request headers` with `edgeAuthHeader` (`present` or `absent`,
 never the value) and `cfConnectingIp`.
 
-**Client address.** Railway's edge replaces `x-forwarded-for` with the address that connected to it, so the API
-sees Cloudflare's address (`request.ip`), not the visitor's. `TRUST_PROXY_HOPS` does not change that
-(measured at 1, 2 and 3 hops). Cloudflare sends the visitor's address as `CF-Connecting-IP`; the debug line above shows whether it arrives.
+**Client address.** Railway's edge replaces `x-forwarded-for` with the address that connected to it, so the
+proxy chain alone names a Cloudflare address, not the visitor's (measured at 1, 2 and 3 hops). The visitor's
+address is `CF-Connecting-IP`, which anyone who reaches the Railway origin directly can write. So the API
+believes it only on a request whose edge secret matched (`EDGE_AUTH_TOKEN` set and the header right): it
+then becomes the single `x-forwarded-for` entry, and `request.ip` (the app rate limits, the Discord invite
+check), the Better Auth rate limiter and the log's `clientIp` field all read it. Better Auth is fed from
+`request.ip` and keys its limiter on the one header the server writes (its documented setup for an address
+the server code sets), so it needs no option of its own. With the lock off, or with a missing or invalid
+`CF-Connecting-IP` (a warning, never the token), the proxy chain's address is used. `TRUST_PROXY_HOPS` stays
+at 1: Railway's edge is the only proxy whose header is believed, and a larger count would trust nothing more.
+Setting it to 0 trusts no header at all, this one included. The info-level "incoming request" line is written
+before any hook runs and keeps the connecting (Cloudflare) address as `remoteAddress`; the visitor is the
+`clientIp` of the same request's "request completed" line. Until the lock is on, requests are attributed to
+Cloudflare's addresses.
 
 ## Migrations
 

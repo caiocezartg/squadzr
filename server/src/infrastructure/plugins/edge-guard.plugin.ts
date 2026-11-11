@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
 import { EdgeAuthRequiredError } from '@application/errors'
+import { adoptEdgeClientAddress } from './edge-client-address'
 
 /** The header the Cloudflare edge overwrites on every request it forwards to the API. */
 export const EDGE_AUTH_HEADER = 'x-squadzr-edge-auth'
@@ -35,15 +36,16 @@ export function hasEdgeToken(received: string | string[] | undefined, expected: 
 
 /**
  * The origin lock: only a request the Cloudflare edge forwarded, which carries the secret it writes, reaches
- * the routes. Runs before everything else, so a refused request touches no cookie, no CORS reflection and no
- * WebSocket handshake. A debug line shows whether the header arrived (never its value), which is how the
- * hosted API proves the edge sends it while the lock is still off.
+ * the routes, and only such a request is believed about the visitor's address. Runs before everything else, so
+ * a refused request touches no cookie, no CORS reflection and no WebSocket handshake. A debug line shows
+ * whether the header arrived (never its value), which is how the hosted API proves the edge sends it while
+ * the lock is still off.
  */
 async function edgeGuardPlugin(
   fastify: FastifyInstance,
   { token }: EdgeGuardPluginOptions
 ): Promise<void> {
-  fastify.addHook('onRequest', async (request) => {
+  fastify.addHook('onRequest', async (request, reply) => {
     if (isHealthPath(request.url)) return
 
     const received = request.headers[EDGE_AUTH_HEADER]
@@ -55,9 +57,11 @@ async function edgeGuardPlugin(
       'Edge request headers'
     )
 
-    if (token !== undefined && !hasEdgeToken(received, token)) {
-      throw new EdgeAuthRequiredError()
-    }
+    // Lock off: nothing proves the request came through Cloudflare, so CF-Connecting-IP is ignored.
+    if (token === undefined) return
+    if (!hasEdgeToken(received, token)) throw new EdgeAuthRequiredError()
+
+    adoptEdgeClientAddress(request, reply)
   })
 }
 
