@@ -57,6 +57,47 @@ describe('EDGE_AUTH_TOKEN', () => {
   })
 })
 
+describe('abuse limits', () => {
+  it('default to 300 requests a minute, 20 upgrades a minute and 10 sockets per address', () => {
+    const env = parseEnv(REQUIRED_ENV)
+
+    expect(env).toMatchObject({
+      RATE_LIMIT_MAX: 300,
+      RATE_LIMIT_WINDOW_MS: 60_000,
+      WS_UPGRADES_PER_MINUTE: 20,
+      WS_MAX_CONNECTIONS_PER_IP: 10,
+    })
+  })
+
+  it('read whole numbers, and 0 as no limit', () => {
+    const env = parseEnv({
+      ...REQUIRED_ENV,
+      RATE_LIMIT_MAX: '0',
+      RATE_LIMIT_WINDOW_MS: '10000',
+      WS_UPGRADES_PER_MINUTE: '5',
+      WS_MAX_CONNECTIONS_PER_IP: '0',
+    })
+
+    expect(env).toMatchObject({
+      RATE_LIMIT_MAX: 0,
+      RATE_LIMIT_WINDOW_MS: 10_000,
+      WS_UPGRADES_PER_MINUTE: 5,
+      WS_MAX_CONNECTIONS_PER_IP: 0,
+    })
+  })
+
+  it.each([
+    ['RATE_LIMIT_MAX', '-1'],
+    ['RATE_LIMIT_MAX', '1.5'],
+    ['RATE_LIMIT_MAX', 'many'],
+    ['RATE_LIMIT_WINDOW_MS', '0'],
+    ['WS_UPGRADES_PER_MINUTE', 'x'],
+    ['WS_MAX_CONNECTIONS_PER_IP', '-3'],
+  ])('refuse %s=%s', (name, value) => {
+    expect(() => parseEnv({ ...REQUIRED_ENV, [name]: value })).toThrow()
+  })
+})
+
 describe('BETTER_AUTH_COOKIE_DOMAIN', () => {
   it('is unset by default', () => {
     expect(parseEnv(REQUIRED_ENV).BETTER_AUTH_COOKIE_DOMAIN).toBeUndefined()

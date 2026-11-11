@@ -103,3 +103,42 @@ describe('a request without the right secret', () => {
     expect(response.statusCode).toBe(403)
   })
 })
+
+describe('the Worker zone', () => {
+  async function loggedWorkerZones(zones: Array<string | undefined>) {
+    const lines: string[] = []
+    const fastify = Fastify({
+      logger: { level: 'info', stream: { write: (line: string) => void lines.push(line) } },
+      trustProxy: 1,
+    })
+    await fastify.register(edgeGuardPlugin, { token: TOKEN })
+    fastify.get('/ip', async (request) => ({ ip: request.ip }))
+    await fastify.ready()
+    for (const zone of zones) {
+      await fastify.inject({
+        method: 'GET',
+        url: '/ip',
+        remoteAddress: RAILWAY_EDGE,
+        headers: {
+          [EDGE_AUTH_HEADER]: TOKEN,
+          ...(zone === undefined ? {} : { 'x-squadzr-worker-zone': zone }),
+        },
+      })
+    }
+    await fastify.close()
+
+    return lines
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .filter((line) => line.msg === 'request completed')
+      .map((line) => line.workerZone)
+  }
+
+  it('is bound to the log of a request that carries the secret, and only when it is a zone name', async () => {
+    expect(await loggedWorkerZones(['Squadzr.app', 'not a zone', '<script>', undefined])).toEqual([
+      'squadzr.app',
+      undefined,
+      undefined,
+      undefined,
+    ])
+  })
+})

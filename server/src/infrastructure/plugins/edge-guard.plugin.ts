@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
 import { EDGE_AUTH_HEADER } from '@squadzr/schemas'
 import { EdgeAuthRequiredError } from '@application/errors'
-import { adoptEdgeClientAddress } from './edge-client-address'
+import { adoptEdgeClientAddress, bindWorkerZone } from './edge-client-address'
 
 // The header name is shared with the Next server, which sends it on its own calls.
 export { EDGE_AUTH_HEADER }
@@ -54,6 +54,7 @@ async function edgeGuardPlugin(
       {
         edgeAuthHeader: received === undefined ? 'absent' : 'present',
         cfConnectingIp: request.headers['cf-connecting-ip'],
+        workerZone: request.headers['x-squadzr-worker-zone'],
       },
       'Edge request headers'
     )
@@ -63,6 +64,7 @@ async function edgeGuardPlugin(
     if (!hasEdgeToken(received, token)) throw new EdgeAuthRequiredError()
 
     adoptEdgeClientAddress(request, reply)
+    bindWorkerZone(request, reply)
   })
 }
 
