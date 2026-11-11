@@ -12,6 +12,9 @@ const TOKEN = 'edge-secret-0123456789abcdef-0123456789'
 const RAILWAY_EDGE = '100.64.0.1'
 const CLOUDFLARE = '172.69.138.8'
 
+// Better Auth keeps its rate-limit counters in memory shared by every server of the process, so each test
+// that exhausts a quota does it for an address of its own.
+
 let server: TestServer | undefined
 
 afterEach(async () => {
@@ -19,20 +22,24 @@ afterEach(async () => {
   server = undefined
 })
 
-function signIn(headers: Record<string, string>) {
+function signIn(headers: Record<string, string>, proxyChainAddress = CLOUDFLARE) {
   return server!.app.inject({
     method: 'POST',
     url: '/api/auth/sign-in/social',
     remoteAddress: RAILWAY_EDGE,
-    headers: { 'x-forwarded-for': CLOUDFLARE, ...headers },
+    headers: { 'x-forwarded-for': proxyChainAddress, ...headers },
     payload: { provider: 'discord', callbackURL: 'http://localhost:5173/squads' },
   })
 }
 
-async function statuses(headersOf: (attempt: number) => Record<string, string>, attempts = 4) {
+async function statuses(
+  headersOf: (attempt: number) => Record<string, string>,
+  proxyChainAddress = CLOUDFLARE,
+  attempts = 4
+) {
   const codes: number[] = []
   for (let attempt = 0; attempt < attempts; attempt++) {
-    codes.push((await signIn(headersOf(attempt))).statusCode)
+    codes.push((await signIn(headersOf(attempt), proxyChainAddress)).statusCode)
   }
   return codes
 }
@@ -70,10 +77,10 @@ describe('with the lock on', () => {
     server = await buildTestServer({ NODE_ENV: 'production', EDGE_AUTH_TOKEN: TOKEN })
 
     // A different invalid value each time: they cannot be told apart, so all share the Cloudflare address.
-    const codes = await statuses((attempt) => ({
-      [HEADER]: TOKEN,
-      'cf-connecting-ip': `not-an-ip-${attempt}`,
-    }))
+    const codes = await statuses(
+      (attempt) => ({ [HEADER]: TOKEN, 'cf-connecting-ip': `not-an-ip-${attempt}` }),
+      '172.69.0.1'
+    )
 
     expect(codes[3]).toBe(429)
   })
@@ -118,7 +125,10 @@ describe('with the lock off', () => {
   it('ignores a forged CF-Connecting-IP: the proxy chain address is the visitor', async () => {
     server = await buildTestServer({ NODE_ENV: 'production' })
 
-    const codes = await statuses((attempt) => ({ 'cf-connecting-ip': `203.0.113.${attempt}` }))
+    const codes = await statuses(
+      (attempt) => ({ 'cf-connecting-ip': `203.0.113.${attempt}` }),
+      '172.69.0.2'
+    )
 
     expect(codes.slice(0, 3)).not.toContain(429)
     expect(codes[3]).toBe(429)
@@ -127,10 +137,10 @@ describe('with the lock off', () => {
   it('does not adopt the address even when a header named like the secret is sent', async () => {
     server = await buildTestServer({ NODE_ENV: 'production' })
 
-    const codes = await statuses((attempt) => ({
-      [HEADER]: TOKEN,
-      'cf-connecting-ip': `203.0.113.${attempt}`,
-    }))
+    const codes = await statuses(
+      (attempt) => ({ [HEADER]: TOKEN, 'cf-connecting-ip': `203.0.113.${attempt}` }),
+      '172.69.0.3'
+    )
 
     expect(codes[3]).toBe(429)
   })
