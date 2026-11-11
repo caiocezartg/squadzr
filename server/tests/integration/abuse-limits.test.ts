@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { errorResponseSchema } from '@squadzr/schemas'
 import { signIn } from '@test/harness/auth'
 import { createLogCapture } from '@test/harness/logging'
+import { connect } from '@test/harness/realtime'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
 // Abuse limits: every route is limited per client address, the health checks and a route with its own
@@ -131,7 +132,9 @@ describe('the Discord invite check', () => {
 })
 
 describe('the socket route', () => {
-  const upgrade = () => server!.app.injectWS('/ws', {})
+  // An in-memory socket has no address of its own: give it one.
+  const upgrade = () =>
+    server!.app.injectWS('/ws', { socket: { remoteAddress: '203.0.113.50' } } as never)
 
   it('refuses an upgrade past the per-minute limit', async () => {
     server = await buildTestServer({ WS_UPGRADES_PER_MINUTE: 2 })
@@ -144,44 +147,37 @@ describe('the socket route', () => {
     await expect(upgrade()).rejects.toThrow()
   })
 
-  it('closes a socket past the per-address cap with 1013, and takes one again once one closes', async () => {
-    server = await buildTestServer({ WS_MAX_CONNECTIONS_PER_IP: 2 })
+  it('turns a socket past the per-address cap away, and takes one again once one closes', async () => {
+    const capture = createLogCapture('warn')
+    server = await buildTestServer({ WS_MAX_CONNECTIONS_PER_IP: 2 }, { logger: capture.logger })
 
-    const first = await upgrade()
-    const second = await upgrade()
-    const third = await upgrade()
-    const closed = await new Promise<{ code: number; reason: string }>((resolve) =>
-      third.once('close', (code: number, reason: Buffer) =>
-        resolve({ code, reason: reason.toString() })
-      )
-    )
+    const first = await connect(server)
+    const second = await connect(server)
 
-    expect(closed).toEqual({ code: 1013, reason: 'Too many connections' })
+    // The third is accepted and closed at once: it never gets the protocol greeting.
+    const third = await server.app.injectWS('/ws', {})
+    const received: unknown[] = []
+    third.on('message', (data: Buffer) => received.push(data.toString()))
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
-    const firstClosed = new Promise<void>((resolve) => first.once('close', () => resolve()))
-    first.close()
-    await firstClosed
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    const fourth = await upgrade()
-    const stillOpen = await new Promise<boolean>((resolve) => {
-      const timer = setTimeout(() => resolve(true), 100)
-      fourth.once('close', () => {
-        clearTimeout(timer)
-        resolve(false)
-      })
-    })
+    expect(received).toEqual([])
+    expect(capture.lines.join('\n')).toContain('WebSocket connection limit exceeded')
 
-    expect(stillOpen).toBe(true)
-    second.close()
-    fourth.close()
+    first.client.close()
+    await first.serverClosed
+    const fourth = await connect(server)
+
+    expect(fourth.protocol.type).toBe('protocol')
+    second.client.close()
+    fourth.client.close()
   })
 
   it('does not limit sockets or upgrades when both are 0', async () => {
     server = await buildTestServer()
 
-    const sockets = await Promise.all([upgrade(), upgrade(), upgrade(), upgrade()])
+    const sessions = [await connect(server), await connect(server), await connect(server)]
 
-    for (const socket of sockets) socket.close()
+    for (const session of sessions) session.client.close()
   })
 })
 

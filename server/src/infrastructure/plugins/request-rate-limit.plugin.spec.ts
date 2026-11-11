@@ -1,3 +1,4 @@
+import websocket from '@fastify/websocket'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
 import edgeGuardPlugin from './edge-guard.plugin'
@@ -122,5 +123,29 @@ describe('the limit on every route', () => {
 
     expect((await get('/api/things', '203.0.113.12')).statusCode).toBe(403)
     expect((await get('/api/things', '203.0.113.12')).statusCode).toBe(403)
+  })
+})
+
+describe('a WebSocket upgrade', () => {
+  it('is refused with 429 past the limit of its own route, counting the address of the socket', async () => {
+    app = Fastify({ trustProxy: 1 })
+    await app.register(requestRateLimitPlugin, { max: 0, windowMs: 60_000 })
+    await app.register(websocket)
+    app.get(
+      '/ws',
+      { websocket: true, config: { rateLimit: { max: 2, timeWindow: 60_000 } } },
+      () => undefined
+    )
+    await app.ready()
+    // An in-memory socket has no address of its own: give it one.
+    const upgrade = () =>
+      app!.injectWS('/ws', { socket: { remoteAddress: '203.0.113.60' } } as never)
+
+    const first = await upgrade()
+    const second = await upgrade()
+    first.close()
+    second.close()
+
+    await expect(upgrade()).rejects.toThrow('Unexpected server response: 429')
   })
 })

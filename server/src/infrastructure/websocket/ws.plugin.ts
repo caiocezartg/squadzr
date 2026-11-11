@@ -70,7 +70,8 @@ async function wsPlugin(
       : undefined
 
   fastify.get('/ws', { websocket: true, config: upgradeLimit }, (socket, request) => {
-    const address = request.ip
+    // Always set behind a real connection; an in-memory test socket has none, and counts under one key.
+    const address = request.ip || 'unknown'
     if (!addressConnections.acquire(address)) {
       fastify.log.warn(
         { category: 'transport', event: 'connection_limit', limit: limits.connectionsPerAddress },
