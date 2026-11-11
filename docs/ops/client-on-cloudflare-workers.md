@@ -183,7 +183,8 @@ These live in the `squadzr.app` zone (Free plan), outside this repository:
   A route wins over the custom domain for its paths, so `squadzr-web` serves everything else.
 - **Redirect rule.** `www.squadzr.app/*` → `https://squadzr.app/${path}` (301, query string kept).
 - **Transform Rule** on `api.squadzr.app`: see "The edge secret". It also sets `x-squadzr-worker-zone` to
-  the zone of the Worker that made the request (empty, so removed, for a Worker of this same zone).
+  the zone of the Worker that made the request (empty, so removed, for a request no Worker made; our own Workers
+  were observed with it empty in November 2026, and the WAF rule allows empty and `squadzr.app` only).
 - **DNS for the API.** `api.squadzr.app` is a proxied CNAME to the Cloudflare Tunnel `squadzr-api`
   (`<tunnel id>.cfargotunnel.com`), not to a Railway domain. The tunnel, its token and its ingress rule are
   described in `docs/ops/catalog-import-railway.md`, "The tunnel", with how to rotate the token and how to roll

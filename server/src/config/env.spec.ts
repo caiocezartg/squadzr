@@ -13,8 +13,13 @@ describe('HOST', () => {
     expect(parseEnv(REQUIRED_ENV).HOST).toBe('0.0.0.0')
   })
 
-  it('reads the IPv6 wildcard Railway private networking needs', () => {
-    expect(parseEnv({ ...REQUIRED_ENV, HOST: '::' }).HOST).toBe('::')
+  it.each(['::', '0.0.0.0', '127.0.0.1', '::1', 'localhost'])('reads %j', (host) => {
+    expect(parseEnv({ ...REQUIRED_ENV, HOST: host }).HOST).toBe(host)
+  })
+
+  it.each(['', '0.0.0,0', '256.0.0.1', 'example.com', ':::'])('refuses %j', (host) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => parseEnv({ ...REQUIRED_ENV, HOST: host })).toThrow()
   })
 })
 

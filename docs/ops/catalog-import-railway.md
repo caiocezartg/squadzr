@@ -281,7 +281,8 @@ the Cloudflare zone, outside this repository:
 - **Transform Rule** (`http_request_late_transform`): on host `api.squadzr.app` it **sets** (overwrites)
   the request header `x-squadzr-edge-auth` to the edge secret, so a client cannot choose it, and the header
   `x-squadzr-worker-zone` to `cf.worker.upstream_zone`, the zone of the Worker that made the request (empty,
-  so the header is removed, for a request no Worker made and for a Worker of this same zone).
+  so the header is removed, for a request no Worker made; the app's own Workers were observed with it empty
+  in November 2026, and `squadzr.app` would mean the same, so the WAF rule below allows both and no other zone).
 - **Rate limiting rule** (`http_ratelimit`, the one the Free plan allows): `/api/auth/sign-in/*` and
   `/api/auth/callback/*` on that host, 5 requests per 10 seconds per IP (the Free plan counts per IP and per
   Cloudflare data center), then blocked for 10 seconds with a 429. Every other route is limited by the API
@@ -343,9 +344,12 @@ every plan; it needs no Access policy or paid feature). The pieces:
 Health and checks:
 
 ```sh
-# Tunnel status and connections (needs a Cloudflare API token with Cloudflare Tunnel Read)
-GET /accounts/<account id>/cfd_tunnel/<tunnel id>/connections   # 2 clients, 4 connections each
-railway logs --service cloudflared --lines 50                   # "Registered tunnel connection" x4 per replica
+# Tunnel status and connections: 2 clients with 4 connections each. $CF_API_TOKEN is an API token with
+# Cloudflare Tunnel Read, $CF_ACCOUNT_ID the account id, and TUNNEL_ID the tunnel id given above.
+curl -s -H "Authorization: Bearer $CF_API_TOKEN"   "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/connections"
+# The same tunnel's status (healthy, degraded or down)
+curl -s -H "Authorization: Bearer $CF_API_TOKEN"   "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID"
+railway logs --service cloudflared --lines 50   # "Registered tunnel connection" x4 per replica
 ```
 
 Stopping one replica does not take the site down: with the replicas scaled to one (`regions` count 1, applied),
@@ -440,9 +444,9 @@ shares between visitors (the landing's popular games, revalidated) carries no ad
 header would split that cache; it is counted under the Worker's address, at most one call per isolate every
 five minutes. Nothing is exempted for being a Worker call: the amplification (a page view
 becomes several API calls) is what the limit is for. The `workerZone` field of the request log (written only
-on a request whose edge secret matched) is empty for the app's own renders: Cloudflare reports an empty upstream
-zone for a Worker of the same zone. A value would name another zone's Worker, which the WAF rule blocks before the
-request gets here.
+on a request whose edge secret matched) was observed empty for the app's own renders in November 2026, although
+Cloudflare documents `cf.worker.upstream_zone` as the calling Worker's zone. Empty and `squadzr.app` both mean the
+app's own renders; the WAF rule blocks any other zone before the request gets here.
 
 ## Migrations
 

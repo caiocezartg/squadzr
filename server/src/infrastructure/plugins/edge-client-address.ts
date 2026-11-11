@@ -43,10 +43,11 @@ const workerZoneSchema = z
 /**
  * Binds the zone of the Worker that made the request, when there is one, to the request's log lines as
  * `workerZone`. The Cloudflare edge writes the header from `cf.worker.upstream_zone` on everything it
- * forwards and removes it from requests that no Worker made, so a client cannot choose it. That zone is
- * empty for a Worker of the same zone, so the app's own server renders carry no `workerZone`; a value
- * would name another zone's Worker, which the edge blocks before the request gets here. Callers pass only
- * a request whose edge secret was checked. It grants nothing.
+ * forwards and removes it from requests that no Worker made, so a client cannot choose it. Cloudflare
+ * documents the field as the calling Worker's zone; the app's own server renders were observed with it
+ * empty in November 2026. Empty (no `workerZone`) and `squadzr.app` both mean the app's own renders; the
+ * WAF rule blocks any other zone's Worker before the request gets here. Callers pass only a request whose
+ * edge secret was checked. It grants nothing.
  */
 export function bindWorkerZone(request: FastifyRequest, reply: FastifyReply): void {
   const parsed = workerZoneSchema.safeParse(request.headers[WORKER_ZONE_HEADER])

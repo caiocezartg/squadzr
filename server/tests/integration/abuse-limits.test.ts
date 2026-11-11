@@ -10,7 +10,7 @@ import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
 const HEADER = 'x-squadzr-edge-auth'
 const TOKEN = 'edge-secret-0123456789abcdef-0123456789'
-const RAILWAY_EDGE = '100.64.0.1'
+const PROXY_PEER = '100.64.0.1'
 
 let server: TestServer | undefined
 
@@ -24,7 +24,7 @@ function getFrom(address: string, url = '/api/rooms', headers: Record<string, st
   return server!.app.inject({
     method: 'GET',
     url,
-    remoteAddress: RAILWAY_EDGE,
+    remoteAddress: PROXY_PEER,
     headers: { 'x-forwarded-for': address, ...headers },
   })
 }
@@ -98,7 +98,7 @@ describe('the Discord invite check', () => {
     server!.app.inject({
       method: 'GET',
       url,
-      remoteAddress: RAILWAY_EDGE,
+      remoteAddress: PROXY_PEER,
       headers: { 'x-forwarded-for': address, ...user?.headers },
     })
 
