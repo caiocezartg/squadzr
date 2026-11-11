@@ -345,10 +345,12 @@ Health and checks:
 
 ```sh
 # Tunnel status and connections: 2 clients with 4 connections each. $CF_API_TOKEN is an API token with
-# Cloudflare Tunnel Read, $CF_ACCOUNT_ID the account id, and TUNNEL_ID the tunnel id given above.
-curl -s -H "Authorization: Bearer $CF_API_TOKEN"   "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/connections"
+# Cloudflare Tunnel Read, $CF_ACCOUNT_ID the account id, and $TUNNEL_ID the tunnel id given above.
+curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
+  "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/connections"
 # The same tunnel's status (healthy, degraded or down)
-curl -s -H "Authorization: Bearer $CF_API_TOKEN"   "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID"
+curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
+  "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID"
 railway logs --service cloudflared --lines 50   # "Registered tunnel connection" x4 per replica
 ```
 
