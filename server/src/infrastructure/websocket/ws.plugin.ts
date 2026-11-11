@@ -70,8 +70,9 @@ async function wsPlugin(
       : undefined
 
   fastify.get('/ws', { websocket: true, config: upgradeLimit }, (socket, request) => {
-    // Always set behind a real connection; an in-memory test socket has none, and counts under one key.
-    const address = request.ip || 'unknown'
+    // A real connection always has a peer. The in-memory `injectWS` upgrade has none, and `request.ip` throws
+    // without a socket (see `serializeRequestUrl`): count it under one key.
+    const address = request.socket ? request.ip : 'unknown'
     if (!addressConnections.acquire(address)) {
       fastify.log.warn(
         { category: 'transport', event: 'connection_limit', limit: limits.connectionsPerAddress },
