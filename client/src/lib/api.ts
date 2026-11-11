@@ -20,6 +20,20 @@ function absoluteUrl(path: string): string {
   return `${env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
+/**
+ * The browser's client speaks for the browser: it sends the session cookie, which only a browser holds,
+ * and no edge secret. A server render that reaches it, such as a suspended read whose server prefetch
+ * failed, would call the API as an anonymous caller the origin lock may refuse, and could answer with
+ * another viewer's view of the data. So it refuses to run there: the read throws, the nearest Suspense
+ * boundary is rendered by the browser instead, and the browser reads with the viewer's cookie. The
+ * server's own reads go through `serverApi`.
+ */
+function assertInBrowser(): void {
+  if (typeof window === 'undefined') {
+    throw new Error('The browser API client cannot run on the server; read through serverApi.')
+  }
+}
+
 /** The body as the server sent it: the parsed JSON, or the raw text when it is not JSON. */
 async function readBody(response: Response): Promise<unknown> {
   const text = await response.text()
@@ -42,6 +56,7 @@ async function request<S extends z.ZodType>(
   { method, url, data, signal }: RequestConfig,
   schema: S | undefined
 ): Promise<z.output<S> | void> {
+  assertInBrowser()
   const hasBody = data !== undefined
   const response = await fetch(absoluteUrl(url), {
     method,

@@ -71,4 +71,6 @@ debug/
 # Git worktrees
 .worktrees/
 
-.vercel
+# Local Worker secrets (`vite preview` reads them)
+.dev.vars
+.dev.vars.*

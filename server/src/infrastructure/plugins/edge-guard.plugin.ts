@@ -1,11 +1,12 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
+import { EDGE_AUTH_HEADER } from '@squadzr/schemas'
 import { EdgeAuthRequiredError } from '@application/errors'
 import { adoptEdgeClientAddress } from './edge-client-address'
 
-/** The header the Cloudflare edge overwrites on every request it forwards to the API. */
-export const EDGE_AUTH_HEADER = 'x-squadzr-edge-auth'
+// The header name is shared with the Next server, which sends it on its own calls.
+export { EDGE_AUTH_HEADER }
 
 /** The two routes the hosting platform probes directly, outside the edge. Exactly these, nothing under them. */
 const HEALTH_PATHS: ReadonlySet<string> = new Set(['/health', '/health/ready'])

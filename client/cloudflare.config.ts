@@ -6,6 +6,8 @@ export default defineConfig({
     entrypoint: 'vinext/server/fetch-handler',
     compatibilityDate: '2026-11-10',
     compatibilityFlags: ['nodejs_compat'],
+    // The Worker serves the apex; `www.squadzr.app` is redirected to it by a Cloudflare rule.
+    domains: ['squadzr.app'],
     assets: {
       htmlHandling: 'none',
       notFoundHandling: 'none',
@@ -13,8 +15,8 @@ export default defineConfig({
     },
     env: {
       ASSETS: bindings.assets(),
-      IMAGES: bindings.images(),
-      VINEXT_KV_CACHE: bindings.kv(),
+      // The edge secret the Next server sends to the API. Set once with `cf`, never in the repository.
+      EDGE_AUTH_TOKEN: bindings.secret(),
     },
   }),
 })
