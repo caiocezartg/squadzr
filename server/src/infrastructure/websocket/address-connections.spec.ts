@@ -19,6 +19,17 @@ describe('addressKey', () => {
     expect(addressKey('2804:1b3:aa80:d189::1')).not.toBe(first)
   })
 
+  it('reads an IPv4 tail as the last two groups, so it never shifts the prefix', () => {
+    expect(addressKey('::a:b:c:1.2.3.4')).toBe('0:0:0:a::/64')
+    expect(addressKey('64:ff9b::1.2.3.4')).toBe('64:ff9b:0:0::/64')
+    expect(addressKey('1:2:3:4:5:6:1.2.3.4')).toBe('1:2:3:4::/64')
+  })
+
+  it('counts the hextet form of an IPv4-mapped address as its IPv4 form', () => {
+    expect(addressKey('::ffff:0102:0304')).toBe('1.2.3.4')
+    expect(addressKey('0:0:0:0:0:ffff:203.0.113.7')).toBe('203.0.113.7')
+  })
+
   it('reads a compressed prefix and is not case sensitive', () => {
     expect(addressKey('2A06:98C0:3600::5')).toBe('2a06:98c0:3600:0::/64')
     expect(addressKey('::1')).toBe('0:0:0:0::/64')

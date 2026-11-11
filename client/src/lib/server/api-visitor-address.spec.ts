@@ -64,7 +64,19 @@ describe('serverApi.get visitor address', () => {
     expect(sentHeaders(fetchMock).get('x-real-ip')).toBe('203.0.113.9')
   })
 
-  it('never forwards it on an anonymous call, so a response Next shares is not split per visitor', async () => {
+  it('forwards it on an anonymous call that is not cached too, such as the invite preview read', async () => {
+    const fetchMock = stubFetch()
+    visitorBehindCloudflare('203.0.113.9')
+
+    await serverApi.get('/api/rooms/ABC123', schema, {
+      credentials: 'anonymous',
+      caching: 'uncached',
+    })
+
+    expect(sentHeaders(fetchMock).get('x-real-ip')).toBe('203.0.113.9')
+  })
+
+  it('never forwards it on a revalidated call, so a response Next shares is not split per visitor', async () => {
     const fetchMock = stubFetch()
     visitorBehindCloudflare('203.0.113.9')
 
@@ -72,13 +84,8 @@ describe('serverApi.get visitor address', () => {
       credentials: 'anonymous',
       caching: 'revalidated',
     })
-    await serverApi.get('/api/rooms/ABC123', schema, {
-      credentials: 'anonymous',
-      caching: 'uncached',
-    })
 
-    expect(sentHeaders(fetchMock, 0).has('x-real-ip')).toBe(false)
-    expect(sentHeaders(fetchMock, 1).has('x-real-ip')).toBe(false)
+    expect(sentHeaders(fetchMock).has('x-real-ip')).toBe(false)
   })
 
   it('sends nothing when the request has no usable address', async () => {

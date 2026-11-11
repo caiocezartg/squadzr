@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { requireAuth } from '@interface/hooks/auth.hook'
+import { createUserRateLimit } from '@interface/hooks/user-rate-limit.hook'
 import { createDiscordController } from '@interface/factories/discord.factory'
 import {
   discordInviteCheckResponseSchema,
@@ -31,6 +32,10 @@ export const discordRoutes: FastifyPluginAsync<DiscordRoutesOptions> = async (
 ) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
   const discordController = createDiscordController(fastify.discordPreviews)
+  const limitPerUser = createUserRateLimit(fastify, {
+    max: rateLimit.max,
+    timeWindowMs: rateLimit.timeWindowMs,
+  })
 
   app.get('/api/discord/invites/:code', {
     schema: {
@@ -46,17 +51,9 @@ export const discordRoutes: FastifyPluginAsync<DiscordRoutesOptions> = async (
         429: errorResponse,
       },
     },
-    // The limit runs after `requireAuth`, so it counts the signed-in user's requests and an unauthenticated
-    // one answers 401 without spending any quota. It replaces the per-address limit every other route has.
-    config: {
-      rateLimit: {
-        hook: 'preHandler',
-        max: rateLimit.max,
-        timeWindow: rateLimit.timeWindowMs,
-        keyGenerator: (request) => request.session?.user?.id ?? request.ip,
-      },
-    },
-    preHandler: requireAuth,
+    // Two limits count this route: the per-address one every route has (at `onRequest`, so an anonymous
+    // request is counted too) and, after `requireAuth`, a quota per signed-in user.
+    preHandler: [requireAuth, limitPerUser],
     handler: discordController.checkInvite.bind(discordController),
   })
 }

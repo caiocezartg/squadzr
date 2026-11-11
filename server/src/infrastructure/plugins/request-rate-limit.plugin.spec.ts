@@ -1,6 +1,8 @@
 import websocket from '@fastify/websocket'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach, describe, expect, it } from 'vitest'
+import { UnauthorizedError } from '@application/errors'
+import { createUserRateLimit } from '@interface/hooks/user-rate-limit.hook'
 import edgeGuardPlugin from './edge-guard.plugin'
 import requestRateLimitPlugin from './request-rate-limit.plugin'
 
@@ -24,18 +26,21 @@ async function build(options: { max: number; token?: string }) {
   app.get('/api/things', async () => ({ ok: true }))
   app.get('/health', async () => ({ status: 'ok' }))
   app.get('/health/ready', async () => ({ status: 'ok' }))
-  // A route with its own limit, checked in `preHandler` and keyed on a header standing in for the user.
+  // A route with a quota per user as well (`createUserRateLimit`, after a stand-in for `requireAuth`): a header
+  // stands in for the session, and no header answers 401.
+  app.decorateRequest('session', null)
+  const limitPerUser = createUserRateLimit(app, { max: 2, timeWindowMs: 60_000 })
   app.get(
     '/api/own',
     {
-      config: {
-        rateLimit: {
-          hook: 'preHandler',
-          max: 2,
-          timeWindow: 60_000,
-          keyGenerator: (request) => String(request.headers['x-user'] ?? request.ip),
+      preHandler: [
+        async (request) => {
+          const user = request.headers['x-user']
+          if (typeof user !== 'string') throw new UnauthorizedError()
+          request.session = { user: { id: user } } as never
         },
-      },
+        limitPerUser,
+      ],
     },
     async () => ({ ok: true })
   )
@@ -93,15 +98,33 @@ describe('the limit on every route', () => {
       expect((await get('/api/things', '203.0.113.4')).statusCode).toBe(200)
   })
 
-  it('lets a route with its own limit keep it, keyed on its own key', async () => {
+  it('lets a route add a quota per user next to the per-address limit', async () => {
     await build({ max: 1_000 })
     const as = (user: string) => get('/api/own', '203.0.113.5', { 'x-user': user })
 
     expect((await as('ada')).statusCode).toBe(200)
     expect((await as('ada')).statusCode).toBe(200)
-    expect((await as('ada')).statusCode).toBe(429)
+    const limited = await as('ada')
+    expect(limited.statusCode).toBe(429)
+    expect(limited.json()).toMatchObject({ code: 'RATE_LIMITED' })
+    expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0)
     // The same address, another user: their own quota.
     expect((await as('grace')).statusCode).toBe(200)
+  })
+
+  it('counts that route per address too, and anonymous requests spend nobody a quota', async () => {
+    await build({ max: 3 })
+
+    // No user: 401 each time, but each one counted against the address.
+    expect((await get('/api/own', '203.0.113.6')).statusCode).toBe(401)
+    expect((await get('/api/own', '203.0.113.6')).statusCode).toBe(401)
+    expect((await get('/api/own', '203.0.113.6')).statusCode).toBe(401)
+    expect((await get('/api/own', '203.0.113.6')).statusCode).toBe(429)
+    // A user from another address still has the whole quota.
+    const as = (user: string) => get('/api/own', '203.0.113.7', { 'x-user': user })
+    expect((await as('ada')).statusCode).toBe(200)
+    expect((await as('ada')).statusCode).toBe(200)
+    expect((await as('ada')).statusCode).toBe(429)
   })
 
   it('counts the visitor, not the Cloudflare address, behind the origin lock', async () => {

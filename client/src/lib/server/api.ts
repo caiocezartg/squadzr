@@ -44,10 +44,11 @@ export interface GetOptions {
  * The fetch options a policy stands for. The cookie goes out only with a viewer call. The edge secret goes
  * out with every call, so the API's origin lock lets the Next server in whether or not the edge stamps it.
  *
- * A viewer call also carries the visitor's address in `x-real-ip`, which Cloudflare turns into the
- * `CF-Connecting-IP` the API counts requests by: without it every render would be counted as the Worker's
- * own address, one shared bucket for all visitors. An anonymous call never carries it, because a response
- * that Next shares between visitors must not differ per visitor (it would split that cache).
+ * Every call that is not revalidated also carries the visitor's address in `x-real-ip`, which Cloudflare turns
+ * into the `CF-Connecting-IP` the API counts requests by: without it every render, and every crawler that
+ * fetches an invite preview, would be counted as the Worker's own address, one shared bucket anyone could
+ * exhaust. A revalidated call never carries it: Next shares its response between visitors and keys that
+ * cache on the request, so a per-visitor header would split it.
  */
 async function requestInit(
   policy: RequestPolicy,
@@ -55,17 +56,16 @@ async function requestInit(
 ): Promise<ServerFetchInit> {
   const headers = new Headers({ accept: 'application/json' })
   if (EDGE_AUTH_TOKEN) headers.set(EDGE_AUTH_HEADER, EDGE_AUTH_TOKEN)
-  if (policy.credentials === 'viewer') {
-    if (policy.cookie) headers.set('cookie', policy.cookie)
+  if (policy.credentials === 'viewer' && policy.cookie) headers.set('cookie', policy.cookie)
+  const revalidated = policy.credentials === 'anonymous' && policy.caching === 'revalidated'
+  if (!revalidated) {
     const address = await getVisitorAddress()
     if (address) headers.set(VISITOR_ADDRESS_HEADER, address)
   }
   // The signal runs until the body is read too, so a stalled body rejects like a dropped connection.
   const signal = timeoutMs === undefined ? undefined : AbortSignal.timeout(timeoutMs)
 
-  if (policy.credentials === 'anonymous' && policy.caching === 'revalidated') {
-    return { headers, signal, next: { revalidate: REVALIDATE_SECONDS } }
-  }
+  if (revalidated) return { headers, signal, next: { revalidate: REVALIDATE_SECONDS } }
   return { headers, signal, cache: 'no-store' }
 }
 

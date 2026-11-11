@@ -93,41 +93,64 @@ describe('the limit on every route', () => {
 })
 
 describe('the Discord invite check', () => {
-  it('keeps its own per-user limit next to the per-address one', async () => {
+  const url = '/api/discord/invites/valorant'
+  const checkFrom = (address: string, user?: { headers: { cookie: string } }) =>
+    server!.app.inject({
+      method: 'GET',
+      url,
+      remoteAddress: RAILWAY_EDGE,
+      headers: { 'x-forwarded-for': address, ...user?.headers },
+    })
+
+  it('limits each signed-in user on their own, even from one address', async () => {
     server = await buildTestServer(
       { RATE_LIMIT_MAX: 1_000 },
       { discordInviteRateLimit: { max: 2, timeWindowMs: 60_000 } }
     )
     const first = await signIn(server, 'First')
     const second = await signIn(server, 'Second')
-    const check = (user: { headers: { cookie: string } }) =>
-      server!.app.inject({
-        method: 'GET',
-        url: '/api/discord/invites/valorant',
-        remoteAddress: RAILWAY_EDGE,
-        headers: { 'x-forwarded-for': '203.0.113.20', ...user.headers },
-      })
 
-    expect((await check(first)).statusCode).toBe(200)
-    expect((await check(first)).statusCode).toBe(200)
-    expect((await check(first)).statusCode).toBe(429)
+    expect((await checkFrom('203.0.113.20', first)).statusCode).toBe(200)
+    expect((await checkFrom('203.0.113.20', first)).statusCode).toBe(200)
+    const limited = await checkFrom('203.0.113.20', first)
+
+    expect(limited.statusCode).toBe(429)
+    expect(limited.json()).toMatchObject({ error: 'RATE_LIMITED' })
+    expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0)
     // Same address, other user: their own quota.
-    expect((await check(second)).statusCode).toBe(200)
+    expect((await checkFrom('203.0.113.20', second)).statusCode).toBe(200)
   })
 
-  it('still answers 401 to an anonymous request without spending anyone a check', async () => {
+  it('also counts the route per address, whoever asks', async () => {
     server = await buildTestServer(
-      { RATE_LIMIT_MAX: 1_000 },
+      { RATE_LIMIT_MAX: 3 },
+      { discordInviteRateLimit: { max: 1_000, timeWindowMs: 60_000 } }
+    )
+    const first = await signIn(server, 'First')
+    const second = await signIn(server, 'Second')
+
+    expect((await checkFrom('203.0.113.21', first)).statusCode).toBe(200)
+    expect((await checkFrom('203.0.113.21', second)).statusCode).toBe(200)
+    expect((await checkFrom('203.0.113.21', first)).statusCode).toBe(200)
+    expect((await checkFrom('203.0.113.21', second)).statusCode).toBe(429)
+    expect((await checkFrom('203.0.113.22', second)).statusCode).toBe(200)
+  })
+
+  it('counts an anonymous request per address, and it spends no user a check', async () => {
+    server = await buildTestServer(
+      { RATE_LIMIT_MAX: 3 },
       { discordInviteRateLimit: { max: 1, timeWindowMs: 60_000 } }
     )
     const user = await signIn(server, 'Player')
-    const url = '/api/discord/invites/valorant'
 
-    expect((await server.app.inject({ method: 'GET', url })).statusCode).toBe(401)
-    expect((await server.app.inject({ method: 'GET', url })).statusCode).toBe(401)
-    expect(
-      (await server.app.inject({ method: 'GET', url, headers: user.headers })).statusCode
-    ).toBe(200)
+    expect((await checkFrom('203.0.113.23')).statusCode).toBe(401)
+    expect((await checkFrom('203.0.113.23')).statusCode).toBe(401)
+    expect((await checkFrom('203.0.113.23')).statusCode).toBe(401)
+    // The address is spent: the fourth is refused before authentication is even asked.
+    expect((await checkFrom('203.0.113.23')).statusCode).toBe(429)
+    // The anonymous requests were nobody's: the user, from another address, still has their one check.
+    expect((await checkFrom('203.0.113.24', user)).statusCode).toBe(200)
+    expect((await checkFrom('203.0.113.24', user)).statusCode).toBe(429)
   })
 })
 

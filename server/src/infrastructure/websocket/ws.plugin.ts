@@ -62,8 +62,8 @@ async function wsPlugin(
     await realtime.shutdown()
   })
 
-  // The upgrade is an HTTP request, so it also counts against the per-address limit every route has; this
-  // one is tighter, because a real client opens one socket and keeps it.
+  // A route's own limit replaces the per-address limit every other route has, so the upgrade is counted
+  // by this one alone: tighter, because a real client opens one socket and keeps it.
   const upgradeLimit =
     limits.upgradesPerMinute > 0
       ? { rateLimit: { max: limits.upgradesPerMinute, timeWindow: UPGRADE_WINDOW_MS } }

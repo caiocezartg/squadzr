@@ -319,23 +319,28 @@ addresses by their /64). The limits are environment variables with these default
 0 turns one off:
 
 - `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS`: 300 requests per 60 seconds on every route, at `onRequest`
-  after the edge guard. `/health` and `/health/ready` are not counted. A route that sets its own limit
-  replaces this one: the Discord invite check keeps 30 checks a minute per signed-in user (`preHandler`,
-  after authentication).
-- `WS_UPGRADES_PER_MINUTE`: 20 upgrades of `/ws` per address per minute (429 before the upgrade).
+  after the edge guard. `/health` and `/health/ready` are not counted. The Discord invite check is counted
+  like every route, anonymous requests included, and has a second quota of 30 checks a minute per signed-in
+  user (`preHandler`, after authentication, built with `createRateLimit` so it counts apart from the first).
+- `WS_UPGRADES_PER_MINUTE`: 20 upgrades of `/ws` per address per minute (429 before the upgrade). The route's
+  own limit replaces the 300 a minute, so the upgrade is counted by this one alone.
 - `WS_MAX_CONNECTIONS_PER_IP`: 10 sockets per address at once; the next one is accepted and closed at once
   with code 1013 ("try again later").
 
 Because the address is only the visitor's behind the lock, the limits mean what they say once
-`EDGE_AUTH_TOKEN` is set; with the lock off every request is counted under the Railway edge's address.
+`EDGE_AUTH_TOKEN` is set. With the lock off `request.ip` is the Railway edge node that carried the request
+(measured on the hosted API: a few `84.17.44.x` and `46.151.194.x` addresses, shared by every visitor), so
+the limits would count everyone together: turn the lock on right after the deploy that brings them.
 
 **Server renders.** The Next server's own calls reach the API from the Worker, whose address is not the
 visitor's. A call that speaks for a viewer (the session, the board, a Squad) carries the visitor's address in
 `x-real-ip`; Cloudflare reports that on a Worker subrequest to this zone as `CF-Connecting-IP`, and removes
 `x-real-ip` from every request no Worker made, so a visitor is counted for their own page loads and a flood
-of page views spends their quota, not everyone's. A call whose response Next shares between visitors (the
-landing's popular games) carries no address and is counted under the Worker's, which is at most one call per
-isolate every five minutes. Nothing is exempted for being a Worker call: the amplification (a page view
+of page views spends their quota, not everyone's. So does every other call that is not revalidated, an
+anonymous one included (the invite preview read, which crawlers trigger). Only a call whose response Next
+shares between visitors (the landing's popular games, revalidated) carries no address, because a per-visitor
+header would split that cache; it is counted under the Worker's address, at most one call per isolate every
+five minutes. Nothing is exempted for being a Worker call: the amplification (a page view
 becomes several API calls) is what the limit is for. The `workerZone` field of the request log (written only
 on a request whose edge secret matched) tells the app's own renders (`squadzr.app`) from anything else.
 

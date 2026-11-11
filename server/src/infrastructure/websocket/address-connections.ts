@@ -10,19 +10,35 @@ export function addressKey(address: string): string {
   const lower = address.toLowerCase()
   if (!isIPv6(lower)) return lower
 
-  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(lower)
-  if (mapped?.[1]) return mapped[1]
-
-  const [head = '', tail] = lower.split('::')
-  const headGroups = head === '' ? [] : head.split(':')
-  const tailGroups = tail === undefined || tail === '' ? [] : tail.split(':')
-  const zeros = tail === undefined ? 0 : 8 - headGroups.length - tailGroups.length
-  const groups = [...headGroups, ...Array<string>(Math.max(zeros, 0)).fill('0'), ...tailGroups]
+  const groups = ipv6Groups(lower)
+  // ::ffff:a.b.c.d (written with an IPv4 tail or as two hextets) is the IPv4 address a.b.c.d.
+  if (groups.slice(0, 5).every((group) => group === 0) && groups[5] === 0xffff) {
+    const [high = 0, low = 0] = groups.slice(6)
+    return `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`
+  }
 
   return `${groups
     .slice(0, 4)
-    .map((group) => group.replace(/^0+(?=.)/, ''))
+    .map((group) => group.toString(16))
     .join(':')}::/64`
+}
+
+/** The eight 16-bit groups of a valid IPv6 address, with `::` expanded and an IPv4 tail read as two groups. */
+function ipv6Groups(address: string): number[] {
+  const [head = '', tail] = address.split('::')
+  const parse = (part: string): number[] =>
+    part === ''
+      ? []
+      : part.split(':').flatMap((group) => {
+          if (!group.includes('.')) return [parseInt(group, 16)]
+          const [a = 0, b = 0, c = 0, d = 0] = group.split('.').map(Number)
+          return [(a << 8) | b, (c << 8) | d]
+        })
+  const headGroups = parse(head)
+  const tailGroups = tail === undefined ? [] : parse(tail)
+  const zeros = Array<number>(Math.max(8 - headGroups.length - tailGroups.length, 0)).fill(0)
+
+  return [...headGroups, ...zeros, ...tailGroups]
 }
 
 /** How many WebSockets each client address holds open, and whether it may open another. */
