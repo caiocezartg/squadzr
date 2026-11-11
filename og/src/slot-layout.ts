@@ -7,8 +7,8 @@ export interface SlotLayout {
   readonly glyphs: boolean
 }
 
-/** The width the slots may take, next to the count, inside the 600px safe column. */
-export const SLOTS_WIDTH = 440
+/** The width the slots may take, next to the count, in the text column. */
+export const SLOTS_WIDTH = 500
 
 const LARGEST_SLOT = 76
 

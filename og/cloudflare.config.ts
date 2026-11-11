@@ -16,10 +16,12 @@ export default defineConfig({
     triggers: [triggers.fetch({ pattern: 'squadzr.app/og/*', zone: 'squadzr.app' })],
     workersDev: false,
     // One key always renders the same picture, so a repeat request is served without running the Worker.
-    cache: { enabled: true },
+    // The cache outlives deploys: a key always renders the same picture, and a design change moves every
+    // Squad to new keys (`SQUAD_PREVIEW_DESIGN_VERSION`), so an old entry is never served for a new design.
+    cache: { enabled: true, crossVersionCache: true },
     observability: { enabled: true },
     env: {
-      // Public game data only: the game's name, cover and player limit.
+      // Public game data only: the game's name and cover.
       API_URL: bindings.text('https://api.squadzr.app'),
       // The edge secret `squadzr-web` also sends, so the API's origin lock lets the call in. Set once
       // with `cf`, never in the repository (docs/ops/client-on-cloudflare-workers.md).

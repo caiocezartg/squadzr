@@ -68,6 +68,10 @@ bun run build
 cf deploy --prebuilt --mode production --secrets-file <path to the file>
 ```
 
+`--mode production` names the mode `vite build` records in the Build Output: `cf deploy --prebuilt` must be
+given the mode the output records ("Deploy a prebuilt build" in the `cf` docs). The image Worker's
+throwaway deploys on 2026-11-11 used exactly this command.
+
 Until `squadzr-og` exists with its secret, the workflow's second step fails after `squadzr-web` has
 deployed: the site is live, and invite links point at images that answer 404 until the image Worker is up.
 Create `squadzr-og` before the first promotion that carries `og/`.
@@ -76,10 +80,10 @@ Create `squadzr-og` before the first promotion that carries `og/`.
 
 A Squad invite's preview shows an image made for its game, its slots and its language (GitHub #152). The
 Squad page's metadata (`client/src/features/lobby/lobby-metadata.ts`) points at
-`/og/squad/<game id>/<filled>-<total>/<language>.jpg`; the key and its validation live in
-`packages/schemas/src/squad-preview.ts`. Every Squad in the same state shares one image, and a Squad that
-gains a member points at the next key, so each image is rendered once and served as
-`Cache-Control: public, max-age=31536000, immutable`.
+`/og/squad/<design version>/<game id>/<filled>-<total>/<language>.jpg`; the key, its validation and the
+design version (`SQUAD_PREVIEW_DESIGN_VERSION`) live in `packages/schemas/src/squad-preview.ts`. Every
+Squad in the same state shares one image, and a Squad that gains a member points at the next key, so each
+image is rendered once and served as `Cache-Control: public, max-age=31536000, immutable`.
 
 |                 |                                                                                                    |
 | --------------- | -------------------------------------------------------------------------------------------------- |
@@ -87,29 +91,45 @@ gains a member points at the next key, so each image is rendered once and served
 | Code            | `og/src/`: the request handler, the layout (satori), the rasterizer (resvg) and the JPEG encoder |
 | Scripts         | `bun run build`, `bun run deploy` and `bun run dev`, in `og/`                                     |
 
-- It is a separate Worker so the renderer (about 0.9 MB gzip of WASM and JavaScript) stays out of
+- It is a separate Worker so the renderer (about 0.85 MB gzip of WASM and JavaScript) stays out of
   `squadzr-web`, and so the **Worker cache**, which bills every request it sees, is on for this Worker
   only: `squadzr-web`'s static assets stay free. A repeat request for a key is a cache HIT and runs no code.
-  The cache is per Worker version, so each deploy renders each key once again.
-- It answers 404 (cached five minutes) to anything that is not the exact spelling of a key, to a query
-  string, to an unknown game and to more slots than the game's player limit. A failed game or cover read
-  answers an uncached 502.
-- It reads the game's name, cover and player limit from `GET /api/games/:id` with the edge secret, never a
-  session, and draws no member, Squad name or avatar. It must send the secret itself: the Transform Rule
-  does not stamp a subrequest made by a Worker of the zone (tested on 2026-11-11 with a throwaway route on
-  `squadzr.app`, which got 403 `EDGE_AUTH_REQUIRED` without it).
-- The image is a JPEG (90–115 KB): as a PNG, the cover photo and its blurred copy weigh 350–550 KB,
+- The cache outlives deploys (`crossVersionCache`), so a deploy that changes nothing in the picture
+  renders nothing again, and the workflow deploys the Worker on every promotion. **A change to how the
+  image looks bumps `SQUAD_PREVIEW_DESIGN_VERSION`**: every Squad then points at new keys, and the old
+  entries are never asked for again. A change that keeps the picture (a fix in the handler, say) keeps
+  the version.
+- It answers 404 (cached five minutes) to anything that is not the exact spelling of a key in the current
+  design (counts from 1 of 2 up to 40 of 40, `en` or `pt-br`), to any query string, to an unknown game and
+  to a game whose cover is not on IGDB. A failed or slow (over five seconds) game or cover read answers an
+  uncached 502. The slot counts are not checked against the game's player limit: a Squad can have more
+  slots than its game allows today.
+- It reads the game's name and cover from `GET /api/games/:id` with the edge secret, never a session, and
+  draws no member, Squad name or avatar. It must send the secret itself: the Transform Rule does not stamp
+  a subrequest made by a Worker of the zone (tested on 2026-11-11 with a throwaway route on `squadzr.app`,
+  which got 403 `EDGE_AUTH_REQUIRED` without it).
+- It fetches covers only from `https://images.igdb.com/igdb/image/upload/`, follows no redirect, and
+  accepts only a JPEG or PNG of at most 1 MB.
+- **Accepted risk: random game ids reach the API.** Anyone can request keys with made-up UUIDs; each one
+  costs a Worker request and an API read that answers 404, and the 404 is cached for five minutes per URL.
+  Nothing is rendered for them. The cost is bounded by request billing and the API's own per-visitor
+  limits, so there is no allowlist of game ids in the Worker.
+- The image is a JPEG (90–120 KB): as a PNG, the cover photo and its blurred copy weigh 350–550 KB,
   above the roughly 300 KB WhatsApp shows.
-- One render costs about 0.9 s of CPU (median; p95 about 1.8 s), measured on Workers. Most of it is the
-  rasterizer, so the layout avoids what it is slow at: no blur filter (the backdrop is IGDB's 35px micro
-  cover stretched, which reads as a blur), no blurred shadow, every slot in one SVG, and the 264px cover
-  for the box art.
+- The layout uses the full width of the wide card (box art on the left, text on the right, 84px
+  margins). A square crop of the centre keeps the kicker, the status line and the slots, and part of the
+  game's name.
+- One render costs about 1.0 s of CPU (median; p95 about 2.1 s), measured on Workers on 2026-11-11. Most of it is
+  the rasterizer, so the layout avoids what it is slow at: no blur filter (the backdrop is IGDB's 35px
+  micro cover stretched, which reads as a blur), no blurred shadow, every slot in one SVG, and the 264px
+  cover for the box art.
 - The fonts are the site's (Big Shoulders 900, Plus Jakarta Sans 600 and 800) as WOFF in `og/src/fonts/`,
-  because satori cannot read WOFF2.
+  because satori cannot read WOFF2. The logo is `client/public/squadzr-logo.svg`, which `og/turbo.json`
+  lists as an input of the build.
 
 To look at an image locally, put a placeholder `EDGE_AUTH_TOKEN` (32 visible characters) in `og/.dev.vars`
 (git ignores it), run `bun run build` then `bunx vite preview --port 3002` in `og/`, and open
-`http://localhost:3002/og/squad/<game id>/3-5/pt-br.jpg`. The API lets the call in without the real
+`http://localhost:3002/og/squad/v1/<game id>/3-5/pt-br.jpg`. The API lets the call in without the real
 secret because the edge stamps it on requests from outside the zone.
 
 ## The `revalidate` cache without KV
@@ -155,9 +175,9 @@ cf workers secrets bulk --worker squadzr-og --secrets @<path to the file>
 These live in the `squadzr.app` zone (Free plan), outside this repository:
 
 - **DNS.** `squadzr.app` is attached to the Worker as a custom domain (the deploy creates its record).
+  `www` has a proxied placeholder record so the redirect below can match.
 - **Worker route** `squadzr.app/og/*` → `squadzr-og` (the deploy creates it from `og/cloudflare.config.ts`).
   A route wins over the custom domain for its paths, so `squadzr-web` serves everything else.
-  `www` has a proxied placeholder record so the redirect below can match.
 - **Redirect rule.** `www.squadzr.app/*` → `https://squadzr.app/${path}` (301, query string kept).
 - **Transform Rule** on `api.squadzr.app`: see "The edge secret". It also sets `x-squadzr-worker-zone` to
   the zone of the Worker that made the request.

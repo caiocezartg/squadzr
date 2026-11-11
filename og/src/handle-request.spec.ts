@@ -7,32 +7,24 @@ const VALORANT: PreviewGame = {
   id: 'c6b3f931-0493-4091-9c3b-b44613fb3da4',
   name: 'Valorant',
   coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/cocqbp.jpg',
-  maxPlayers: 5,
 }
 
 const COVER = { tile: 'data:image/jpeg;base64,AAAA', backdrop: 'data:image/jpeg;base64,BBBB' }
 
-const imageUrl = (path: string) => `https://squadzr.app/og/squad/${path}`
+const imageUrl = (path: string) => `https://squadzr.app/og/squad/v1/${path}`
 
-function deps(game: PreviewGame | null = VALORANT): ImageDeps & {
-  rendered: SquadImageInput[]
-  readGame: ReturnType<typeof vi.fn>
-} {
+function deps(game: PreviewGame | null = VALORANT) {
   const rendered: SquadImageInput[] = []
-  return {
+  const source = {
     rendered,
-    readGame: vi.fn(async () => game),
-    readCover: vi.fn(async () => COVER),
+    readGame: vi.fn(async (_gameId: string) => game),
+    readCover: vi.fn(async (_coverUrl: string) => COVER),
     render: vi.fn(async (input: SquadImageInput) => {
       rendered.push(input)
-      return new Response('jpeg', {
-        headers: {
-          'content-type': 'image/jpeg',
-          'cache-control': 'public, max-age=31536000, immutable',
-        },
-      })
+      return new Response('jpeg', { headers: { 'content-type': 'image/jpeg' } })
     }),
   }
+  return source satisfies ImageDeps & { rendered: SquadImageInput[] }
 }
 
 afterEach(() => {
@@ -49,9 +41,8 @@ describe('handleImageRequest', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('content-type')).toBe('image/jpeg')
-    expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
     expect(source.readGame).toHaveBeenCalledWith(VALORANT.id)
+    expect(source.readCover).toHaveBeenCalledWith(VALORANT.coverUrl)
     expect(source.rendered).toEqual([
       {
         previewKey: { gameId: VALORANT.id, filled: 3, total: 5, language: 'pt-br' },
@@ -59,6 +50,19 @@ describe('handleImageRequest', () => {
         cover: COVER,
       },
     ])
+  })
+
+  it("renders a Squad with more slots than its game's player limit", async () => {
+    // Valorant's limit is 5; a Squad can be bigger (the limit can drop after the Squad is created).
+    const source = deps()
+
+    const response = await handleImageRequest(
+      new Request(imageUrl(`${VALORANT.id}/3-12/en.jpg`)),
+      source
+    )
+
+    expect(response.status).toBe(200)
+    expect(source.rendered[0]?.previewKey).toMatchObject({ filled: 3, total: 12 })
   })
 
   it('accepts a HEAD request', async () => {
@@ -71,11 +75,14 @@ describe('handleImageRequest', () => {
   })
 
   it.each([
-    ['a path that is not a key', imageUrl('valorant.jpg')],
+    ['a path that is not a key', 'https://squadzr.app/og/squad/v1/valorant.jpg'],
+    ['a key without the design version', `https://squadzr.app/og/squad/${VALORANT.id}/2-5/en.jpg`],
     ['a key with more filled slots than the total', imageUrl(`${VALORANT.id}/6-5/en.jpg`)],
+    ['a key over 40 slots', imageUrl(`${VALORANT.id}/2-41/en.jpg`)],
     ['a key with an unknown language', imageUrl(`${VALORANT.id}/2-5/es.jpg`)],
     ['a key with a query string', `${imageUrl(`${VALORANT.id}/2-5/en.jpg`)}?v=2`],
-  ])('answers 404 to %s without reading the catalog', async (_label, url) => {
+    ['a key with a bare question mark', `${imageUrl(`${VALORANT.id}/2-5/en.jpg`)}?`],
+  ])('answers a cached 404 to %s without reading anything', async (_label, url) => {
     const source = deps()
 
     const response = await handleImageRequest(new Request(url), source)
@@ -83,7 +90,7 @@ describe('handleImageRequest', () => {
     expect(response.status).toBe(404)
     expect(response.headers.get('cache-control')).toBe('public, max-age=300')
     expect(source.readGame).not.toHaveBeenCalled()
-    expect(source.rendered).toEqual([])
+    expect(source.readCover).not.toHaveBeenCalled()
   })
 
   it('answers 404 to a game the catalog does not have', async () => {
@@ -98,22 +105,28 @@ describe('handleImageRequest', () => {
     expect(source.rendered).toEqual([])
   })
 
-  it("answers 404 to more slots than the game's player limit", async () => {
-    const source = deps()
+  it.each([
+    ['another host', 'https://example.com/igdb/image/upload/t_cover_big/cocqbp.jpg'],
+    ['plain HTTP', 'http://images.igdb.com/igdb/image/upload/t_cover_big/cocqbp.jpg'],
+    ['another IGDB path', 'https://images.igdb.com/other/t_cover_big/cocqbp.jpg'],
+  ])('never fetches a cover on %s, and answers a cached 404', async (_label, coverUrl) => {
+    const source = deps({ ...VALORANT, coverUrl })
 
     const response = await handleImageRequest(
-      new Request(imageUrl(`${VALORANT.id}/2-6/en.jpg`)),
+      new Request(imageUrl(`${VALORANT.id}/2-5/en.jpg`)),
       source
     )
 
     expect(response.status).toBe(404)
+    expect(response.headers.get('cache-control')).toBe('public, max-age=300')
+    expect(source.readCover).not.toHaveBeenCalled()
     expect(source.rendered).toEqual([])
   })
 
   it('answers an uncached 502 when the catalog read fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const source = deps()
-    source.readGame.mockRejectedValueOnce(new GameReadError(500))
+    source.readGame.mockRejectedValueOnce(new GameReadError('status 500'))
 
     const response = await handleImageRequest(
       new Request(imageUrl(`${VALORANT.id}/2-5/en.jpg`)),

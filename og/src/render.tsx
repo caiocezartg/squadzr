@@ -4,12 +4,10 @@ import { encode as encodeJpeg } from 'jpeg-js'
 // Workers compile no WASM from bytes at runtime, so both binaries ship as precompiled modules.
 import yogaWasm from 'satori/yoga.wasm?module'
 import resvgWasm from '@resvg/resvg-wasm/index_bg.wasm?module'
-import { SQUAD_PREVIEW_IMAGE_SIZE, SQUAD_PREVIEW_IMAGE_TYPE } from '@squadzr/schemas'
+import { SQUAD_PREVIEW_IMAGE_SIZE } from '@squadzr/schemas'
 import { imageFonts } from './assets'
+import { imageResponse } from './image-response'
 import { SquadImage, type SquadImageInput } from './squad-image'
-
-/** One year: a key always renders the same picture. */
-export const IMMUTABLE_CACHE_CONTROL = 'public, max-age=31536000, immutable'
 
 /** High enough that the text keeps clean edges; a typical image stays near 100 KB. */
 const JPEG_QUALITY = 88
@@ -50,11 +48,5 @@ async function renderJpeg(input: SquadImageInput): Promise<Uint8Array<ArrayBuffe
 
 /** Renders one key as a 1200×630 JPEG response, cached as immutable. */
 export async function renderSquadImage(input: SquadImageInput): Promise<Response> {
-  const body = await renderJpeg(input)
-  return new Response(body, {
-    headers: {
-      'content-type': SQUAD_PREVIEW_IMAGE_TYPE,
-      'cache-control': IMMUTABLE_CACHE_CONTROL,
-    },
-  })
+  return imageResponse(await renderJpeg(input))
 }

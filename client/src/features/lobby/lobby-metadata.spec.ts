@@ -48,7 +48,7 @@ describe('lobbyMetadata', () => {
     const metadata = await lobbyMetadata(lobbySquad.code)
 
     const image = {
-      url: `/og/squad/${lobbySquad.game.id}/1-3/en.jpg`,
+      url: `/og/squad/v1/${lobbySquad.game.id}/1-3/en.jpg`,
       width: 1200,
       height: 630,
       alt: 'Open League of Legends squad: 1 of 3 slots filled',
@@ -85,7 +85,7 @@ describe('lobbyMetadata', () => {
     expect(metadata.openGraph).toMatchObject({
       images: [
         {
-          url: `/og/squad/${lobbySquad.game.id}/3-5/pt-br.jpg`,
+          url: `/og/squad/v1/${lobbySquad.game.id}/3-5/pt-br.jpg`,
           alt: 'Squad aberto de League of Legends: 3 de 5 vagas preenchidas',
         },
       ],
@@ -112,6 +112,30 @@ describe('lobbyMetadata', () => {
     }
   )
 
+  it.each([
+    ['en', 'Full League of Legends squad: all 5 slots filled'],
+    ['pt-br', 'Squad completo de League of Legends: as 5 vagas preenchidas'],
+  ] as const)('never calls a full %s Squad open in the image alt text', async (language, alt) => {
+    stubRead(jsonResponse({ room: { ...publicSquad, language, maxPlayers: 5, memberCount: 5 } }))
+
+    const metadata = await lobbyMetadata(lobbySquad.code)
+
+    expect(metadata.openGraph).toMatchObject({
+      images: [{ url: `/og/squad/v1/${lobbySquad.game.id}/5-5/${language}.jpg`, alt }],
+    })
+    expect(metadata.twitter).toMatchObject({ images: [{ alt }] })
+  })
+
+  it("points a Squad bigger than its game's player limit at its own slots", async () => {
+    stubRead(jsonResponse({ room: { ...publicSquad, maxPlayers: 12, memberCount: 3 } }))
+
+    const metadata = await lobbyMetadata(lobbySquad.code)
+
+    expect(metadata.openGraph).toMatchObject({
+      images: [{ url: `/og/squad/v1/${lobbySquad.game.id}/3-12/en.jpg` }],
+    })
+  })
+
   it('points at the next image when the Squad gains a member', async () => {
     stubRead(jsonResponse({ room: { ...publicSquad, maxPlayers: 5, memberCount: 2 } }))
     const before = await lobbyMetadata(lobbySquad.code)
@@ -119,10 +143,10 @@ describe('lobbyMetadata', () => {
     const after = await lobbyMetadata(lobbySquad.code)
 
     expect(before.openGraph).toMatchObject({
-      images: [{ url: `/og/squad/${lobbySquad.game.id}/2-5/en.jpg` }],
+      images: [{ url: `/og/squad/v1/${lobbySquad.game.id}/2-5/en.jpg` }],
     })
     expect(after.openGraph).toMatchObject({
-      images: [{ url: `/og/squad/${lobbySquad.game.id}/3-5/en.jpg` }],
+      images: [{ url: `/og/squad/v1/${lobbySquad.game.id}/3-5/en.jpg` }],
     })
   })
 

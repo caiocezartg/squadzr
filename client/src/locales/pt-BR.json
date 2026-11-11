@@ -400,7 +400,7 @@
     "preview": {
       "openSpots": "{open, plural, =0 {Squad completo} one {Falta # de {total}} other {Faltam # de {total}}}",
       "language": "Português",
-      "imageAlt": "Squad aberto de {game}: {filled} de {total} vagas preenchidas"
+      "imageAlt": "{state, select, full {Squad completo de {game}: as {total} vagas preenchidas} other {Squad aberto de {game}: {filled} de {total} vagas preenchidas}}"
     },
     "signInPrompt": {
       "title": "Entre para ver este squad",

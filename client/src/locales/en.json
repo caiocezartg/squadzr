@@ -400,7 +400,7 @@
     "preview": {
       "openSpots": "{open, plural, =0 {Full squad} one {# of {total} spots left} other {# of {total} spots left}}",
       "language": "English",
-      "imageAlt": "Open {game} squad: {filled} of {total} slots filled"
+      "imageAlt": "{state, select, full {Full {game} squad: all {total} slots filled} other {Open {game} squad: {filled} of {total} slots filled}}"
     },
     "signInPrompt": {
       "title": "Sign in to view this squad",

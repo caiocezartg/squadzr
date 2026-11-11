@@ -54,7 +54,12 @@ function invitePreview(squad: PublicRoomDto): Metadata {
   const image = {
     url: squadPreviewImagePath(key),
     ...SQUAD_PREVIEW_IMAGE_SIZE,
-    alt: t('imageAlt', { game: squad.game.name, filled: key.filled, total: key.total }),
+    alt: t('imageAlt', {
+      state: key.filled === key.total ? 'full' : 'open',
+      game: squad.game.name,
+      filled: key.filled,
+      total: key.total,
+    }),
     type: SQUAD_PREVIEW_IMAGE_TYPE,
   }
 

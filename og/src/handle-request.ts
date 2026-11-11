@@ -1,6 +1,6 @@
-import { parseSquadPreviewPath, type SquadPreviewKey } from '@squadzr/schemas'
-import type { CoverImages } from './cover'
-import type { GameSource, PreviewGame } from './game-source'
+import { parseSquadPreviewPath } from '@squadzr/schemas'
+import { isIgdbCover, type CoverImages } from './cover'
+import type { GameSource } from './game-source'
 import type { SquadImageInput } from './squad-image'
 
 /** What answering a request needs: where games come from, how a cover is read and how a key is drawn. */
@@ -32,27 +32,25 @@ function unavailable(): Response {
   })
 }
 
-/** The game's own limit: a Squad never has more slots than its game allows. */
-function fitsGame(key: SquadPreviewKey, game: PreviewGame): boolean {
-  return key.total <= game.maxPlayers
-}
-
 /**
- * Answers one image request. Only the exact spelling of a key renders: any other path, a query string,
- * an unknown game or a slot count the game does not allow answers 404, so nobody can mint images.
+ * Answers one image request. Only the exact spelling of a key renders: any other path, a query string
+ * (even a bare `?`), an unknown game or a game whose cover is not on IGDB answers 404, so nobody can mint
+ * images or make the Worker fetch an address of their choosing. The slot counts are bound by the key
+ * alone: a Squad can have more slots than its game's current player limit.
  */
 export async function handleImageRequest(request: Request, deps: ImageDeps): Promise<Response> {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } })
   }
 
-  const url = new URL(request.url)
-  const key = url.search === '' ? parseSquadPreviewPath(url.pathname) : null
+  const key = request.url.includes('?')
+    ? null
+    : parseSquadPreviewPath(new URL(request.url).pathname)
   if (!key) return notFound()
 
   try {
     const game = await deps.readGame(key.gameId)
-    if (!game || !fitsGame(key, game)) return notFound()
+    if (!game || !isIgdbCover(game.coverUrl)) return notFound()
 
     const cover = await deps.readCover(game.coverUrl)
     return await deps.render({ previewKey: key, gameName: game.name, cover })

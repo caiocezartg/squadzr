@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  The source of client/public/og-landing.png, the landing's link preview (GitHub #151).
+  The source of client/public/og-landing.png, the landing's link preview (GitHub #151, laid out again in #152).
   The PNG is rendered once and committed; nothing renders it per request. To regenerate it, from client/:
 
     "C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --hide-scrollbars \
@@ -8,7 +8,9 @@
       --screenshot="%CD%\public\og-landing.png" "file:///%CD%/og/landing-preview.html"
 
   (Any Chromium works; on macOS or Linux use $PWD.) The fonts are the site's own, loaded from Google Fonts.
-  The content sits in the middle 600px column (15px inside the 630px square), so the image still reads when WhatsApp crops it to a square.
+  The image uses its full width, the wide card Discord, X and WhatsApp show: the text on the left and a
+  squad of slots on the right, inside symmetric 84px margins. Keep the PNG under about 300 KB, the most
+  WhatsApp shows.
 -->
 <html lang="en">
   <head>
@@ -17,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@900&family=Plus+Jakarta+Sans:wght@600&display=block"
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@900&family=Plus+Jakarta+Sans:wght@600;800&display=block"
       rel="stylesheet"
     />
     <style>
@@ -44,18 +46,18 @@
       body {
         position: relative;
         background:
-          radial-gradient(640px 520px at 1080px 40px, rgba(0, 255, 162, 0.2), transparent 70%),
+          radial-gradient(560px 520px at 900px 300px, rgba(0, 255, 162, 0.16), transparent 70%),
           radial-gradient(680px 540px at 100px 620px, rgba(78, 90, 232, 0.26), transparent 70%),
           var(--bg);
         font-family: 'Plus Jakarta Sans', sans-serif;
         color: var(--text);
       }
-      .column {
+      .text {
         position: absolute;
-        top: 56px;
-        bottom: 56px;
-        left: 300px;
-        width: 600px;
+        top: 84px;
+        bottom: 84px;
+        left: 84px;
+        width: 560px;
         display: flex;
         flex-direction: column;
       }
@@ -64,12 +66,11 @@
         align-self: flex-start;
       }
       h1 {
-        margin-top: 72px;
+        margin-top: auto;
         font-family: 'Big Shoulders', sans-serif;
         font-weight: 900;
-        font-size: 80px;
-        white-space: nowrap;
-        line-height: 0.92;
+        font-size: 92px;
+        line-height: 0.9;
         letter-spacing: 0.005em;
         text-transform: uppercase;
       }
@@ -83,65 +84,85 @@
         font-weight: 600;
         color: var(--text-2);
       }
-      .slots {
-        margin-top: auto;
-        align-self: flex-start;
+      .squad {
+        position: absolute;
+        right: 84px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 420px;
         display: flex;
-        gap: 14px;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
       }
       .slot {
-        width: 76px;
-        height: 76px;
+        width: 124px;
+        height: 124px;
         border-radius: 50%;
         display: grid;
         place-items: center;
       }
       .slot.filled {
         background: rgba(0, 255, 162, 0.1);
-        border: 3px solid var(--mint);
+        border: 4px solid var(--mint);
         color: var(--mint);
+        box-shadow: 0 0 36px rgba(0, 255, 162, 0.22);
       }
       .slot.open {
         background: var(--card);
-        border: 3px dashed rgba(201, 203, 209, 0.6);
+        border: 4px dashed rgba(201, 203, 209, 0.6);
         color: rgba(201, 203, 209, 0.75);
       }
       .slot svg {
-        width: 34px;
-        height: 34px;
+        width: 54px;
+        height: 54px;
+      }
+      .count {
+        width: 100%;
+        margin-top: 10px;
+        text-align: center;
+        font-family: 'Big Shoulders', sans-serif;
+        font-weight: 900;
+        font-size: 64px;
+        line-height: 1;
+        color: var(--faint);
+      }
+      .count b {
+        color: var(--mint);
       }
     </style>
   </head>
   <body>
-    <div class="column">
+    <div class="text">
       <img class="logo" src="../public/squadzr-logo.svg" alt="Squadzr" />
       <h1>Build your squad.<span class="accent">Play tonight.</span></h1>
       <p class="games">LoL, CS, Valorant, Dota and more</p>
-      <div class="slots">
-        <span class="slot filled"
-          ><svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="8" r="4.5" />
-            <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
-        ></span>
-        <span class="slot filled"
-          ><svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="8" r="4.5" />
-            <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
-        ></span>
-        <span class="slot filled"
-          ><svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="8" r="4.5" />
-            <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
-        ></span>
-        <span class="slot open"
-          ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-            <path d="M12 5v14M5 12h14" /></svg
-        ></span>
-        <span class="slot open"
-          ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-            <path d="M12 5v14M5 12h14" /></svg
-        ></span>
-      </div>
+    </div>
+    <div class="squad">
+      <span class="slot filled"
+        ><svg viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="8" r="4.5" />
+          <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
+      ></span>
+      <span class="slot filled"
+        ><svg viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="8" r="4.5" />
+          <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
+      ></span>
+      <span class="slot filled"
+        ><svg viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="8" r="4.5" />
+          <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
+      ></span>
+      <span class="slot open"
+        ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <path d="M12 5v14M5 12h14" /></svg
+      ></span>
+      <span class="slot open"
+        ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <path d="M12 5v14M5 12h14" /></svg
+      ></span>
+      <p class="count"><b>3</b>/5</p>
     </div>
   </body>
 </html>

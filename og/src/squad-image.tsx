@@ -19,8 +19,23 @@ const COLORS = {
 
 const { width: WIDTH, height: HEIGHT } = SQUAD_PREVIEW_IMAGE_SIZE
 
-/** The content stays in the middle 600px, so the image still reads when WhatsApp crops it to a square. */
-const COLUMN = { left: 300, width: 600, top: 56, bottom: 56 } as const
+/**
+ * The image uses its full width, the wide card Discord, X and WhatsApp show: the box art on the left and
+ * the text on the right, inside symmetric 84px margins. A square crop of the centre keeps the game name
+ * and the slots readable, if not whole.
+ */
+const MARGIN = 84
+
+/** The cover as box art, vertically centred in the left margin. */
+const TILE = { left: MARGIN, width: 270, height: 360, top: (HEIGHT - 360) / 2 } as const
+
+/** The text column, from the box art to the right margin. */
+const COLUMN = {
+  left: TILE.left + TILE.width + 76,
+  right: MARGIN,
+  top: 70,
+  bottom: 70,
+} as const
 
 /** What one image shows: the key, plus the game's name and cover. */
 export interface SquadImageInput {
@@ -91,13 +106,13 @@ function Slots({ filled, total }: { filled: number; total: number }) {
   )
 }
 
-/** The cover backdrop covers the right part of the image, behind the box art. */
-const BACKDROP = { left: 560, width: WIDTH - 560 } as const
+/** The blurred cover covers the left part of the image, behind the box art, and fades into the ground. */
+const BACKDROP = { width: 760, fadeFrom: 460 } as const
 
 /**
  * The game's cover behind the box art, dimmed and faded into the ground, under the landing's two glows.
- * The source is IGDB's 35px micro cover, so stretching it blurs it: a blur filter, or a backdrop over the whole
- * width, would cost the rasterizer a large share of the render.
+ * The source is IGDB's 35px micro cover, so stretching it blurs it: a blur filter, or a backdrop over the
+ * whole width, would cost the rasterizer a large share of the render.
  */
 function Backdrop({ cover }: { cover: string }) {
   const height = Math.round((BACKDROP.width * 4) / 3)
@@ -110,7 +125,7 @@ function Backdrop({ cover }: { cover: string }) {
         height={height}
         style={{
           position: 'absolute',
-          left: BACKDROP.left,
+          left: 0,
           top: Math.round((HEIGHT - height) / 2),
           opacity: 0.35,
         }}
@@ -118,12 +133,12 @@ function Backdrop({ cover }: { cover: string }) {
       <div
         style={{
           position: 'absolute',
-          left: BACKDROP.left,
+          left: BACKDROP.fadeFrom,
           top: 0,
-          width: 280,
+          width: BACKDROP.width - BACKDROP.fadeFrom,
           height: HEIGHT,
           display: 'flex',
-          backgroundImage: `linear-gradient(90deg, ${COLORS.ground}, rgba(7, 8, 10, 0))`,
+          backgroundImage: `linear-gradient(90deg, rgba(7, 8, 10, 0), ${COLORS.ground})`,
         }}
       />
       <div
@@ -131,7 +146,7 @@ function Backdrop({ cover }: { cover: string }) {
           position: 'absolute',
           inset: 0,
           display: 'flex',
-          backgroundImage: `linear-gradient(90deg, ${COLORS.ground} 0%, rgba(7, 8, 10, 0.86) 45%, rgba(7, 8, 10, 0.55) 100%)`,
+          backgroundImage: `linear-gradient(90deg, rgba(7, 8, 10, 0.55) 0%, rgba(7, 8, 10, 0.86) 55%, ${COLORS.ground} 100%)`,
         }}
       />
       <div
@@ -156,11 +171,9 @@ function Backdrop({ cover }: { cover: string }) {
   )
 }
 
-const TILE = { left: 934, top: 150, width: 224, height: 299 } as const
-
 /**
- * The cover as tilted box art, in the right margin. Its shadow is a darker card behind it: a blurred
- * shadow would cost the rasterizer about as much as the rest of the image.
+ * The cover as tilted box art on the left. Its shadow is a darker card behind it: a blurred shadow would
+ * cost the rasterizer about as much as the rest of the image.
  */
 function BoxArt({ cover }: { cover: string }) {
   return (
@@ -168,14 +181,14 @@ function BoxArt({ cover }: { cover: string }) {
       <div
         style={{
           position: 'absolute',
-          left: TILE.left + 6,
-          top: TILE.top + 18,
+          left: TILE.left + 10,
+          top: TILE.top + 16,
           width: TILE.width + 6,
           height: TILE.height + 6,
           display: 'flex',
-          transform: 'rotate(6deg)',
-          borderRadius: 20,
-          background: 'rgba(0, 0, 0, 0.45)',
+          transform: 'rotate(-4deg)',
+          borderRadius: 22,
+          background: 'rgba(0, 0, 0, 0.5)',
         }}
       />
       <div
@@ -184,9 +197,9 @@ function BoxArt({ cover }: { cover: string }) {
           left: TILE.left,
           top: TILE.top,
           display: 'flex',
-          transform: 'rotate(6deg)',
-          borderRadius: 18,
-          border: '3px solid rgba(242, 243, 245, 0.14)',
+          transform: 'rotate(-4deg)',
+          borderRadius: 20,
+          border: '3px solid rgba(242, 243, 245, 0.16)',
           overflow: 'hidden',
         }}
       >
@@ -221,19 +234,19 @@ export function SquadImage({ previewKey, gameName, cover }: SquadImageInput): Re
         style={{
           position: 'absolute',
           left: COLUMN.left,
+          right: COLUMN.right,
           top: COLUMN.top,
           bottom: COLUMN.bottom,
-          width: COLUMN.width,
           display: 'flex',
           flexDirection: 'column',
         }}
       >
-        <img alt="Squadzr" src={LOGO_SRC} width={182} height={48} />
+        <img alt="Squadzr" src={LOGO_SRC} width={167} height={44} />
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            marginTop: 40,
+            marginTop: 34,
             fontSize: 24,
             fontWeight: 800,
             letterSpacing: 3,
@@ -257,7 +270,7 @@ export function SquadImage({ previewKey, gameName, cover }: SquadImageInput): Re
         <div
           style={{
             display: 'flex',
-            marginTop: 14,
+            marginTop: 12,
             maxHeight: nameSize * 0.92 * 2,
             overflow: 'hidden',
             fontFamily: 'Big Shoulders',
@@ -269,8 +282,8 @@ export function SquadImage({ previewKey, gameName, cover }: SquadImageInput): Re
         >
           {gameName}
         </div>
-        <div style={{ display: 'flex', marginTop: 20, fontSize: 32, color: COLORS.amber }}>
-          {copy.openSpots}
+        <div style={{ display: 'flex', marginTop: 18, fontSize: 32, color: COLORS.amber }}>
+          {copy.status}
         </div>
         <div
           style={{

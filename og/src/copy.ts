@@ -2,25 +2,41 @@ import type { RoomLanguage } from '@squadzr/schemas'
 
 /** The words on the image, in the Squad's language. */
 export interface ImageCopy {
+  /** The small line over the game's name. */
   readonly kicker: string
-  readonly openSpots: string
+  /** The line under the game's name: the open spots, or that every slot is taken. */
+  readonly status: string
 }
 
-const COPY: Record<RoomLanguage, { kicker: string; spots: (open: number) => string }> = {
+interface LanguageCopy {
+  readonly open: { readonly kicker: string; readonly spots: (open: number) => string }
+  readonly full: ImageCopy
+}
+
+const COPY: Record<RoomLanguage, LanguageCopy> = {
   'pt-br': {
-    kicker: 'Squad aberto',
-    spots: (open) =>
-      open === 0 ? 'Squad completo' : `${open === 1 ? 'Falta' : 'Faltam'} ${open} — entra aí`,
+    open: {
+      kicker: 'Squad aberto',
+      spots: (open) => `${open === 1 ? 'Falta' : 'Faltam'} ${open} — entra aí`,
+    },
+    full: { kicker: 'Squad completo', status: 'Todas as vagas preenchidas' },
   },
   en: {
-    kicker: 'Open squad',
-    spots: (open) =>
-      open === 0 ? 'Squad full' : `${open} ${open === 1 ? 'spot' : 'spots'} left — jump in`,
+    open: {
+      kicker: 'Open squad',
+      spots: (open) => `${open} ${open === 1 ? 'spot' : 'spots'} left — jump in`,
+    },
+    full: { kicker: 'Squad full', status: 'Every slot is taken' },
   },
 }
 
-/** The kicker and the open-spots line for a Squad with `filled` of `total` slots taken. */
+/**
+ * The kicker and the status line for a Squad with `filled` of `total` slots taken. A full Squad never
+ * calls itself open.
+ */
 export function imageCopy(language: RoomLanguage, filled: number, total: number): ImageCopy {
   const copy = COPY[language]
-  return { kicker: copy.kicker, openSpots: copy.spots(Math.max(total - filled, 0)) }
+  const open = total - filled
+  if (open <= 0) return copy.full
+  return { kicker: copy.open.kicker, status: copy.open.spots(open) }
 }
