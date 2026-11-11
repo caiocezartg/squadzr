@@ -13,7 +13,7 @@ remains the package manager and the server runtime.
 | Focused workspace run          | `bunx turbo test --filter=<workspace>`              |
 | Direct workspace run           | `bun run test` inside the workspace directory       |
 
-`vitest.workspace.ts` composes the three projects by pointing at each workspace directory, whose own
+`vitest.workspace.ts` composes the four projects by pointing at each workspace directory, whose own
 `vitest.config.ts` stays the single source of truth (see
 https://v2.vitest.dev/guide/workspace). Focused and direct runs execute the exact same script
 Turbo executes for the root command, so the root suite and the focused suites always share one
@@ -23,11 +23,26 @@ inventory (see the equivalence proof below).
 
 | Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
-| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 45     | 342   |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 66     | 541   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 43     | 427   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 92     | 1068  |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 208   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 113    | 1351  |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 14     | 372   |
+| `og`                         | `og:unit`            | `node`      | `src/**/*.spec.{ts,tsx}`         | 5      | 46    |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
+
+Issue #152 (Squad invite preview image) adds the `og` workspace, the `squadzr-og` image Worker, as a fourth Vitest
+project in `vitest.workspace.ts`. `og:unit` has 5 files and 46 tests: `handle-request.spec.ts` (the key that renders, a Squad over
+its game's player limit, HEAD, cached 404s for a bad path, a missing design version, too many slots, an unknown language and any query
+string, an unknown game, a cover off IGDB never fetched, an uncached 502, the method check), `sources.spec.ts` (the game read with the
+edge secret and a timeout, its failures and their reasons, the IGDB cover allowlist, the cover reads with no redirect, a timeout, the
+JPEG or PNG type and the size cap, the Worker bindings), `copy.spec.ts` (the image copy in both languages, a full Squad never called
+open), `title-size.spec.ts` (the title sizes) and `image-response.spec.ts` (the 200 headers). `schemas:unit` gains
+`squad-preview.spec.ts` (the key path with its design version, its counts from 1 of 2 to 40 of 40, and every spelling it rejects).
+The rail of a Squad (at most five circles, then `+N`) moves to `@squadzr/schemas` so the Squad card and the image share it:
+`avatar-rail.spec.ts` moves from `client:unit` to `schemas:unit` with its 8 tests, plus one for a rail drawn without a preview, as
+the image draws it, so `client:unit` goes down one file and 8 tests. `lobby-metadata.spec.ts` covers the per-Squad title and description in both languages, the image key,
+its declared size, alt text and type, a full Squad's alt text, a Squad over its game's limit and the generic fallback. The rows above
+are the counts measured on this branch.
 
 Issue #114 (Player Profile: Squad Records and `GET /api/users/:id/profile`) recounts every row. `server:unit` adds 2 files and 6
 tests: `get-player-profile.use-case.spec.ts` (3: the person with their stats, a person with no completed Squad, an unknown id reading

@@ -42,41 +42,121 @@ afterEach(() => {
 const GENERIC = { title: { absolute: SITE_TITLE }, ...DEFAULT_PREVIEW }
 
 describe('lobbyMetadata', () => {
-  it('gives an Open Squad the full invite preview: name and game, size, language, tags and cover', async () => {
+  it('gives an Open Squad the full invite preview: its title, its copy and its slots image', async () => {
     stubRead(jsonResponse({ room: publicSquad }))
 
     const metadata = await lobbyMetadata(lobbySquad.code)
 
+    const image = {
+      url: `/og/squad/v1/${lobbySquad.game.id}/1-3/en.jpg`,
+      width: 1200,
+      height: 630,
+      alt: 'Open League of Legends squad: 1 of 3 slots filled',
+      type: 'image/jpeg',
+    }
     expect(metadata.title).toBe('Squad ready check · League of Legends')
-    expect(metadata.description).toBe('Up to 3 players · EN-US · #squad')
+    expect(metadata.description).toBe('2 of 3 spots left · English · #squad')
     expect(metadata.openGraph).toEqual({
       siteName: 'Squadzr',
       type: 'website',
       url: `/squads/${lobbySquad.code}`,
       title: 'Squad ready check · League of Legends',
-      description: 'Up to 3 players · EN-US · #squad',
-      images: [lobbySquad.game.coverUrl],
+      description: '2 of 3 spots left · English · #squad',
+      images: [image],
     })
     expect(metadata.twitter).toEqual({
       card: 'summary_large_image',
       title: 'Squad ready check · League of Legends',
-      description: 'Up to 3 players · EN-US · #squad',
-      images: [lobbySquad.game.coverUrl],
+      description: '2 of 3 spots left · English · #squad',
+      images: [image],
     })
   })
 
-  it('reads the game from the Squad response, not from a separate catalog read', async () => {
-    const game = {
-      ...lobbySquad.game,
-      name: 'Arc Raiders',
-      coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co999.webp',
+  it("writes a Portuguese Squad's preview in Portuguese, whatever the visitor's locale", async () => {
+    stubRead(
+      jsonResponse({
+        room: { ...publicSquad, language: 'pt-br', maxPlayers: 5, memberCount: 3, platform: 'pc' },
+      })
+    )
+
+    const metadata = await lobbyMetadata(lobbySquad.code)
+
+    expect(metadata.description).toBe('Faltam 2 de 5 · Português · PC · #squad')
+    expect(metadata.openGraph).toMatchObject({
+      images: [
+        {
+          url: `/og/squad/v1/${lobbySquad.game.id}/3-5/pt-br.jpg`,
+          alt: 'Squad aberto de League of Legends: 3 de 5 vagas preenchidas',
+        },
+      ],
+    })
+  })
+
+  it.each([
+    ['en', 4, '1 of 5 spots left'],
+    ['pt-br', 4, 'Falta 1 de 5'],
+    ['en', 5, 'Full squad'],
+    ['pt-br', 5, 'Squad completo'],
+  ] as const)(
+    'counts the open spots of a %s Squad with %i of 5 members',
+    async (language, count, copy) => {
+      stubRead(
+        jsonResponse({ room: { ...publicSquad, language, maxPlayers: 5, memberCount: count } })
+      )
+
+      const metadata = await lobbyMetadata(lobbySquad.code)
+
+      expect(metadata.description).toBe(
+        `${copy} · ${language === 'en' ? 'English' : 'Português'} · #squad`
+      )
     }
+  )
+
+  it.each([
+    ['en', 'Full League of Legends squad: all 5 slots filled'],
+    ['pt-br', 'Squad completo de League of Legends: as 5 vagas preenchidas'],
+  ] as const)('never calls a full %s Squad open in the image alt text', async (language, alt) => {
+    stubRead(jsonResponse({ room: { ...publicSquad, language, maxPlayers: 5, memberCount: 5 } }))
+
+    const metadata = await lobbyMetadata(lobbySquad.code)
+
+    expect(metadata.openGraph).toMatchObject({
+      images: [{ url: `/og/squad/v1/${lobbySquad.game.id}/5-5/${language}.jpg`, alt }],
+    })
+    expect(metadata.twitter).toMatchObject({ images: [{ alt }] })
+  })
+
+  it("points a Squad bigger than its game's player limit at its own slots", async () => {
+    stubRead(jsonResponse({ room: { ...publicSquad, maxPlayers: 12, memberCount: 3 } }))
+
+    const metadata = await lobbyMetadata(lobbySquad.code)
+
+    expect(metadata.openGraph).toMatchObject({
+      images: [{ url: `/og/squad/v1/${lobbySquad.game.id}/3-12/en.jpg` }],
+    })
+  })
+
+  it('points at the next image when the Squad gains a member', async () => {
+    stubRead(jsonResponse({ room: { ...publicSquad, maxPlayers: 5, memberCount: 2 } }))
+    const before = await lobbyMetadata(lobbySquad.code)
+    stubRead(jsonResponse({ room: { ...publicSquad, maxPlayers: 5, memberCount: 3 } }))
+    const after = await lobbyMetadata(lobbySquad.code)
+
+    expect(before.openGraph).toMatchObject({
+      images: [{ url: `/og/squad/v1/${lobbySquad.game.id}/2-5/en.jpg` }],
+    })
+    expect(after.openGraph).toMatchObject({
+      images: [{ url: `/og/squad/v1/${lobbySquad.game.id}/3-5/en.jpg` }],
+    })
+  })
+
+  it('names the game from the Squad response, not from a separate catalog read', async () => {
+    const game = { ...lobbySquad.game, name: 'Arc Raiders' }
     const fetchMock = stubRead(jsonResponse({ room: { ...publicSquad, game } }))
 
     const metadata = await lobbyMetadata(lobbySquad.code)
 
     expect(metadata.title).toBe('Squad ready check · Arc Raiders')
-    expect(metadata.openGraph).toMatchObject({ images: [game.coverUrl] })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -85,7 +165,7 @@ describe('lobbyMetadata', () => {
 
     const metadata = await lobbyMetadata(lobbySquad.code)
 
-    expect(metadata.description).toBe('Up to 3 players · EN-US')
+    expect(metadata.description).toBe('2 of 3 spots left · English')
   })
 
   it('names the platform after the language when the Squad has one', async () => {
@@ -93,7 +173,7 @@ describe('lobbyMetadata', () => {
 
     const metadata = await lobbyMetadata(lobbySquad.code)
 
-    expect(metadata.description).toBe('Up to 3 players · EN-US · PS5 · #squad')
+    expect(metadata.description).toBe('2 of 3 spots left · English · PS5 · #squad')
   })
 
   it('reads the Squad anonymously and never from a cache', async () => {

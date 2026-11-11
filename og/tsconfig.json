@@ -1,0 +1,13 @@
+{
+  "extends": "@squadzr/typescript-config/react.json",
+  "compilerOptions": {
+    "types": ["vite/client"]
+  },
+  "include": [
+    "cloudflare.config.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "src/**/*"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
