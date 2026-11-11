@@ -19,7 +19,7 @@ afterEach(async () => {
   server = undefined
 })
 
-/** A GET that reaches Fastify as Railway's edge forwards it for `address`. */
+/** A GET that reaches Fastify as the proxy in front of it forwards it for `address`. */
 function getFrom(address: string, url = '/api/rooms', headers: Record<string, string> = {}) {
   return server!.app.inject({
     method: 'GET',

@@ -2,9 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createLogCapture } from '@test/harness/logging'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
-// Behind Cloudflare the proxy chain only names a Cloudflare address: the Railway edge replaces
-// x-forwarded-for with the address that connected to it. The visitor's address is CF-Connecting-IP,
-// believed only on a request that carries the edge secret. Better Auth's sign-in limit (production, 3 per
+// The proxy chain may name only a Cloudflare address (a request the Worker made names the Worker). The
+// visitor's address is CF-Connecting-IP, believed only on a request that carries the edge secret. Better Auth's sign-in limit (production, 3 per
 // window) and the request log are the consumers observed here.
 
 const HEADER = 'x-squadzr-edge-auth'

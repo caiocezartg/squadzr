@@ -5,7 +5,7 @@ import edgeGuardPlugin, { EDGE_AUTH_HEADER } from './edge-guard.plugin'
 
 const TOKEN = 'edge-secret-0123456789abcdef-0123456789'
 const RAILWAY_EDGE = '100.64.0.1'
-// What the Railway edge writes into x-forwarded-for: the address that connected to it.
+// A proxy in front of the API, as the platform presents it to Fastify.
 const CLOUDFLARE = '172.69.138.8'
 const VISITOR = '203.0.113.9'
 

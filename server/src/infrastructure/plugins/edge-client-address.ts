@@ -7,9 +7,9 @@ const clientAddressSchema = z.union([z.ipv4(), z.ipv6()])
 
 /**
  * Adopts the visitor's address Cloudflare reports in `CF-Connecting-IP` as the request's client address.
- * Railway's edge replaces `x-forwarded-for` with the address that connected to it, so behind Cloudflare the
- * proxy chain alone only ever names a Cloudflare address. Callers pass only a request whose edge secret was
- * checked: anyone can write this header when they reach the origin directly.
+ * The proxy chain alone (`x-forwarded-for` through `TRUST_PROXY_HOPS`) is only a fallback: a Worker's
+ * subrequest names the Worker's own address there. Callers pass only a request whose edge secret was
+ * checked: anyone who reaches the origin some other way can write this header.
  *
  * The address becomes the single `x-forwarded-for` entry, which is what `request.ip` and the Better Auth
  * rate limiter (fed from `request.ip`) read, and is bound to the request's log lines as `clientIp`. A missing
@@ -43,9 +43,10 @@ const workerZoneSchema = z
 /**
  * Binds the zone of the Worker that made the request, when there is one, to the request's log lines as
  * `workerZone`. The Cloudflare edge writes the header from `cf.worker.upstream_zone` on everything it
- * forwards and removes it from requests that no Worker made, so a client cannot choose it. Callers pass
- * only a request whose edge secret was checked. It says which requests are the app's own server renders
- * (`squadzr.app`) and which came from some other zone's Worker; it grants nothing.
+ * forwards and removes it from requests that no Worker made, so a client cannot choose it. That zone is
+ * empty for a Worker of the same zone, so the app's own server renders carry no `workerZone`; a value
+ * would name another zone's Worker, which the edge blocks before the request gets here. Callers pass only
+ * a request whose edge secret was checked. It grants nothing.
  */
 export function bindWorkerZone(request: FastifyRequest, reply: FastifyReply): void {
   const parsed = workerZoneSchema.safeParse(request.headers[WORKER_ZONE_HEADER])

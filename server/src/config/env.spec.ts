@@ -8,6 +8,16 @@ const REQUIRED_ENV = {
   DISCORD_CLIENT_SECRET: 'env-spec-client-secret',
 }
 
+describe('HOST', () => {
+  it('listens on every IPv4 address by default, which keeps local development unchanged', () => {
+    expect(parseEnv(REQUIRED_ENV).HOST).toBe('0.0.0.0')
+  })
+
+  it('reads the IPv6 wildcard Railway private networking needs', () => {
+    expect(parseEnv({ ...REQUIRED_ENV, HOST: '::' }).HOST).toBe('::')
+  })
+})
+
 describe('TRUST_PROXY_HOPS', () => {
   it('trusts one edge proxy by default', () => {
     expect(parseEnv(REQUIRED_ENV).TRUST_PROXY_HOPS).toBe(1)
