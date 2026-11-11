@@ -34,6 +34,17 @@ const envSchema = z.object({
     .default('1')
     .transform(Number),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  // The origin lock. Set: a request without this value in the `x-squadzr-edge-auth` header, which the
+  // Cloudflare edge writes on everything it forwards, is refused with 403 (the health checks aside). Unset
+  // or empty: no lock. Visible ASCII only, so the HTTP layer can carry it unchanged.
+  EDGE_AUTH_TOKEN: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .string()
+      .regex(/^[!-~]+$/, 'EDGE_AUTH_TOKEN must be visible ASCII without spaces')
+      .min(32, 'EDGE_AUTH_TOKEN must be at least 32 characters')
+      .optional()
+  ),
 
   // Better Auth
   BETTER_AUTH_SECRET: z.string().min(32),

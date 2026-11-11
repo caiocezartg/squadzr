@@ -6,6 +6,7 @@ export {
 } from './validation.error'
 export { UnauthorizedError } from './unauthorized.error'
 export { ForbiddenOriginError } from './forbidden-origin.error'
+export { EdgeAuthRequiredError } from './edge-auth-required.error'
 export { AdminRequiredError } from './admin-required.error'
 export { RateLimitedError } from './rate-limited.error'
 export { GameNotFoundError, RoomNotFoundError, UserNotFoundError } from './not-found.error'
