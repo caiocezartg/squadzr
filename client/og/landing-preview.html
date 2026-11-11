@@ -1,0 +1,147 @@
+<!doctype html>
+<!--
+  The source of client/public/og-landing.png, the landing's link preview (GitHub #151).
+  The PNG is rendered once and committed; nothing renders it per request. To regenerate it, from client/:
+
+    "C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --hide-scrollbars \
+      --force-device-scale-factor=1 --window-size=1200,630 --virtual-time-budget=5000 \
+      --screenshot="%CD%\public\og-landing.png" "file:///%CD%/og/landing-preview.html"
+
+  (Any Chromium works; on macOS or Linux use $PWD.) The fonts are the site's own, loaded from Google Fonts.
+  The content sits in the middle 630px column, so the image still reads when WhatsApp crops it to a square.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Squadzr landing preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@900&family=Plus+Jakarta+Sans:wght@600&display=block"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #07080a;
+        --text: #f2f3f5;
+        --text-2: #c9cbd1;
+        --faint: #5f626b;
+        --mint: #00ffa2;
+        --discord: #4e5ae8;
+        --card: #121317;
+      }
+      * {
+        margin: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      body {
+        position: relative;
+        background:
+          radial-gradient(640px 520px at 1080px 40px, rgba(0, 255, 162, 0.2), transparent 70%),
+          radial-gradient(680px 540px at 100px 620px, rgba(78, 90, 232, 0.26), transparent 70%),
+          var(--bg);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: var(--text);
+      }
+      .column {
+        position: absolute;
+        top: 56px;
+        bottom: 56px;
+        left: 300px;
+        width: 600px;
+        display: flex;
+        flex-direction: column;
+      }
+      .logo {
+        height: 48px;
+        align-self: flex-start;
+      }
+      h1 {
+        margin-top: 72px;
+        font-family: 'Big Shoulders', sans-serif;
+        font-weight: 900;
+        font-size: 80px;
+        white-space: nowrap;
+        line-height: 0.92;
+        letter-spacing: 0.005em;
+        text-transform: uppercase;
+      }
+      h1 .accent {
+        display: block;
+        color: var(--mint);
+      }
+      .games {
+        margin-top: 26px;
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--text-2);
+      }
+      .slots {
+        margin-top: auto;
+        align-self: flex-end;
+        display: flex;
+        gap: 14px;
+      }
+      .slot {
+        width: 76px;
+        height: 76px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+      }
+      .slot.filled {
+        background: rgba(0, 255, 162, 0.1);
+        border: 3px solid var(--mint);
+        color: var(--mint);
+      }
+      .slot.open {
+        background: var(--card);
+        border: 3px dashed var(--faint);
+        color: var(--faint);
+      }
+      .slot svg {
+        width: 34px;
+        height: 34px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="column">
+      <img class="logo" src="../public/squadzr-logo.svg" alt="Squadzr" />
+      <h1>Build your squad.<span class="accent">Play tonight.</span></h1>
+      <p class="games">LoL, CS, Valorant, Dota and more</p>
+      <div class="slots">
+        <span class="slot filled"
+          ><svg viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="8" r="4.5" />
+            <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
+        ></span>
+        <span class="slot filled"
+          ><svg viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="8" r="4.5" />
+            <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
+        ></span>
+        <span class="slot filled"
+          ><svg viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="8" r="4.5" />
+            <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
+        ></span>
+        <span class="slot open"
+          ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14" /></svg
+        ></span>
+        <span class="slot open"
+          ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14" /></svg
+        ></span>
+      </div>
+    </div>
+  </body>
+</html>

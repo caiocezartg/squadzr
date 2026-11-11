@@ -9,10 +9,11 @@ import { LandingNav } from '@/components/landing/landing-nav'
 import { PopularGames } from '@/components/landing/popular-games'
 import { MotionProvider } from '@/components/ui/motion-provider'
 import { loadPopularGames } from '@/lib/server/games'
+import { SITE_TITLE } from '@/lib/site-metadata'
 
 // The root layout's title template does not reach a page at its own level, so the landing names the app itself.
 export const metadata: Metadata = {
-  title: 'Squadzr — Find your gaming squad',
+  title: SITE_TITLE,
 }
 
 /**
