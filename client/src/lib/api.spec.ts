@@ -262,3 +262,24 @@ describe('error responses and commands', () => {
     expect(getHttpLog().at(-1)).toMatchObject({ method: 'POST', path: '/api/rooms/LOBBY1/leave' })
   })
 })
+
+describe('on the server', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('refuses to call the API, so a server render never reads as an anonymous caller', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: [openSquad] }))
+    // Next and the Worker render the app without a `window`.
+    vi.stubGlobal('window', undefined)
+
+    await expect(api.get('/api/rooms', roomsResponseSchema)).rejects.toThrow(
+      'The browser API client cannot run on the server'
+    )
+    await expect(api.post('/api/rooms/ABC123/join')).rejects.toThrow(
+      'The browser API client cannot run on the server'
+    )
+
+    expect(getHttpLog()).toEqual([])
+  })
+})

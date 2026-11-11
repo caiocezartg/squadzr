@@ -19,6 +19,10 @@ The Next.js client runs as the Worker `squadzr-web` at `https://squadzr.app`, bu
 
 ## Deploys
 
+GitHub runs a `workflow_run` workflow as it is on the default branch (`main`), so the first deploy happens
+only after the promotion pull request that brings `deploy-client.yml` into `main`; until then merging to
+`development` deploys nothing.
+
 A push to `main` runs the CI workflow; when it succeeds, `Deploy client` builds the commit CI tested
 with `NEXT_PUBLIC_API_URL=https://api.squadzr.app` and deploys it to the Worker. A failing CI run, a push
 to `development` and a pull request deploy nothing. `main` only receives promotion pull requests, so a
@@ -67,10 +71,13 @@ The value is at least 32 visible ASCII characters (both sides validate it with Z
 a new random value without echoing it and update the three places back to back. Until the last one is
 done, some requests carry the old value and are refused with 403 `EDGE_AUTH_REQUIRED`, so do it when
 nobody is online and open `https://squadzr.app` afterwards. The value never goes in a commit, an issue, a
-log or a chat. The Worker secret is set with:
+log or a chat. Never pass the value on a command line (`--text <value>` lands in the shell history and the
+process list). Write it to a file outside the repository that only you can read, as the JSON
+`{"EDGE_AUTH_TOKEN": {"type": "secret_text", "text": "<value>"}}`, set the secret from the file and delete
+the file at once:
 
 ```
-cf workers secrets update EDGE_AUTH_TOKEN --worker squadzr-web --type secret_text --text <value>
+cf workers secrets bulk --worker squadzr-web --secrets @<path to the file>
 ```
 
 ## Rules in the Cloudflare zone
