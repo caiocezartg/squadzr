@@ -32,3 +32,25 @@ export function adoptEdgeClientAddress(request: FastifyRequest, reply: FastifyRe
   request.log = request.log.child({ clientIp: parsed.data })
   reply.log = request.log
 }
+
+const WORKER_ZONE_HEADER = 'x-squadzr-worker-zone'
+
+// A zone name such as `squadzr.app`: what Cloudflare's `cf.worker.upstream_zone` holds.
+const workerZoneSchema = z
+  .string()
+  .regex(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i)
+
+/**
+ * Binds the zone of the Worker that made the request, when there is one, to the request's log lines as
+ * `workerZone`. The Cloudflare edge writes the header from `cf.worker.upstream_zone` on everything it
+ * forwards and removes it from requests that no Worker made, so a client cannot choose it. Callers pass
+ * only a request whose edge secret was checked. It says which requests are the app's own server renders
+ * (`squadzr.app`) and which came from some other zone's Worker; it grants nothing.
+ */
+export function bindWorkerZone(request: FastifyRequest, reply: FastifyReply): void {
+  const parsed = workerZoneSchema.safeParse(request.headers[WORKER_ZONE_HEADER])
+  if (!parsed.success) return
+
+  request.log = request.log.child({ workerZone: parsed.data.toLowerCase() })
+  reply.log = request.log
+}

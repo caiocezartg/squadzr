@@ -3,6 +3,7 @@ import fp from 'fastify-plugin'
 import { REALTIME_PROTOCOL_VERSION, type WsIncomingMessage } from '@squadzr/schemas/ws'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
 import { AppError } from '@application/errors'
+import { AddressConnections } from './address-connections'
 import { parseIncomingMessage } from './incoming-message'
 import { InvalidMessages, INVALID_MESSAGE_LIMIT } from './invalid-messages'
 import { MessageRate, PING_RATE_LIMIT } from './message-rate'
@@ -24,10 +25,23 @@ declare module 'fastify' {
 
 export const SOCKET_OPERATION_LIMIT = 8
 
+/** What one client address may do with the socket route. A limit of 0 is no limit. */
+export interface WsLimits {
+  /** Upgrades one address may start per minute. */
+  readonly upgradesPerMinute: number
+  /** Sockets one address may hold open at once. */
+  readonly connectionsPerAddress: number
+}
+
+const UPGRADE_WINDOW_MS = 60_000
+/** Close code 1013, "try again later". */
+const WS_TRY_AGAIN_LATER = 1013
+
 async function wsPlugin(
   fastify: FastifyInstance,
-  { realtime }: { realtime: Realtime }
+  { realtime, limits }: { realtime: Realtime; limits: WsLimits }
 ): Promise<void> {
+  const addressConnections = new AddressConnections(limits.connectionsPerAddress)
   const { manager, heartbeat, operations, presence, broadcaster, subscribeSnapshot } = realtime
   fastify.decorate('broadcaster', broadcaster)
   fastify.decorate('realtime', realtime)
@@ -48,7 +62,31 @@ async function wsPlugin(
     await realtime.shutdown()
   })
 
-  fastify.get('/ws', { websocket: true }, (socket, request) => {
+  // The upgrade is an HTTP request, so it also counts against the per-address limit every route has; this
+  // one is tighter, because a real client opens one socket and keeps it.
+  const upgradeLimit =
+    limits.upgradesPerMinute > 0
+      ? { rateLimit: { max: limits.upgradesPerMinute, timeWindow: UPGRADE_WINDOW_MS } }
+      : undefined
+
+  fastify.get('/ws', { websocket: true, config: upgradeLimit }, (socket, request) => {
+    const address = request.ip
+    if (!addressConnections.acquire(address)) {
+      fastify.log.warn(
+        { category: 'transport', event: 'connection_limit', limit: limits.connectionsPerAddress },
+        'WebSocket connection limit exceeded'
+      )
+      socket.close(WS_TRY_AGAIN_LATER, 'Too many connections')
+      return
+    }
+    let released = false
+    const release = () => {
+      if (released) return
+      released = true
+      addressConnections.release(address)
+    }
+    socket.on('close', release)
+
     const client: WsClient = {
       userId: request.session?.user?.id ?? null,
       sessionId: request.session?.session?.id ?? null,

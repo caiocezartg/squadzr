@@ -274,11 +274,16 @@ Let's Encrypt certificate for the custom domain is what Cloudflare validates). T
 Cloudflare zone, outside this repository:
 
 - **Transform Rule** (`http_request_late_transform`): on host `api.squadzr.app` it **sets** (overwrites)
-  the request header `x-squadzr-edge-auth` to the edge secret, so a client cannot choose it.
-- **Rate limiting rule** (`http_ratelimit`, the one the Free plan allows): every request to that host,
-  100 requests per 10 seconds per IP (the Free plan counts per IP and per Cloudflare data center), then
-  blocked for 10 seconds with a 429. It is a ceiling for data routes and WebSocket upgrades; Better Auth
-  keeps its own, stricter limit on sign-in.
+  the request header `x-squadzr-edge-auth` to the edge secret, so a client cannot choose it, and the header
+  `x-squadzr-worker-zone` to `cf.worker.upstream_zone`, the zone of the Worker that made the request (empty,
+  so the header is removed, for a request no Worker made).
+- **Rate limiting rule** (`http_ratelimit`, the one the Free plan allows): `/api/auth/sign-in/*` and
+  `/api/auth/callback/*` on that host, 5 requests per 10 seconds per IP (the Free plan counts per IP and per
+  Cloudflare data center), then blocked for 10 seconds with a 429. Every other route is limited by the API
+  itself (see "Abuse limits").
+- **WAF custom rule**: blocks a request to that host that another zone's Worker made
+  (`http.host eq "api.squadzr.app" and not cf.worker.upstream_zone in {"" "squadzr.app"}`). Only the browser
+  and this app's own Worker reach the API.
 - **DNS**: the `api` CNAME is proxied; the `_railway-verify.api` TXT stays DNS-only.
 
 The API reads the secret from the optional `EDGE_AUTH_TOKEN` variable, a `preserve()`d variable of the
@@ -306,6 +311,33 @@ Setting it to 0 trusts no header at all, this one included. The info-level "inco
 before any hook runs and keeps the connecting (Railway edge) address as `remoteAddress`; the visitor is the
 `clientIp` of the same request's "request completed" line. While the lock is off, requests are attributed to
 the proxy chain's address.
+
+### Abuse limits
+
+The API counts requests by client address, which behind the lock is the visitor's (`request.ip`; IPv6
+addresses by their /64). The limits are environment variables with these defaults, validated at start, and
+0 turns one off:
+
+- `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS`: 300 requests per 60 seconds on every route, at `onRequest`
+  after the edge guard. `/health` and `/health/ready` are not counted. A route that sets its own limit
+  replaces this one: the Discord invite check keeps 30 checks a minute per signed-in user (`preHandler`,
+  after authentication).
+- `WS_UPGRADES_PER_MINUTE`: 20 upgrades of `/ws` per address per minute (429 before the upgrade).
+- `WS_MAX_CONNECTIONS_PER_IP`: 10 sockets per address at once; the next one is accepted and closed at once
+  with code 1013 ("try again later").
+
+Because the address is only the visitor's behind the lock, the limits mean what they say once
+`EDGE_AUTH_TOKEN` is set; with the lock off every request is counted under the Railway edge's address.
+
+**Server renders.** The Next server's own calls reach the API from the Worker, whose address is not the
+visitor's. A call that speaks for a viewer (the session, the board, a Squad) carries the visitor's address in
+`x-real-ip`; Cloudflare reports that on a Worker subrequest to this zone as `CF-Connecting-IP`, and removes
+`x-real-ip` from every request no Worker made, so a visitor is counted for their own page loads and a flood
+of page views spends their quota, not everyone's. A call whose response Next shares between visitors (the
+landing's popular games) carries no address and is counted under the Worker's, which is at most one call per
+isolate every five minutes. Nothing is exempted for being a Worker call: the amplification (a page view
+becomes several API calls) is what the limit is for. The `workerZone` field of the request log (written only
+on a request whose edge secret matched) tells the app's own renders (`squadzr.app`) from anything else.
 
 ## Migrations
 

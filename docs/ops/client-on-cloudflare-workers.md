@@ -45,6 +45,20 @@ To look at the build before deploying, `bun run build:vinext` then `bun run star
 workerd on `localhost` (the API URL is read at build time). Local Worker secrets go in `client/.dev.vars`,
 which git ignores.
 
+## The first deploy of a Worker
+
+`bindings.secret()` makes `cf deploy` refuse a Worker that does not exist yet and has no `EDGE_AUTH_TOKEN`
+("required secrets have not been set"), so the workflow cannot create it. Create it once by hand from
+`client/`, signed in with `cf auth create <profile>`, with the secret in a file outside the repository
+(`EDGE_AUTH_TOKEN=<value>`, deleted straight after):
+
+```
+NEXT_PUBLIC_API_URL=https://api.squadzr.app bun run build:vinext
+cf deploy --prebuilt --secrets-file <path to the file>
+```
+
+Every later deploy, including the workflow's, finds the secret already set and needs nothing else.
+
 ## The `revalidate` cache without KV
 
 The Worker has no KV namespace. Next's `revalidate` cache therefore lives in each isolate's memory: the
@@ -87,9 +101,11 @@ These live in the `squadzr.app` zone (Free plan), outside this repository:
 - **DNS.** `squadzr.app` is attached to the Worker as a custom domain (the deploy creates its record).
   `www` has a proxied placeholder record so the redirect below can match.
 - **Redirect rule.** `www.squadzr.app/*` → `https://squadzr.app/${path}` (301, query string kept).
-- **Transform Rule** on `api.squadzr.app`: see "The edge secret".
-- **Rate limiting rule** (the one the Free plan allows): every request to `api.squadzr.app`, 100 requests
-  per 10 seconds per IP, then blocked for 10 seconds with a 429. A page load costs a handful of API calls
-  and the WebSocket is one upgrade, so ordinary use stays far below it; hammering a route does not.
-  Better Auth keeps its own, stricter limit on sign-in (3 per 10 seconds).
+- **Transform Rule** on `api.squadzr.app`: see "The edge secret". It also sets `x-squadzr-worker-zone` to
+  the zone of the Worker that made the request.
+- **Rate limiting rule** (the one the Free plan allows): sign-in and OAuth callback of `api.squadzr.app`,
+  5 requests per 10 seconds per IP. Every other route is limited by the API itself, per visitor
+  (`docs/ops/catalog-import-railway.md`, "Abuse limits").
+- **WAF custom rule**: blocks requests to `api.squadzr.app` made by another zone's Worker
+  (`not cf.worker.upstream_zone in {"" "squadzr.app"}`).
 - Bot Fight Mode and Turnstile are not used.

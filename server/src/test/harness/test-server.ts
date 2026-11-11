@@ -62,6 +62,10 @@ export function createTestEnv(overrides: Partial<Env> & Pick<Env, 'DATABASE_URL'
     CORS_ORIGIN: 'http://localhost:5173',
     DISCORD_CLIENT_ID: 'integration-test-client-id',
     DISCORD_CLIENT_SECRET: 'integration-test-client-secret',
+    // Every test comes from the same address: the abuse limits are off unless a test turns one on.
+    RATE_LIMIT_MAX: '0',
+    WS_UPGRADES_PER_MINUTE: '0',
+    WS_MAX_CONNECTIONS_PER_IP: '0',
     ...Object.fromEntries(Object.entries(overrides).map(([key, value]) => [key, String(value)])),
   })
 }

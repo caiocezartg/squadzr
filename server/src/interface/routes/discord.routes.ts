@@ -46,10 +46,11 @@ export const discordRoutes: FastifyPluginAsync<DiscordRoutesOptions> = async (
         429: errorResponse,
       },
     },
-    // The limit runs after `requireAuth` (see the rate-limit plugin's registration), so it counts the
-    // signed-in user's requests and an unauthenticated one answers 401 without spending any quota.
+    // The limit runs after `requireAuth`, so it counts the signed-in user's requests and an unauthenticated
+    // one answers 401 without spending any quota. It replaces the per-address limit every other route has.
     config: {
       rateLimit: {
+        hook: 'preHandler',
         max: rateLimit.max,
         timeWindow: rateLimit.timeWindowMs,
         keyGenerator: (request) => request.session?.user?.id ?? request.ip,
