@@ -1,50 +1,50 @@
-import { useTranslation } from 'react-i18next'
+'use client'
 
-export function LanguageToggle() {
-  const { i18n } = useTranslation()
-  const isEN = i18n.resolvedLanguage === 'en'
+import { useLocale, useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
+import { Segmented } from '@/components/ds/segmented'
+import { LOCALE_COOKIE, type Locale } from '@/i18n/locales'
 
-  const switchTo = (lang: 'en' | 'pt-BR') => {
-    if (i18n.resolvedLanguage !== lang) {
-      void i18n.changeLanguage(lang)
-    }
+const LOCALE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
+
+const LANGUAGE_OPTIONS = [
+  { value: 'pt-BR', label: 'PT' },
+  { value: 'en', label: 'EN' },
+] as const satisfies readonly { value: Locale; label: string }[]
+
+function writeLocaleCookie(locale: Locale): void {
+  document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE_SECONDS}; samesite=lax`
+}
+
+interface LanguageToggleProps {
+  /** Stretches the switch to its container, as the sidebar wants; the landing nav keeps it compact. */
+  readonly fluid?: boolean
+  /** Drops the switch's ground, so only the pressed language's mint marks it, as the landing nav wants. */
+  readonly bare?: boolean
+}
+
+/** The language switch: it writes the locale cookie the server reads, then refreshes the route. */
+export function LanguageToggle({ fluid = true, bare = false }: LanguageToggleProps) {
+  const t = useTranslations()
+  const locale: Locale = useLocale() === 'pt-BR' ? 'pt-BR' : 'en'
+  const router = useRouter()
+
+  const switchTo = (next: Locale) => {
+    if (locale === next) return
+    writeLocaleCookie(next)
+    // The refresh re-renders the root layout, which reads the new cookie and sends its messages.
+    router.refresh()
   }
 
   return (
-    <div
-      className="relative flex items-center rounded-lg bg-surface border border-border p-0.5 font-heading"
-      role="radiogroup"
-      aria-label="Language"
-    >
-      {/* Sliding highlight */}
-      <div
-        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-md bg-accent/15 border border-accent/30 shadow-[0_0_8px_rgba(0,255,162,0.1)] transition-all duration-300 ease-out"
-        style={{ left: isEN ? '2px' : 'calc(50% + 0px)' }}
-      />
-
-      <button
-        type="button"
-        role="radio"
-        aria-checked={isEN}
-        onClick={() => switchTo('en')}
-        className={`relative z-10 rounded-md px-3 py-1 text-xs font-bold tracking-wide transition-colors duration-200 ${
-          isEN ? 'text-accent' : 'text-muted hover:text-muted-light'
-        }`}
-      >
-        EN
-      </button>
-
-      <button
-        type="button"
-        role="radio"
-        aria-checked={!isEN}
-        onClick={() => switchTo('pt-BR')}
-        className={`relative z-10 rounded-md px-3 py-1 text-xs font-bold tracking-wide transition-colors duration-200 ${
-          !isEN ? 'text-accent' : 'text-muted hover:text-muted-light'
-        }`}
-      >
-        PT
-      </button>
-    </div>
+    <Segmented
+      size="sm"
+      fluid={fluid}
+      className={bare ? 'bg-transparent p-0' : undefined}
+      label={t('common.language')}
+      options={LANGUAGE_OPTIONS}
+      value={locale}
+      onChange={switchTo}
+    />
   )
 }

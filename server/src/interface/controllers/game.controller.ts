@@ -1,32 +1,56 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import type { IGameRepository } from '@domain/repositories/game.repository'
-import type { gameIdParamSchema } from '@application/dtos'
+import type { gameIdParamSchema, gamesQuerySchema, popularGamesQuerySchema } from '@squadzr/schemas'
+import type { IListGamesUseCase } from '@application/use-cases/game/list-games.use-case'
+import type { IGetGameUseCase } from '@application/use-cases/game/get-game.use-case'
+import type { IGetPopularGamesUseCase } from '@application/use-cases/game/get-popular-games.use-case'
+import { toGameDto } from '@application/projections'
 import type { z } from 'zod'
 
 export interface GameControllerDeps {
-  readonly gameRepository: IGameRepository
+  readonly listGamesUseCase: IListGamesUseCase
+  readonly getGameUseCase: IGetGameUseCase
+  readonly getPopularGamesUseCase: IGetPopularGamesUseCase
 }
 
 export class GameController {
   constructor(private readonly deps: GameControllerDeps) {}
 
-  async list(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const games = await this.deps.gameRepository.findAll()
+  async list(
+    request: FastifyRequest<{ Querystring: z.infer<typeof gamesQuerySchema> }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    const result = await this.deps.listGamesUseCase.execute({
+      search: request.query.search,
+      limit: request.query.limit,
+    })
 
-    await reply.send({ games })
+    await reply.send({ games: result.games.map(toGameDto) })
   }
 
   async getById(
     request: FastifyRequest<{ Params: z.infer<typeof gameIdParamSchema> }>,
     reply: FastifyReply
   ): Promise<void> {
-    const game = await this.deps.gameRepository.findById(request.params.id)
+    const result = await this.deps.getGameUseCase.execute({ id: request.params.id })
 
-    if (!game) {
-      await reply.status(404).send({ error: 'Not Found', message: 'Game not found' })
-      return
-    }
+    await reply.send({ game: toGameDto(result.game) })
+  }
 
-    await reply.send({ game })
+  async popular(
+    request: FastifyRequest<{ Querystring: z.infer<typeof popularGamesQuerySchema> }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    const result = await this.deps.getPopularGamesUseCase.execute({
+      limit: request.query.limit,
+    })
+
+    await reply.send({
+      totalGames: result.totalGames,
+      games: result.games.map(({ game, openSquadCount, topTags }) => ({
+        game: toGameDto(game),
+        openSquadCount,
+        topTags,
+      })),
+    })
   }
 }

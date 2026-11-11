@@ -1,21 +1,25 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { GetAvailableRoomsUseCase } from './get-available-rooms.use-case'
 import {
+  createMockClock,
   createMockRoom,
   createMockRoomRepository,
   createMockRoomMemberRepository,
   createMockRoomMember,
+  FIXED_NOW,
 } from '@test/mocks'
 
 describe('GetAvailableRoomsUseCase', () => {
   let useCase: GetAvailableRoomsUseCase
   let mockRoomRepository: ReturnType<typeof createMockRoomRepository>
   let mockRoomMemberRepository: ReturnType<typeof createMockRoomMemberRepository>
+  let clock: ReturnType<typeof createMockClock>
 
   beforeEach(() => {
     mockRoomRepository = createMockRoomRepository()
     mockRoomMemberRepository = createMockRoomMemberRepository()
-    useCase = new GetAvailableRoomsUseCase(mockRoomRepository, mockRoomMemberRepository)
+    clock = createMockClock()
+    useCase = new GetAvailableRoomsUseCase(mockRoomRepository, mockRoomMemberRepository, clock)
   })
 
   describe('execute', () => {
@@ -29,7 +33,7 @@ describe('GetAvailableRoomsUseCase', () => {
       const result = await useCase.execute()
 
       expect(result.rooms).toEqual(expectedRooms)
-      expect(mockRoomRepository.findAvailable).toHaveBeenCalledOnce()
+      expect(mockRoomRepository.findAvailable).toHaveBeenCalledWith(FIXED_NOW)
       expect(mockRoomMemberRepository.findByUserId).not.toHaveBeenCalled()
     })
 

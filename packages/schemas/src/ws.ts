@@ -1,19 +1,11 @@
 import { z } from 'zod'
-import { roomSchema } from './index'
+import { playerSchema, publicRoomSchema, roomSchema } from './room'
+import { isoDateTimeSchema } from './date'
+import { userNotificationSchema } from './notification'
 
-export const wsMessageTypeSchema = z.enum([
+const wsMessageTypeSchema = z.enum([
   'join_room',
   'leave_room',
-  'room_joined',
-  'room_left',
-  'player_joined',
-  'player_left',
-  'viewer_left',
-  'room_ready',
-  'game_start',
-  'game_end',
-  'game_state',
-  'player_action',
   'error',
   'ping',
   'pong',
@@ -24,75 +16,42 @@ export const wsMessageTypeSchema = z.enum([
   'room_created',
   'room_updated',
   'room_deleted',
+  // User-targeted notification push
+  'notification',
+  'protocol',
+  'room_snapshot',
+  'presence_updated',
+  'room_removed',
 ])
 
-export type WsMessageType = z.infer<typeof wsMessageTypeSchema>
+export const REALTIME_PROTOCOL_VERSION = 5
+export const WS_MAX_PAYLOAD_BYTES = 16 * 1024
+/** Close code of a socket whose sign-in session was signed out or expired; the app reconnects as a visitor. */
+export const SESSION_ENDED_CLOSE_CODE = 4001
 
-export const baseWsMessageSchema = z.object({
+const baseWsMessageSchema = z.object({
   type: wsMessageTypeSchema,
   timestamp: z.number().default(() => Date.now()),
 })
 
-// Shared player schema for WS payloads
-export const wsPlayerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  image: z.string().nullable(),
-  isHost: z.boolean(),
-})
-
 // Client only sends roomCode - userId comes from authenticated session
-export const joinRoomMessageSchema = baseWsMessageSchema.extend({
+const joinRoomMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('join_room'),
   payload: z.object({
-    roomCode: z.string().length(6),
+    roomCode: z
+      .string()
+      .length(6)
+      .transform((code) => code.toUpperCase()),
   }),
 })
 
-export const leaveRoomMessageSchema = baseWsMessageSchema.extend({
+const leaveRoomMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('leave_room'),
   payload: z.object({
-    roomCode: z.string().length(6),
-  }),
-})
-
-export const roomJoinedMessageSchema = baseWsMessageSchema.extend({
-  type: z.literal('room_joined'),
-  payload: z.object({
-    roomId: z.uuid(),
-    roomCode: z.string().length(6),
-    players: z.array(wsPlayerSchema),
-  }),
-})
-
-export const playerJoinedMessageSchema = baseWsMessageSchema.extend({
-  type: z.literal('player_joined'),
-  payload: z.object({
-    player: wsPlayerSchema,
-  }),
-})
-
-export const playerLeftMessageSchema = baseWsMessageSchema.extend({
-  type: z.literal('player_left'),
-  payload: z.object({
-    playerId: z.string(),
-  }),
-})
-
-export const viewerLeftMessageSchema = baseWsMessageSchema.extend({
-  type: z.literal('viewer_left'),
-  payload: z.object({
-    playerId: z.string(),
-    roomCode: z.string().length(6),
-  }),
-})
-
-export const roomReadyMessageSchema = baseWsMessageSchema.extend({
-  type: z.literal('room_ready'),
-  payload: z.object({
-    roomId: z.uuid(),
-    roomCode: z.string().length(6),
-    message: z.string(),
+    roomCode: z
+      .string()
+      .length(6)
+      .transform((code) => code.toUpperCase()),
   }),
 })
 
@@ -104,38 +63,39 @@ export const errorMessageSchema = baseWsMessageSchema.extend({
   }),
 })
 
-export const pingMessageSchema = baseWsMessageSchema.extend({
+const pingMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('ping'),
 })
 
-export const pongMessageSchema = baseWsMessageSchema.extend({
+const pongMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('pong'),
 })
 
 // Lobby subscription messages
-export const subscribeLobbyMessageSchema = baseWsMessageSchema.extend({
+const subscribeLobbyMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('subscribe_lobby'),
 })
 
-export const unsubscribeLobbyMessageSchema = baseWsMessageSchema.extend({
+const unsubscribeLobbyMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('unsubscribe_lobby'),
 })
 
-export const lobbySubscribedMessageSchema = baseWsMessageSchema.extend({
+const lobbySubscribedMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('lobby_subscribed'),
   payload: z.object({
     message: z.string(),
   }),
 })
 
+// Catalog event pushed to every lobby subscriber, guests included: public projection only.
 export const roomCreatedMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('room_created'),
   payload: z.object({
-    room: roomSchema,
+    room: publicRoomSchema,
   }),
 })
 
-export const roomUpdatedMessageSchema = baseWsMessageSchema.extend({
+const roomUpdatedMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('room_updated'),
   payload: z.object({
     roomId: z.uuid(),
@@ -144,12 +104,63 @@ export const roomUpdatedMessageSchema = baseWsMessageSchema.extend({
   }),
 })
 
-export const roomDeletedMessageSchema = baseWsMessageSchema.extend({
+const roomDeletedMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('room_deleted'),
   payload: z.object({
     roomId: z.uuid(),
     roomCode: z.string(),
   }),
+})
+
+// User-targeted push: only sent to sockets authenticated as `payload.notification.userId`.
+const notificationMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('notification'),
+  payload: z.object({
+    notification: userNotificationSchema,
+  }),
+})
+
+export const protocolMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('protocol'),
+  payload: z.object({ version: z.literal(REALTIME_PROTOCOL_VERSION) }),
+})
+
+// Version-agnostic announcement: a client parses it before the version-specific
+// contract so a mismatched build can be detected and reloaded instead of being
+// rejected as an invalid payload.
+export const protocolAnnouncementSchema = z.object({
+  version: z.number().int().positive(),
+})
+
+// `offlineSince` is when the member's last session closed, or null when the server never saw it.
+const memberPresenceSchema = z.object({
+  playerId: z.string(),
+  online: z.boolean(),
+  offlineSince: isoDateTimeSchema.nullable(),
+})
+
+// Replaces the live roster in its entirety; applying it twice has the same effect.
+export const roomSnapshotMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('room_snapshot'),
+  payload: z.object({
+    room: roomSchema,
+    players: z.array(playerSchema),
+    readyAt: isoDateTimeSchema.nullable(),
+    expiresAt: isoDateTimeSchema,
+    presence: z.array(memberPresenceSchema),
+  }),
+})
+
+// Presence assigns online plus offlineSince; it never adds or removes a Membership.
+const presenceUpdatedMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('presence_updated'),
+  payload: memberPresenceSchema.extend({ roomCode: z.string().length(6) }),
+})
+
+// Catalog-only hint, including Ready Rooms that retain their member channel.
+const roomRemovedMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('room_removed'),
+  payload: z.object({ roomId: z.uuid(), roomCode: z.string().length(6) }),
 })
 
 export const wsIncomingMessageSchema = z.discriminatedUnion('type', [
@@ -160,32 +171,57 @@ export const wsIncomingMessageSchema = z.discriminatedUnion('type', [
   unsubscribeLobbyMessageSchema,
 ])
 
+export const wsServerMessageSchema = z.discriminatedUnion('type', [
+  errorMessageSchema,
+  pongMessageSchema,
+  lobbySubscribedMessageSchema,
+  roomCreatedMessageSchema,
+  roomUpdatedMessageSchema,
+  roomDeletedMessageSchema,
+  notificationMessageSchema,
+  protocolMessageSchema,
+  roomSnapshotMessageSchema,
+  presenceUpdatedMessageSchema,
+  roomRemovedMessageSchema,
+])
+
+// Frame envelope every server message shares, before its payload is checked per event
+export const wsServerEnvelopeSchema = z.object({
+  type: z.string(),
+  payload: z.unknown(),
+})
+
 // Payload-only schemas (for client-side validation of incoming WS events)
-export const roomJoinedPayloadSchema = roomJoinedMessageSchema.shape.payload
-export const playerJoinedPayloadSchema = playerJoinedMessageSchema.shape.payload
-export const playerLeftPayloadSchema = playerLeftMessageSchema.shape.payload
-export const viewerLeftPayloadSchema = viewerLeftMessageSchema.shape.payload
-export const roomReadyPayloadSchema = roomReadyMessageSchema.shape.payload
-export const errorPayloadSchema = errorMessageSchema.shape.payload
-export const roomCreatedPayloadSchema = roomCreatedMessageSchema.shape.payload
-export const roomUpdatedPayloadSchema = roomUpdatedMessageSchema.shape.payload
-export const roomDeletedPayloadSchema = roomDeletedMessageSchema.shape.payload
+const errorPayloadSchema = errorMessageSchema.shape.payload
+const roomCreatedPayloadSchema = roomCreatedMessageSchema.shape.payload
+const roomUpdatedPayloadSchema = roomUpdatedMessageSchema.shape.payload
+const roomDeletedPayloadSchema = roomDeletedMessageSchema.shape.payload
+const notificationPayloadSchema = notificationMessageSchema.shape.payload
+const lobbySubscribedPayloadSchema = lobbySubscribedMessageSchema.shape.payload
+
+// Payload schema of each server event that carries one, keyed by message type
+export const wsServerEventPayloadSchemas = {
+  error: errorPayloadSchema,
+  lobby_subscribed: lobbySubscribedPayloadSchema,
+  room_created: roomCreatedPayloadSchema,
+  room_updated: roomUpdatedPayloadSchema,
+  room_deleted: roomDeletedPayloadSchema,
+  notification: notificationPayloadSchema,
+  protocol: protocolMessageSchema.shape.payload,
+  room_snapshot: roomSnapshotMessageSchema.shape.payload,
+  presence_updated: presenceUpdatedMessageSchema.shape.payload,
+  room_removed: roomRemovedMessageSchema.shape.payload,
+} as const
+
+export type WsServerEventType = keyof typeof wsServerEventPayloadSchemas
+export type WsServerEventPayload<T extends WsServerEventType> = z.infer<
+  (typeof wsServerEventPayloadSchemas)[T]
+>
 
 // Inferred types
 export type WsIncomingMessage = z.infer<typeof wsIncomingMessageSchema>
+/** Frame as callers build it, before defaults and transforms are applied. */
+export type WsIncomingMessageInput = z.input<typeof wsIncomingMessageSchema>
+export type WsServerMessage = z.infer<typeof wsServerMessageSchema>
 export type JoinRoomMessage = z.infer<typeof joinRoomMessageSchema>
 export type LeaveRoomMessage = z.infer<typeof leaveRoomMessageSchema>
-export type RoomJoinedMessage = z.infer<typeof roomJoinedMessageSchema>
-export type PlayerJoinedMessage = z.infer<typeof playerJoinedMessageSchema>
-export type PlayerLeftMessage = z.infer<typeof playerLeftMessageSchema>
-export type ViewerLeftMessage = z.infer<typeof viewerLeftMessageSchema>
-export type RoomReadyMessage = z.infer<typeof roomReadyMessageSchema>
-export type ErrorMessage = z.infer<typeof errorMessageSchema>
-export type PingMessage = z.infer<typeof pingMessageSchema>
-export type PongMessage = z.infer<typeof pongMessageSchema>
-export type SubscribeLobbyMessage = z.infer<typeof subscribeLobbyMessageSchema>
-export type UnsubscribeLobbyMessage = z.infer<typeof unsubscribeLobbyMessageSchema>
-export type LobbySubscribedMessage = z.infer<typeof lobbySubscribedMessageSchema>
-export type RoomCreatedMessage = z.infer<typeof roomCreatedMessageSchema>
-export type RoomUpdatedMessage = z.infer<typeof roomUpdatedMessageSchema>
-export type RoomDeletedMessage = z.infer<typeof roomDeletedMessageSchema>

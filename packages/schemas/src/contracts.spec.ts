@@ -1,0 +1,706 @@
+import { describe, expect, expectTypeOf, it } from 'vitest'
+import {
+  MEMBER_PREVIEW_LIMIT,
+  IGDB_PLATFORM_IDS,
+  PLATFORMS,
+  PLATFORM_LABELS,
+  createRoomInputSchema,
+  createRoomResponseSchema,
+  PROFILE_TOP_GAMES_LIMIT,
+  describeContractIssues,
+  isRoomLobbyResponse,
+  notificationsResponseSchema,
+  platformSchema,
+  playerProfileParamsSchema,
+  playerProfileResponseSchema,
+  playerProfileSchema,
+  platformsFromIgdbIds,
+  publicRoomSchema,
+  roomCodeParamSchema,
+  roomLobbyResponseSchema,
+  roomMemberSchema,
+  roomResponseSchema,
+  roomSchema,
+  roomsResponseSchema,
+  userNotificationSchema,
+} from './index'
+import { GAME_SEARCH_MAX_LENGTH, gameSchema, gameSummarySchema, gamesQuerySchema } from './game'
+import { isoDateTimeSchema } from './date'
+import { userSchema } from './user'
+import type { UserNotificationPayloadDto } from './notification'
+import type {
+  GameDto,
+  GameGenreDto,
+  GameSummaryDto,
+  PublicRoomDto,
+  RoomDto,
+  RoomMemberDto,
+  RoomsResponse,
+  UserDto,
+  UserNotificationDto,
+} from './index'
+
+const ROOM_ID = '3fa85f64-5717-4562-b3fc-2c963f66afa6'
+const GAME_ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7'
+const INVITE = 'https://discord.gg/squadzr'
+const CREATED_AT = '2026-09-27T12:30:00.000Z'
+
+const gameSummary = {
+  id: GAME_ID,
+  name: 'Counter-Strike 2',
+  slug: 'cs2',
+  genres: [{ slug: 'shooter', name: 'Shooter' }],
+  aliases: ['cs2', 'counter strike'],
+  coverUrl: 'https://cdn.squadzr.test/cs2.webp',
+  coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
+}
+
+const publicRoom = {
+  id: ROOM_ID,
+  code: 'ABC123',
+  name: 'Ranked 5v5',
+  hostId: 'user-1',
+  gameId: GAME_ID,
+  game: gameSummary,
+  maxPlayers: 5,
+  tags: ['ranked'],
+  language: 'en',
+  platform: 'pc',
+  memberCount: 2,
+  memberPreview: [
+    { id: 'user-1', name: 'Caio', image: null },
+    { id: 'user-2', name: 'Ana', image: 'https://cdn.squadzr.test/ana.png' },
+  ],
+  isMember: false,
+  createdAt: CREATED_AT,
+  updatedAt: CREATED_AT,
+}
+const memberRoom = { ...publicRoom, discordLink: INVITE }
+const players = [{ id: 'user-1', name: 'Caio', image: null, isHost: true }]
+
+describe('isoDateTimeSchema', () => {
+  it('accepts the ISO 8601 UTC string a JSON date is serialized to', () => {
+    expect(isoDateTimeSchema.parse(CREATED_AT)).toBe(CREATED_AT)
+    expect(isoDateTimeSchema.parse(new Date(0).toISOString())).toBe('1970-01-01T00:00:00.000Z')
+  })
+
+  it.each([
+    ['a Date instance', new Date(0)],
+    ['an epoch number', 1_769_000_000_000],
+    ['a date without time', '2026-09-27'],
+    ['a local time without offset', '2026-09-27T12:30:00'],
+    ['free text', 'yesterday'],
+    ['null', null],
+  ])('rejects %s', (_label, value) => {
+    expect(isoDateTimeSchema.safeParse(value).success).toBe(false)
+  })
+})
+
+describe('transport dates', () => {
+  it('keeps every date field as the ISO string that travelled in JSON', () => {
+    const game = gameSchema.parse({
+      id: GAME_ID,
+      name: 'Counter-Strike 2',
+      slug: 'cs2',
+      genres: [{ slug: 'shooter', name: 'Shooter' }],
+      platforms: ['pc'],
+      coverUrl: 'https://cdn.squadzr.test/cs2.webp',
+      coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
+      minPlayers: 2,
+      maxPlayers: 5,
+      createdAt: CREATED_AT,
+      updatedAt: CREATED_AT,
+    })
+    const member = roomMemberSchema.parse({
+      id: ROOM_ID,
+      roomId: ROOM_ID,
+      userId: 'user-1',
+      joinedAt: CREATED_AT,
+    })
+
+    expect(game.createdAt).toBe(CREATED_AT)
+    expect(member.joinedAt).toBe(CREATED_AT)
+    expect(roomSchema.parse(memberRoom).updatedAt).toBe(CREATED_AT)
+  })
+
+  it('rejects a room whose dates are not ISO strings', () => {
+    expect(
+      publicRoomSchema.safeParse({ ...publicRoom, createdAt: 1_769_000_000_000 }).success
+    ).toBe(false)
+    expect(publicRoomSchema.safeParse({ ...publicRoom, updatedAt: 'soon' }).success).toBe(false)
+  })
+
+  it('accepts a notification that was never read and one read at an ISO instant', () => {
+    const notification = {
+      id: ROOM_ID,
+      userId: 'user-1',
+      type: 'room_ready',
+      title: 'Room ready',
+      message: 'Ranked 5v5 is ready.',
+      payload: {
+        roomId: ROOM_ID,
+        roomCode: 'ABC123',
+        roomName: 'Ranked 5v5',
+        gameName: 'Counter-Strike 2',
+        players: [{ name: 'Caio', image: null }],
+        discordLink: INVITE,
+      },
+      readAt: null,
+      createdAt: CREATED_AT,
+    }
+
+    expect(userNotificationSchema.parse(notification).readAt).toBeNull()
+    expect(userNotificationSchema.parse({ ...notification, readAt: CREATED_AT }).readAt).toBe(
+      CREATED_AT
+    )
+    expect(
+      notificationsResponseSchema.safeParse({
+        notifications: [{ ...notification, readAt: new Date(0) }],
+      }).success
+    ).toBe(false)
+  })
+
+  describe('userNotificationSchema as a union discriminated by type', () => {
+    const squad = {
+      roomId: ROOM_ID,
+      roomCode: 'ABC123',
+      roomName: 'Ranked 5v5',
+      gameName: 'Counter-Strike 2',
+    }
+    const person = { name: 'Caio', image: null }
+    const base = {
+      id: ROOM_ID,
+      userId: 'user-1',
+      title: 'Title',
+      message: 'Message',
+      readAt: null,
+      createdAt: CREATED_AT,
+    }
+    const byType = {
+      room_ready: { ...squad, players: [person], discordLink: INVITE },
+      host_transferred: { ...squad, previousHost: person, reason: 'squad_completed' },
+      member_left: { ...squad, member: person, reason: 'squad_completed' },
+      room_closed: { ...squad, previousHost: person, reason: 'no_eligible_host' },
+      room_closed_by_admin: { ...squad, reason: 'Offensive name' },
+    } as const
+
+    it.each(Object.entries(byType))(
+      'accepts a %s notification with its own payload',
+      (type, payload) => {
+        expect(userNotificationSchema.safeParse({ ...base, type, payload }).success).toBe(true)
+      }
+    )
+
+    it('still accepts a room_ready written before leftSquads and covers existed', () => {
+      const legacy = { ...base, type: 'room_ready', payload: byType.room_ready }
+
+      const parsed = userNotificationSchema.parse(legacy)
+
+      expect(parsed.type === 'room_ready' && parsed.payload.leftSquads).toBeUndefined()
+      expect(parsed.type === 'room_ready' && parsed.payload.gameCoverUrl).toBeUndefined()
+    })
+
+    it('accepts the list of squads a member left on room_ready', () => {
+      const payload = { ...byType.room_ready, leftSquads: [{ roomCode: 'DEF456', roomName: 'B' }] }
+
+      const parsed = userNotificationSchema.parse({ ...base, type: 'room_ready', payload })
+
+      expect(parsed.type === 'room_ready' && parsed.payload.leftSquads).toEqual([
+        { roomCode: 'DEF456', roomName: 'B' },
+      ])
+    })
+
+    it.each([
+      ['an unknown type', { ...base, type: 'system_announcement', payload: byType.room_ready }],
+      ['a payload of another type', { ...base, type: 'member_left', payload: byType.room_closed }],
+      [
+        'a room_ready without the invite field',
+        { ...base, type: 'room_ready', payload: { ...squad, players: [] } },
+      ],
+      [
+        'a reason that does not belong to the type',
+        {
+          ...base,
+          type: 'room_closed',
+          payload: { ...byType.room_closed, reason: 'squad_completed' },
+        },
+      ],
+    ])('rejects %s', (_label, notification) => {
+      expect(userNotificationSchema.safeParse(notification).success).toBe(false)
+    })
+
+    it('does not let a type other than room_ready carry the invite', () => {
+      const parsed = userNotificationSchema.parse({
+        ...base,
+        type: 'member_left',
+        payload: { ...byType.member_left, discordLink: INVITE },
+      })
+
+      expect(parsed.payload).not.toHaveProperty('discordLink')
+    })
+  })
+
+  it('infers transport types whose dates are strings', () => {
+    expectTypeOf<UserDto['id']>().toEqualTypeOf<string>()
+    expectTypeOf<UserDto['image']>().toEqualTypeOf<string | null>()
+    expectTypeOf<UserDto['createdAt']>().toEqualTypeOf<string>()
+    expectTypeOf<GameDto['minPlayers']>().toEqualTypeOf<number>()
+    expectTypeOf<GameDto['genres']>().toEqualTypeOf<GameGenreDto[]>()
+    expectTypeOf<GameDto['coverThumbUrl']>().toEqualTypeOf<string>()
+    expectTypeOf<GameDto['updatedAt']>().toEqualTypeOf<string>()
+    expectTypeOf<RoomDto['tags']>().toEqualTypeOf<string[]>()
+    expectTypeOf<RoomDto['createdAt']>().toEqualTypeOf<string>()
+    expectTypeOf<RoomMemberDto['joinedAt']>().toEqualTypeOf<string>()
+    expectTypeOf<UserNotificationDto['readAt']>().toEqualTypeOf<string | null>()
+    expectTypeOf<UserNotificationDto['payload']>().toEqualTypeOf<UserNotificationPayloadDto>()
+    expectTypeOf(userSchema.parse).returns.toEqualTypeOf<UserDto>()
+  })
+})
+
+describe('gamesQuerySchema', () => {
+  it('defaults to the twenty most popular games with no search', () => {
+    expect(gamesQuerySchema.parse({})).toEqual({ limit: 20 })
+    expect(gamesQuerySchema.parse({ search: undefined })).toEqual({ limit: 20 })
+  })
+
+  it('trims the search and treats empty text as no search', () => {
+    expect(gamesQuerySchema.parse({ search: '  league  ' })).toEqual({
+      search: 'league',
+      limit: 20,
+    })
+    expect(gamesQuerySchema.parse({ search: '   ' })).toEqual({ search: '', limit: 20 })
+  })
+
+  it('limits the search to GAME_SEARCH_MAX_LENGTH (100) characters after the trim', () => {
+    const longest = 'a'.repeat(GAME_SEARCH_MAX_LENGTH)
+
+    expect(GAME_SEARCH_MAX_LENGTH).toBe(100)
+    expect(gamesQuerySchema.safeParse({ search: longest }).success).toBe(true)
+    expect(gamesQuerySchema.safeParse({ search: `  ${longest}  ` }).success).toBe(true)
+    expect(gamesQuerySchema.safeParse({ search: `${longest}a` }).success).toBe(false)
+  })
+
+  it('reads the limit from the query string and bounds it from 1 to 50', () => {
+    expect(gamesQuerySchema.parse({ limit: '1' }).limit).toBe(1)
+    expect(gamesQuerySchema.parse({ limit: '50' }).limit).toBe(50)
+    for (const limit of ['0', '51', '1.5', 'many']) {
+      expect(gamesQuerySchema.safeParse({ limit }).success).toBe(false)
+    }
+  })
+})
+
+describe('platformSchema', () => {
+  it('lists the eight platforms in display order, each with a label and IGDB ids', () => {
+    expect(PLATFORMS).toEqual([
+      'pc',
+      'ps5',
+      'ps4',
+      'xbox-series',
+      'xbox-one',
+      'switch-2',
+      'switch',
+      'mobile',
+    ])
+    expect(platformSchema.options).toEqual([...PLATFORMS])
+    expect(PLATFORMS.map((platform) => PLATFORM_LABELS[platform])).toEqual([
+      'PC',
+      'PS5',
+      'PS4',
+      'Xbox Series',
+      'Xbox One',
+      'Switch 2',
+      'Switch',
+      'Mobile',
+    ])
+    expect(IGDB_PLATFORM_IDS).toEqual({
+      pc: [6, 14, 3],
+      ps5: [167],
+      ps4: [48],
+      'xbox-series': [169],
+      'xbox-one': [49],
+      'switch-2': [508],
+      switch: [130],
+      mobile: [34, 39],
+    })
+  })
+
+  it('maps IGDB ids to platforms without repeats, in display order, ignoring unknown ids', () => {
+    expect(platformsFromIgdbIds([39, 34, 130, 14, 6, 3, 9, 12, 41, 49])).toEqual([
+      'pc',
+      'xbox-one',
+      'switch',
+      'mobile',
+    ])
+    expect(platformsFromIgdbIds([9, 12, 41])).toEqual([])
+    expect(platformsFromIgdbIds([])).toEqual([])
+  })
+
+  it('rejects a value outside the list', () => {
+    expect(platformSchema.safeParse('ps3').success).toBe(false)
+    expect(platformSchema.safeParse('steam').success).toBe(false)
+  })
+})
+
+describe('game platforms', () => {
+  const game = {
+    id: GAME_ID,
+    name: 'Counter-Strike 2',
+    slug: 'cs2',
+    genres: [],
+    coverUrl: 'https://cdn.squadzr.test/cs2.webp',
+    coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
+    minPlayers: 2,
+    maxPlayers: 5,
+    createdAt: CREATED_AT,
+    updatedAt: CREATED_AT,
+  }
+
+  it('requires the platforms list on a Game, and accepts an empty one', () => {
+    expect(gameSchema.parse({ ...game, platforms: ['pc', 'ps5'] }).platforms).toEqual(['pc', 'ps5'])
+    expect(gameSchema.parse({ ...game, platforms: [] }).platforms).toEqual([])
+    expect(gameSchema.safeParse(game).success).toBe(false)
+    expect(gameSchema.safeParse({ ...game, platforms: ['ps3'] }).success).toBe(false)
+  })
+})
+
+describe('Squad platform', () => {
+  it('is required on the public and the member Squad, and is nullable', () => {
+    const { platform: _platform, ...withoutPlatform } = publicRoom
+
+    expect(publicRoomSchema.safeParse(withoutPlatform).success).toBe(false)
+    expect(roomSchema.safeParse({ ...withoutPlatform, discordLink: null }).success).toBe(false)
+    expect(publicRoomSchema.parse({ ...publicRoom, platform: null }).platform).toBeNull()
+    expect(roomSchema.parse({ ...memberRoom, platform: 'switch-2' }).platform).toBe('switch-2')
+    expect(publicRoomSchema.safeParse({ ...publicRoom, platform: 'ps3' }).success).toBe(false)
+  })
+
+  it('is optional on the create input and validated against the list when given', () => {
+    const input = { name: 'Ranked', gameId: GAME_ID, discordLink: INVITE }
+
+    expect(createRoomInputSchema.parse(input).platform).toBeUndefined()
+    expect(createRoomInputSchema.parse({ ...input, platform: null }).platform).toBeNull()
+    expect(createRoomInputSchema.parse({ ...input, platform: 'xbox-series' }).platform).toBe(
+      'xbox-series'
+    )
+    expect(createRoomInputSchema.safeParse({ ...input, platform: 'steam' }).success).toBe(false)
+  })
+})
+
+describe('gameSummarySchema', () => {
+  it('parses the summary a Squad carries and infers its type', () => {
+    const parsed = gameSummarySchema.parse(gameSummary)
+
+    expect(parsed).toEqual(gameSummary)
+    expectTypeOf<GameSummaryDto['genres']>().toEqualTypeOf<{ slug: string; name: string }[]>()
+    expectTypeOf<GameSummaryDto['coverThumbUrl']>().toEqualTypeOf<string>()
+    expectTypeOf<GameSummaryDto['aliases']>().toEqualTypeOf<string[]>()
+  })
+
+  it('carries the aliases as an array of strings, empty for a Game without any', () => {
+    expect(gameSummarySchema.parse({ ...gameSummary, aliases: [] }).aliases).toEqual([])
+    expect(gameSummarySchema.safeParse({ ...gameSummary, aliases: 'cs2' }).success).toBe(false)
+    expect(gameSummarySchema.safeParse({ ...gameSummary, aliases: [2] }).success).toBe(false)
+  })
+
+  it('rejects a summary without its aliases', () => {
+    const { aliases: _aliases, ...withoutAliases } = gameSummary
+
+    expect(gameSummarySchema.safeParse(withoutAliases).success).toBe(false)
+  })
+
+  it('rejects a summary without its genres or with an invalid cover URL', () => {
+    const { genres: _genres, ...withoutGenres } = gameSummary
+
+    expect(gameSummarySchema.safeParse(withoutGenres).success).toBe(false)
+    expect(
+      gameSummarySchema.safeParse({ ...gameSummary, coverThumbUrl: 'not a url' }).success
+    ).toBe(false)
+  })
+
+  it('requires the summary next to gameId on every Squad', () => {
+    const { game: _game, ...withoutGame } = publicRoom
+
+    expect(publicRoomSchema.safeParse(withoutGame).success).toBe(false)
+  })
+})
+
+describe('public and private room projections', () => {
+  it('drops the Discord invite from the public projection', () => {
+    const parsed = publicRoomSchema.parse(memberRoom)
+
+    expect(parsed).toEqual(publicRoom)
+    expect(parsed).not.toHaveProperty('discordLink')
+  })
+
+  it('requires the Discord invite field on the private projection', () => {
+    expect(roomSchema.parse(memberRoom).discordLink).toBe(INVITE)
+    expect(roomSchema.parse({ ...publicRoom, discordLink: null }).discordLink).toBeNull()
+    expect(roomSchema.safeParse(publicRoom).success).toBe(false)
+  })
+
+  it('applies the wire defaults for tags and language', () => {
+    const { tags: _tags, language: _language, ...minimal } = publicRoom
+
+    expect(publicRoomSchema.parse(minimal)).toMatchObject({ tags: [], language: 'pt-br' })
+  })
+
+  it('never lets an invite or a roster through the catalog response', () => {
+    const parsed = roomsResponseSchema.parse({ rooms: [memberRoom], players })
+
+    expect(JSON.stringify(parsed)).not.toContain(INVITE)
+    expect(parsed).toEqual({ rooms: [publicRoom] })
+  })
+
+  it('does not expose discordLink or a roster on the public types', () => {
+    expectTypeOf<PublicRoomDto>().not.toHaveProperty('discordLink')
+    expectTypeOf<RoomsResponse['rooms'][number]>().toEqualTypeOf<PublicRoomDto>()
+    expectTypeOf<RoomsResponse>().not.toHaveProperty('players')
+    expectTypeOf<RoomDto['discordLink']>().toEqualTypeOf<string | null>()
+  })
+})
+
+describe('member preview', () => {
+  const entry = (n: number) => ({ id: `user-${n}`, name: `Player ${n}`, image: null })
+
+  it('is required on the public and the member Squad', () => {
+    const { memberPreview: _preview, ...withoutPreview } = publicRoom
+
+    expect(publicRoomSchema.parse(publicRoom).memberPreview).toEqual(publicRoom.memberPreview)
+    expect(roomSchema.parse(memberRoom).memberPreview).toEqual(publicRoom.memberPreview)
+    expect(publicRoomSchema.safeParse(withoutPreview).success).toBe(false)
+    expect(roomSchema.safeParse({ ...withoutPreview, discordLink: INVITE }).success).toBe(false)
+  })
+
+  it('reaches the create response and the member lobby response', () => {
+    expect(createRoomResponseSchema.parse({ room: memberRoom }).room.memberPreview).toHaveLength(2)
+    expect(roomLobbyResponseSchema.parse({ room: memberRoom, players }).room.memberPreview).toEqual(
+      publicRoom.memberPreview
+    )
+  })
+
+  it('accepts up to five entries and rejects a sixth', () => {
+    const preview = (count: number) => Array.from({ length: count }, (_, i) => entry(i + 1))
+
+    expect(MEMBER_PREVIEW_LIMIT).toBe(5)
+    expect(publicRoomSchema.safeParse({ ...publicRoom, memberPreview: [] }).success).toBe(true)
+    expect(publicRoomSchema.safeParse({ ...publicRoom, memberPreview: preview(5) }).success).toBe(
+      true
+    )
+    const sixth = publicRoomSchema.safeParse({ ...publicRoom, memberPreview: preview(6) })
+    if (sixth.success) throw new Error('expected a sixth entry to be rejected')
+    expect(describeContractIssues(sixth.error).map((issue) => issue.path)).toEqual([
+      'memberPreview',
+    ])
+  })
+
+  it('holds only the id, the name and a nullable image of each member', () => {
+    const parsed = publicRoomSchema.parse({
+      ...publicRoom,
+      memberPreview: [{ ...entry(1), isHost: true, email: 'caio@squadzr.test' }],
+    })
+
+    expect(parsed.memberPreview).toEqual([entry(1)])
+    expect(
+      publicRoomSchema.safeParse({ ...publicRoom, memberPreview: [{ id: 'u', name: 'N' }] }).success
+    ).toBe(false)
+  })
+
+  it('does not lift the refusal of the roster and the invite on a non-member response', () => {
+    expect(roomResponseSchema.parse({ room: publicRoom }).room.memberPreview).toHaveLength(2)
+    expect(roomResponseSchema.safeParse({ room: publicRoom, players }).success).toBe(false)
+    expect(roomResponseSchema.safeParse({ room: memberRoom }).success).toBe(false)
+  })
+})
+
+describe('roomResponseSchema', () => {
+  it('keeps the invite and the roster of a member response', () => {
+    const parsed = roomResponseSchema.parse({ room: memberRoom, players })
+
+    expect(parsed).toEqual({ room: memberRoom, players })
+    expect(isRoomLobbyResponse(parsed)).toBe(true)
+  })
+
+  it('reads a non-member response as the public projection', () => {
+    const parsed = roomResponseSchema.parse({ room: publicRoom })
+
+    expect(parsed).toEqual({ room: publicRoom })
+    expect(isRoomLobbyResponse(parsed)).toBe(false)
+  })
+
+  it.each([
+    ['a roster that is not a list', { room: memberRoom, players: 'invalid-roster' }, ['players']],
+    [
+      'a roster entry with a wrong field type',
+      { room: memberRoom, players: [{ id: 'u1', name: 42, image: null, isHost: true }] },
+      ['players.0.name'],
+    ],
+    [
+      'an invite that is not a URL',
+      { room: { ...memberRoom, discordLink: 'not a url' }, players },
+      ['room.discordLink'],
+    ],
+  ])('rejects %s instead of downgrading it to the public projection', (_label, payload, paths) => {
+    const result = roomResponseSchema.safeParse(payload)
+
+    expect(roomLobbyResponseSchema.safeParse(payload).success).toBe(false)
+    if (result.success) throw new Error('expected an invalid response')
+    expect(describeContractIssues(result.error).map((issue) => issue.path)).toEqual(paths)
+  })
+
+  // Half of the lobby details is neither projection: the missing half and the
+  // unexpected half are both reported.
+  it.each([
+    ['an invite without a roster', { room: memberRoom }],
+    ['a null invite without a roster', { room: { ...publicRoom, discordLink: null } }],
+    ['a roster without an invite', { room: publicRoom, players }],
+    ['an empty roster without an invite', { room: publicRoom, players: [] }],
+  ])('rejects %s', (_label, payload) => {
+    const result = roomResponseSchema.safeParse(payload)
+
+    if (result.success) throw new Error('expected an invalid response')
+    expect(
+      describeContractIssues(result.error)
+        .map((issue) => issue.path)
+        .sort()
+    ).toEqual(['players', 'room.discordLink'])
+  })
+
+  it('keeps ignoring unknown fields that are not lobby details', () => {
+    const parsed = roomResponseSchema.parse({
+      room: { ...publicRoom, futureField: 1 },
+      futureField: 1,
+    })
+
+    expect(parsed).toEqual({ room: publicRoom })
+  })
+
+  it('rejects a response without a valid room', () => {
+    expect(roomResponseSchema.safeParse({ players }).success).toBe(false)
+    expect(roomResponseSchema.safeParse({ room: { ...publicRoom, id: 'nope' } }).success).toBe(
+      false
+    )
+  })
+})
+
+describe('roomCodeParamSchema', () => {
+  it('uppercases a 6-character code and rejects any other length', () => {
+    expect(roomCodeParamSchema.parse({ code: 'abc123' })).toEqual({ code: 'ABC123' })
+    expect(roomCodeParamSchema.safeParse({ code: 'abc' }).success).toBe(false)
+  })
+})
+
+describe('describeContractIssues', () => {
+  it('reports where and what kind of issue, never the offending value', () => {
+    const result = roomSchema.safeParse({
+      ...memberRoom,
+      discordLink: 'not-a-url-but-secret',
+      createdAt: 42,
+    })
+    if (result.success) throw new Error('expected an invalid room')
+
+    const issues = describeContractIssues(result.error)
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        { path: 'createdAt', code: 'invalid_type' },
+        { path: 'discordLink', code: 'invalid_format' },
+      ])
+    )
+    expect(JSON.stringify(issues)).not.toContain('secret')
+    for (const issue of issues) expect(Object.keys(issue).sort()).toEqual(['code', 'path'])
+  })
+
+  it('locates the issue inside the branches of a union, once', () => {
+    const result = roomResponseSchema.safeParse({
+      room: { ...memberRoom, createdAt: 'yesterday' },
+      players,
+    })
+    if (result.success) throw new Error('expected an invalid response')
+
+    expect(describeContractIssues(result.error)).toEqual([
+      { path: 'room.createdAt', code: 'invalid_format' },
+    ])
+  })
+})
+
+describe('Player Profile contract', () => {
+  const profileGame = {
+    id: GAME_ID,
+    name: 'Counter-Strike 2',
+    slug: 'cs2',
+    coverUrl: 'https://cdn.squadzr.test/cs2.webp',
+    coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
+  }
+  const profile = {
+    id: 'user-1',
+    name: 'Caio',
+    image: null,
+    memberSince: CREATED_AT,
+    completedSquads: 3,
+    gamesPlayed: 1,
+    lastSquad: { game: profileGame, readyAt: CREATED_AT },
+    topGames: [{ game: profileGame, squads: 3 }],
+  }
+
+  it('accepts a profile with and without history', () => {
+    expect(playerProfileSchema.parse(profile)).toEqual(profile)
+    const empty = { ...profile, completedSquads: 0, gamesPlayed: 0, lastSquad: null, topGames: [] }
+    expect(playerProfileResponseSchema.parse({ profile: empty }).profile).toEqual(empty)
+  })
+
+  it('never carries the email or any other private field of the user', () => {
+    const leaky = {
+      ...profile,
+      email: 'caio@squadzr.test',
+      emailVerified: true,
+      updatedAt: CREATED_AT,
+    }
+
+    const parsed = playerProfileSchema.parse(leaky)
+
+    expect(parsed).not.toHaveProperty('email')
+    expect(parsed).not.toHaveProperty('emailVerified')
+    expect(parsed).not.toHaveProperty('updatedAt')
+    expect(Object.keys(playerProfileSchema.shape).sort()).toEqual([
+      'completedSquads',
+      'gamesPlayed',
+      'id',
+      'image',
+      'lastSquad',
+      'memberSince',
+      'name',
+      'topGames',
+    ])
+  })
+
+  it('carries only the Game fields the profile shows', () => {
+    const parsed = playerProfileSchema.parse({
+      ...profile,
+      topGames: [{ game: { ...profileGame, genres: [], aliases: ['cs'] }, squads: 3 }],
+    })
+
+    expect(Object.keys(parsed.topGames[0]!.game).sort()).toEqual([
+      'coverThumbUrl',
+      'coverUrl',
+      'id',
+      'name',
+      'slug',
+    ])
+  })
+
+  it('lists at most five Games', () => {
+    const topGames = Array.from({ length: PROFILE_TOP_GAMES_LIMIT + 1 }, () => ({
+      game: profileGame,
+      squads: 1,
+    }))
+
+    expect(playerProfileSchema.safeParse({ ...profile, topGames }).success).toBe(false)
+  })
+
+  it('bounds the id param to 1 through 255 characters', () => {
+    expect(playerProfileParamsSchema.safeParse({ id: 'a' }).success).toBe(true)
+    expect(playerProfileParamsSchema.safeParse({ id: 'a'.repeat(255) }).success).toBe(true)
+    expect(playerProfileParamsSchema.safeParse({ id: '' }).success).toBe(false)
+    expect(playerProfileParamsSchema.safeParse({ id: 'a'.repeat(256) }).success).toBe(false)
+  })
+})

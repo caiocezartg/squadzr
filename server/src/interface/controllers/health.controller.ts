@@ -1,46 +1,37 @@
-import { sql } from 'drizzle-orm'
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import type { HealthResponse } from '@squadzr/schemas'
+import type { ICheckReadinessUseCase } from '@application/use-cases/health/check-readiness.use-case'
 
-export interface HealthResponse {
-  status: 'ok' | 'error'
-  timestamp: string
-  uptime: number
-  version: string
+export interface HealthControllerDeps {
+  readonly checkReadinessUseCase: ICheckReadinessUseCase
+}
+
+const HEALTH_VERSION = '0.1.0'
+
+/** Builds the payload every health probe answers with, so all three share one shape. */
+function buildHealthResponse(status: HealthResponse['status']): HealthResponse {
+  return {
+    status,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: HEALTH_VERSION,
+  }
 }
 
 export class HealthController {
-  async check(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const response: HealthResponse = {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      version: '0.1.0',
-    }
+  constructor(private readonly deps: HealthControllerDeps) {}
 
-    await reply.status(200).send(response)
+  async check(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    await reply.status(200).send(buildHealthResponse('ok'))
   }
 
-  async readiness(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    try {
-      await request.server.db.execute(sql`SELECT 1`)
+  async readiness(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const result = await this.deps.checkReadinessUseCase.execute()
 
-      const response: HealthResponse = {
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        version: '0.1.0',
-      }
-
-      await reply.status(200).send(response)
-    } catch {
-      const response: HealthResponse = {
-        status: 'error',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        version: '0.1.0',
-      }
-
-      await reply.status(503).send(response)
+    if (!result.ready) {
+      await reply.status(503).send(buildHealthResponse('error'))
+      return
     }
+    await reply.status(200).send(buildHealthResponse('ok'))
   }
 }

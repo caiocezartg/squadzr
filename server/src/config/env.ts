@@ -1,4 +1,24 @@
 import { z } from 'zod'
+import {
+  igdbClientIdSchema,
+  igdbClientSecretSchema,
+  igdbHypeThresholdSchema,
+  igdbPopularityThresholdSchema,
+} from './catalog-import-env'
+
+// An unset variable and an empty one both mean "not configured".
+function optionalIgdbCredential<Schema extends z.ZodType>(schema: Schema) {
+  return z.preprocess((value) => (value === '' ? undefined : value), schema.optional())
+}
+
+// A bare parent domain such as `squadzr.app`: DNS labels, at least two, ending in a
+// letter-only TLD.
+const parentDomainSchema = z
+  .string()
+  .regex(
+    /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i,
+    'BETTER_AUTH_COOKIE_DOMAIN must be a parent domain such as squadzr.app'
+  )
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -6,21 +26,62 @@ const envSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.url(),
   CORS_ORIGIN: z.url({ error: 'CORS_ORIGIN must be a valid URL' }).default('http://localhost:5173'),
+  // Proxies in front of the API whose x-forwarded-for entries are believed: one edge proxy by default. Only
+  // the entries those hops appended are trusted, so a client cannot pick its own address. 0 trusts none.
+  TRUST_PROXY_HOPS: z
+    .string()
+    .regex(/^\d+$/, 'TRUST_PROXY_HOPS must be a whole number of proxies')
+    .default('1')
+    .transform(Number),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   // Better Auth
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.url().default('http://localhost:3000'),
+  // Shares the session cookie with every subdomain of this parent domain. Unset: host-only cookies.
+  BETTER_AUTH_COOKIE_DOMAIN: parentDomainSchema.optional(),
 
   // Discord OAuth
   DISCORD_CLIENT_ID: z.string().min(1, 'DISCORD_CLIENT_ID is required'),
   DISCORD_CLIENT_SECRET: z.string().min(1, 'DISCORD_CLIENT_SECRET is required'),
+
+  // IGDB, for the manual Catalog Import run from the admin panel. Optional: without the credentials the
+  // API boots and answers 503 `CATALOG_IMPORT_UNAVAILABLE`, while the cron keeps its own environment.
+  // Same rules as the cron's (`catalog-import-env.ts`), same thresholds.
+  IGDB_CLIENT_ID: optionalIgdbCredential(igdbClientIdSchema),
+  IGDB_CLIENT_SECRET: optionalIgdbCredential(igdbClientSecretSchema),
+  IGDB_POPULARITY_THRESHOLD: igdbPopularityThresholdSchema,
+  IGDB_HYPE_THRESHOLD: igdbHypeThresholdSchema,
 })
 
 export type Env = z.infer<typeof envSchema>
 
-function validateEnv(): Env {
-  const result = envSchema.safeParse(process.env)
+/** The database connection alone, for scripts that never read auth or Discord settings. */
+const databaseEnvSchema = envSchema.pick({ DATABASE_URL: true })
+
+export type DatabaseEnv = z.infer<typeof databaseEnvSchema>
+
+type EnvSource = Record<string, string | undefined>
+
+/**
+ * Parses and validates an environment source without touching the process.
+ * Throws when the source is invalid, so tests can build isolated configurations.
+ */
+export function parseEnv(source: EnvSource): Env {
+  const result = envSchema.safeParse(source)
+
+  if (!result.success) {
+    throw new Error(
+      `Invalid environment variables: ${JSON.stringify(z.treeifyError(result.error))}`
+    )
+  }
+
+  return result.data
+}
+
+/** Validates a source against a schema, exiting the process when a variable is invalid. */
+function parseOrExit<T extends z.ZodType>(schema: T, source: EnvSource): z.output<T> {
+  const result = schema.safeParse(source)
 
   if (!result.success) {
     console.error('Invalid environment variables:')
@@ -31,4 +92,18 @@ function validateEnv(): Env {
   return result.data
 }
 
-export const env: Env = validateEnv()
+/**
+ * Loads the environment for a process entry point (server, scripts).
+ * Keeps the production contract: invalid variables are reported and the process exits.
+ */
+export function loadEnv(source: EnvSource = process.env): Env {
+  return parseOrExit(envSchema, source)
+}
+
+/**
+ * Loads only the database connection, so a script runs with `DATABASE_URL` alone.
+ * Same contract as `loadEnv`: invalid variables are reported and the process exits.
+ */
+export function loadDatabaseEnv(source: EnvSource = process.env): DatabaseEnv {
+  return parseOrExit(databaseEnvSchema, source)
+}

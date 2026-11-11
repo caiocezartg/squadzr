@@ -1,0 +1,91 @@
+'use client'
+
+import { Dialog } from '@base-ui-components/react/dialog'
+import { X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { cn } from '@/lib/utils'
+import type { ReactElement } from 'react'
+import type { FloatingPanelProps } from './floating-types'
+import { useInstantDismiss } from './use-instant-dismiss'
+import { useMounted } from './use-mounted'
+
+type BottomSheetProps = Omit<FloatingPanelProps, 'trigger'> & {
+  /** The element that opens the sheet; leave it out when the parent drives `open`. */
+  trigger?: ReactElement<Record<string, unknown>>
+  /**
+   * Called once the open or close transition has finished. A parent that unmounts the sheet on
+   * close waits for `false` here, so the exit plays (see `useDialogPresence`).
+   */
+  onOpenChangeComplete?: (open: boolean) => void
+  /** Classes for the close button, for a sheet whose header carries its own artwork. */
+  closeClassName?: string
+}
+
+/**
+ * A panel that rises from the bottom edge. It takes the same props as a popover, so a popover can
+ * stand in for it on narrow screens. It is modal: focus stays inside, Escape and the backdrop close
+ * it, and focus returns to the trigger. Reduced motion swaps the slide for a fade. A sheet whose
+ * parent passes `open` already true (a popover that crossed 640px while open) is first rendered
+ * closed and opened right after, so it still slides in; `defaultOpen` alone skips that step.
+ */
+export function BottomSheet({
+  trigger,
+  title,
+  hideTitle,
+  children,
+  open,
+  defaultOpen,
+  onOpenChange,
+  onOpenChangeComplete,
+  className,
+  closeClassName,
+}: BottomSheetProps) {
+  const t = useTranslations('ds')
+  const { instant, handleOpenChange } = useInstantDismiss(onOpenChange)
+  const instantAttribute = instant ? '' : undefined
+  const mounted = useMounted()
+
+  return (
+    <Dialog.Root
+      open={open === undefined ? undefined : open && mounted}
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      onOpenChangeComplete={onOpenChangeComplete}
+    >
+      {trigger && <Dialog.Trigger render={trigger} />}
+      <Dialog.Portal>
+        <Dialog.Backdrop
+          data-instant={instantAttribute}
+          className="fixed inset-0 z-50 bg-black/60 transition-opacity duration-280 ease-out data-ending-style:opacity-0 data-ending-style:duration-180 data-instant:data-ending-style:duration-0 data-starting-style:opacity-0"
+        />
+        <Dialog.Popup
+          data-instant={instantAttribute}
+          className={cn(
+            'bg-raised text-text fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col overflow-y-auto p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_-24px_60px_-20px_rgba(0,0,0,0.9)] outline-none',
+            'transition-[translate,opacity] duration-280 ease-out',
+            'motion-safe:data-starting-style:translate-y-full motion-safe:data-ending-style:translate-y-full',
+            'motion-reduce:data-starting-style:opacity-0 motion-reduce:data-ending-style:opacity-0',
+            'data-ending-style:duration-180 data-instant:data-ending-style:duration-0',
+            className
+          )}
+        >
+          <Dialog.Close
+            aria-label={t('close')}
+            className={cn(
+              'press bg-raised-2 text-text-3 hover-fine:text-text focus-visible:outline-text absolute top-3 right-3 z-10 flex size-11 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2',
+              closeClassName
+            )}
+          >
+            <X aria-hidden className="size-4" strokeWidth={2.4} />
+          </Dialog.Close>
+          <Dialog.Title
+            className={cn('type-panel-title-sm text-text mb-4 pr-12', hideTitle && 'sr-only')}
+          >
+            {title}
+          </Dialog.Title>
+          {children}
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}

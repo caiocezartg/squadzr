@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Card — estados e vagas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080A}
+.sqc{transition:background-color .2s,box-shadow .2s}
+.sqc:hover{background-color:#17181D !important;box-shadow:inset 0 0 0 1.5px #00FFA2 !important}
+.sqc .sqc-poster{transition:transform .5s cubic-bezier(.22,1,.36,1)}
+.sqc:hover .sqc-poster{transform:scale(1.06) !important}
+.sqc .sqc-count{transition:opacity .15s}
+.sqc .sqc-cta{transition:opacity .2s,transform .25s cubic-bezier(.22,1,.36,1)}
+.sqc:hover .sqc-count{opacity:0 !important}
+.sqc:hover .sqc-cta{opacity:1 !important;transform:none !important}
+.sqc-off:hover{background-color:#121317 !important;box-shadow:none !important;cursor:not-allowed}
+.sqc-off:hover .sqc-poster{transform:none !important}
+.sqc-off:hover .sqc-count{opacity:1 !important}
+</style>
+</helmet>
+<div style="width: 1240px; height: 720px; box-sizing: border-box; padding: 32px 26px; background: #07080A; color: #F2F3F5; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; flex-direction: column; gap: 30px">
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 24px">
+    <sc-for list="{{cards}}" as="c" hint-placeholder-count="8">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #80838C">{{c.label}}</span>
+        <dc-import name="SquadCard" squad="{{c.squad}}" hover="{{c.hover}}" hint-size="100%,176px"></dc-import>
+      </div>
+    </sc-for>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1240,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const C = {
+      lol: '/_blob/8df3967d6379fe20d30cbe81ffa8f1d7',
+      cs2: '/_blob/e99d5c165ccede7035df3d33d9ff414d',
+      val: '/_blob/48d569e7ccecf944cc19cb2d19ae7720',
+      apex: '/_blob/54ef0dd62a2c3285ea217f850f06e169',
+      mc: '/_blob/27f1b58c3da08be4ee09f50b803963d5',
+      ow: '/_blob/828fcf6511c34f6726bd1bd2e3b4f956'
+    };
+    return {
+      cards: [
+        { label: 'ABERTO · 3/5', squad: { name: 'Ranked climbing — Gold+', game: 'League of Legends', cover: C.lol, tags: ['ranked', 'chill'], lang: 'PT-BR', code: 'ABC12', members: 3, max: 5, state: 'open' } },
+        { label: 'QUASE CHEIO · 4/5', squad: { name: 'Competitive 5v5 tryhard', game: 'Counter-Strike 2', cover: C.cs2, tags: ['ranked', 'competitive', 'mic'], lang: 'EN-US', code: 'XYZ99', members: 4, max: 5, state: 'open' } },
+        { label: 'ENTROU NESTE SQUAD', squad: { name: 'Premier quinta à noite', game: 'Valorant', cover: C.val, tags: ['premier', 'mic'], lang: 'PT-BR', code: 'VLR77', members: 4, max: 5, state: 'member' } },
+        { label: 'CHEIO · SEM VAGA', squad: { name: 'Trio ranked Plat → Diamond', game: 'Apex Legends', cover: C.apex, tags: ['ranked'], lang: 'PT-BR', code: 'APX03', members: 3, max: 3, state: 'full' } },
+        { label: '10 VAGAS · 5 CÍRCULOS + 5', squad: { name: 'SMP survival hardcore', game: 'Minecraft', cover: C.mc, tags: ['survival', 'smp'], lang: 'PT-BR', code: 'MCX10', members: 3, max: 10, state: 'open' } },
+        { label: 'PRONTO · CONVITE LIBERADO', squad: { name: 'Comp role queue — Diamond+', game: 'Overwatch', cover: C.ow, tags: ['rolequeue', 'comp'], lang: 'PT-BR', code: 'OW2X1', members: 5, max: 5, state: 'ready' } },
+        { label: 'HOVER · PODE ENTRAR', hover: true, squad: { name: 'Ranked climbing — Gold+', game: 'League of Legends', cover: C.lol, tags: ['ranked', 'chill'], lang: 'PT-BR', code: 'ABC12', members: 3, max: 5, state: 'open' } },
+        { label: 'HOVER · JÁ ESTÁ NO SQUAD', hover: true, squad: { name: 'Premier quinta à noite', game: 'Valorant', cover: C.val, tags: ['premier', 'mic'], lang: 'PT-BR', code: 'VLR77', members: 4, max: 5, state: 'member' } }
+      ].map((c) => Object.assign({ hover: false }, c))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Botão</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<sc-if value="{{isLink}}" hint-placeholder-val="{{ false }}">
+  <a href="{{href}}" class="{{cls}}" aria-label="{{aria}}" aria-disabled="{{offAttr}}" style="display: inline-flex; align-items: center; justify-content: center; gap: {{gap}}; box-sizing: border-box; width: {{width}}; min-width: {{minW}}; min-height: {{h}}; padding: {{pad}}; background: {{bg}}; color: {{fg}}; font-family: {{family}}; font-size: {{fs}}; font-weight: {{fw}}; letter-spacing: {{ls}}; line-height: 1.2; text-decoration: none; white-space: nowrap; cursor: {{cursor}}">
+    <sc-if value="{{iconStart}}" hint-placeholder-val="{{ false }}">
+      <svg aria-hidden="true" width="{{is}}" height="{{is}}" viewBox="0 0 24 24" fill="{{iconFill}}" stroke="{{iconStroke}}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{p1}}"></path><path d="{{p2}}"></path><path d="{{p3}}"></path></svg>
+    </sc-if>
+    <sc-if value="{{hasLabel}}" hint-placeholder-val="{{ true }}"><span>{{label}}</span></sc-if>
+    <sc-if value="{{iconEnd}}" hint-placeholder-val="{{ false }}">
+      <svg aria-hidden="true" width="{{is}}" height="{{is}}" viewBox="0 0 24 24" fill="{{iconFill}}" stroke="{{iconStroke}}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{p1}}"></path><path d="{{p2}}"></path><path d="{{p3}}"></path></svg>
+    </sc-if>
+  </a>
+</sc-if>
+<sc-if value="{{isButton}}" hint-placeholder-val="{{ true }}">
+  <button type="button" onClick="{{click}}" disabled="{{off}}" class="{{cls}}" aria-label="{{aria}}" style="display: inline-flex; align-items: center; justify-content: center; gap: {{gap}}; box-sizing: border-box; width: {{width}}; min-width: {{minW}}; min-height: {{h}}; padding: {{pad}}; border: 0; background: {{bg}}; color: {{fg}}; font-family: {{family}}; font-size: {{fs}}; font-weight: {{fw}}; letter-spacing: {{ls}}; line-height: 1.2; white-space: nowrap; cursor: {{cursor}}">
+    <sc-if value="{{iconStart}}" hint-placeholder-val="{{ true }}">
+      <svg aria-hidden="true" width="{{is}}" height="{{is}}" viewBox="0 0 24 24" fill="{{iconFill}}" stroke="{{iconStroke}}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{p1}}"></path><path d="{{p2}}"></path><path d="{{p3}}"></path></svg>
+    </sc-if>
+    <sc-if value="{{hasLabel}}" hint-placeholder-val="{{ true }}"><span>{{label}}</span></sc-if>
+    <sc-if value="{{iconEnd}}" hint-placeholder-val="{{ false }}">
+      <svg aria-hidden="true" width="{{is}}" height="{{is}}" viewBox="0 0 24 24" fill="{{iconFill}}" stroke="{{iconStroke}}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{p1}}"></path><path d="{{p2}}"></path><path d="{{p3}}"></path></svg>
+    </sc-if>
+  </button>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"variant":{"editor":"enum","options":["primary","secondary","ghost","link","danger","discord","light","dark","glass"],"default":"primary"},"size":{"editor":"enum","options":["sm","md","lg"],"default":"md"},"label":{"editor":"text","default":"Criar squad"},"icon":{"editor":"enum","options":["none","plus","arrow","back","check","copy","link","external","close","logout","lock","discord"],"default":"plus"},"iconPos":{"editor":"enum","options":["start","end"],"default":"start"},"full":{"editor":"boolean","default":false},"disabled":{"editor":"boolean","default":false},"mono":{"editor":"boolean","default":false},"href":{"editor":null},"onClick":{"editor":null},"ariaLabel":{"editor":null},"$preview":{"width":200,"height":44}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const DISCORD = 'M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.319 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.011c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z';
+    // Stroke icons as up to three paths each; Discord is the one filled mark.
+    const ICONS = {
+      none: [],
+      plus: ['M12 5v14', 'M5 12h14'],
+      arrow: ['M5 12h14', 'm13 6 6 6-6 6'],
+      back: ['M19 12H5', 'm11 18-6-6 6-6'],
+      check: ['M20 6 9 17l-5-5'],
+      copy: ['M9 9h12v12H9z', 'M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1'],
+      link: ['M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71', 'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'],
+      external: ['M7 17 17 7', 'M8 7h9v9'],
+      close: ['M18 6 6 18', 'm6 6 12 12'],
+      logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'm16 17 5-5-5-5', 'M21 12H9'],
+      lock: ['M4 11h16v10H4z', 'M8 11V7a4 4 0 0 1 8 0v4'],
+      discord: [DISCORD]
+    };
+    // [background, text, weight]
+    const VARIANTS = {
+      primary: ['#00FFA2', '#03140D', '800'],
+      secondary: ['#1A1B20', '#F2F3F5', '700'],
+      ghost: ['transparent', '#C9CBD1', '700'],
+      link: ['transparent', '#00FFA2', '700'],
+      danger: ['rgba(239,68,68,0.10)', '#FF8A8A', '700'],
+      discord: ['#4E5AE8', '#FFFFFF', '700'],
+      light: ['#FFFFFF', '#2B33A8', '800'],
+      dark: ['#07080A', '#F2F3F5', '800'],
+      glass: ['rgba(255,255,255,0.14)', '#FFFFFF', '700']
+    };
+    const SIZES = {
+      sm: { h: 36, fs: 12.5, pad: 12, gap: 7, is: 13 },
+      md: { h: 44, fs: 14, pad: 16, gap: 8, is: 15 },
+      lg: { h: 56, fs: 16, pad: 24, gap: 10, is: 17 }
+    };
+    const p = this.props;
+    const variant = VARIANTS[p.variant] ? p.variant : 'primary';
+    const z = SIZES[p.size] || SIZES.md;
+    const label = p.label ?? 'Botão';
+    const iconKey = ICONS[p.icon] ? p.icon : 'none';
+    const paths = ICONS[iconKey];
+    const hasIcon = paths.length > 0;
+    const end = p.iconPos === 'end';
+    const off = !!p.disabled;
+    const quiet = variant === 'ghost' || variant === 'link';
+    const v = off ? (quiet ? ['transparent', '#4A4C54', VARIANTS[variant][2]] : ['#24252B', '#5F626B', VARIANTS[variant][2]]) : VARIANTS[variant];
+    const iconOnly = !label && hasIcon;
+    const isLink = typeof p.href === 'string' && p.href.length > 0;
+    return {
+      isLink,
+      isButton: !isLink,
+      href: off ? undefined : p.href,
+      click: off ? undefined : p.onClick,
+      off,
+      offAttr: off ? 'true' : undefined,
+      cls: 'ds-btn ' + (off ? 'ds-btn-off' : 'ds-btn-' + variant),
+      aria: p.ariaLabel,
+      label,
+      hasLabel: !!label,
+      iconStart: hasIcon && !end,
+      iconEnd: hasIcon && end,
+      p1: paths[0],
+      p2: paths[1],
+      p3: paths[2],
+      iconFill: iconKey === 'discord' ? 'currentColor' : 'none',
+      iconStroke: iconKey === 'discord' ? 'none' : 'currentColor',
+      is: z.is + 'px',
+      gap: z.gap + 'px',
+      h: z.h + 'px',
+      minW: iconOnly ? z.h + 'px' : '0',
+      width: iconOnly ? z.h + 'px' : p.full ? '100%' : 'auto',
+      pad: iconOnly ? '0' : variant === 'link' ? '0 6px' : '0 ' + z.pad + 'px',
+      bg: v[0],
+      fg: v[1],
+      fw: v[2],
+      family: p.mono ? "'JetBrains Mono', monospace" : "'Plus Jakarta Sans', sans-serif",
+      fs: (p.mono ? z.fs - 1.5 : z.fs) + 'px',
+      ls: p.mono ? '0.1em' : 'normal',
+      cursor: off ? 'not-allowed' : 'pointer'
+    };
+  }
+}
+</script>
+</body>
+</html>

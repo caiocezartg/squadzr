@@ -2,15 +2,30 @@ import type { Room } from '@domain/entities/room.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
-import type { Player } from '@squadzr/types/ws'
+import type { Clock } from '@domain/services/clock.interface'
+import { findRoomPlayers } from './helpers/find-room-players'
+import { resolveAccessibleRoom } from './helpers/resolve-accessible-room'
+import { withRosterPreview } from './helpers/with-roster-preview'
+
+export interface RoomPlayer {
+  readonly id: string
+  readonly name: string
+  readonly image: string | null
+  readonly isHost: boolean
+}
 
 export interface GetRoomByCodeInput {
   readonly code: string
+  /** Authenticated caller, if any. The roster is resolved only for a member of the room. */
+  readonly viewerId?: string
 }
 
 export interface GetRoomByCodeOutput {
-  readonly room: Room | null
-  readonly players: Player[]
+  /** Never null: a missing, expired or hidden room throws RoomNotFoundError instead. */
+  readonly room: Room
+  /** True when `viewerId` holds a Membership in the room: only then may private details be shown. */
+  readonly isMember: boolean
+  readonly players: RoomPlayer[]
 }
 
 export interface IGetRoomByCodeUseCase {
@@ -21,33 +36,23 @@ export class GetRoomByCodeUseCase implements IGetRoomByCodeUseCase {
   constructor(
     private readonly roomRepository: IRoomRepository,
     private readonly roomMemberRepository: IRoomMemberRepository,
-    private readonly userRepository: IUserRepository
+    private readonly userRepository: IUserRepository,
+    private readonly clock: Clock
   ) {}
 
   async execute(input: GetRoomByCodeInput): Promise<GetRoomByCodeOutput> {
-    const room = await this.roomRepository.findByCode(input.code)
-    if (!room) {
-      return { room: null, players: [] }
+    const { room, isMember } = await resolveAccessibleRoom(
+      this.roomRepository,
+      this.roomMemberRepository,
+      this.clock,
+      input
+    )
+
+    if (!isMember) {
+      return { room, isMember: false, players: [] }
     }
 
-    const members = await this.roomMemberRepository.findByRoomId(room.id)
-    const userIds = members.map((m) => m.userId)
-    const users = await this.userRepository.findByIds(userIds)
-    const userMap = new Map(users.map((u) => [u.id, u]))
-
-    const players: Player[] = members
-      .map((m) => {
-        const user = userMap.get(m.userId)
-        if (!user) return null
-        return {
-          id: user.id,
-          name: user.name,
-          image: user.avatarUrl,
-          isHost: user.id === room.hostId,
-        }
-      })
-      .filter((p): p is Player => p !== null)
-
-    return { room, players }
+    const players = await findRoomPlayers(room, this.roomMemberRepository, this.userRepository)
+    return { room: withRosterPreview(room, players), isMember: true, players }
   }
 }

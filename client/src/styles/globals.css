@@ -1,6 +1,386 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  /*
+    Tailwind 3 gave each font size a fixed line height in rem; Tailwind 4 uses ratios, which resize
+    when a text-[Npx] class overrides the size. These keep the Tailwind 3 values.
+  */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  --font-body: var(--font-plus-jakarta-sans), sans-serif;
+
+  /* The palette (docs/design/reference.md, Colour tokens). */
+  --color-bg: #07080a;
+  --color-menu: #0b0c0f;
+  --color-panel: #0f1013;
+  --color-card: #121317;
+  --color-raised: #17181d;
+  --color-raised-2: #1a1b20;
+  --color-line: #1f2026;
+  --color-track: #24252b;
+  --color-text: #f2f3f5;
+  --color-text-2: #c9cbd1;
+  --color-text-3: #a9abb3;
+  --color-muted: #80838c;
+  --color-faint: #5f626b;
+  --color-mint: #00ffa2;
+  --color-mint-hover: #5cffc4;
+  --color-mint-ink: #03140d;
+  --color-amber: #ffb547;
+  --color-discord: #4e5ae8;
+  --color-discord-hover: #5d68f0;
+  --color-discord-soft: #8b93f5;
+  --color-danger: #ff8a8a;
+  --color-danger-ground: rgba(239, 68, 68, 0.1);
+  --color-danger-ground-hover: rgba(239, 68, 68, 0.18);
+
+  /* The display and mono families (reference, Typography); the body family is above. */
+  --font-display: var(--font-big-shoulders), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), monospace;
+
+  /* Motion curves (reference, Motion tokens). They also drive the ease-out and ease-in-out classes. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /*
+    Avatar loops (reference, Per element): the online halo and the open slot's wait pulse. Both are
+    used behind `motion-safe:`, so they never run under reduced motion.
+  */
+  --animate-halo: halo 2.4s ease-out infinite;
+  --animate-wait-pulse: wait-pulse 2.4s ease-in-out infinite;
+
+  /*
+    The invite panel's Ready moment (reference, Per element): it enters over 500ms, and the sheen sweeps
+    across it once, from the moment the 500ms entrance ends. The entrance and the sheen are used behind
+    `motion-safe:`; under reduced motion the panel fades in alone (`motion-reduce:`).
+  */
+  --animate-invite-enter: invite-enter 500ms var(--ease-out) both;
+  --animate-invite-fade: invite-fade 300ms var(--ease-out) both;
+  --animate-invite-sheen: invite-sheen 1100ms var(--ease-in-out) 500ms both;
+
+  /*
+    The landing. The hero's wall of covers drifts, its columns in turn up and down, one set of covers
+    per loop. In the carousel, a player who joins arrives under a mint disc that pops and fades, the
+    avatar showing beneath it once the disc covers the seat (a step, never a fade or a scale, so the
+    initials never move), and flashes a ring once, and a full squad's poster takes its stamp. The squad's counter and
+    status roll each new value in. The nav menu opens below 640px. Loops are used behind `motion-safe:`
+    only.
+  */
+  --animate-wall-up: wall-up 120s linear infinite;
+  --animate-wall-down: wall-down 120s linear infinite;
+  --animate-seat-in: seat-in 1ms step-end 180ms both;
+  --animate-seat-burst: seat-burst 420ms var(--ease-out) both;
+  --animate-seat-ping: seat-ping 700ms var(--ease-out) both;
+  --animate-card-stamp: card-stamp 360ms var(--ease-out) both;
+  --animate-count-in: count-in var(--dur-ui) var(--ease-out) both;
+  --animate-menu-in: menu-in var(--dur-ui) var(--ease-out) both;
+  /*
+    The games towers: the open tower's timer line fills once, and when it ends the next tower opens
+    (src/components/landing/game-tower.tsx), so the line is the clock. Used behind `motion-safe:`
+    only, so under reduced motion nothing advances on its own.
+  */
+  --animate-tower-progress: tower-progress 4200ms linear both;
+  /*
+    The admin Overview's Activity chart: its lines draw in from the left once the series is on
+    screen, a clip so the dashed line keeps its dashes (src/features/admin/overview/activity-chart.tsx).
+    Used behind `motion-safe:` only, so under reduced motion the lines are simply there.
+  */
+  --animate-line-draw: line-draw 800ms var(--ease-out) both;
+
+  @keyframes halo {
+    0% {
+      opacity: 0.45;
+      transform: scale(1);
+    }
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(1.45);
+    }
+  }
+  @keyframes wait-pulse {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes invite-enter {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.99);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes invite-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes invite-sheen {
+    from {
+      transform: translateX(-120%) skewX(-18deg);
+    }
+    to {
+      transform: translateX(420%) skewX(-18deg);
+    }
+  }
+  @keyframes wall-up {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-33.3333%);
+    }
+  }
+  @keyframes wall-down {
+    from {
+      transform: translateY(-33.3333%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes tower-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+  @keyframes seat-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes seat-burst {
+    0% {
+      opacity: 0.95;
+      transform: scale(0.35);
+    }
+    55% {
+      opacity: 0.85;
+      transform: scale(1.12);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1);
+    }
+  }
+  @keyframes seat-ping {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.7);
+    }
+  }
+  @keyframes card-stamp {
+    from {
+      opacity: 0;
+      transform: scale(1.6) rotate(-6deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes count-in {
+    from {
+      opacity: 0;
+      transform: translateY(40%);
+    }
+  }
+  @keyframes line-draw {
+    from {
+      clip-path: inset(-8px 100% -8px -8px);
+    }
+    to {
+      clip-path: inset(-8px);
+    }
+  }
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+}
+
+/* Motion durations (reference, Motion tokens). */
+:root {
+  --dur-press: 160ms;
+  --dur-fast: 150ms;
+  --dur-ui: 200ms;
+  --dur-modal: 280ms;
+  --dur-modal-exit: 180ms;
+}
+
+/*
+  Type scale (reference, Typography). The counter and UI roles leave the size to the caller, because
+  it varies per use: `type-counter text-[64px]`.
+*/
+@utility type-display {
+  font-family: var(--font-display);
+  font-size: clamp(88px, 11vw, 176px);
+  font-weight: 900;
+  line-height: 0.94;
+  text-transform: uppercase;
+}
+
+@utility type-section-title {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 6.4vw, 92px);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+@utility type-page-title {
+  font-family: var(--font-display);
+  font-size: 60px;
+  font-weight: 900;
+  line-height: 0.96;
+  text-transform: uppercase;
+}
+
+/* Modal title; a popover's title is type-panel-title-sm. */
+@utility type-panel-title {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+@utility type-panel-title-sm {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* Large card and Lobby; a medium card's name is type-squad-name-md. */
+@utility type-squad-name {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+@utility type-squad-name-md {
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+@utility type-counter {
+  font-family: var(--font-display);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility type-body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+@utility type-ui {
+  font-family: var(--font-body);
+  font-weight: 700;
+}
+
+@utility type-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* A Squad code such as #VLR77: the label's metrics, in the code's own case. */
+@utility type-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+/*
+  Press feedback for any pressable control (reference, Per element). It also carries the control's
+  hover colour transition, so a control needs no second transition that would replace this one.
+*/
+@utility press {
+  transition-property: transform, color, background-color, border-color, box-shadow;
+  transition-duration:
+    var(--dur-press), var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast);
+  transition-timing-function: var(--ease-out), ease, ease, ease, ease;
+
+  @media (prefers-reduced-motion: no-preference) {
+    &:active:not(:disabled, [aria-disabled='true']) {
+      transform: scale(0.97);
+    }
+  }
+}
+
+/* Hover for a fine pointer only: a touch screen fires hover on tap and leaves it stuck. */
+@custom-variant hover-fine {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
+@custom-variant group-hover-fine {
+  @media (hover: hover) and (pointer: fine) {
+    &:is(:where(.group):hover *) {
+      @slot;
+    }
+  }
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
 
 @layer base {
   *,
@@ -16,11 +396,16 @@
   }
 
   body {
-    @apply min-h-screen bg-background text-offwhite font-body;
+    @apply min-h-screen bg-bg text-text font-body;
   }
 
   #root {
     @apply min-h-screen;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
   }
 
   ::selection {
@@ -29,114 +414,106 @@
   }
 }
 
-@keyframes cell-ripple {
-  0% {
+/*
+  In-view reveal (src/components/ui/reveal.tsx): fade and rise 16px once, 400ms --ease-out, with
+  children 50ms apart when staggered. The animation fills backwards only, so once it ends the
+  element's own opacity and transform apply again. Under reduced motion the component sets no state,
+  so the content renders in its final state.
+*/
+@keyframes reveal-rise {
+  from {
     opacity: 0;
-  }
-  40% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 9999px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(16px);
   }
 }
 
 @layer components {
-  .btn {
-    @apply inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold
-      transition-all duration-200 focus-visible:outline-none focus-visible:ring-2
-      focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background
-      disabled:pointer-events-none disabled:opacity-40;
+  [data-reveal='hidden']:not([data-reveal-stagger]),
+  [data-reveal-stagger][data-reveal='hidden'] > * {
+    opacity: 0;
   }
 
-  .btn-accent {
-    @apply btn bg-accent text-background hover:bg-accent-hover
-      shadow-[0_0_20px_rgba(0,255,162,0.15)] hover:shadow-[0_0_30px_rgba(0,255,162,0.25)];
+  [data-reveal='shown']:not([data-reveal-stagger]),
+  [data-reveal-stagger][data-reveal='shown'] > * {
+    animation: reveal-rise 400ms var(--ease-out) backwards;
   }
 
-  .btn-discord {
-    @apply btn bg-discord text-white hover:bg-discord/85;
+  [data-reveal-stagger][data-reveal='shown'] > :nth-child(2) {
+    animation-delay: 50ms;
+  }
+  [data-reveal-stagger][data-reveal='shown'] > :nth-child(3) {
+    animation-delay: 100ms;
+  }
+  [data-reveal-stagger][data-reveal='shown'] > :nth-child(4) {
+    animation-delay: 150ms;
+  }
+  [data-reveal-stagger][data-reveal='shown'] > :nth-child(5) {
+    animation-delay: 200ms;
+  }
+  [data-reveal-stagger][data-reveal='shown'] > :nth-child(n + 6) {
+    animation-delay: 250ms;
+  }
+}
+
+/*
+  Reduced motion keeps opacity and colour changes and removes movement, scale and loops (reference,
+  Rules). The motion utilities above gate their own movement; this rule covers the rest:
+  - Tailwind's transition classes, and the arbitrary lists (`transition-[scale,opacity]`), stop
+    animating transforms and sizes, so a moved, scaled or resized state applies at once while its
+    colour and opacity still transition;
+  - the movement keyframes become fades;
+  - the loops do not run.
+*/
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 
-  .btn-ghost {
-    @apply btn border border-border-light text-offwhite hover:bg-surface-hover hover:border-muted/30;
+  /*
+    Tailwind's default transition list without transform, translate, scale and rotate. The arbitrary
+    lists get it too, plus visibility (a fade that hides its element needs it): any property not in
+    it, such as height or width, changes at once.
+  */
+  .transition,
+  .transition-all,
+  [class*='transition-['] {
+    transition-property:
+      color,
+      background-color,
+      border-color,
+      outline-color,
+      text-decoration-color,
+      fill,
+      stroke,
+      --tw-gradient-from,
+      --tw-gradient-via,
+      --tw-gradient-to,
+      opacity,
+      box-shadow,
+      filter,
+      -webkit-backdrop-filter,
+      backdrop-filter,
+      visibility,
+      display,
+      content-visibility,
+      overlay,
+      pointer-events;
   }
 
-  .btn-danger {
-    @apply btn bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20;
+  .transition-transform {
+    transition-property: none;
   }
 
-  .input-field {
-    @apply w-full rounded-lg border border-border-light bg-surface px-4 py-2.5 text-sm text-offwhite
-      placeholder:text-muted/60 transition-colors duration-200
-      focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20;
+  .animate-spin,
+  .animate-ping,
+  .animate-bounce,
+  .animate-pulse {
+    animation: none;
   }
 
-  .card {
-    @apply rounded-xl border border-border bg-surface overflow-hidden;
-  }
-
-  .card-hover {
-    @apply card transition-all duration-300
-      hover:border-accent/20 hover:shadow-[0_0_30px_rgba(0,255,162,0.05)];
-  }
-
-  .badge {
-    @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium;
-  }
-
-  .badge-accent {
-    @apply badge bg-accent/10 text-accent border border-accent/20;
-  }
-
-  .badge-muted {
-    @apply badge bg-surface-light text-muted border border-border;
-  }
-
-  .input-field-error {
-    @apply input-field border-danger/50 focus:border-danger/70 focus:ring-danger/20;
-  }
-
-  .field-error {
-    @apply mt-1 text-xs text-danger;
-  }
-
-  .section-label {
-    @apply text-xs font-semibold uppercase tracking-widest text-accent;
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+    }
   }
 }

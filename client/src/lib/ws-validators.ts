@@ -1,10 +1,25 @@
-import { z } from 'zod'
+import { describeContractIssues } from '@squadzr/schemas'
+import {
+  wsServerEventPayloadSchemas,
+  type WsServerEventPayload,
+  type WsServerEventType,
+} from '@squadzr/schemas/ws'
 
-export function parseWsPayload<T>(schema: z.ZodType<T>, raw: unknown): T | null {
-  const result = schema.safeParse(raw)
+/**
+ * Parses the payload of a server event against its contract in @squadzr/schemas.
+ * A mismatch is reported by issue path and code only, never by payload content.
+ */
+export function parseServerEvent<T extends WsServerEventType>(
+  type: T,
+  raw: unknown
+): WsServerEventPayload<T> | null {
+  const result = wsServerEventPayloadSchemas[type].safeParse(raw)
   if (!result.success) {
-    console.error('Invalid WebSocket payload:', z.treeifyError(result.error))
+    console.error('Invalid WebSocket payload:', {
+      type,
+      issues: describeContractIssues(result.error),
+    })
     return null
   }
-  return result.data
+  return result.data as WsServerEventPayload<T>
 }

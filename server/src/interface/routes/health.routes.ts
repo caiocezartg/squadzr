@@ -1,18 +1,11 @@
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
-import { z } from 'zod'
-import { HealthController } from '@interface/controllers/health.controller'
-
-const healthResponse = z.object({
-  status: z.enum(['ok', 'error']),
-  timestamp: z.string(),
-  uptime: z.number(),
-  version: z.string(),
-})
+import { healthResponseSchema } from '@squadzr/schemas'
+import { createHealthController } from '@interface/factories/health.factory'
 
 export async function healthRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
-  const controller = new HealthController()
+  const controller = createHealthController(fastify.db)
 
   app.get('/health', {
     schema: {
@@ -20,7 +13,7 @@ export async function healthRoutes(fastify: FastifyInstance): Promise<void> {
       summary: 'Health check',
       description: 'Returns the current health status of the server.',
       response: {
-        200: healthResponse,
+        200: healthResponseSchema,
       },
     },
     handler: controller.check.bind(controller),
@@ -32,8 +25,8 @@ export async function healthRoutes(fastify: FastifyInstance): Promise<void> {
       summary: 'Readiness check',
       description: 'Checks if the server and database are ready to accept requests.',
       response: {
-        200: healthResponse,
-        503: healthResponse,
+        200: healthResponseSchema,
+        503: healthResponseSchema,
       },
     },
     handler: controller.readiness.bind(controller),

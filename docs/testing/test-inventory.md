@@ -1,0 +1,601 @@
+# Test inventory
+
+Canonical runner for every workspace: **Vitest**. `bun test` is no longer a test entry point; Bun
+remains the package manager and the server runtime.
+
+## Commands
+
+| Purpose                        | Command                                             |
+| ------------------------------ | --------------------------------------------------- |
+| Full suite (single root entry) | `bun run test` (delegates to `turbo test`)          |
+| Direct root composition        | `bunx vitest run` (composes `vitest.workspace.ts`)  |
+| Root watch composition         | `bun run test:watch` (same composition, watch mode) |
+| Focused workspace run          | `bunx turbo test --filter=<workspace>`              |
+| Direct workspace run           | `bun run test` inside the workspace directory       |
+
+`vitest.workspace.ts` composes the three projects by pointing at each workspace directory, whose own
+`vitest.config.ts` stays the single source of truth (see
+https://v2.vitest.dev/guide/workspace). Focused and direct runs execute the exact same script
+Turbo executes for the root command, so the root suite and the focused suites always share one
+inventory (see the equivalence proof below).
+
+## Projects
+
+| Workspace                    | Vitest project       | Environment | Include pattern                  | Suites | Tests |
+| ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
+| `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 45     | 342   |
+| `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 43     | 427   |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 92     | 1068  |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 6      | 208   |
+| `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
+
+Issue #114 (Player Profile: Squad Records and `GET /api/users/:id/profile`) recounts every row. `server:unit` adds 2 files and 6
+tests: `get-player-profile.use-case.spec.ts` (3: the person with their stats, a person with no completed Squad, an unknown id reading
+no history) and `player-profile.projection.spec.ts` (3: the contract mapping, the empty history, no email or update time).
+`server:integration` adds 3 files and 23 tests: `squad-record-postgres.test.ts` (7: the record of the final join with its Game, name,
+platform, host, size, Ready instant and roster, nothing while the Squad is open, a second write changing nothing, a failed record
+rolling the whole join back, the record surviving `DeleteExpiredRoomsUseCase`, no record for an expired Open Squad, a deleted account
+leaving the record), `player-profile-http.test.ts` (13: `getPlayerStats` empty, ordered by Squads then latest Ready then name, the
+name tie-break, the limit with full totals, only the person's own Squads, a Game that left the catalog, open Squads ignored; the route
+public, in order and without the email, empty history, five Games at most, a delisted Game, 404 `USER_NOT_FOUND`, 400 past 255
+characters) and `squad-records-migration.test.ts` (3: migration 0009 on a database with no Squads, with Ready and Open ones, and its
+backfill run twice); `server-lifecycle` now expects 10 migrations. `schemas:unit` goes from 203 to 208 (`playerProfileSchema`: with
+and without history, no `email` or other private field, only the five Game fields, five Games at most, the id param bounds).
+`client:unit` goes from 1052 to 1068 (the 1044 above predates eight tests added since): `player-profile.spec.tsx` (16: opening from a
+Lobby tile over a Lobby that stays live, the stats and the ranked Games, opening from the non-member Lobby, from a shared link, and
+from "My profile"; reading ahead on hover; closing with the button, Escape, Back and Forward, and opening again; a cached profile
+opening with no skeleton and no second read; the empty profile of the viewer and of someone else; 404; the retry; the skeleton for a
+cold cache; the pushed `room_ready` notification reading the viewer's profile again). The harness location now mirrors into
+`window.location`, as the address bar and the router are one in a browser.
+
+Issue #112 (Squad Release, Host Transfer, Squad Limits of 1 hosted and 3 joined, one notification type per action)
+recounts every row. `server:unit` adds 4 files and 34 tests: `choose-next-host.spec.ts` (5: the oldest member, the tie on
+`joinedAt` by `userId`, the ineligible skipped, nobody eligible, an empty Squad), `squad-release.spec.ts` (10: the plan for a
+leaver, a host handed over, an ineligible member skipped, a closed Squad, a deleted Squad, the same heir of two Squads taking
+only the first, the order of the Squads, and the candidates who need locking), `squad-release-notifications.spec.ts` (7: the
+four notifications and who gets each), `notification.projection.spec.ts` (7: each type in the contract, the invite only on
+`room_ready`, `leftSquads`) plus cases in `room-ready-notifications.spec.ts` (3: `leftSquads`), `list-notifications` (1: no
+invite for another type) and `create-room` (1: the Membership limit). `server:integration` adds 4 files and 23 tests:
+`squad-release-postgres.test.ts` (12: host handed over, tie, skipped host, heir of two Squads, one `member_left` per leaver and
+two for two releases, a closed and a deleted Squad, Ready and expired Squads untouched, no release when the Squad does not fill,
+a manual host leave still deleting the Squad), `squad-release-concurrency.test.ts` (3: crossed releases that deadlock and run
+again, and a `create` by the heir racing the release in both orders), `squad-release-realtime.test.ts` (3: snapshot, revoked
+leaver, board events and pushes) and `notification-types-migration.test.ts` (1: migration 0008 on a database with
+notifications); the Membership limit on create adds 5 cases to `rooms-postgres`, the crossed final joins of
+`room-limit-concurrency` move to the new concurrency suite, and the suites that created several Squads with one host now use
+one host per Squad. `schemas:unit` goes from 187 to 203 (the notification union per type, the legacy `room_ready`, the
+protocol at version 5). `client:unit` goes from 1030 to 1044: `notification-item.spec.tsx` covers every type (the media, badge,
+message, accessible name and link, 17 tests, from 7), `notifications.spec.tsx` the four types in the panel, `app-shell.spec.tsx`
+the closed Squad opening the Squad Board and `my-squads.spec.tsx` the sidebar reading again on a pushed notification.
+
+Issue #100 (Game Search by acronym and nickname) adds two server unit files, `search-text.spec.ts` and
+`game-aliases.spec.ts`, and extends the IGDB adapter suite, so `server:unit` goes from 37 files / 264 tests
+to 39 / 312. `search-text.spec.ts` covers `normalizeSearchText` (accents, case, punctuation, repeated spaces,
+text made only of punctuation, idempotence), `normalizeAliases` and `buildSearchText`; `game-aliases.spec.ts`
+pins the manual alias map (unique ids, non-empty and already normalized aliases, none equal to the game's
+name, and "mw4" mapped to Modern Warfare 4); the adapter suite adds `alternative_names` asked for, present, empty, absent, blank and malformed, and (#106) drops the executable names and paths (`isSearchableAlternativeName`, 18 cases plus the four examples of the issue read through the adapter).
+`server:integration` goes from 362 to 380 tests and from 35 to 36 files: `games-http` is rewritten for the
+folded search (accents and punctuation, aliases first, similarity after text, no similarity under three
+letters, the 0.7 bar for three or four letters against 0.5 from five (#104), the LIKE wildcards as punctuation, suggestions for a term made only of punctuation, 400 above 100
+characters), `games-postgres` covers the stored `aliases` and `search_text`, `catalog-import` covers the IGDB
+and manual aliases written together, migration 0007 raises the migration count to 8, the new `search-backfill-migration` suite applies the migrations
+up to 0006, stores games (including a "Pokémon") and applies 0007 to confirm that "pokemon" finds the game before
+any import, and `games-postgres` checks that a similarity search leaves `pg_trgm.word_similarity_threshold` of the
+pooled connection as it found it (on a one-connection pool, after the session was set to a value the search never uses, so a leak fails the test), and that `games.search_text` has no default and `games_search_text_trgm_idx` exists with `gin_trgm_ops`.
+`schemas:unit` goes from 168 to 169 tests with the 100-character limit of the search, which #105 exports as
+`GAME_SEARCH_MAX_LENGTH`. `client:unit` goes from 88 files / 953 tests to 90 / 1011: `search-text.spec.ts` (the
+server's folding examples, `foldWithOrigins(x).text` tied to `normalizeSearchText(x)` for ten texts, and the part of a name a term matches, with offsets into the original name, including a ligature and astral characters),
+`game-option.spec.tsx` ("pokemon" highlights "Pokémon", "counter strike" highlights "Counter-Strike", "lol" highlights
+nothing in "League of Legends" or in "Valorant" found by similarity) and `create-squad.spec.tsx` (the search field's `maxlength`).
+
+Issue #101 (recent releases enter on hype) adds no file, so every file count stays. `server:unit` goes from 312 to
+317 tests: the IGDB adapter suite (`igdb-game-catalog-source.spec.ts`, +2) checks the `(total_rating_count … |
+(first_release_date … & hypes …))` group with the window start computed by the `FakeClock` (180 days before
+`NOW`) and the injected hype threshold, the threshold `0`, the curated query without the new filters and two
+pages that share one window although the clock moves between them; the import environment suite
+(`catalog-import-env.spec.ts`, +3) checks the default of each threshold, the explicit values, an empty value
+falling back to the default, negative and fractional values refused for both variables and `0` accepted for the
+hype threshold. The other workspaces keep the counts below.
+
+Issue #109 (one search normalization in `@squadzr/schemas`) moves `normalizeSearchText` and its spec out of the
+server and the client. `schemas:unit` gains `search-text.spec.ts` and goes from 5 files / 169 tests to 6 / 185 (the folding examples,
+the text made only of punctuation and idempotence), `server:unit` goes from 317 to 301 tests, losing the same 16 cases from
+`search-text.spec.ts` (`normalizeAliases` and `buildSearchText` stay) and `client:unit` loses its 16 copies,
+while its `foldWithOrigins` case ties `foldWithOrigins(x).text` to the shared function for 21 texts instead
+of 10 (+11), so the client nets −5 (1011 to 1006, back to 1011 with #108). File counts of `server:unit` and `client:unit` stay.
+
+Issue #108 (board search with the same normalization) adds 5 cases to `squad-list-query.spec.ts` in `client:unit`
+("pokemon" finds "Pokémon Go", "counter strike" finds "Counter-Strike 2", case still ignored, a squad name with
+accents, and a term made only of punctuation keeps every squad). No file is added.
+
+The board finds squads by game alias (a Squad's Game summary now carries the Game's `aliases`; no file is added).
+`schemas:unit` goes from 185 to 187 tests (`contracts.spec.ts`: the `aliases` array, empty for a Game without any,
+and the summary refused without it). `server:unit` goes from 301 to 302 (`room.projection.spec.ts`: the aliases
+copied from the Game into the Squad's summary, empty for a Game without any). `server:integration` goes from 380
+to 381: `games-http` checks that the catalog's Game never carries `aliases`, and `squad-game-summary` now stores
+raw aliases and expects the folded ones on the create response, the list, My Squads, the Lobby, `room_created` and
+`room_snapshot`. `client:unit` goes from 1011 to 1016: `squad-list-query.spec.ts` adds 5 cases ("lol" finds League
+of Legends, "cs2" finds Counter-Strike 2, a partial and punctuated alias, an alias of another game does not match,
+a game without aliases still matches by name). File counts stay.
+
+The dialog enter and exit transitions (the create-squad modal no longer appears "dry") add one file,
+`use-dialog-presence.spec.ts`, so `client:unit` goes from 90 files / 1016 tests to 91 / 1026. The new file (5 tests)
+covers the mount, open, closing and unmount phases of `useDialogPresence`, a `show` during the exit handing out a
+new key, and an old exit finishing late not closing the new dialog. `dialog.spec.tsx` adds 3 tests: a dialog the
+parent mounts already open is first rendered closed and gets `data-starting-style`, and an exit held open by a
+stubbed `getAnimations` keeps the dialog mounted with `data-ending-style` until `onOpenChangeComplete(false)`.
+`create-squad.spec.tsx` adds the fresh form on the next open, and `squad-board.spec.tsx` the guest prompt closed
+with "Maybe later" and shown again. jsdom runs no transitions, so the 280ms enter and the 180ms exit themselves
+were checked in the browser, not in these tests.
+
+The review of that change makes a popover or bottom sheet that a parent mounts already open play its enter too, and
+keeps a second `show` of `useDialogPresence` from resetting an open dialog. `client:unit` goes from 91 files / 1026
+tests to 91 / 1030, with no file added. `use-dialog-presence.spec.ts` adds the case where a `show` while open keeps the
+key (+1). `popover.spec.tsx` adds three cases for the enter of a panel the parent mounts open: a popover on a wide
+screen, a sheet below 640px, and the sheet an open popover becomes when the screen narrows (+3). The "shows it again for
+the next squad" case in `squad-board.spec.tsx` now opens a different squad and expects its own code. The bell cases
+in `notifications.spec.tsx` wait for the panel to open, which now comes one render after its code arrives.
+
+Issue #98 (a Squad's platform) recounts every row on the merged tree after #96. Its only new test file is
+`client/src/components/ds/choice-chips.spec.tsx`, so every other file count stays and the test counts are the ones measured on `development` plus this change.
+`schemas:unit` (5 / 168) covers the platform list, its labels, the IGDB id map and its mapping helper, the
+`platforms` list of a Game, the nullable `platform` of both Squad projections, the optional `platform` of
+the create input and protocol version 4. `server:unit` (37 / 264) covers the IGDB adapter (the `platforms`
+field asked for, mapped, deduplicated, in display order, empty for a game with none and refused when
+malformed), the create-room use case (a platform required when the Game has some, refused when it is not
+one of them or when the Game has none) and the Squad projection. `server:integration` (35 / 362) covers
+the import writing and refreshing `games.platforms`, `games-postgres` upserting it, `rooms-http` (the
+`platform` of every read, the 400 `INVALID_PLATFORM` cases and the database check constraint),
+`games-http`, the `room_created` and `room_snapshot` payloads in `realtime-payloads` and migration 0006 in
+the migration-count and schema suites. `client:unit` (88 / 953) covers the choice chips (Home and End, the invalid group pointing at its error), the `platform` and
+`platform-light` Tag variants with each Platform family's mark, the mark on the toggle and removable chips and the single-choice `toggle`, the create form (only the game's platforms,
+the only one preselected, the field hidden without platforms, Continue blocked, the choice cleared on a
+game change, the payload and the preview), the card and Lobby chips, the board filter (`?platform=`, the
+panel, the chip, the count, "Clear all", an invalid value), the platform in the invite preview, the query and URL contracts and the
+`platforms` messages.
+
+CCC-118 removes the old design system and recounts every row on the merged `design-v2` tree after
+CCC-117: `client:unit` measures 87 files / 902 tests (89 / 909 before it; the table had drifted since
+CCC-115). The unused `tooltip.spec.tsx` (4 tests) and `user-avatar.spec.tsx` (3 tests) leave with their
+components, and `reduced-motion.spec.ts` drops the `.animate-pulse-glow` loop case with the keyframe
+(1 test). The guest sign-in prompt case in `squads-page.spec.tsx` now finds the dialog by its role and
+name instead of a class, and `squad-lobby.spec.tsx` adds the case that cuts an over-long code in the
+Lobby's not-found state (1 test). `server:unit` (33 / 208) and `schemas:unit` (5 / 162) rerun unchanged;
+`server:integration` (31 / 324) was not rerun, because this ticket touches no server code.
+
+The pre-merge security audit of the redesign (on `design-v2`, after CCC-119) adds an Origin guard to the
+server and framing headers to the client. `server:unit` gains `origin-guard.plugin.spec.ts` (+1 file / 14
+tests: every state-changing method from another site refused, the app's origin and a request without an
+Origin accepted, safe methods let through, the WebSocket handshake from another site refused with and
+without a query string and on any path that asks for an upgrade, a path that only starts like `/ws`, and the
+`null` origin), so it measures 34 files / 222 tests. `server:integration` gains `cross-site-requests.test.ts` (+1 file / 8 tests: a cross-site
+text/plain post that would end the host's Squad or join a visitor, a cross-site notification delete, the app's
+own origin, a request without an Origin, a cross-site read still served, and a WebSocket opened by another site
+and by the app) and `api-docs.test.ts` (+1 file / 2 tests: the API reference served outside production and
+not in production), so it measures 33 files / 334 tests. `client:unit` gains one case in `next-config.spec.ts`
+(the framing and baseline security headers on every page), so it measures 87 files / 903 tests.
+
+The audit's second round closes the remaining realtime and proxy gaps and tightens the client's
+headers. `server:unit` gains `message-rate.spec.ts` (+1 file / 3 tests: the limit within one window, a
+fresh window, a refused message left uncounted) and five `TRUST_PROXY_HOPS` cases in `env.spec.ts` (one hop
+by default, a count read with zero included, three values refused), so it measures 35 files / 230 tests.
+`server:integration` gains `realtime-sessions.test.ts` (+1 file / 5 tests: the socket of a signed-out and
+of an expired session closed with 4001, a live session's and a guest's socket kept, and a message beyond
+the rate refused) and one case in `test-server-logging.test.ts` (the address the trusted proxy saw is
+logged, not one the client wrote), and `realtime-isolation.test.ts` floods with as many joins as the rate
+allows instead of 64, so the in-flight limit alone refuses them; it measures 34 files / 340 tests.
+`client:unit` replaces the headers case of `next-config.spec.ts` with three (the baseline headers with
+HSTS, the production Content-Security-Policy, eval allowed in development), so it measures 87 files / 905
+tests.
+
+Its review round hands Better Auth only the trusted address and keeps the Next server out of the
+visitor's address. `server:unit` gains `auth.plugin.spec.ts` (+1 file / 3 tests: the trusted address
+replaces the one the client wrote, is set when none came, and every other header is kept) and the empty
+`TRUST_PROXY_HOPS` refused in `env.spec.ts` (+1), so it measures 36 files / 234 tests.
+`server:integration` gains `auth-rate-limit.test.ts` (+1 file / 2 tests: sign-in limited by the address the
+proxy saw whatever the client wrote, and the session read never limited) and two cases in
+`realtime-sessions.test.ts` (a live session found among more ids than one query takes, and a socket that
+keeps sending past its rate closed with 1008), so it measures 35 files / 344 tests. `client:unit` folds the
+three `x-forwarded-for` cases of `api.spec.ts` into one (the viewer's address is never sent, −2), rewrites
+the forwarding cases of `session.spec.ts`, `my-squads.spec.ts`, `squad-board.spec.ts` and
+`server-squad-source.spec.ts` to assert the header is absent, and adds two cases to `ws-client.spec.ts` (a
+session end reported and a reconnect still made, no report for any other close) and two to
+`realtime-protocol.spec.tsx` (the page reloads once without the update notice when the server ends the
+session, and not on a dropped socket), so it measures 87 files / 907 tests.
+
+Its last round caps pings and stops the invite link from joining on its own. `server:unit` gains a case in
+`message-rate.spec.ts` (the limit it is given, as the ping rate uses), so it measures 36 files / 235 tests,
+and `server:integration` one in `realtime-sessions.test.ts` (pings answered up to their rate, then a
+socket that keeps pinging closed with 1008), so it measures 35 files / 345 tests. `client:unit` keeps 87
+files / 907 tests: `squad-board.spec.tsx` now opens the Lobby from a `?join=` link without joining (and
+with invalid sibling parameters), and `sidebar-flows.spec.tsx` opens the Lobby for a signed-in viewer's
+link without joining and sends the code form straight to the Lobby.
+
+Suites are test files. The counts above are the current inventory, last recounted by CCC-118 on
+2026-11-02 (above). The 2026-10-25 recount ran on the merged tree after CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104 and CCC-105. CCC-104 puts `memberPreview` on every Squad and orders the roster: it adds `tests/integration/member-preview.test.ts` (+1 file / +9 tests: the preview on the list, the single read for non-members and members, My Squads, `POST /api/rooms` with `room_created`, and `room_snapshot`, with its content, the limit of five and the order), the contract cases in `schemas:unit` (+8), the use-case, projection and ordering cases in `server:unit` (+5), and updates the client fixtures without adding client tests. CCC-90 adds the
+IGDB adapter suite (`igdb-game-catalog-source.spec.ts`, +1 file / +10 tests, with a recorded IGDB
+page as fixture) and the import environment suite (`catalog-import-env.spec.ts`, +1 file / +9
+tests), plus one curated-id case in `curated-games.spec.ts` (+1). It adds no integration suite: the
+adapter runs with a stubbed `fetch` and needs no database or IGDB credentials. It does add one
+invalid-summary case to `tests/integration/catalog-import.test.ts` (+1 test). Issue #96 adds the
+popularity score suite (`popularity-score.spec.ts`: percentile per signal, ties, absent signal, the
+maximum of both and the 0–10000 scale), the `popularity_primitives` cases of the IGDB adapter suite
+(query shape, 250-id batches, paging past 500 rows, signal mapping, retry), the signal-based score in
+`catalog-import.test.ts`, and the featured-first empty search in `games-http`.
+
+CCC-94 moves the client onto the game summary every Squad carries: the full-list games hooks and the
+games map are gone, the game-list stubs leave the board, My Squads and Lobby flow specs, and the flow
+tests now cover cards and both searches from `squad.game`, the Lobby before and after a snapshot, the
+invite preview and the landing showcase. It adds no suite files and removes none; `client:unit` gains
+2 tests (479 → 481). CCC-93 extends `tests/integration/games-http.test.ts` with the game search and the delisted
+single-game read, and `tests/integration/rooms-http.test.ts` with the 2/40/41 Squad-size bounds and
+the delisted-game rejection; it also adds the game-list dismissal (including a case that mirrors
+Next's `document` root for Escape), toggle, selection and live-region cases to the client
+create-Squad flow, and the search-announcement strings to the message-file spec. It adds no suite
+files. CCC-92 adds `tests/integration/squad-game-summary.test.ts` (+1 file / +4 tests), one
+projection case and one create-path case in `server:unit` (+2), and three contract cases in
+`schemas:unit` (+3); it adds no client tests. CCC-95 adds tests to each suite it touches: the legacy
+notification payload contract case and the game-cover payload case in `schemas:unit` (+2), the
+builder cover/omission cases and the join use-case cover flow in `server:unit` (+3), the covered and
+uncovered menu renderings in `client:unit` (+2), and the cover over HTTP and the realtime channel in
+`server:integration` (+2). CCC-89 removed the child-process `games-seed` suite with the static seed,
+moved `games-postgres` to the IGDB-id upsert, added the Catalog Import suites (fake source against
+an isolated PostgreSQL, plus the entry's exit code and pool close) and added
+`src/interface/catalog/curated-games.spec.ts`; that recount also corrected the client and schemas
+rows, which had drifted since CCC-70.
+
+CCC-96 adds `tests/integration/popular-games-http.test.ts` (+1 file / +10 tests) for the landing's
+popular games endpoint: ranking, the Featured fallback, expired and Ready Squads, the top-tag
+tie-break, `totalGames` and the `limit` bounds. It also replaces the landing's full-list and
+random-pick client cases with the popular read in `games.spec.ts` (−2) and adds the FAQ
+no-fixed-count and IGDB-credit cases to `messages.spec.ts` (+2), so on the merged tree `client:unit`
+measures 58 files / 481 tests; the popular read also adds the client assertions in
+`landing.spec.tsx`, which keeps its 9 tests.
+
+CCC-98 keeps the game selector's previous results while the next term loads and cancels superseded
+searches. It adds 4 create-Squad flow cases (the first term's results stay listed until the next
+answer replaces them with no visible loading copy, the empty copy waits for a settled response, the
+superseded request's signal aborts, and a warm term answers from the cache without another request)
+and 3 `api` cancellation cases (the signal reaches `fetch`, an aborted call rejects with its abort
+error rather than a contract error, and calls without a signal stay unchanged). It adds no suite
+files, so `client:unit` measures 58 files / 489 tests on the merged tree (CCC-105 added the Lobby's
+"Offline · X ago" case).
+
+CCC-101 adds the Redesign v2 motion base with three client suites: `use-reduced-motion.spec.tsx` (3
+tests, the preference and its changes), `reveal.spec.tsx` (6 tests, the in-view reveal, its viewport
+margin and its final state under reduced motion) and `reduced-motion.spec.ts` (11 tests, the
+properties the reduced-motion block keeps in transitions and the loops it removes). `client:unit`
+measures 61 files / 509 tests on the merged tree (CCC-105 added the Lobby offline-time case).
+
+CCC-109 puts the Redesign v2 Squad card on the board and adds one client suite, `avatar-rail.spec.ts` (8 tests: the rail formula for 3/5, 5/5, 3/10, 8/10, a preview shorter than the count, the preview order, a smaller squad and a count above the maximum). It rewrites `squad-card.spec.tsx` against roles and names (11 tests before, 21 after: no entrance animation, layout and tags, the member link, the non-member join, the full state, the poster fallback, the preview avatars with their image fallback, and the rail circles counted by kind: member, neutral filled circle and vacant), so the card adds 1 file / 18 tests to `client:unit`. It also rewrites the card assertions in `squad-board.spec.tsx` and `landing.spec.tsx` without changing their test counts. The totals below were recounted by CCC-106 and include it, CCC-102 and CCC-103.
+
+CCC-111 rebuilds the member Lobby and rewrites `squad-lobby.spec.tsx` and `squad-lobby-page.spec.tsx` against roles, names and text (the tooltip and `.rounded-xl` assertions go). It adds a `copy-swap.spec.tsx` suite (4 tests) and 12 cases to `squad-lobby.spec.tsx` plus 1 to `squad-lobby-page.spec.tsx` (the first snapshot of the next Squad on a warm-cache switch does not animate) (the cover and header actions, the `02/03` counter, the server order with the "you" marker and open slots, online and away tiles, paging above eight members, the first snapshot without animation and a later member entering, the reduced-motion entrance, the code and link copy feedback, "End squad" and "Team closed", no replayed entrance when paging away and back, and Presence frozen while reconnecting), so `client:unit` measures 79 files / 717 tests on this branch.
+
+CCC-112 unlocks the invite and opens the Lobby to non-members. It adds three suites: `squad-lobby-non-member.spec.tsx` (13 tests: the visitor's sign-in prompt, the non-member's cover, counter, preview tiles, open slots and locked invite, no Presence and no live channel, no frame and no "not connected" warning when the read lands before the socket connects, a preview shorter than the count, joining into the member Lobby without a reload, a failed join, a join whose follow-up lists cannot be read, a join whose follow-up details read fails and is read again, the socket leaving the member Lobby it comes from on a warm switch, a warm non-member switch that starts afresh, and the Ready entrance, at full motion and under reduced motion, for the joiner whose join closed the last slot), `discord-invite-link.spec.ts` (10 tests: the two invite hosts and the links refused, a host with no invite code among them) and `use-ready-entrance.spec.ts` (5 tests: a watched completion enters, a Squad Ready in the first snapshot does not, a join that closes the last slot enters, another Squad watched from outside does not count, and a channel reset forgets). It replaces the old Discord card assertions in `squad-lobby.spec.tsx` with the locked bar, the Ready panel's server card, the new-tab link, the copy feedback and a reduced-motion unlock, going back to a Squad the viewer left, the locked bar's region name and the entrance for a watched completion against a cold open (+7 tests), splits the Ready access gates into the visitor and the non-member (both end without roster or invite), rewrites the non-member cases of `squad-lobby-page.spec.tsx` and `contract-violations.spec.tsx` for the public view (+1 test: a non-member response that carries the invite is refused), and adds a Presence-less tile case to `member-tile.spec.tsx`, a custom-duration case to `use-copied-flag.spec.ts` and three cases to `reduced-motion.spec.ts` (the fade keyframes have no movement, the sheen starts when the entrance ends, and the movement and the sheen stay behind `motion-safe`), so `client:unit` measures 83 files / 773 tests on this branch.
+
+CCC-112 then moves the invite into the members column and fills the Ready card from the Discord server behind the invite. `discord-invite-link.spec.ts` moves to `@squadzr/schemas` as `discord.spec.ts` (the parser's 10 cases, 12 for `discordInviteCode`: the code with a trailing slash, query or fragment, and the links with no safe code, and 8 for the preview contract: a preview and an absent one, the missing key and the fields refused). `server:unit` gains `get-discord-preview.use-case.spec.ts` (13: the member of a Ready Squad gets the server, only the code is asked of Discord, an invalid, unreachable or rate-limited answer and the links with no code read as no preview, and the non-member, the non-member of an Open Squad, the member of an Open Squad and the missing Squad are refused without asking Discord), `discord-api-invite-preview-provider.spec.ts` (14: the request, the mapping of a live answer with its still banner, the animated icon and the splash fallback, 404, no server, 429, 5xx, a network failure, a body that is not JSON, a contract and an unsafe image hash refused, and the 3s timeout) and `cached-discord-invite-preview-provider.spec.ts` (8: ten minutes for an answer and a negative one, one minute for an unreachable Discord, codes kept apart, one request shared by callers in flight, and the cap on entries). `server:integration` gains `discord-preview-http.test.ts` (10: the member of a Ready Room gets the preview, a null preview for an invalid, rate-limited or unreachable Discord, the code in lower case, 401, 404 for a non-member of a Ready or Open Room and for a missing Room, and 422 `ROOM_NOT_READY` for a member of an Open Room); its test server stubs Discord, so no test reaches the network. `client:unit` gains `squad-lobby-discord-preview.spec.tsx` (8: the server's icon, name and counts over its banner, the read only once the Squad is Ready, the skeleton on a cold cache, no skeleton on a warm one, the fallback to the cover, name and counts for no preview, a failed request and an answer that is not the contract, and no read while the Squad forms), and `squad-lobby.spec.tsx` reads the server card from the Squad when Discord has no preview.
+
+CCC-106 moves the app pages into the sidebar shell and recounts `client:unit` at 77 files / 668 tests on
+the merged tree, with CCC-109 (the row had not been recounted since CCC-101, so the difference also holds
+CCC-102, CCC-103, CCC-104 and CCC-109's client work). It adds two suites, `src/test/app-layout.spec.tsx`
+(+6 tests: the `(app)` layout's server render with and without a session, no footer, and the My Squads
+visitor redirect in the proxy) and `src/test/sidebar-flows.spec.tsx` (+34 tests: the squad
+count from the board's cache and its refresh on focus and navigation, "Create squad" on the board and in
+the Lobby, a visitor's create prompt, `?create=1`, the visitor and signed-in `?join=`, the code form,
+the language switch, the drawer's keyboard behaviour, the one bell and the warm-cache navigation board
+→ Lobby → board → Lobby) and rewrites `app-shell.spec.tsx` (9 tests: the logos, the All squads link and its current item,
+the notification link, the title, and the account button and the visitor sign-in; the server HTML cases live in
+`app-layout.spec.tsx`), `session.spec.tsx`, `notifications.spec.tsx`,
+`use-sign-out.spec.tsx` and `language-toggle.spec.tsx` for the sidebar and the top bar. The harness
+gains a `shell` option, and the capability-boundaries spec accepts a capability's `server` entry.
+
+CCC-107 moves My Squads into the sidebar and removes `/squads/my`, and recounts `client:unit` at 79 files / 712 tests on the tree rebased onto the merged Squad Board and Lobby. It deletes `my-squads-page.spec.tsx` (the page, its tabs and filters) and the proxy block of `app-layout.spec.tsx`, rewrites `my-squads.spec.tsx` as the sidebar's flows (12 tests, 3 of them the realtime refresh by another member's join, by the last slot filling, and the silence for a squad the viewer is not in; the other 9: the merged, deduplicated, newest-first order, the current item, the host crown, the amber count, the Ready state with its Discord tone on the meter, the visitor's sign-in call to action, the browser read, the focus refresh and the refresh after a join), adds `[code]/page.spec.ts` (4 tests: `/squads/my` in three cases and the `/rooms/my` redirect end in a 404) and three `app-layout.spec.tsx` tests (the list in the first HTML, no read for a visitor, a failed server read left to the browser), swaps the create-squad flow from My Squads to the sidebar, and drops the `/squads/my` cases from `next-config.spec.ts` (the `/rooms/my` redirect and the lookahead are gone; both URLs end in the Lobby route's not-found) and from `bundle-limits.spec.mjs` (the `/squads/my` budget entry). The old `SquadFilters` component and its `squads.filters.*` copy, left unused by the new board, are deleted; they had no spec.
+
+CCC-113 turns the create dialog into the three-step wizard and moves `create-squad.spec.tsx`,
+`dialogs.spec.tsx`, `my-squads.spec.tsx`, `sidebar-flows.spec.tsx` and `squads-page.spec.tsx` to the
+step flow. It adds one suite, `step-panel.spec.tsx` (the transition classes), and 20 tests to
+`client:unit` (712 → 732): Continue gating on the game step and the details and invite errors, the
+popular games and their heading, the highlighted match with genre and size, the initials tile, the
+empty state without a suggest link, reopening the closed list, going back and forward, Cancel, and
+the full-screen layout with the pinned footer, plus Escape on step 2 after a keyboard Continue and
+with focus outside the search, the horizontally clipped slide, the two-line step labels, the bounded game list on a phone, and the keyboard-only scroll of
+the highlighted option. The chevron case and the old route-animation case are gone with their
+code.
+
+CCC-108 restyles the notifications panel and recounts `client:unit` at 81 files / 747 tests. It adds
+`src/components/ds/notification-item.spec.tsx` (7 tests: the name, message and game with the time,
+the unread name and hidden text, a read row and its grayscale cover, the placeholder without a cover, open and
+dismiss with the dismiss label naming the Squad, and the dismiss button on focus), rewrites
+`notifications.spec.tsx` against the new panel (15 tests: open, the panel code loaded on idle with the Popover trigger and the focus kept, the unread marks, the 9+ badge cap, the
+empty state, the bottom sheet below 640px, mark one, mark all, dismiss, the three failures, cover and no
+cover) and adds one `sidebar-flows.spec.tsx` case (the bell's place held in the page header). The other
+shell bell cases changed only in the bell's accessible name.
+
+Removing the bundle budget deletes `scripts/bundle-report.spec.mjs` (2 tests) and
+`scripts/bundle-limits.spec.mjs` (12 tests) with the scripts they covered, and drops `scripts/**`
+from the `client:unit` include, so `client:unit` measures 78 files / 718 tests (732 → 718). On the CCC-108 tree merged with this change, `client:unit` measures 79 files / 733 tests; on the CCC-112 tree merged with both, 82 files / 772 tests.
+
+CCC-114 finishes the create wizard (details, Discord invite and a card preview) and recounts
+`client:unit` at 86 files / 813 tests (772 → 813, on the CCC-112 tree). It adds four suites, all
+beside the modules they cover: `add-tag.spec.ts` (4 tests: the tag as the contract writes it, a
+blank or repeated tag ignored, the 15-character edge, the fifth and sixth tag),
+`discord-link.spec.ts` (7: the two invite hosts, no URL, a URL that is no invite),
+`preview-squad.spec.ts` (3: the form's values, the viewer as only member with a masked code, the name
+fallback) and `create-squad-form.spec.ts` (3: the limits read from the contract, the stepper's start).
+`create-squad.spec.tsx` grows from 32 to 53 tests: the chosen game with "Change game", the `n/30`
+counter on the trimmed name and the too-long name, the stepper's start, announcement and 2–40 bounds, the language control,
+the tag suggestions, chips, Enter, comma, Backspace and both limits, the live Discord validation and its
+announcement, the hint, the preview content, every value kept through Back, Continue and "Change game", the stepper
+starting over for a different game, Back never validating, per-step validation, and the posted
+`maxPlayers` and language. `squad-card.spec.tsx` gains 3 tests for the non-interactive preview, and
+`messages.spec.ts` swaps the 40-player message test for the stepper's labels in both languages. The
+unused `squads.createModal` copy and the `input-field` utilities of the old form are deleted.
+
+CCC-114 round 2 verifies the Discord invite, tightens the tag rule and makes the player count typeable.
+`schemas:unit` gains 33 tests (127 → 160): `discord.spec.ts` covers the invite-code param schema and the
+invite-check response (`valid` with or without an icon and a member count, `invalid`, `unknown`, and the
+shapes refused), and `index.spec.ts` covers the tag rule (the hashes not counting toward 12 characters,
+letters with accents, digits and hyphens, a 13th character, text that is not one word, the sixth tag) and the
+links with no invite code (`https://discord.gg/`, `https://discord.gg/??`). `server:unit` gains one suite,
+`check-discord-invite.use-case.spec.ts` (5: a valid invite that never expires, one that expires, an invalid
+one, and Discord rate limiting or unreachable as `unknown`), 7 cases in `create-room.use-case.spec.ts` (the
+code asked of Discord before creating, an unknown invite refused with `InvalidDiscordInviteError` and nothing
+created, Discord not asked when the game is refused first, a found, expiring, rate-limited or unreachable
+answer creating the Squad, and a link with no code refused) and 1 in the provider spec (the expiration); the
+cache spec now pins one minute for an `invalid` answer as well as for an unreachable Discord (same count),
+so `server:unit` measures 33 files / 208 tests. `server:integration` gains `discord-invite-http.test.ts`
+(9: the server behind an invite that never expires, one that expires, `invalid`, `unknown` for a
+rate-limited or unreachable Discord, 401 without asking Discord, and 400 for three bad codes) and 7 cases
+in `rooms-http.test.ts` (an invite link with no code, a 13-character tag and a two-word tag as 400, a
+12-character tag with a hash that does not count, `INVALID_DISCORD_INVITE` as 422 with nothing created, and
+a rate-limited or unreachable Discord letting the Squad through). Its test server now answers `found` for
+every invite, so the suites that create Squads keep working, and the three suites that build the app
+themselves pass it too. `client:unit` gains 33 tests (813 → 846), no new suite: 26 in
+`create-squad.spec.tsx` (53 → 79: the stepper as a numeric spinbutton with its bounds, the live region apart
+from the field, a typed count written on blur, the clamping of 1, 0 and 99, an empty field restoring the
+count, the arrow keys, Enter not submitting, and the buttons painting no ground; the tag stopping at 12
+characters, the hash not counting, a paste cut at 12, a space committing the draft and pasted words refused
+with the one-word message; and the Discord step checking, showing the server behind the invite, warning
+about an expiring invite, refusing an unknown one without a POST, clearing the refusal on a new link,
+staying valid when Discord is unknown or the check fails, letting the Squad be created while it checks, the
+server's 422 keeping the dialog open on the field, and links with no invite code refused by the contract),
+3 in `add-tag.spec.ts` (4 → 7), 1 in `tag-errors.spec.ts` (3 → 4) and 3 in `discord-link.spec.ts` (7 → 10).
+
+The CCC-114 review nits drop the stepper case that read class names (`create-squad.spec.tsx` 79 → 78,
+`client:unit` 846 → 845; the borderless hover stays a visual check) and add tags made only of hyphens to
+the one-word rejections in `@squadzr/schemas` (160 → 162). The checking case now also asserts the
+checking announcement.
+
+CCC-115 rebuilds the landing's navigation, hero and footer and recounts `client:unit` at 87 files / 877
+tests (845 → 877). It adds `hero-demo-card.spec.tsx` beside the card (10 tests, with fake timers and a
+controlled `IntersectionObserver`: the start at 2/5 with the invite locked, no play before the card is
+visible, a member at 600ms and then every 900ms with its toast, each toast in its own row of the stack and leaving after 1.6s, the final
+state held with no loop or replay, the timers cleared on unmount, the reduced-motion final state that never
+rewinds or observes, and the one description of the card for assistive technology). `landing.spec.tsx`
+goes from 9 to 12 tests: the old showcase and ripple cases leave with the components, and the server HTML
+now pins the headline and the copy without a game count, the badge with the total and without it at 0, the
+nav links and their hrefs, the signed-out and signed-in actions, the demo in its final state, and the
+footer with the IGDB credit. `landing-navigation.spec.tsx` goes from 2 to 20 tests: the nav anchors, the
+language switch, the sign-in and the board link, the menu below 640px (disclosure, Escape and link clicks
+closing it with the focus back on the button), the Create squad target and the hero code field (valid
+codes normalised, invalid ones refused with the alert and no navigation). `messages.spec.ts` keeps its 11
+tests, with the subtitle and IGDB assertions moved to `landing.hero.subtitle` and
+`landing.footer.gameDataByIgdb`.
+
+The same CCC-115 change rate-limits the Discord invite check (30 requests a minute per signed-in user,
+429 `RATE_LIMITED`). `discord-invite-http.test.ts` gains 4 tests (9 → 13: the 31st request from one user
+answering 429 with the error shape and a `Retry-After`, each user counted on their own, an unauthenticated
+request answering 401 however many it sends without spending any quota, and a user asking again once a
+shortened window has passed), so `server:integration` measures 31 files / 324 tests (320 → 324).
+`create-squad.spec.tsx` gains 1 test (78 → 79: a rate-limited check reads as unknown, with no new message),
+which the `client:unit` total above counts.
+
+CCC-115 round 3 rebuilds the hero as a pre-match stage with a game switcher and recounts `client:unit` at
+87 files / 888 tests (877 → 888). `hero-demo-card.spec.tsx` leaves with the card and
+`hero-demo.spec.tsx` replaces it (10 → 18 tests, with fake timers and a controlled
+`IntersectionObserver`: the start at 2/5, no play until half the stage is on screen, a slot at 600ms and
+then every 900ms with the board card following, the viewer locked in last and the invite swapped at 5/5,
+the final state held with no loop, the timers cleared on unmount, the reduced-motion final state that
+never rewinds or observes, the `hydrateRoot` case that never shows 2/5, the result described once and
+inert, the five slots with the viewer's linking to the board, and the switcher: three tabs with one in the
+tab order, a pick that swaps the squad and replays from 2/5, a replay of the same game, a restart that
+never runs two stories at once, the arrows, Home and End, and the swap in its final state under reduced
+motion). `landing.spec.tsx` goes from 12 to 11 tests (the badge cases become one "no badge" case, and the
+final-state case pins the stage list, the viewer's link and the selected tab). `landing-navigation.spec.tsx`
+goes from 20 to 24 tests: the numbered links, the scroll-spy (marking the section in view, never the board
+route) and the sticky header's ground once the page scrolls.
+
+CCC-115 round 4 replaces the hero's slot stage with a carousel of squads over a wall of game covers and
+drops the hero code field, and recounts `client:unit` at 87 files / 871 tests (888 → 871).
+`hero-demo.spec.tsx` leaves with the stage and `hero-squad-showcase.spec.tsx` replaces it (18 → 10 tests,
+with fake timers and a controlled `IntersectionObserver`: the first squad full in the server HTML, the
+rewind to its founders with no play until it is on screen, one player per step with the full state
+announced, the hold and the next squad from its start, the hold under the pointer, the stop off screen,
+the pause and play control, a bar bringing a squad to the centre, and under reduced motion a full squad
+that never moves, offers no pause and comes to the centre full). `landing.spec.tsx` keeps its 11 tests
+(the final-state case now pins the carousel's centre squad and the absent code field, and the popular
+games are read in their own section). `landing-navigation.spec.tsx` goes from 24 to 15 tests: the 9 code
+field cases leave with the field.
+
+CCC-91 adds no suites and no tests: it brings the already-tested Catalog Import to Railway with a
+Railway Infrastructure as Code authoring file and an operations runbook, so the counts above stand.
+
+The CCC-88 recount (2026-10-22) added `tests/integration/catalog-migration.test.ts` and recorded
+`server:integration` at 25 files / 231 tests. The CCC-70 recount added `src/env.spec.ts`,
+`src/lib/router-history.spec.ts` and `scripts/bundle-report.spec.mjs` to `client:unit`, corrected
+the server and client unit rows that had drifted since the 2026-10-09 recount, and corrected the
+`server:integration` row, which had drifted since CCC-59. The CCC-28 numbers are kept as a
+historical record in the equivalence proof below.
+
+`@squadzr/typescript-config` ships only shared TypeScript configuration files, so no test project is
+expected there. Every other workspace must keep at least one test file: the configs deliberately do
+not use `--passWithNoTests`, so a workspace whose include pattern stops matching fails its own
+script with exit code 1 (`No test files found`), which in turn fails `bun run test` (Turbo). A
+Vitest 2.1 nuance verified on 2026-09-25: the direct root composition (`bunx vitest run`) silently
+skips a project whose include matches no files and exits 0, so the no-masking gate is the
+per-workspace script executed by Turbo, not the root composition. Delete a suite only together
+with its project entry.
+
+## Unit and integration projects
+
+Project names carry the suite kind after the `:` separator. Unit projects (`*:unit`) run against
+mock/in-memory dependencies:
+
+- `server:unit` — 160 tests across 29 spec files as of 2026-10-25 (merged tree, CCC-89, CCC-90,
+  CCC-92, CCC-93, CCC-95, CCC-104 and CCC-105, whose 7 cases cover the Presence tracker's offline time,
+  clearing and removal). CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
+  specs together with their use cases. The CCC-28 baseline of 39 tests across 10 specs is historical; see
+  the equivalence proof below. CCC-90 adds the IGDB adapter and Catalog Import environment suites.
+- `client:unit` — runs in jsdom; the environment is proven by an assertion on `document`, which
+  fails under a Node environment.
+- `schemas:unit` — runtime contract tests for the shared Zod schemas.
+
+Integration projects follow the same naming convention:
+
+- `server:integration` (CCC-29) — Fastify injection and PostgreSQL 16 suites under
+  `server/tests/integration/**`, configured by `server/vitest.integration.config.ts`. Run it with
+  `bun run test:integration` inside `server/` after starting the disposable database with
+  `docker compose -f docker-compose.test.yml up -d --wait` (PostgreSQL 16 on port 5433, tmpfs
+  storage). `TEST_DATABASE_URL` overrides the admin connection
+  (default `postgresql://postgres:postgres@localhost:5433/postgres`). Migration suites
+  (`room-lifecycle-migration`, `catalog-migration`) replay the checked-in SQL files against a
+  throwaway database and pin the migration they exercise by tag, so later migrations cannot
+  silently change what they prove. `catalog-migration` (CCC-88) seeds a legacy game and a Squad
+  that references it, then asserts the catalog migration delists the game, keeps the Squad and
+  applies the defaults. `games-http` (CCC-93) covers the Listed-only search, prefix/popularity
+  ranking, the featured-first empty search (#96), wildcard escaping, the `limit` bounds and the delisted single-game read; `rooms-http`
+  covers the 2–40 Squad-size bounds and the `INVALID_GAME` rejection for a delisted Game.
+  `popular-games-http` (CCC-96) drives `GET /api/games/popular`: open-Squad ranking, the Featured
+  fallback on a quiet day, expired and Ready Squads excluded, the top-tag tie-break, `totalGames`
+  and the 1–20 `limit` bounds.
+  `catalog-import` (CCC-89) drives the use case with a fake Game Catalog Source against an isolated
+  PostgreSQL: first run, idempotent re-run, update with a slug change, delist and relist, both
+  safety stops and the override, mid-run rollbacks of new and existing rows, concurrent runs
+  serialized by the import lock, every squad-size rule, featured ranks, legacy rows and dropped
+  duplicates. `catalog-import-entry` runs the real entry function on its own isolated database and
+  asserts the exit code, the single structured summary and that the database pool closed; it spawns
+  no child process. `squad-game-summary` (CCC-92) asserts every Squad response and realtime message
+  carries its Game summary, including a Squad on a legacy Game, and counts repository reads to prove
+  the Game is joined in the same query as the Squad. `member-preview` (CCC-104) asserts the member preview on the board, the single Squad read, My Squads, the create response, `room_created` and `room_snapshot`: host first, then join time, at most five, no full roster and no invite on public surfaces, and the roster of the member read and the snapshot in the same order.
+- Client and realtime flows stay in jsdom projects under the planned capability work
+  (CCC-32/CCC-33).
+
+Realtime characterization (CCC-33) spans both sides of the `/ws` protocol:
+
+- `server:integration` — `tests/integration/realtime-{connections,payloads,disconnects}.test.ts`
+  open in-memory sockets through `app.injectWS` (no ports, no network) with the helpers in
+  `server/src/test/harness/realtime.ts`: `connect()` (guest or Better Auth session cookie),
+  `drain()` (ping/pong barrier for synchronous handlers; DB-backed handlers such as `join_room`
+  are awaited message by message), and `subscriptionState()` (read-only probe of catalog/room
+  subscriptions). The harness destroys the in-memory stream once both directions end, as a TCP
+  socket would; otherwise `ws` keeps the server socket CLOSING for its 30 s fallback timer.
+- `client:unit` — `src/lib/ws-client.spec.ts` (reconnect backoff with fake timers) and
+  `src/test/realtime-reconnect.spec.tsx` (catalog/lobby resubscription and cleanup on the real
+  pages). `MockWebSocket.close(code)` accepts a close code (default 1000).
+- Assertions tagged `REPLACED BY CCC-37` (server) or `REPLACED BY CCC-38` (client) record the
+  current Membership/Presence conflation, payload limits and error codes as behavior to replace,
+  not preserve.
+
+How the server harness works (`server/src/test/harness/`):
+
+- `global-setup.ts` asserts the server is PostgreSQL 16, creates one template database per run,
+  applies every Drizzle migration from `server/drizzle/` to it, and drops the template plus any
+  leftover per-test database when the run ends.
+- `buildTestServer()` clones the template into a fresh database for the calling test, then builds
+  a ready, non-listening app through `buildApp({ env, logger: false })`. Its `close()` shuts the
+  app down (Fastify, WebSocket clients, the room-cleanup interval, the pool) and drops the
+  database, so every test starts from the same migrated, empty state and instances never share
+  data, even across parallel workers.
+
+`server:integration` is deliberately not part of `bun run test` (Turbo) nor of the root
+`vitest.workspace.ts` composition: it needs an external PostgreSQL 16 server, and the unit gate
+must keep running without Docker. CI runs it as the separate `integration-tests` required check
+against a PostgreSQL 16 service (see [`docs/ci/quality-gates.md`](../ci/quality-gates.md)).
+
+## Known limitations
+
+- The direct root composition (`bunx vitest run`) silently skips a project whose include matches
+  no files and exits 0 (Vitest 2.1 behavior, verified empirically on 2026-09-25). The enforced
+  no-masking gate is therefore the per-workspace script run by `bun run test` (Turbo), which
+  fails with exit code 1 when a workspace's expected suite is missing.
+- `@squadzr/typescript-config` has no `test` script, so Turbo skips it when running `turbo test`;
+  the no-masking guarantee lives in the Vitest configs (no `--passWithNoTests`) and in the root
+  composition listing exactly the three expected projects.
+- The `schemas:unit` suite used to characterize the legacy room `status` contract
+  (`roomStatusSchema`). CCC-35 removed that contract from `@squadzr/schemas`, so the suite now
+  covers the remaining runtime contracts (create-room input, notification payload, and the room,
+  game, and user transport shapes) instead.
+- The former root `test:coverage` script (`vitest run --coverage`) never worked on the base
+  commit: no coverage provider (`@vitest/coverage-v8`) is installed, so the run failed before
+  collecting tests. The script was removed instead of being restored with a new dependency;
+  introducing coverage tooling is a deliberate follow-up decision, not an accidental default.
+
+## Equivalence proof (CCC-28, CCC-58, CCC-59, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-104, CCC-105)
+
+### Current counts (recounted 2026-10-25 on the merged tree, CCC-89, CCC-90, CCC-92, CCC-93, CCC-94, CCC-95, CCC-96, CCC-98, CCC-101, CCC-104 and CCC-105)
+
+| Command                                                             | Test files | Tests |
+| ------------------------------------------------------------------- | ---------- | ----- |
+| `bun run test` (root, all projects; sum of the three unit projects) | 113        | 990   |
+| `bunx vitest run` (direct root composition)                         | 113        | 990   |
+| `bunx turbo test --filter=server`                                   | 29         | 160   |
+| `bunx turbo test --filter=client`                                   | 80         | 732   |
+| `bunx turbo test --filter=@squadzr/schemas`                         | 4          | 98    |
+
+The direct root composition matches the Turbo run, and the focused runs match the per-workspace
+numbers of the root run. CCC-58 removed the `create-user` (2 tests) and `update-user` (3 tests)
+specs together with their use cases, so the server unit suite has 5 fewer tests than before that
+change. It added and removed no integration tests: `bun run test:integration` in `server/` ran
+16 files / 202 tests at the CCC-58 recount and 19 files / 211 tests at CCC-59, both historical. The
+current run passes 29 files / 294 tests (measured 2026-10-25 against the test PostgreSQL on port
+5433): the CCC-88 row of 25 files / 231 tests plus CCC-89's changes — the 2 child-process seed
+tests removed with the static seed, the Catalog Import suites (+2 files / +16 tests), two extra
+IGDB-id cases in `games-postgres` — plus CCC-93's cases in the existing games and rooms HTTP suites
+(search, delisted-game and Squad-size), CCC-95's 2 cover cases in the existing notification
+suites, CCC-92's `squad-game-summary` suite (+1 file / +4 tests) and CCC-90's invalid-summary case
+in `catalog-import.test.ts` (+1 test) and CCC-105's `offlineSince` cases in
+`realtime-disconnects.test.ts` (+5 tests: the close time after the grace, kept for a later snapshot,
+cleared on reconnect, removed with the Membership, `null` when never seen). The `server:unit` row had
+drifted to 26 files / 119 tests since CCC-70, so the CCC-89 recount corrected it to 27 files / 122
+tests with `curated-games.spec.ts` (+1 file / +3 tests); CCC-93 adds its create-room delisted-game
+cases, CCC-95 adds 3 cover cases and CCC-92 adds one projection case and one create-path case, and
+CCC-90 adds the IGDB adapter (10 tests) and import environment (9 tests) suites plus one curated-id
+case, CCC-104 adds 5 more and CCC-105 adds 7 Presence tracker cases, so the merged tree measures 29 files / 160 tests. CCC-59 removed the `types:unit` project (1
+file, 1 test) together with the `@squadzr/types` workspace. The schemas suite measures 98 tests across
+4 files (CCC-89 corrected a drift to 76, CCC-93 added the game genre, cover-thumbnail and games-query
+contract cases, CCC-95 added 2, CCC-92 added 3, CCC-104 added 8 and CCC-105 added 6: presence with an ISO
+time, with `null` and without it, and protocol version 3), and the client suite measures 80 files / 732
+tests (CCC-111 added 17 Lobby and copy-swap cases; CCC-106 recounted it on the merged tree, adding 2 suites and 40 tests; CCC-105 added the Lobby's offline-time case; CCC-89 corrected a drift to 465, CCC-93 added its create-Squad flow cases, CCC-94 added 2,
+CCC-95 added 2, CCC-92 added none, CCC-96 replaced the landing's random-pick cases with the
+popular read and added the FAQ and IGDB-credit cases: net 0, and CCC-98 added 7 cancellation and
+placeholder flow cases, and CCC-101 added 20 motion-base cases in 3 files); both drifts predate CCC-89 and were
+corrected by its recount. CCC-96's 10 popular-games cases plus CCC-90's invalid-summary case are the
+difference between the CCC-95 row of 27 files / 269 tests and the 28 files / 280 tests measured before CCC-104, whose member-preview suite adds 1 file / 9 tests (29 files / 289), and CCC-105's 5 `offlineSince` cases (29 files / 294).
+
+### Historical record (CCC-28, 2026-09-25)
+
+The table below is the CCC-28 measurement, kept for traceability; it is not the current
+inventory. Recorded on 2026-09-25 (review round), Bun 1.3.8, Vitest 2.1.9, Windows:
+
+| Command                                     | Test files | Tests |
+| ------------------------------------------- | ---------- | ----- |
+| `bun run test` (root, all projects)         | 13         | 50    |
+| `bunx vitest run` (direct root composition) | 13         | 50    |
+| `bunx turbo test --filter=server`           | 10         | 39    |
+| `bunx turbo test --filter=client`           | 1          | 3     |
+| `bunx turbo test --filter=@squadzr/schemas` | 1          | 6     |
+| `bunx turbo test --filter=@squadzr/types`   | 1          | 2     |
+
+At that time the direct root composition matched the Turbo run, the focused runs matched the
+per-workspace numbers of the root run, and the server suite had 39 tests / 10 suites with
+unchanged test names. Per-suite server counts then: create-room 8, join-room 9, leave-room 4,
+delete-expired-rooms 4, get-available-rooms 3, get-my-rooms 2, get-room-by-code 2, create-user 2,
+get-user 2, update-user 3 (the create-user and update-user specs were removed by CCC-58).
+
+To re-verify after changes: run `bun run test`, `bunx vitest run`, and each
+`bunx turbo test --filter=<workspace>` above, then compare the `Test Files` / `Tests` summaries
+with the current counts table.
+`bun run test:watch` runs the same composition in watch mode; in non-interactive terminals
+(piped output) it executes the suite once, which is how the script is verified. Server project
+membership is visible in verbose output: `bun run test --reporter=verbose` inside `server` tags
+every line with `|server:unit|`.

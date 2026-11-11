@@ -1,22 +1,26 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import { ZodError, type z } from 'zod'
+import type { CreateRoomInput, roomCodeParamSchema } from '@squadzr/schemas'
 import type { ICreateRoomUseCase } from '@application/use-cases/room/create-room.use-case'
 import type { IGetAvailableRoomsUseCase } from '@application/use-cases/room/get-available-rooms.use-case'
+import type { IGetDiscordPreviewUseCase } from '@application/use-cases/room/get-discord-preview.use-case'
 import type { IGetRoomByCodeUseCase } from '@application/use-cases/room/get-room-by-code.use-case'
 import type { IJoinRoomUseCase } from '@application/use-cases/room/join-room.use-case'
 import type { ILeaveRoomUseCase } from '@application/use-cases/room/leave-room.use-case'
-import type { INotifyRoomReadyUseCase } from '@application/use-cases/room/notify-room-ready.use-case'
 import type { IGetMyRoomsUseCase } from '@application/use-cases/room/get-my-rooms.use-case'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
-import { RoomNotFoundError, NotRoomMemberError } from '@application/errors'
-import { createRoomRequestSchema, roomCodeParamSchema } from '@application/dtos'
+import { AppError } from '@application/errors'
+import { toMemberRoom, toPublicRoom, toRoomMemberDto } from '@application/projections'
+
+type RoomCodeParams = z.infer<typeof roomCodeParamSchema>
 
 export interface RoomControllerDeps {
   readonly createRoomUseCase: ICreateRoomUseCase
   readonly getAvailableRoomsUseCase: IGetAvailableRoomsUseCase
   readonly getRoomByCodeUseCase: IGetRoomByCodeUseCase
+  readonly getDiscordPreviewUseCase: IGetDiscordPreviewUseCase
   readonly joinRoomUseCase: IJoinRoomUseCase
   readonly leaveRoomUseCase: ILeaveRoomUseCase
-  readonly notifyRoomReadyUseCase: INotifyRoomReadyUseCase
   readonly getMyRoomsUseCase: IGetMyRoomsUseCase
   readonly broadcaster: IRoomBroadcaster
 }
@@ -28,23 +32,46 @@ export class RoomController {
     const userId = request.session?.user?.id
     const result = await this.deps.getAvailableRoomsUseCase.execute(userId ? { userId } : undefined)
 
-    await reply.send({ rooms: result.rooms })
+    await reply.send({ rooms: result.rooms.map(toPublicRoom) })
   }
 
-  async getByCode(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const params = roomCodeParamSchema.parse(request.params)
-    const result = await this.deps.getRoomByCodeUseCase.execute({ code: params.code })
+  async getByCode(
+    request: FastifyRequest<{ Params: RoomCodeParams }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    const params = request.params
+    const result = await this.deps.getRoomByCodeUseCase.execute({
+      code: params.code,
+      viewerId: request.session?.user?.id,
+    })
 
-    if (!result.room) {
-      throw new RoomNotFoundError(params.code)
+    // Discord invite and roster are lobby details: members only.
+    if (!result.isMember) {
+      await reply.send({ room: toPublicRoom(result.room) })
+      return
     }
 
-    await reply.send({ room: result.room, players: result.players })
+    await reply.send({ room: toMemberRoom(result.room), players: result.players })
   }
 
-  async create(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async getDiscordPreview(
+    request: FastifyRequest<{ Params: RoomCodeParams }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    const result = await this.deps.getDiscordPreviewUseCase.execute({
+      code: request.params.code,
+      viewerId: request.userId,
+    })
+
+    await reply.send(result)
+  }
+
+  async create(
+    request: FastifyRequest<{ Body: CreateRoomInput }>,
+    reply: FastifyReply
+  ): Promise<void> {
     const userId = request.userId
-    const body = createRoomRequestSchema.parse(request.body)
+    const body = request.body
 
     const result = await this.deps.createRoomUseCase.execute({
       name: body.name,
@@ -54,82 +81,153 @@ export class RoomController {
       discordLink: body.discordLink,
       tags: body.tags,
       language: body.language,
+      platform: body.platform,
     })
 
+    request.server.log.info(
+      { roomId: result.room.id, roomCode: result.room.code, hostId: userId },
+      'Room created'
+    )
+
+    // After commit: the room row and its host Membership already exist.
     this.deps.broadcaster.broadcastRoomCreated(result.room)
 
-    await reply.status(201).send({ room: result.room })
+    await reply.status(201).send({ room: toMemberRoom(result.room) })
   }
 
-  async join(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async join(
+    request: FastifyRequest<{ Params: RoomCodeParams }>,
+    reply: FastifyReply
+  ): Promise<void> {
     const userId = request.userId
-    const params = roomCodeParamSchema.parse(request.params)
+    const params = request.params
 
-    const { room } = await this.deps.getRoomByCodeUseCase.execute({ code: params.code })
-    if (!room) {
-      throw new RoomNotFoundError(params.code)
+    let result
+    try {
+      result = await this.deps.joinRoomUseCase.execute({
+        code: params.code,
+        userId,
+      })
+    } catch (error) {
+      // A transaction failure rolls back Membership, Room Activity, readiness
+      // and notifications together; the room stays open and untouched.
+      // An AppError is an expected rejection, and the error handler alone logs a ZodError.
+      if (!(error instanceof AppError) && !(error instanceof ZodError)) {
+        request.server.log.error(
+          { err: error, roomCode: params.code, userId },
+          'Room join failed — activity, readiness and notifications rolled back'
+        )
+      }
+      throw error
     }
 
-    const result = await this.deps.joinRoomUseCase.execute({
-      roomId: room.id,
-      userId,
-    })
+    const { room } = result
 
-    this.deps.broadcaster.broadcastRoomUpdated(room.id, room.code, result.memberCount)
+    request.server.log.info(
+      {
+        roomId: room.id,
+        roomCode: room.code,
+        userId,
+        memberCount: result.memberCount,
+        becameReady: result.isRoomNowFull,
+      },
+      'Room joined'
+    )
+
+    // After commit: the catalog hint reflects the durable Membership change.
+    this.deps.broadcaster.broadcastRoomUpdated(room.id, room.code)
 
     if (result.isRoomNowFull) {
-      try {
-        const notificationResult = await this.deps.notifyRoomReadyUseCase.execute({
+      request.server.log.info(
+        {
           roomId: room.id,
-        })
+          roomCode: room.code,
+          memberCount: result.memberCount,
+          affectedSquads: result.departures.length,
+        },
+        'Room ready'
+      )
+
+      // Each other Squad the release changed: the lobby and the board hear about it
+      // like about any other Membership change, or about a deletion.
+      for (const departure of result.departures) {
         request.server.log.info(
           {
-            roomId: room.id,
-            roomCode: room.code,
-            ...notificationResult,
+            roomId: departure.roomId,
+            roomCode: departure.roomCode,
+            outcome: departure.outcome,
+            newHostId: departure.newHostId,
           },
-          'Room ready notifications processed'
+          'Room membership released (squad completed)'
         )
-      } catch (error) {
-        request.server.log.error(
-          {
-            roomId: room.id,
-            roomCode: room.code,
-            error,
-          },
-          'Failed to process room ready notifications'
-        )
+        if (departure.outcome === 'updated') {
+          this.deps.broadcaster.broadcastRoomUpdated(departure.roomId, departure.roomCode)
+        } else {
+          this.deps.broadcaster.broadcastRoomDeleted(departure.roomId, departure.roomCode)
+        }
+      }
+
+      // Best-effort realtime push: the notifications are already persisted, so
+      // a failed push never loses them (the next fetch returns them). Only the
+      // `room_ready` of this Squad carries its Discord invite.
+      for (const notification of result.createdNotifications) {
+        try {
+          this.deps.broadcaster.broadcastNotification(
+            notification,
+            notification.type === 'room_ready' ? room.discordLink : null
+          )
+        } catch (error) {
+          request.server.log.error(
+            {
+              err: error,
+              roomId: room.id,
+              roomCode: room.code,
+              notificationId: notification.id,
+              notificationType: notification.type,
+              userId: notification.userId,
+            },
+            'Squad notification push failed'
+          )
+        }
       }
     }
 
     await reply.send({
       message: 'Joined room successfully',
-      roomMember: result.roomMember,
+      roomMember: toRoomMemberDto(result.roomMember),
     })
   }
 
-  async leave(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async leave(
+    request: FastifyRequest<{ Params: RoomCodeParams }>,
+    reply: FastifyReply
+  ): Promise<void> {
     const userId = request.userId
-    const params = roomCodeParamSchema.parse(request.params)
-
-    const { room } = await this.deps.getRoomByCodeUseCase.execute({ code: params.code })
-    if (!room) {
-      throw new RoomNotFoundError(params.code)
-    }
+    const params = request.params
 
     const result = await this.deps.leaveRoomUseCase.execute({
-      roomId: room.id,
+      code: params.code,
       userId,
     })
 
-    if (!result.success) {
-      throw new NotRoomMemberError(userId, room.id)
-    }
-
+    // After commit: the deletion or the new member count is durable.
     if (result.wasHostLeave) {
-      this.deps.broadcaster.broadcastRoomDeleted(room.id, room.code)
+      request.server.log.info(
+        { roomId: result.roomId, roomCode: result.roomCode, userId },
+        'Room deleted (host left)'
+      )
+      this.deps.broadcaster.broadcastRoomDeleted(result.roomId, result.roomCode)
     } else {
-      this.deps.broadcaster.broadcastRoomUpdated(room.id, room.code, result.memberCount)
+      request.server.log.info(
+        {
+          roomId: result.roomId,
+          roomCode: result.roomCode,
+          userId,
+          memberCount: result.memberCount,
+        },
+        'Room left'
+      )
+      this.deps.broadcaster.broadcastRoomUpdated(result.roomId, result.roomCode)
     }
 
     await reply.send({
@@ -142,6 +240,9 @@ export class RoomController {
     const userId = request.userId
     const result = await this.deps.getMyRoomsUseCase.execute({ userId })
 
-    await reply.send({ hosted: result.hosted, joined: result.joined })
+    await reply.send({
+      hosted: result.hosted.map(toMemberRoom),
+      joined: result.joined.map(toMemberRoom),
+    })
   }
 }

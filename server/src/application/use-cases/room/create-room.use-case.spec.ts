@@ -1,29 +1,63 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CreateRoomUseCase } from './create-room.use-case'
-import { InvalidGameError, RoomCreateLimitReachedError } from '@application/errors'
+import type {
+  DiscordInvitePreviewOutcome,
+  DiscordInvitePreviewProvider,
+} from '@domain/services/discord-invite-preview-provider.interface'
+import {
+  GameNotAvailableError,
+  InvalidDiscordInviteError,
+  InvalidGameError,
+  PlatformNotAvailableError,
+  RoomCreateLimitReachedError,
+  RoomJoinLimitReachedError,
+  UserNotFoundError,
+} from '@application/errors'
 import {
   createMockRoom,
   createMockRoomRepository,
-  createMockRoomMemberRepository,
   createMockRoomMember,
   createMockGameRepository,
   createMockGame,
+  createMockUser,
+  createMockUserRepository,
 } from '@test/mocks'
+import { ROOM } from '@config/constants'
 
 describe('CreateRoomUseCase', () => {
   let useCase: CreateRoomUseCase
   let mockRoomRepository: ReturnType<typeof createMockRoomRepository>
   let mockGameRepository: ReturnType<typeof createMockGameRepository>
-  let mockRoomMemberRepository: ReturnType<typeof createMockRoomMemberRepository>
+  let mockUserRepository: ReturnType<typeof createMockUserRepository>
+  let mockDiscordPreviews: {
+    fetch: ReturnType<typeof vi.fn<DiscordInvitePreviewProvider['fetch']>>
+  }
 
   beforeEach(() => {
     mockRoomRepository = createMockRoomRepository()
     mockGameRepository = createMockGameRepository()
-    mockRoomMemberRepository = createMockRoomMemberRepository()
+    mockUserRepository = createMockUserRepository()
+    mockUserRepository.findById.mockImplementation((id) =>
+      Promise.resolve(createMockUser({ id, name: 'Host', avatarUrl: null }))
+    )
+    mockDiscordPreviews = {
+      fetch: vi.fn<DiscordInvitePreviewProvider['fetch']>().mockResolvedValue({
+        kind: 'found',
+        preview: {
+          name: 'Test Server',
+          iconUrl: null,
+          backdropUrl: null,
+          memberCount: 10,
+          onlineCount: 5,
+          expiresAt: null,
+        },
+      }),
+    }
     useCase = new CreateRoomUseCase(
       mockRoomRepository,
       mockGameRepository,
-      mockRoomMemberRepository
+      mockUserRepository,
+      mockDiscordPreviews
     )
   })
 
@@ -38,13 +72,11 @@ describe('CreateRoomUseCase', () => {
         gameId: 'game-123',
         maxPlayers: 5,
       })
-      mockRoomRepository.create.mockResolvedValue(expectedRoom)
-
-      const expectedMember = createMockRoomMember({
-        roomId: expectedRoom.id,
-        userId: 'host-123',
+      mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
+        room: expectedRoom,
+        hostMember: createMockRoomMember({ roomId: expectedRoom.id, userId: 'host-123' }),
       })
-      mockRoomMemberRepository.create.mockResolvedValue(expectedMember)
 
       const result = await useCase.execute({
         name: 'My Room',
@@ -64,8 +96,99 @@ describe('CreateRoomUseCase', () => {
         gameId: 'game-123',
         maxPlayers: 5,
         discordLink: 'https://discord.gg/test',
+        platform: null,
       })
       expect(mockRoomRepository.create).toHaveBeenCalledOnce()
+    })
+
+    it('reuses the Game it read to validate the input as the created Squad summary', async () => {
+      const game = createMockGame({ id: 'game-123', name: 'League of Legends' })
+      mockGameRepository.findById.mockResolvedValue(game)
+      mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
+        room: createMockRoom({ gameId: 'game-123' }),
+        hostMember: createMockRoomMember(),
+      })
+
+      const result = await useCase.execute({
+        name: 'My Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        discordLink: 'https://discord.gg/test',
+      })
+
+      expect(result.room.game).toBe(game)
+      expect(mockGameRepository.findById).toHaveBeenCalledOnce()
+      expect(mockGameRepository.findById).toHaveBeenCalledWith('game-123')
+    })
+
+    it("carries the host's entry as the whole member preview", async () => {
+      mockGameRepository.findById.mockResolvedValue(createMockGame({ id: 'game-123' }))
+      mockUserRepository.findById.mockResolvedValue(
+        createMockUser({
+          id: 'host-123',
+          name: 'Host Name',
+          avatarUrl: 'https://cdn.discordapp.com/avatars/host.png',
+        })
+      )
+
+      const result = await useCase.execute({
+        name: 'My Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        discordLink: 'https://discord.gg/test',
+      })
+
+      expect(mockUserRepository.findById).toHaveBeenCalledWith('host-123')
+      expect(result.room.memberPreview).toEqual([
+        {
+          id: 'host-123',
+          name: 'Host Name',
+          image: 'https://cdn.discordapp.com/avatars/host.png',
+        },
+      ])
+    })
+
+    it('throws UserNotFoundError without creating the Squad when the host cannot be read', async () => {
+      mockGameRepository.findById.mockResolvedValue(createMockGame({ id: 'game-123' }))
+      mockUserRepository.findById.mockResolvedValue(null)
+
+      await expect(
+        useCase.execute({
+          name: 'My Room',
+          hostId: 'host-123',
+          gameId: 'game-123',
+          discordLink: 'https://discord.gg/test',
+        })
+      ).rejects.toThrow(UserNotFoundError)
+      expect(mockRoomRepository.create).not.toHaveBeenCalled()
+    })
+
+    it('should return the host membership created in the same transaction', async () => {
+      const game = createMockGame({ id: 'game-123' })
+      mockGameRepository.findById.mockResolvedValue(game)
+
+      const expectedRoom = createMockRoom({ id: 'room-1', hostId: 'host-123' })
+      const expectedMember = createMockRoomMember({
+        roomId: 'room-1',
+        userId: 'host-123',
+      })
+      mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
+        room: expectedRoom,
+        hostMember: expectedMember,
+      })
+
+      const result = await useCase.execute({
+        name: 'Test Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        discordLink: 'https://discord.gg/test',
+      })
+
+      expect(result.hostMember).toEqual(expectedMember)
+      expect(result.hostMember.roomId).toBe('room-1')
+      expect(result.hostMember.userId).toBe('host-123')
     })
 
     it('should return room with valid 6-char alphanumeric code from repository', async () => {
@@ -73,7 +196,11 @@ describe('CreateRoomUseCase', () => {
       mockGameRepository.findById.mockResolvedValue(game)
 
       const expectedRoom = createMockRoom({ code: 'ABC123' })
-      mockRoomRepository.create.mockResolvedValue(expectedRoom)
+      mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
+        room: expectedRoom,
+        hostMember: createMockRoomMember(),
+      })
 
       const result = await useCase.execute({
         name: 'Test Room',
@@ -89,8 +216,11 @@ describe('CreateRoomUseCase', () => {
       const game = createMockGame({ id: 'game-123', maxPlayers: 10 })
       mockGameRepository.findById.mockResolvedValue(game)
 
-      const expectedRoom = createMockRoom({ maxPlayers: 10 })
-      mockRoomRepository.create.mockResolvedValue(expectedRoom)
+      mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
+        room: createMockRoom({ maxPlayers: 10 }),
+        hostMember: createMockRoomMember(),
+      })
 
       await useCase.execute({
         name: 'Test Room',
@@ -110,8 +240,11 @@ describe('CreateRoomUseCase', () => {
       const game = createMockGame({ id: 'game-123', maxPlayers: 5 })
       mockGameRepository.findById.mockResolvedValue(game)
 
-      const expectedRoom = createMockRoom({ maxPlayers: 10 })
-      mockRoomRepository.create.mockResolvedValue(expectedRoom)
+      mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
+        room: createMockRoom({ maxPlayers: 10 }),
+        hostMember: createMockRoomMember(),
+      })
 
       await useCase.execute({
         name: 'Test Room',
@@ -144,41 +277,27 @@ describe('CreateRoomUseCase', () => {
       expect(mockRoomRepository.create).not.toHaveBeenCalled()
     })
 
-    it('should add host as first room member', async () => {
-      const game = createMockGame({ id: 'game-123' })
-      mockGameRepository.findById.mockResolvedValue(game)
+    it('should throw GameNotAvailableError if the game is delisted', async () => {
+      const delisted = createMockGame({ id: 'game-123', listed: false })
+      mockGameRepository.findById.mockResolvedValue(delisted)
 
-      const expectedRoom = createMockRoom({ id: 'room-1', hostId: 'host-123' })
-      mockRoomRepository.create.mockResolvedValue(expectedRoom)
+      await expect(
+        useCase.execute({
+          name: 'Test Room',
+          hostId: 'host-123',
+          gameId: 'game-123',
+          discordLink: 'https://discord.gg/test',
+        })
+      ).rejects.toThrow(GameNotAvailableError)
 
-      const expectedMember = createMockRoomMember({
-        roomId: 'room-1',
-        userId: 'host-123',
-      })
-      mockRoomMemberRepository.create.mockResolvedValue(expectedMember)
-
-      const result = await useCase.execute({
-        name: 'Test Room',
-        hostId: 'host-123',
-        gameId: 'game-123',
-        discordLink: 'https://discord.gg/test',
-      })
-
-      expect(mockRoomMemberRepository.create).toHaveBeenCalledWith({
-        roomId: 'room-1',
-        userId: 'host-123',
-      })
-      expect(result.hostMember.roomId).toBe('room-1')
-      expect(result.hostMember.userId).toBe('host-123')
+      expect(mockRoomRepository.create).not.toHaveBeenCalled()
     })
 
-    it('should throw RoomCreateLimitReachedError when user already hosts 3 active rooms', async () => {
-      // Arrange
+    it('should throw RoomCreateLimitReachedError when the transaction reports the host limit', async () => {
       const game = createMockGame({ id: 'game-123' })
       mockGameRepository.findById.mockResolvedValue(game)
-      mockRoomRepository.countActiveByHostId.mockResolvedValue(3)
+      mockRoomRepository.create.mockResolvedValue({ status: 'limit_reached' })
 
-      // Act & Assert
       await expect(
         useCase.execute({
           name: 'Test Room',
@@ -188,14 +307,101 @@ describe('CreateRoomUseCase', () => {
         })
       ).rejects.toThrow(RoomCreateLimitReachedError)
 
-      expect(mockRoomRepository.create).not.toHaveBeenCalled()
+      expect(mockRoomRepository.create).toHaveBeenCalledOnce()
     })
 
-    it('should allow room creation when user hosts 2 active rooms (below limit)', async () => {
-      // Arrange
+    it('should throw RoomJoinLimitReachedError when the transaction reports the Membership limit', async () => {
+      const game = createMockGame({ id: 'game-123' })
+      mockGameRepository.findById.mockResolvedValue(game)
+      mockRoomRepository.create.mockResolvedValue({ status: 'join_limit_reached' })
+
+      const attempt = useCase.execute({
+        name: 'Test Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        discordLink: 'https://discord.gg/test',
+      })
+
+      await expect(attempt).rejects.toThrow(RoomJoinLimitReachedError)
+      await expect(attempt).rejects.toMatchObject({
+        code: 'ROOM_JOIN_LIMIT_REACHED',
+        message: `You can only be in ${ROOM.JOIN_LIMIT} open squads at a time`,
+      })
+    })
+
+    describe('Discord invite check', () => {
+      const input = {
+        name: 'My Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        discordLink: 'https://discord.com/invite/premier-qui?event=1',
+      }
+
+      beforeEach(() => {
+        mockGameRepository.findById.mockResolvedValue(createMockGame({ id: 'game-123' }))
+        mockRoomRepository.create.mockResolvedValue({
+          status: 'created',
+          room: createMockRoom({ gameId: 'game-123' }),
+          hostMember: createMockRoomMember(),
+        })
+      })
+
+      it('asks Discord about the code of the invite before creating the Squad', async () => {
+        await useCase.execute(input)
+
+        expect(mockDiscordPreviews.fetch).toHaveBeenCalledTimes(1)
+        expect(mockDiscordPreviews.fetch).toHaveBeenCalledWith('premier-qui')
+        expect(mockRoomRepository.create).toHaveBeenCalledOnce()
+      })
+
+      it('throws InvalidDiscordInviteError without creating the Squad for an invite Discord does not know', async () => {
+        mockDiscordPreviews.fetch.mockResolvedValue({ kind: 'invalid' })
+
+        await expect(useCase.execute(input)).rejects.toThrow(InvalidDiscordInviteError)
+        expect(mockRoomRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('does not ask Discord when the game is refused first', async () => {
+        mockGameRepository.findById.mockResolvedValue(null)
+
+        await expect(useCase.execute(input)).rejects.toThrow(InvalidGameError)
+        expect(mockDiscordPreviews.fetch).not.toHaveBeenCalled()
+      })
+
+      it.each<DiscordInvitePreviewOutcome>([
+        { kind: 'rate_limited' },
+        { kind: 'unreachable' },
+        {
+          kind: 'found',
+          preview: {
+            name: 'Expiring',
+            iconUrl: null,
+            backdropUrl: null,
+            memberCount: null,
+            onlineCount: null,
+            expiresAt: '2026-11-01T12:00:00+00:00',
+          },
+        },
+      ])('creates the Squad when Discord answers $kind', async (outcome) => {
+        mockDiscordPreviews.fetch.mockResolvedValue(outcome)
+
+        const result = await useCase.execute(input)
+
+        expect(result.room).toBeDefined()
+        expect(mockRoomRepository.create).toHaveBeenCalledOnce()
+      })
+
+      it('refuses a link with no invite code without asking Discord', async () => {
+        await expect(
+          useCase.execute({ ...input, discordLink: 'https://discord.gg/' })
+        ).rejects.toThrow(InvalidDiscordInviteError)
+        expect(mockDiscordPreviews.fetch).not.toHaveBeenCalled()
+      })
+    })
+
+    it('should allow room creation when the transaction finds the user below both limits', async () => {
       const game = createMockGame({ id: 'game-123', maxPlayers: 5 })
       mockGameRepository.findById.mockResolvedValue(game)
-      mockRoomRepository.countActiveByHostId.mockResolvedValue(2)
 
       const expectedRoom = createMockRoom({
         name: 'My Room',
@@ -203,15 +409,12 @@ describe('CreateRoomUseCase', () => {
         gameId: 'game-123',
         maxPlayers: 5,
       })
-      mockRoomRepository.create.mockResolvedValue(expectedRoom)
-
-      const expectedMember = createMockRoomMember({
-        roomId: expectedRoom.id,
-        userId: 'host-123',
+      mockRoomRepository.create.mockResolvedValue({
+        status: 'created',
+        room: expectedRoom,
+        hostMember: createMockRoomMember({ roomId: expectedRoom.id, userId: 'host-123' }),
       })
-      mockRoomMemberRepository.create.mockResolvedValue(expectedMember)
 
-      // Act
       const result = await useCase.execute({
         name: 'My Room',
         hostId: 'host-123',
@@ -220,9 +423,93 @@ describe('CreateRoomUseCase', () => {
         discordLink: 'https://discord.gg/test',
       })
 
-      // Assert
       expect(mockRoomRepository.create).toHaveBeenCalledOnce()
       expect(result.room).toBeDefined()
+    })
+
+    describe('platform', () => {
+      const baseInput = {
+        name: 'My Room',
+        hostId: 'host-123',
+        gameId: 'game-123',
+        discordLink: 'https://discord.gg/test',
+      }
+
+      beforeEach(() => {
+        mockRoomRepository.create.mockResolvedValue({
+          status: 'created',
+          room: createMockRoom({ gameId: 'game-123' }),
+          hostMember: createMockRoomMember(),
+        })
+      })
+
+      it('stores the platform when it is one of the Game platforms', async () => {
+        mockGameRepository.findById.mockResolvedValue(
+          createMockGame({ id: 'game-123', platforms: ['pc', 'ps5', 'switch'] })
+        )
+
+        await useCase.execute({ ...baseInput, platform: 'ps5' })
+
+        expect(mockRoomRepository.create).toHaveBeenCalledWith(
+          expect.objectContaining({ platform: 'ps5' })
+        )
+      })
+
+      it('accepts the only platform of a Game that has just one', async () => {
+        mockGameRepository.findById.mockResolvedValue(
+          createMockGame({ id: 'game-123', platforms: ['mobile'] })
+        )
+
+        await useCase.execute({ ...baseInput, platform: 'mobile' })
+
+        expect(mockRoomRepository.create).toHaveBeenCalledWith(
+          expect.objectContaining({ platform: 'mobile' })
+        )
+      })
+
+      it.each([
+        ['a platform the Game does not have', 'xbox-one'],
+        ['no platform', undefined],
+        ['a null platform', null],
+      ] as const)('refuses %s when the Game has platforms', async (_label, platform) => {
+        mockGameRepository.findById.mockResolvedValue(
+          createMockGame({ id: 'game-123', platforms: ['pc', 'ps5'] })
+        )
+
+        await expect(useCase.execute({ ...baseInput, platform })).rejects.toBeInstanceOf(
+          PlatformNotAvailableError
+        )
+        expect(mockRoomRepository.create).not.toHaveBeenCalled()
+      })
+
+      it.each([undefined, null] as const)(
+        'stores no platform when the Game has none and the input says %s',
+        async (platform) => {
+          mockGameRepository.findById.mockResolvedValue(
+            createMockGame({ id: 'game-123', platforms: [] })
+          )
+
+          await useCase.execute({ ...baseInput, platform })
+
+          expect(mockRoomRepository.create).toHaveBeenCalledWith(
+            expect.objectContaining({ platform: null })
+          )
+        }
+      )
+
+      it('refuses a platform for a Game that has none', async () => {
+        mockGameRepository.findById.mockResolvedValue(
+          createMockGame({ id: 'game-123', platforms: [] })
+        )
+
+        const error = await useCase
+          .execute({ ...baseInput, platform: 'pc' })
+          .catch((caught: unknown) => caught)
+
+        expect(error).toBeInstanceOf(PlatformNotAvailableError)
+        expect(error).toMatchObject({ statusCode: 400, code: 'INVALID_PLATFORM' })
+        expect(mockRoomRepository.create).not.toHaveBeenCalled()
+      })
     })
   })
 })

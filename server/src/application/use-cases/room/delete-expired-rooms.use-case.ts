@@ -1,12 +1,12 @@
 import type { IRoomRepository } from '@domain/repositories/room.repository'
+import type { Clock } from '@domain/services/clock.interface'
 
-export interface DeleteExpiredRoomsInput {
-  readonly expirationMinutes: number
-}
+export type ExpiredRoomReason = 'open_expired' | 'ready_expired'
 
 export interface DeletedRoom {
   readonly id: string
   readonly code: string
+  readonly reason: ExpiredRoomReason
 }
 
 export interface DeleteExpiredRoomsOutput {
@@ -14,22 +14,31 @@ export interface DeleteExpiredRoomsOutput {
 }
 
 export interface IDeleteExpiredRoomsUseCase {
-  execute(input: DeleteExpiredRoomsInput): Promise<DeleteExpiredRoomsOutput>
+  execute(): Promise<DeleteExpiredRoomsOutput>
 }
 
 export class DeleteExpiredRoomsUseCase implements IDeleteExpiredRoomsUseCase {
-  constructor(private readonly roomRepository: IRoomRepository) {}
+  constructor(
+    private readonly roomRepository: IRoomRepository,
+    private readonly clock: Clock
+  ) {}
 
-  async execute(input: DeleteExpiredRoomsInput): Promise<DeleteExpiredRoomsOutput> {
-    const cutoff = new Date(Date.now() - input.expirationMinutes * 60_000)
-    const expiredRooms = await this.roomRepository.findExpiredRooms(cutoff)
+  async execute(): Promise<DeleteExpiredRoomsOutput> {
+    const now = this.clock.now()
+    const expiredRooms = await this.roomRepository.findExpiredRooms(now)
 
     const deletedRooms: DeletedRoom[] = []
 
     for (const room of expiredRooms) {
-      const deleted = await this.roomRepository.delete(room.id)
+      // Conditional delete: a join that advanced Room Activity after the list
+      // was read keeps the room alive instead of losing fresh state.
+      const deleted = await this.roomRepository.deleteExpired(room.id, now)
       if (deleted) {
-        deletedRooms.push({ id: room.id, code: room.code })
+        deletedRooms.push({
+          id: room.id,
+          code: room.code,
+          reason: room.readyAt ? 'ready_expired' : 'open_expired',
+        })
       }
     }
 

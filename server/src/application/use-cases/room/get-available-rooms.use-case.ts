@@ -1,6 +1,7 @@
 import type { Room } from '@domain/entities/room.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
+import type { Clock } from '@domain/services/clock.interface'
 
 export interface GetAvailableRoomsInput {
   readonly userId?: string
@@ -19,11 +20,14 @@ export interface IGetAvailableRoomsUseCase {
 export class GetAvailableRoomsUseCase implements IGetAvailableRoomsUseCase {
   constructor(
     private readonly roomRepository: IRoomRepository,
-    private readonly roomMemberRepository: IRoomMemberRepository
+    private readonly roomMemberRepository: IRoomMemberRepository,
+    private readonly clock: Clock
   ) {}
 
   async execute(input?: GetAvailableRoomsInput): Promise<GetAvailableRoomsOutput> {
-    const rooms = await this.roomRepository.findAvailable()
+    // The catalog lists valid Open Rooms only: Ready Rooms leave immediately
+    // and expired Open Rooms are gone even before physical deletion.
+    const rooms = await this.roomRepository.findAvailable(this.clock.now())
 
     if (input?.userId) {
       const memberships = await this.roomMemberRepository.findByUserId(input.userId)

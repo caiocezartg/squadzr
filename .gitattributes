@@ -1,0 +1,26 @@
+# Keep repository text deterministic across operating systems.
+* text=auto eol=lf
+
+# Generated files are owned by their generators and are not formatter inputs.
+client/src/routeTree.gen.ts text eol=lf
+server/drizzle/meta/** text eol=lf
+server/drizzle/*.sql text eol=lf
+
+# Binary assets must never be rewritten or line-ending normalized.
+*.avif binary
+*.eot binary
+*.gif binary
+*.ico binary
+*.jpeg binary
+*.jpg binary
+*.mp3 binary
+*.mp4 binary
+*.pdf binary
+*.png binary
+*.ttf binary
+*.wasm binary
+*.webm binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.zip binary

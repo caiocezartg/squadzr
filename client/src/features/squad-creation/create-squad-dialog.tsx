@@ -1,0 +1,201 @@
+'use client'
+
+import { useState, type FormEvent } from 'react'
+import { FormProvider, useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useTranslations } from 'next-intl'
+import { cn } from '@/lib/utils'
+import { Dialog } from '@/components/ds/dialog'
+import { Steps } from '@/components/ds/steps'
+import { ApiClientError } from '@/lib/api'
+import { getUserFriendlyError } from '@/lib/error-messages'
+import { notifyError } from '@/lib/notify'
+import type { Game, Squad } from '@/types'
+import {
+  DETAIL_FIELDS,
+  STEPS,
+  defaultPlatform,
+  defaultPlayers,
+  platformMissing,
+  type Step,
+  formSchema,
+  type FormInput,
+  type FormValues,
+} from './create-squad-form'
+import { DetailsStep } from './details-step'
+import { DiscordStep } from './discord-step'
+import { CreateSquadFooter } from './footer'
+import { GameStep } from './game-step'
+import { StepPanel, type StepDirection } from './step-panel'
+import { useCreateSquad } from './use-create-squad'
+import { useDiscordInviteCheck } from './use-discord-invite-check'
+
+export interface CreateSquadDialogProps {
+  /** Whether the dialog is shown; it leaves with its exit transition once this turns false. */
+  open: boolean
+  /** Dismisses the dialog by turning `open` off. */
+  onClose: () => void
+  /**
+   * Called when the open or close transition has finished. The caller unmounts the dialog after
+   * `false`, so the next open starts from an empty form.
+   */
+  onOpenChangeComplete: (open: boolean) => void
+  /**
+   * Called with the new squad after the board refresh was requested and
+   * before navigating to its lobby, so the caller can refresh its own data.
+   */
+  onCreated?: (squad: Squad) => void
+}
+
+/**
+ * The create-Squad wizard: three steps in the shared dialog (game, details, Discord invite). The
+ * form values are inferred from the shared contract and live across steps, through "Back" and
+ * "Change game" too; "Continue" validates the step it leaves, and the last step creates the
+ * Squad. The creation mutation, its typed errors, the board refresh and the navigation to the new
+ * lobby stay internal. Callers mount the dialog while it is shown and unmount it once it has left.
+ */
+export function CreateSquadDialog({
+  open,
+  onClose,
+  onOpenChangeComplete,
+  onCreated,
+}: CreateSquadDialogProps) {
+  const t = useTranslations('ds.createSquad')
+  const tAll = useTranslations()
+  const form = useForm<FormInput, unknown, FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      gameId: '',
+      maxPlayers: undefined,
+      discordLink: '',
+      tags: [],
+      language: 'pt-br',
+      platform: null,
+    },
+  })
+  const createSquad = useCreateSquad({ onClose, onCreated })
+  const invite = useDiscordInviteCheck(
+    useWatch({ control: form.control, name: 'discordLink' }) ?? ''
+  )
+
+  const [stepIndex, setStepIndex] = useState(0)
+  const [direction, setDirection] = useState<StepDirection | null>(null)
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null)
+  const [searchOwnsEscape, setSearchOwnsEscape] = useState(false)
+
+  const step: Step = STEPS[stepIndex] ?? 'game'
+  const first = stepIndex === 0
+  const last = stepIndex === STEPS.length - 1
+
+  const goTo = (index: number) => {
+    setDirection(index > stepIndex ? 'forward' : 'back')
+    setStepIndex(index)
+  }
+
+  // A different game starts the player stepper from its own maximum and the platform from its own
+  // platforms (the only one, or none chosen); choosing the same game again keeps what the player set.
+  const selectGame = (game: Game) => {
+    if (selectedGame?.id !== game.id) {
+      form.setValue('maxPlayers', defaultPlayers(game))
+      form.setValue('platform', defaultPlatform(game))
+      form.clearErrors('platform')
+    }
+    setSelectedGame(game)
+    form.setValue('gameId', game.id, { shouldValidate: form.formState.isSubmitted })
+  }
+
+  const create = form.handleSubmit(async (data) => {
+    // Discord already said it does not know the invite: the field shows it, and nothing is sent.
+    if (invite.status === 'invalid') {
+      form.setFocus('discordLink')
+      return
+    }
+
+    try {
+      await createSquad.mutateAsync(data)
+    } catch (err) {
+      notifyError(getUserFriendlyError(err, tAll))
+      // The server asked Discord itself and refused the invite: the dialog stays open on the field.
+      if (err instanceof ApiClientError && err.code === 'INVALID_DISCORD_INVITE') {
+        form.setError('discordLink', { type: 'server' })
+        form.setFocus('discordLink')
+      }
+    }
+  })
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    if (last) return create(event)
+
+    event.preventDefault()
+    if (step === 'game') {
+      if (selectedGame) goTo(stepIndex + 1)
+      return
+    }
+    return form.trigger([...DETAIL_FIELDS]).then((valid) => {
+      // The contract leaves the platform optional; whether the game needs one is decided here.
+      const needsPlatform =
+        selectedGame !== null && platformMissing(selectedGame, form.getValues('platform'))
+      if (needsPlatform) form.setError('platform', { type: 'required' })
+      if (valid && !needsPlatform) goTo(stepIndex + 1)
+    })
+  }
+
+  return (
+    <Dialog
+      open={open}
+      title={t(`titles.${step}`)}
+      fullScreen
+      onOpenChangeComplete={onOpenChangeComplete}
+      onOpenChange={(isOpen, eventDetails) => {
+        // The game search owns the first Escape while its list is open. It reports that
+        // and the dialog cancels its own Escape dismissal, so keeping the draft does not
+        // depend on event propagation.
+        if (!isOpen && eventDetails.reason === 'escape-key' && searchOwnsEscape) {
+          eventDetails.cancel()
+          return
+        }
+
+        if (!isOpen) onClose()
+      }}
+    >
+      <FormProvider {...form}>
+        <form
+          onSubmit={submit}
+          noValidate
+          className={cn('flex flex-1 flex-col', step === 'game' && 'max-sm:min-h-0')}
+        >
+          <Steps
+            className="px-6 pt-5"
+            label={t('progress')}
+            steps={[t('stepLabels.game'), t('stepLabels.details'), t('stepLabels.discord')]}
+            current={stepIndex + 1}
+          />
+          <StepPanel step={step} direction={direction} fill={step === 'game'}>
+            {step === 'game' && (
+              <GameStep
+                selectedGame={selectedGame}
+                onSelect={selectGame}
+                onEscapeOwnerChange={setSearchOwnsEscape}
+              />
+            )}
+            {step === 'details' && selectedGame && (
+              <DetailsStep selectedGame={selectedGame} onChangeGame={() => goTo(0)} />
+            )}
+            {step === 'discord' && selectedGame && (
+              <DiscordStep game={selectedGame} invite={invite} />
+            )}
+          </StepPanel>
+          <CreateSquadFooter
+            first={first}
+            last={last}
+            canContinue={step !== 'game' || selectedGame !== null}
+            creating={createSquad.isPending}
+            onCancel={onClose}
+            onBack={() => goTo(stepIndex - 1)}
+          />
+        </form>
+      </FormProvider>
+    </Dialog>
+  )
+}

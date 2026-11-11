@@ -1,4 +1,12 @@
-export type RoomStatus = 'waiting' | 'playing' | 'finished'
+import type { Platform } from '@squadzr/schemas'
+import type { GameSummary } from './game.entity'
+
+/** One member of a Squad's preview: enough to show who joined, never the roster. */
+export interface MemberPreview {
+  readonly id: string
+  readonly name: string
+  readonly image: string | null
+}
 
 export interface Room {
   readonly id: string
@@ -6,20 +14,27 @@ export interface Room {
   readonly name: string
   readonly hostId: string
   readonly gameId: string
-  readonly status: RoomStatus
+  /** Read together with the Squad, so a projection never looks the Game up again. */
+  readonly game: GameSummary
   readonly maxPlayers: number
   readonly discordLink: string | null
   readonly tags: string[]
   readonly language: 'en' | 'pt-br'
-  readonly completedAt: Date | null
-  readonly readyNotifiedAt: Date | null
+  /** The platform the group plays on; null when the Game has none (or the Squad predates platforms). */
+  readonly platform: Platform | null
+  /** Null while the room is open; set when the room reaches capacity. */
+  readonly readyAt: Date | null
+  /** Advanced only by durable membership changes; feeds open-room expiration. */
+  readonly lastActivityAt: Date
   readonly memberCount?: number
+  /** Up to five members, host first, then by join time. Read with the Squad. */
+  readonly memberPreview: readonly MemberPreview[]
   readonly isMember?: boolean
   readonly createdAt: Date
   readonly updatedAt: Date
 }
 
-export interface CreateRoomInput {
+export interface NewRoom {
   readonly name: string
   readonly hostId: string
   readonly gameId: string
@@ -27,15 +42,5 @@ export interface CreateRoomInput {
   readonly discordLink: string
   readonly tags?: string[]
   readonly language?: 'en' | 'pt-br'
-}
-
-export interface UpdateRoomInput {
-  readonly name?: string
-  readonly status?: RoomStatus
-  readonly maxPlayers?: number
-  readonly discordLink?: string
-  readonly tags?: string[]
-  readonly language?: 'en' | 'pt-br'
-  readonly completedAt?: Date
-  readonly readyNotifiedAt?: Date
+  readonly platform?: Platform | null
 }

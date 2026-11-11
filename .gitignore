@@ -6,6 +6,9 @@ dist/
 build/
 .output/
 out/
+.next/
+.vinext/
+.cloudflare/
 
 # Environment files
 .env
@@ -40,6 +43,7 @@ coverage/
 
 # TypeScript cache
 *.tsbuildinfo
+next-env.d.ts
 
 # Bun
 bun.lockb

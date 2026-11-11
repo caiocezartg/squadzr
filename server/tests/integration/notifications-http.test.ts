@@ -1,0 +1,385 @@
+import { randomUUID } from 'node:crypto'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { sql } from 'drizzle-orm'
+import { userNotificationSchema, type UserNotificationDto } from '@squadzr/schemas'
+import { signIn, signInMany, type TestUser } from '@test/harness/auth'
+import { FakeClock } from '@test/harness/clock'
+import { roomReadyPayload } from '@test/harness/notifications'
+import {
+  DISCORD_INVITE,
+  countMembers,
+  createRoom,
+  findRoomRow,
+  get,
+  insertGame,
+  joinAll,
+  roomAction,
+  setRoomLifecycle,
+} from '@test/harness/rooms'
+import { buildTestServer, type TestServer } from '@test/harness/test-server'
+
+// Characterizes the in-app notification API, fed by the Room Ready flow that
+// runs when the last seat of a room is taken over HTTP.
+
+let server: TestServer
+let host: TestUser
+let member: TestUser
+
+beforeEach(async () => {
+  server = await buildTestServer()
+  host = await signIn(server, 'Host')
+  member = await signIn(server, 'Member')
+})
+
+afterEach(async () => {
+  await server.close()
+})
+
+const UNAUTHORIZED = { error: 'UNAUTHORIZED', message: 'Authentication required' }
+// Transport dates are ISO 8601 UTC strings, as produced by `Date.prototype.toISOString()`.
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+
+/** Fills a 2-seat room with `host` and `member`, which triggers Room Ready notifications. */
+async function fillRoom(name = 'Ready squad') {
+  const game = await insertGame(server)
+  const room = await createRoom(server, host, { gameId: game.id, maxPlayers: 2, name })
+  await joinAll(server, room.code, [member])
+  return { room, game }
+}
+
+async function listNotifications(user: TestUser, query = ''): Promise<UserNotificationDto[]> {
+  const response = await get(server, `/api/notifications${query}`, user)
+  expect(response.statusCode, response.body).toBe(200)
+  return response
+    .json<{ notifications: unknown[] }>()
+    .notifications.map((notification) => userNotificationSchema.parse(notification))
+}
+
+function post(user: TestUser | null, url: string) {
+  return server.app.inject({ method: 'POST', url, headers: user?.headers })
+}
+
+function remove(user: TestUser | null, url: string) {
+  return server.app.inject({ method: 'DELETE', url, headers: user?.headers })
+}
+
+describe('Room Ready notifications', () => {
+  it('creates one unread room_ready notification per member when the room fills', async () => {
+    const { room, game } = await fillRoom()
+
+    for (const user of [host, member]) {
+      const [notification, ...rest] = await listNotifications(user)
+      expect(rest).toEqual([])
+      expect(notification).toMatchObject({
+        userId: user.id,
+        type: 'room_ready',
+        title: 'Room ready: your squad is full',
+        message: 'Ready squad is ready. Your Discord invite is now available.',
+        readAt: null,
+        payload: {
+          roomId: room.id,
+          roomCode: room.code,
+          roomName: 'Ready squad',
+          gameName: game.name,
+          discordLink: DISCORD_INVITE,
+        },
+      })
+      expect(roomReadyPayload(notification).players).toEqual(
+        expect.arrayContaining([
+          { name: host.name, image: host.image },
+          { name: member.name, image: member.image },
+        ])
+      )
+    }
+  })
+
+  it('carries the game cover of a ready notification over HTTP', async () => {
+    const { game } = await fillRoom()
+
+    for (const user of [host, member]) {
+      const [notification] = await listNotifications(user)
+      expect(notification?.payload.gameCoverUrl).toBe(game.coverUrl)
+    }
+  })
+
+  it('does not notify anyone while the room still has free seats', async () => {
+    const game = await insertGame(server)
+    const room = await createRoom(server, host, { gameId: game.id, maxPlayers: 3 })
+    await joinAll(server, room.code, [member])
+
+    expect(await listNotifications(host)).toEqual([])
+    expect(await listNotifications(member)).toEqual([])
+  })
+})
+
+describe('GET /api/notifications', () => {
+  it('lists newest first and honours the limit query', async () => {
+    await fillRoom('First squad')
+    await fillRoom('Second squad')
+
+    const all = await listNotifications(host)
+    const limited = await listNotifications(host, '?limit=1')
+
+    expect(all.map((n) => n.payload.roomName)).toEqual(['Second squad', 'First squad'])
+    expect(limited.map((n) => n.payload.roomName)).toEqual(['Second squad'])
+  })
+
+  it.each(['?limit=0', '?limit=51', '?limit=abc'])(
+    'rejects %s with 400 VALIDATION_ERROR',
+    async (query) => {
+      const response = await get(server, `/api/notifications${query}`, host)
+
+      expect(response.statusCode).toBe(400)
+      expect(response.json()).toEqual({
+        error: 'VALIDATION_ERROR',
+        message: expect.stringMatching(/^querystring\/limit /),
+      })
+    }
+  )
+
+  it('requires authentication', async () => {
+    const response = await get(server, '/api/notifications')
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual(UNAUTHORIZED)
+  })
+})
+
+describe('POST /api/notifications/:id/read', () => {
+  it('marks the caller notification as read once', async () => {
+    await fillRoom()
+    const [notification] = await listNotifications(member)
+
+    const first = await post(member, `/api/notifications/${notification!.id}/read`)
+    const second = await post(member, `/api/notifications/${notification!.id}/read`)
+
+    expect(first.json()).toEqual({ success: true })
+    expect(second.statusCode).toBe(200)
+    expect(second.json()).toEqual({ success: false })
+    expect((await listNotifications(member))[0]?.readAt).toMatch(ISO_DATE_TIME)
+  })
+
+  it("answers success: false for another user's notification and leaves it unread", async () => {
+    await fillRoom()
+    const [notification] = await listNotifications(member)
+
+    const response = await post(host, `/api/notifications/${notification!.id}/read`)
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ success: false })
+    expect((await listNotifications(member))[0]?.readAt).toBeNull()
+  })
+
+  it('rejects a non-UUID id with 400 VALIDATION_ERROR', async () => {
+    const response = await post(host, '/api/notifications/abc/read')
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      error: 'VALIDATION_ERROR',
+      message: 'params/id Invalid UUID',
+    })
+  })
+
+  it('requires authentication', async () => {
+    const response = await post(null, `/api/notifications/${randomUUID()}/read`)
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual(UNAUTHORIZED)
+  })
+})
+
+describe('POST /api/notifications/read-all', () => {
+  it("marks only the caller's unread notifications and reports how many", async () => {
+    await fillRoom('First squad')
+    await fillRoom('Second squad')
+
+    const first = await post(host, '/api/notifications/read-all')
+    const second = await post(host, '/api/notifications/read-all')
+
+    expect(first.json()).toEqual({ success: true, count: 2 })
+    expect(second.json()).toEqual({ success: true, count: 0 })
+    expect((await listNotifications(member)).every((n) => n.readAt === null)).toBe(true)
+  })
+
+  it('requires authentication', async () => {
+    const response = await post(null, '/api/notifications/read-all')
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual(UNAUTHORIZED)
+  })
+})
+
+describe('DELETE /api/notifications/:id', () => {
+  it("deletes the caller's notification and refuses another user's", async () => {
+    await fillRoom()
+    const [notification] = await listNotifications(member)
+
+    const foreign = await remove(host, `/api/notifications/${notification!.id}`)
+    const own = await remove(member, `/api/notifications/${notification!.id}`)
+    const again = await remove(member, `/api/notifications/${notification!.id}`)
+
+    expect(foreign.json()).toEqual({ success: false })
+    expect(own.json()).toEqual({ success: true })
+    expect(again.json()).toEqual({ success: false })
+    expect(await listNotifications(member)).toEqual([])
+    expect(await listNotifications(host)).toHaveLength(1)
+  })
+
+  it('requires authentication', async () => {
+    const response = await remove(null, `/api/notifications/${randomUUID()}`)
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual(UNAUTHORIZED)
+  })
+})
+
+describe('Room Ready notification persistence and delivery', () => {
+  it('never stores the Discord invite in the persisted payload', async () => {
+    const { room } = await fillRoom()
+
+    const { rows } = await server.app.db.execute<{ payload: Record<string, unknown> }>(
+      sql`SELECT payload FROM user_notifications WHERE room_id = ${room.id} LIMIT 1`
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.payload).not.toHaveProperty('discordLink')
+    expect(JSON.stringify(rows[0]?.payload)).not.toContain(DISCORD_INVITE)
+  })
+
+  it('resolves every concurrent member with a name in the ready payload', async () => {
+    const game = await insertGame(server)
+    const room = await createRoom(server, host, { gameId: game.id, maxPlayers: 3 })
+    const contenders = await signInMany(server, 2)
+
+    const responses = await Promise.all(
+      contenders.map((user) => roomAction(server, user, room.code, 'join'))
+    )
+    for (const response of responses) expect(response.statusCode).toBe(200)
+
+    const expectedPlayers = [
+      { name: host.name, image: host.image },
+      ...contenders.map((user) => ({ name: user.name, image: user.image })),
+    ]
+    for (const user of [host, ...contenders]) {
+      const [notification] = await listNotifications(user)
+      expect(roomReadyPayload(notification).players).toEqual(
+        expect.arrayContaining(expectedPlayers)
+      )
+      expect(JSON.stringify(roomReadyPayload(notification).players)).not.toContain('Unknown')
+    }
+  })
+
+  it('resolves the invite at read time and hides it once retention passed', async () => {
+    const { room } = await fillRoom()
+
+    expect(roomReadyPayload((await listNotifications(member))[0]).discordLink).toBe(DISCORD_INVITE)
+
+    const readyAt = new Date(Date.now() - 61 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: readyAt,
+      lastActivityAt: readyAt,
+      readyAt,
+    })
+
+    const expired = await listNotifications(member)
+    expect(expired).toHaveLength(1)
+    expect(roomReadyPayload(expired[0]).discordLink).toBeNull()
+  })
+
+  it('keeps the notification when the best-effort realtime push fails', async () => {
+    server.app.broadcaster.broadcastNotification = () => {
+      throw new Error('push unavailable')
+    }
+
+    const { room } = await fillRoom()
+
+    // The fill succeeded: the failed push was caught after commit.
+    for (const user of [host, member]) {
+      const notifications = await listNotifications(user)
+      expect(notifications).toHaveLength(1)
+      expect(notifications[0]?.payload.roomId).toBe(room.id)
+    }
+  })
+
+  it('rolls the join back when the notification transaction fails, then resumes cleanly', async () => {
+    const game = await insertGame(server)
+    const room = await createRoom(server, host, { gameId: game.id, maxPlayers: 2 })
+
+    await server.app.db.execute(sql`
+      CREATE OR REPLACE FUNCTION fail_room_ready_notification() RETURNS trigger AS $$
+      BEGIN RAISE EXCEPTION 'notification persistence failed'; END;
+      $$ LANGUAGE plpgsql
+    `)
+    await server.app.db.execute(sql`
+      CREATE TRIGGER fail_room_ready_notification
+      BEFORE INSERT ON user_notifications
+      FOR EACH ROW EXECUTE FUNCTION fail_room_ready_notification()
+    `)
+
+    const failed = await roomAction(server, member, room.code, 'join')
+
+    expect(failed.statusCode).toBe(500)
+    // The whole transaction rolled back: no Membership, no readiness, no notification.
+    expect(await countMembers(server, room.id)).toBe(1)
+    expect((await findRoomRow(server, room.id))?.readyAt).toBeNull()
+    expect(await listNotifications(member)).toEqual([])
+
+    await server.app.db.execute(
+      sql`DROP TRIGGER fail_room_ready_notification ON user_notifications`
+    )
+    await server.app.db.execute(sql`DROP FUNCTION fail_room_ready_notification()`)
+
+    const retried = await roomAction(server, member, room.code, 'join')
+
+    expect(retried.statusCode).toBe(200)
+    expect(await countMembers(server, room.id)).toBe(2)
+    expect((await findRoomRow(server, room.id))?.readyAt).toBeInstanceOf(Date)
+    expect(await listNotifications(member)).toHaveLength(1)
+    expect(await listNotifications(host)).toHaveLength(1)
+  })
+})
+
+describe('read timestamps come from the injected clock', () => {
+  // A pinned clock makes readAt an exact instant rather than a wall-clock reading.
+  const READ_AT = new Date('2026-01-01T00:00:00.000Z')
+  let pinned: TestServer
+
+  beforeEach(async () => {
+    pinned = await buildTestServer({}, { clock: new FakeClock(READ_AT) })
+  })
+
+  afterEach(async () => {
+    await pinned.close()
+  })
+
+  it('stamps readAt with the injected instant when one or all notifications are read', async () => {
+    const host = await signIn(pinned, 'Host')
+    const member = await signIn(pinned, 'Member')
+    const game = await insertGame(pinned)
+    for (const name of ['First squad', 'Second squad']) {
+      const room = await createRoom(pinned, host, { gameId: game.id, maxPlayers: 2, name })
+      await joinAll(pinned, room.code, [member])
+    }
+    const listed = await get(pinned, '/api/notifications', member)
+    const [first] = listed.json<{ notifications: { id: string }[] }>().notifications
+
+    const single = await pinned.app.inject({
+      method: 'POST',
+      url: `/api/notifications/${first!.id}/read`,
+      headers: member.headers,
+    })
+    const all = await pinned.app.inject({
+      method: 'POST',
+      url: '/api/notifications/read-all',
+      headers: member.headers,
+    })
+    const relisted = await get(pinned, '/api/notifications', member)
+    const readAts = relisted
+      .json<{ notifications: { readAt: string | null }[] }>()
+      .notifications.map((notification) => notification.readAt)
+
+    expect(single.json()).toEqual({ success: true })
+    expect(all.json()).toEqual({ success: true, count: 1 })
+    expect(readAts).toEqual([READ_AT.toISOString(), READ_AT.toISOString()])
+  })
+})

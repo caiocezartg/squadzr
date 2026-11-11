@@ -22,6 +22,90 @@
       "when": 1771561443749,
       "tag": "0002_wet_korg",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790993426164,
+      "tag": "0003_fine_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792720479974,
+      "tag": "0004_nosy_lifeguard",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792722262641,
+      "tag": "0005_mute_leech",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793751772572,
+      "tag": "0006_rapid_leader",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793766881661,
+      "tag": "0007_abandoned_hannibal_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793847371356,
+      "tag": "0008_wandering_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793856203735,
+      "tag": "0009_broken_chronomancer",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793909325138,
+      "tag": "0010_chunky_solo",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793915164276,
+      "tag": "0011_audit_append_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793925495786,
+      "tag": "0012_owner_moderator_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794193380291,
+      "tag": "0013_activity_samples",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794245755593,
+      "tag": "0014_catalog_import_runs",
+      "breakpoints": true
     }
   ]
 }

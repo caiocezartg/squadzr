@@ -1,0 +1,272 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Board.dc.html": {
+      "expand": "fill",
+      "h": 1240,
+      "is_interactive": true,
+      "title": "Board de squads",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "BoardFiltros.dc.html": {
+      "expand": "fill",
+      "h": 1240,
+      "is_interactive": true,
+      "title": "Board — filtros abertos",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "BoardNotificacoes.dc.html": {
+      "expand": "fill",
+      "h": 1240,
+      "is_interactive": true,
+      "title": "Board — notificações",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "CardStates.dc.html": {
+      "h": 720,
+      "title": "Card — estados, vagas e hover",
+      "w": 1240,
+      "x": 1980,
+      "y": 1900
+    },
+    "CriarSquad.dc.html": {
+      "expand": "fill",
+      "h": 1240,
+      "is_interactive": true,
+      "title": "Criar squad — 1. jogo (busca)",
+      "w": 1440,
+      "x": 1520,
+      "y": 3400
+    },
+    "CriarSquadDetalhes.dc.html": {
+      "expand": "fill",
+      "h": 1240,
+      "is_interactive": true,
+      "title": "Criar squad — 2. detalhes",
+      "w": 1440,
+      "x": 3040,
+      "y": 3400
+    },
+    "CriarSquadDiscord.dc.html": {
+      "expand": "fill",
+      "h": 1240,
+      "is_interactive": true,
+      "title": "Criar squad — 3. Discord",
+      "w": 1440,
+      "x": 4560,
+      "y": 3400
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 5400,
+      "is_interactive": true,
+      "title": "Landing page",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Sidebar.dc.html": {
+      "h": 689,
+      "title": "Menu lateral",
+      "w": 280,
+      "x": 3300,
+      "y": 1900
+    },
+    "Squad.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Sala do squad — formando",
+      "w": 1440,
+      "x": 6080,
+      "y": 0
+    },
+    "SquadCard.dc.html": {
+      "h": 176,
+      "title": "Card de squad",
+      "w": 380,
+      "x": 1520,
+      "y": 1900
+    },
+    "SquadCompleto.dc.html": {
+      "expand": "fill",
+      "h": 1120,
+      "is_interactive": true,
+      "title": "Sala do squad — completo",
+      "w": 1440,
+      "x": 7600,
+      "y": 0
+    },
+    "SquadGrande.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Sala do squad — 10 jogadores",
+      "w": 1440,
+      "x": 9120,
+      "y": 0
+    },
+    "Biblioteca.dc.html": {
+      "h": 3200,
+      "title": "Biblioteca de componentes",
+      "w": 1440,
+      "x": 1520,
+      "y": 5200
+    },
+    "Button.dc.html": {
+      "h": 44,
+      "title": "Botão",
+      "w": 200,
+      "x": 3040,
+      "y": 5200
+    },
+    "Tag.dc.html": {
+      "h": 40,
+      "title": "Tag",
+      "w": 120,
+      "x": 3040,
+      "y": 5324
+    },
+    "Avatar.dc.html": {
+      "h": 44,
+      "title": "Avatar",
+      "w": 44,
+      "x": 3040,
+      "y": 5444
+    },
+    "SlotMeter.dc.html": {
+      "h": 40,
+      "title": "Medidor de vagas",
+      "w": 220,
+      "x": 3040,
+      "y": 5568
+    },
+    "Segmented.dc.html": {
+      "h": 48,
+      "title": "Seletor segmentado",
+      "w": 240,
+      "x": 3040,
+      "y": 5688
+    },
+    "Pagination.dc.html": {
+      "h": 44,
+      "title": "Paginação",
+      "w": 300,
+      "x": 3040,
+      "y": 5816
+    },
+    "SearchField.dc.html": {
+      "h": 54,
+      "title": "Campo de busca",
+      "w": 520,
+      "x": 3420,
+      "y": 5200
+    },
+    "Steps.dc.html": {
+      "h": 40,
+      "title": "Etapas",
+      "w": 560,
+      "x": 3420,
+      "y": 5334
+    },
+    "MemberTile.dc.html": {
+      "h": 64,
+      "title": "Membro do squad",
+      "w": 360,
+      "x": 3420,
+      "y": 5454
+    },
+    "NotificationItem.dc.html": {
+      "h": 70,
+      "title": "Notificação",
+      "w": 384,
+      "x": 3420,
+      "y": 5598
+    },
+    "DiscordInvite.dc.html": {
+      "h": 360,
+      "title": "Convite do Discord",
+      "w": 1100,
+      "x": 4060,
+      "y": 5200
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-21T15:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "appTitle": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "App: board e sala do squad",
+      "w": 240,
+      "x": 1520,
+      "y": -300
+    },
+    "compTitle": {
+      "kind": "title1",
+      "maxW": 2060,
+      "text": "Componentes",
+      "w": 240,
+      "x": 1520,
+      "y": 1600
+    },
+    "createTitle": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Criar squad",
+      "w": 240,
+      "x": 1520,
+      "y": 3100
+    },
+    "dsTitle": {
+      "kind": "title1",
+      "maxW": 3640,
+      "text": "Design system",
+      "w": 240,
+      "x": 1520,
+      "y": 4900
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Board.dc.html",
+    "BoardFiltros.dc.html",
+    "BoardNotificacoes.dc.html",
+    "Squad.dc.html",
+    "SquadCompleto.dc.html",
+    "SquadGrande.dc.html",
+    "SquadCard.dc.html",
+    "CardStates.dc.html",
+    "Sidebar.dc.html",
+    "CriarSquad.dc.html",
+    "CriarSquadDetalhes.dc.html",
+    "CriarSquadDiscord.dc.html",
+    "Biblioteca.dc.html",
+    "Button.dc.html",
+    "Tag.dc.html",
+    "Avatar.dc.html",
+    "SlotMeter.dc.html",
+    "Segmented.dc.html",
+    "Pagination.dc.html",
+    "SearchField.dc.html",
+    "Steps.dc.html",
+    "MemberTile.dc.html",
+    "NotificationItem.dc.html",
+    "DiscordInvite.dc.html"
+  ],
+  "pages": [],
+  "title": "Squadzr Redesign v2"
+}

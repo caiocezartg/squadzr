@@ -1,13 +1,32 @@
 export { AppError } from './base.error'
-export { ValidationError, InvalidGameError } from './validation.error'
-export { UnauthorizedError } from './unauthorized.error'
-export { NotFoundError, RoomNotFoundError, UserNotFoundError } from './not-found.error'
-export { ConflictError, EmailAlreadyExistsError, UserAlreadyInRoomError } from './conflict.error'
 export {
-  RoomNotWaitingError,
+  GameNotAvailableError,
+  InvalidGameError,
+  PlatformNotAvailableError,
+} from './validation.error'
+export { UnauthorizedError } from './unauthorized.error'
+export { ForbiddenOriginError } from './forbidden-origin.error'
+export { AdminRequiredError } from './admin-required.error'
+export { RateLimitedError } from './rate-limited.error'
+export { GameNotFoundError, RoomNotFoundError, UserNotFoundError } from './not-found.error'
+export {
+  InvalidDiscordInviteError,
   RoomFullError,
-  RoomCompletedError,
+  RoomReadyError,
   NotRoomMemberError,
+  RoomNotReadyError,
   RoomCreateLimitReachedError,
   RoomJoinLimitReachedError,
 } from './business-rule.error'
+export {
+  CannotChangeOwnRoleError,
+  CannotChangeOwnerError,
+  OwnerAlreadyExistsError,
+  RoleChangeForbiddenError,
+} from './role-change.error'
+export { RoomNotOpenError } from './room-not-open.error'
+export {
+  CatalogImportManualLimitError,
+  CatalogImportRunningError,
+  CatalogImportUnavailableError,
+} from './catalog-import.error'

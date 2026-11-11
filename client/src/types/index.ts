@@ -1,12 +1,18 @@
-// Re-export shared types from the monorepo package
-export type { Room, Game, UserNotification } from '@squadzr/types'
+// Transport types inferred from the shared Zod contracts (@squadzr/schemas)
+export type {
+  RoomDto as Squad,
+  PublicRoomDto as PublicSquad,
+  GameDto as Game,
+  PopularGameDto as PopularGame,
+  UserNotificationDto as UserNotification,
+  PlayerDto as Player,
+} from '@squadzr/schemas'
 export type {
   RoomsResponse,
   RoomResponse,
   GamesResponse,
-  GameResponse,
+  PopularGamesResponse,
   CreateRoomResponse,
   NotificationsResponse,
   MyRoomsResponse,
-} from '@squadzr/types'
-export type { Player } from '@squadzr/types'
+} from '@squadzr/schemas'

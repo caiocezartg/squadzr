@@ -1,0 +1,264 @@
+/**
+ * The HTTP transport seam: a response only leaves `api` after it parsed against its
+ * contract from @squadzr/schemas. HTTP runs through the deterministic adapter
+ * (src/test/http-router).
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { roomResponseSchema, roomsResponseSchema } from '@squadzr/schemas'
+import { ApiClientError, ApiContractError, api } from './api'
+import { getUserFriendlyError } from './error-messages'
+import { englishT } from '../test/intl'
+import { type MockHttpResponse, getHttpLog, httpError, httpOk, onHttp } from '@/test/http-router'
+import { hostPlayer, lobbySquad, openSquad } from '@/test/fixtures'
+
+const SECRET_INVITE = 'https://discord.gg/secret-invite'
+
+beforeEach(() => {
+  vi.spyOn(console, 'error').mockImplementation(() => undefined)
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+describe('valid responses', () => {
+  it('returns the parsed body with dates as ISO strings', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: [openSquad] }))
+
+    const { rooms: squads } = await api.get('/api/rooms', roomsResponseSchema)
+
+    expect(squads[0]?.createdAt).toBe(openSquad.createdAt)
+    expect(typeof squads[0]?.createdAt).toBe('string')
+    expect(console.error).not.toHaveBeenCalled()
+  })
+
+  it('keeps only the public projection of a catalog squad', async () => {
+    onHttp('GET', '/api/rooms', () =>
+      httpOk({ rooms: [{ ...openSquad, discordLink: SECRET_INVITE }], players: [hostPlayer] })
+    )
+
+    const response = await api.get('/api/rooms', roomsResponseSchema)
+
+    expect(response.rooms[0]).not.toHaveProperty('discordLink')
+    expect(JSON.stringify(response)).not.toContain(SECRET_INVITE)
+    expect(response).not.toHaveProperty('players')
+  })
+
+  it('returns lobby details for a member and the public projection otherwise', async () => {
+    const { discordLink: _discordLink, ...publicSquad } = lobbySquad
+    onHttp('GET', '/api/rooms/:code', (req) =>
+      httpOk(
+        req.params.code === 'LOBBY1'
+          ? { room: lobbySquad, players: [hostPlayer] }
+          : { room: publicSquad }
+      )
+    )
+
+    const asMember = await api.get('/api/rooms/LOBBY1', roomResponseSchema)
+    const asOutsider = await api.get('/api/rooms/OTHER1', roomResponseSchema)
+
+    expect(asMember).toEqual({ room: lobbySquad, players: [hostPlayer] })
+    expect(asOutsider).toEqual({ room: publicSquad })
+  })
+})
+
+describe('cancellation', () => {
+  it('forwards the caller signal to fetch', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: [] }))
+    const controller = new AbortController()
+
+    await api.get('/api/rooms', roomsResponseSchema, controller.signal)
+
+    expect(getHttpLog().at(-1)?.signal).toBe(controller.signal)
+  })
+
+  it('rejects with the abort error, not a contract error, when the caller aborts', async () => {
+    onHttp('GET', '/api/rooms', () => new Promise<MockHttpResponse>(() => undefined))
+    const controller = new AbortController()
+
+    const pending = api.get('/api/rooms', roomsResponseSchema, controller.signal)
+    controller.abort()
+
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    await expect(pending).rejects.not.toBeInstanceOf(ApiClientError)
+    expect(console.error).not.toHaveBeenCalled()
+  })
+
+  it('leaves callers without a signal unchanged', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: [] }))
+
+    await api.get('/api/rooms', roomsResponseSchema)
+
+    expect(getHttpLog().at(-1)?.signal).toBeUndefined()
+  })
+})
+
+describe('invalid responses', () => {
+  it.each([
+    ['a missing collection', {}],
+    ['a squad without an id', { rooms: [{ ...openSquad, id: undefined }] }],
+    ['a date that is not an ISO string', { rooms: [{ ...openSquad, createdAt: 1_769_000_000 }] }],
+    ['a squad name that is not a string', { rooms: [{ ...openSquad, name: 42 }] }],
+  ])('rejects %s with a typed ApiContractError', async (_label, body) => {
+    onHttp('GET', '/api/rooms', () => httpOk(body))
+
+    const error = await api.get('/api/rooms', roomsResponseSchema).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ApiContractError)
+    expect(error).toMatchObject({
+      name: 'ApiContractError',
+      code: 'INVALID_RESPONSE',
+      method: 'GET',
+      path: '/api/rooms',
+      status: 200,
+    })
+    expect((error as ApiContractError).issues.length).toBeGreaterThan(0)
+  })
+
+  it.each([
+    ['a roster that is not a list', { players: 'invalid-roster' }, 'players'],
+    [
+      'a roster entry with a wrong field type',
+      { players: [{ id: 'u1', name: 42, image: null, isHost: true }] },
+      'players.0.name',
+    ],
+    [
+      'an invite that is not a URL',
+      { room: { ...lobbySquad, discordLink: 'not a url' } },
+      'room.discordLink',
+    ],
+  ])(
+    'rejects lobby details with %s instead of downgrading them to a public squad',
+    async (_label, override, path) => {
+      onHttp('GET', '/api/rooms/:code', () =>
+        httpOk({ room: lobbySquad, players: [hostPlayer], ...override })
+      )
+
+      const error = await api.get('/api/rooms/LOBBY1', roomResponseSchema).catch((e: unknown) => e)
+
+      expect(error).toBeInstanceOf(ApiContractError)
+      expect((error as ApiContractError).issues).toEqual([{ path, code: expect.any(String) }])
+      expect(console.error).toHaveBeenCalledWith('Invalid API response:', {
+        method: 'GET',
+        path: '/api/rooms/LOBBY1',
+        status: 200,
+        issues: [{ path, code: expect.any(String) }],
+      })
+    }
+  )
+
+  it('logs structured diagnostics without the response body or the query string', async () => {
+    onHttp('GET', '/api/rooms/:code', () =>
+      httpOk({
+        room: { ...lobbySquad, discordLink: SECRET_INVITE, createdAt: 'yesterday' },
+        players: [hostPlayer],
+      })
+    )
+
+    const error = await api
+      .get('/api/rooms/LOBBY1?token=session-secret', roomResponseSchema)
+      .catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ApiContractError)
+    expect(console.error).toHaveBeenCalledTimes(1)
+    expect(console.error).toHaveBeenCalledWith('Invalid API response:', {
+      method: 'GET',
+      path: '/api/rooms/LOBBY1',
+      status: 200,
+      issues: [{ path: 'room.createdAt', code: 'invalid_format' }],
+    })
+    const logged = JSON.stringify(vi.mocked(console.error).mock.calls)
+    expect(logged).not.toContain(SECRET_INVITE)
+    expect(logged).not.toContain('session-secret')
+    expect(logged).not.toContain(hostPlayer.name)
+    expect(JSON.stringify(error)).not.toContain(SECRET_INVITE)
+  })
+
+  it('shows the generic friendly message for a contract error', async () => {
+    onHttp('GET', '/api/rooms', () => httpOk({ rooms: 'nope' }))
+
+    const error = await api.get('/api/rooms', roomsResponseSchema).catch((e: unknown) => e)
+
+    expect(getUserFriendlyError(error, englishT)).toBe('Something went wrong. Please try again.')
+  })
+})
+
+describe('error responses and commands', () => {
+  it('keeps mapping HTTP errors to ApiClientError with the server code', async () => {
+    onHttp('GET', '/api/rooms/:code', () =>
+      httpError(404, { message: 'Squad not found', error: 'ROOM_NOT_FOUND' })
+    )
+
+    const error = await api.get('/api/rooms/ZZZZZZ', roomResponseSchema).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ApiClientError)
+    expect(error).toMatchObject({ status: 404, code: 'ROOM_NOT_FOUND', message: 'Squad not found' })
+    expect(console.error).not.toHaveBeenCalled()
+  })
+
+  it('accepts the validation details of an error response without exposing them', async () => {
+    onHttp('POST', '/api/rooms', () =>
+      httpError(400, {
+        error: 'VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: [{ field: 'name', message: 'Room name is required' }],
+      })
+    )
+
+    const error = await api.post('/api/rooms', {}).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ApiClientError)
+    expect(error).toMatchObject({ status: 400, code: 'VALIDATION_ERROR' })
+    expect(getUserFriendlyError(error, englishT)).toBe(
+      'Please check the form fields and try again.'
+    )
+  })
+
+  it.each([
+    ['a null body', null, ''],
+    ['a body that is not an object', '<html>Bad Gateway</html>', ''],
+    ['a numeric error code', { message: 'broken', error: 123 }, 'error'],
+    ['an object as error code', { message: 'broken', error: { token: SECRET_INVITE } }, 'error'],
+    ['a missing message', { error: 'ROOM_NOT_FOUND' }, 'message'],
+  ])(
+    'rejects an error response with %s as a typed ApiContractError',
+    async (_label, body, path) => {
+      onHttp('GET', '/api/rooms/:code', () => httpError(400, body))
+
+      const error = await api
+        .get('/api/rooms/ABC123?token=session-secret', roomResponseSchema)
+        .catch((e: unknown) => e)
+
+      expect(error).toBeInstanceOf(ApiContractError)
+      expect(error).not.toBeInstanceOf(ApiClientError)
+      expect(error).toMatchObject({
+        code: 'INVALID_RESPONSE',
+        method: 'GET',
+        path: '/api/rooms/ABC123',
+        status: 400,
+        issues: [{ path, code: 'invalid_type' }],
+      })
+      expect(console.error).toHaveBeenCalledTimes(1)
+      expect(console.error).toHaveBeenCalledWith('Invalid API response:', {
+        method: 'GET',
+        path: '/api/rooms/ABC123',
+        status: 400,
+        issues: [{ path, code: 'invalid_type' }],
+      })
+      const logged = JSON.stringify(vi.mocked(console.error).mock.calls)
+      expect(logged).not.toContain(SECRET_INVITE)
+      expect(logged).not.toContain('session-secret')
+      expect(getUserFriendlyError(error, englishT)).toBe('Something went wrong. Please try again.')
+    }
+  )
+
+  it('discards the body of a command sent without a schema', async () => {
+    onHttp('POST', '/api/rooms/:code/leave', () => httpOk({ anything: SECRET_INVITE }))
+
+    const result = await api.post('/api/rooms/LOBBY1/leave', {})
+
+    expect(result).toBeUndefined()
+    expect(getHttpLog().at(-1)).toMatchObject({ method: 'POST', path: '/api/rooms/LOBBY1/leave' })
+  })
+})

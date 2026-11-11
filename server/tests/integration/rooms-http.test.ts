@@ -1,0 +1,707 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { eq } from 'drizzle-orm'
+import { playerSchema, roomMemberSchema, roomSchema, type Platform } from '@squadzr/schemas'
+import { rooms } from '@infrastructure/database/schema'
+import { signIn, signInMany, type TestUser } from '@test/harness/auth'
+import {
+  DISCORD_INVITE,
+  countMembers,
+  createRoom,
+  findRoomRow,
+  get,
+  insertGame,
+  joinAll,
+  postRoom,
+  roomAction,
+  setRoomLifecycle,
+} from '@test/harness/rooms'
+import { buildTestServer, type TestServer } from '@test/harness/test-server'
+
+// Characterizes the room HTTP API through Fastify injection against a real
+// PostgreSQL 16 database.
+
+let server: TestServer
+let host: TestUser
+let gameId: string
+
+beforeEach(async () => {
+  server = await buildTestServer()
+  host = await signIn(server, 'Host')
+  gameId = (await insertGame(server)).id
+})
+
+afterEach(async () => {
+  await server.close()
+})
+
+/** Creates a room for `owner` and fills every free seat with fresh users. */
+async function createFullRoom(owner: TestUser, maxPlayers = 2) {
+  const room = await createRoom(server, owner, { gameId, maxPlayers })
+  const members = await signInMany(server, maxPlayers - 1)
+  await joinAll(server, room.code, members)
+  return { room, members }
+}
+
+const UNAUTHORIZED = { error: 'UNAUTHORIZED', message: 'Authentication required' }
+
+describe('POST /api/rooms', () => {
+  it('creates a room owned by the caller and persists the host as the first member', async () => {
+    const response = await postRoom(server, host, {
+      gameId,
+      name: '  Ranked squad  ',
+      maxPlayers: 4,
+      tags: ['#Ranked', 'EU'],
+      language: 'en',
+    })
+
+    expect(response.statusCode).toBe(201)
+    const { room } = response.json<{ room: Record<string, unknown> }>()
+    expect(Object.keys(room).sort()).toEqual(
+      [
+        'code',
+        'createdAt',
+        'discordLink',
+        'game',
+        'gameId',
+        'hostId',
+        'id',
+        'language',
+        'maxPlayers',
+        'memberPreview',
+        'name',
+        'platform',
+        'tags',
+        'updatedAt',
+      ].sort()
+    )
+    expect(room).toMatchObject({
+      name: 'Ranked squad',
+      hostId: host.id,
+      gameId,
+      maxPlayers: 4,
+      discordLink: DISCORD_INVITE,
+      tags: ['ranked', 'eu'],
+      language: 'en',
+    })
+    expect(room['code']).toMatch(/^[A-Z0-9]{6}$/)
+    expect(await countMembers(server, String(room['id']))).toBe(1)
+  })
+
+  it('defaults maxPlayers to the game capacity, tags to [] and language to pt-br', async () => {
+    const game = await insertGame(server, 3)
+
+    const room = await createRoom(server, host, { gameId: game.id })
+
+    expect(room).toMatchObject({ maxPlayers: 3, tags: [], language: 'pt-br' })
+  })
+
+  it('requires authentication', async () => {
+    const response = await postRoom(server, null, { gameId })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual(UNAUTHORIZED)
+  })
+
+  it('rejects a session cookie with a forged signature', async () => {
+    const forged = host.headers.cookie.replace(/\.[^.]+$/, '.forged')
+
+    const response = await server.app.inject({
+      method: 'POST',
+      url: '/api/rooms',
+      headers: { cookie: forged },
+      payload: { name: 'Squad', gameId, discordLink: DISCORD_INVITE },
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual(UNAUTHORIZED)
+  })
+
+  it('validates the body before authentication is checked', async () => {
+    const response = await postRoom(server, null, { gameId: 'not-a-uuid' })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      error: 'VALIDATION_ERROR',
+      message: 'body/gameId Invalid game ID',
+    })
+  })
+
+  // The message is `<location>/<field> <first issue>`; custom Zod messages are kept verbatim.
+  it.each([
+    ['an empty name', { name: '   ' }, 'body/name Room name is required'],
+    ['a name longer than 30 characters', { name: 'x'.repeat(31) }, 'body/name Room name too long'],
+    [
+      'a non-Discord invite link',
+      { discordLink: 'https://example.com/invite' },
+      'body/discordLink Discord link must be a valid Discord invite URL',
+    ],
+    ['maxPlayers below 2', { maxPlayers: 1 }, /^body\/maxPlayers /],
+    ['maxPlayers above 40', { maxPlayers: 41 }, /^body\/maxPlayers /],
+    [
+      'an invite link with no code',
+      { discordLink: 'https://discord.gg/' },
+      'body/discordLink Discord link must be a valid Discord invite URL',
+    ],
+    ['more than 5 tags', { tags: ['a', 'b', 'c', 'd', 'e', 'f'] }, 'body/tags Max 5 tags'],
+    ['a tag longer than 12 characters', { tags: ['a'.repeat(13)] }, 'body/tags/0 Tag too long'],
+    ['a tag of two words', { tags: ['two words'] }, 'body/tags/0 Tag must be one word'],
+    ['an unsupported language', { language: 'es' as 'en' }, /^body\/language /],
+  ])('rejects %s with 400 VALIDATION_ERROR', async (_label, override, message) => {
+    const response = await postRoom(server, host, { gameId, ...override })
+
+    expect(response.statusCode).toBe(400)
+    const body = response.json<{ error: string; message: string }>()
+    expect(body).toEqual({ error: 'VALIDATION_ERROR', message: expect.any(String) })
+    if (typeof message === 'string') expect(body.message).toBe(message)
+    else expect(body.message).toMatch(message)
+  })
+
+  it('keeps a tag of 12 characters and strips the hash that does not count toward the limit', async () => {
+    const room = await createRoom(server, host, { gameId, tags: ['#Ranked', '#' + 'a'.repeat(12)] })
+
+    expect(room.tags).toEqual(['ranked', 'a'.repeat(12)])
+  })
+
+  it('rejects an invite Discord does not know with 422 INVALID_DISCORD_INVITE and persists nothing', async () => {
+    const strict = await buildTestServer(
+      {},
+      { discordPreviews: { fetch: () => Promise.resolve({ kind: 'invalid' }) } }
+    )
+    try {
+      const owner = await signIn(strict, 'Owner')
+      const strictGame = await insertGame(strict)
+
+      const response = await postRoom(strict, owner, { gameId: strictGame.id })
+
+      expect(response.statusCode).toBe(422)
+      expect(response.json()).toMatchObject({ error: 'INVALID_DISCORD_INVITE' })
+      expect((await get(strict, '/api/rooms/my', owner)).json()).toEqual({ hosted: [], joined: [] })
+    } finally {
+      await strict.close()
+    }
+  })
+
+  it.each(['rate_limited', 'unreachable'] as const)(
+    'creates the Squad when Discord cannot be asked (%s)',
+    async (kind) => {
+      const lenient = await buildTestServer(
+        {},
+        { discordPreviews: { fetch: () => Promise.resolve({ kind }) } }
+      )
+      try {
+        const owner = await signIn(lenient, 'Owner')
+        const lenientGame = await insertGame(lenient)
+
+        const response = await postRoom(lenient, owner, { gameId: lenientGame.id })
+
+        expect(response.statusCode).toBe(201)
+      } finally {
+        await lenient.close()
+      }
+    }
+  )
+
+  it('accepts the Squad size bounds of 2 and 40', async () => {
+    const [otherHost] = await signInMany(server, 1)
+    const smallest = await createRoom(server, host, { gameId, maxPlayers: 2 })
+    const largest = await createRoom(server, otherHost!, { gameId, maxPlayers: 40 })
+
+    expect(smallest.maxPlayers).toBe(2)
+    expect(largest.maxPlayers).toBe(40)
+  })
+
+  it('rejects an unknown game with 400 INVALID_GAME and persists nothing', async () => {
+    const unknownGameId = '00000000-0000-4000-8000-000000000000'
+
+    const response = await postRoom(server, host, { gameId: unknownGameId })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      error: 'INVALID_GAME',
+      message: `Game with id "${unknownGameId}" does not exist`,
+    })
+    const hosted = await get(server, '/api/rooms/my', host)
+    expect(hosted.json()).toEqual({ hosted: [], joined: [] })
+  })
+
+  it('rejects a delisted game with 400 INVALID_GAME and says it is no longer available', async () => {
+    const delisted = await insertGame(server, { listed: false })
+
+    const response = await postRoom(server, host, { gameId: delisted.id })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      error: 'INVALID_GAME',
+      message: `Game with id "${delisted.id}" is no longer available`,
+    })
+    const hosted = await get(server, '/api/rooms/my', host)
+    expect(hosted.json()).toEqual({ hosted: [], joined: [] })
+  })
+})
+
+describe('POST /api/rooms platform', () => {
+  const PLATFORM_ERROR = 'INVALID_PLATFORM'
+
+  async function insertGameWithPlatforms(platforms: Platform[]): Promise<string> {
+    return (await insertGame(server, { platforms })).id
+  }
+
+  async function expectNoRoomCreated(): Promise<void> {
+    const hosted = await get(server, '/api/rooms/my', host)
+    expect(hosted.json()).toEqual({ hosted: [], joined: [] })
+  }
+
+  it('stores the chosen platform of a Game that has several and projects it everywhere', async () => {
+    const multi = await insertGameWithPlatforms(['pc', 'ps5', 'switch'])
+
+    const created = await createRoom(server, host, { gameId: multi, platform: 'ps5' })
+
+    expect(created.platform).toBe('ps5')
+    expect((await findRoomRow(server, created.id))?.platform).toBe('ps5')
+
+    const catalog = await get(server, '/api/rooms')
+    expect(catalog.json<{ rooms: { id: string; platform: string | null }[] }>().rooms).toEqual([
+      expect.objectContaining({ id: created.id, platform: 'ps5' }),
+    ])
+    const mine = await get(server, '/api/rooms/my', host)
+    expect(mine.json<{ hosted: { platform: string | null }[] }>().hosted[0]?.platform).toBe('ps5')
+    const lobby = await get(server, `/api/rooms/${created.code}`, host)
+    expect(lobby.json<{ room: { platform: string | null } }>().room.platform).toBe('ps5')
+    const guest = await get(server, `/api/rooms/${created.code}`)
+    expect(guest.json<{ room: { platform: string | null } }>().room.platform).toBe('ps5')
+  })
+
+  it('accepts the only platform of a Game that has one', async () => {
+    const single = await insertGameWithPlatforms(['mobile'])
+
+    const created = await createRoom(server, host, { gameId: single, platform: 'mobile' })
+
+    expect(created.platform).toBe('mobile')
+  })
+
+  it.each([undefined, null] as const)(
+    'creates a Squad without platform for a Game that has none (%s)',
+    async (platform) => {
+      const created = await createRoom(server, host, { gameId, platform })
+
+      expect(created.platform).toBeNull()
+      expect((await findRoomRow(server, created.id))?.platform).toBeNull()
+    }
+  )
+
+  it('rejects a platform the Game does not have with 400 INVALID_PLATFORM', async () => {
+    const game = await insertGameWithPlatforms(['pc', 'ps5'])
+
+    const response = await postRoom(server, host, { gameId: game, platform: 'xbox-one' })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      error: PLATFORM_ERROR,
+      message: `Platform "xbox-one" is not available for game with id "${game}"`,
+    })
+    await expectNoRoomCreated()
+  })
+
+  it.each([undefined, null] as const)(
+    'rejects a missing platform (%s) when the Game has platforms',
+    async (platform) => {
+      const game = await insertGameWithPlatforms(['pc', 'ps5'])
+
+      const response = await postRoom(server, host, { gameId: game, platform })
+
+      expect(response.statusCode).toBe(400)
+      expect(response.json()).toEqual({
+        error: PLATFORM_ERROR,
+        message: `Game with id "${game}" needs a platform`,
+      })
+      await expectNoRoomCreated()
+    }
+  )
+
+  it('rejects a platform sent for a Game that has none', async () => {
+    const response = await postRoom(server, host, { gameId, platform: 'pc' })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      error: PLATFORM_ERROR,
+      message: `Platform "pc" is not available for game with id "${gameId}"`,
+    })
+    await expectNoRoomCreated()
+  })
+
+  it('rejects a value outside the platform list with 400 VALIDATION_ERROR', async () => {
+    const response = await postRoom(server, host, {
+      gameId,
+      platform: 'ps3' as unknown as Platform,
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ error: 'VALIDATION_ERROR' })
+  })
+
+  it('refuses at the database a platform outside the list', async () => {
+    const created = await createRoom(server, host, { gameId })
+
+    await expect(
+      server.app.db.update(rooms).set({ platform: 'ps3' }).where(eq(rooms.id, created.id))
+    ).rejects.toThrow()
+  })
+})
+
+describe('GET /api/rooms', () => {
+  it('lists waiting rooms with memberCount and no isMember for anonymous callers', async () => {
+    const room = await createRoom(server, host, { gameId })
+
+    const response = await get(server, '/api/rooms')
+
+    expect(response.statusCode).toBe(200)
+    const { rooms } = response.json<{ rooms: Record<string, unknown>[] }>()
+    expect(rooms).toHaveLength(1)
+    expect(rooms[0]).toMatchObject({ id: room.id, code: room.code, memberCount: 1 })
+    expect(rooms[0]).not.toHaveProperty('isMember')
+  })
+
+  it('flags isMember for the authenticated caller', async () => {
+    const [member, outsider] = await signInMany(server, 2)
+    const room = await createRoom(server, host, { gameId })
+    await joinAll(server, room.code, [member!])
+
+    const asMember = await get(server, '/api/rooms', member)
+    const asOutsider = await get(server, '/api/rooms', outsider)
+
+    expect(asMember.json()).toMatchObject({ rooms: [{ id: room.id, isMember: true }] })
+    expect(asOutsider.json()).toMatchObject({ rooms: [{ id: room.id, isMember: false }] })
+  })
+
+  it('excludes ready rooms from the catalog immediately, before deletion', async () => {
+    const room = await createRoom(server, host, { gameId })
+    const now = new Date()
+    await setRoomLifecycle(server, room.id, {
+      createdAt: now,
+      lastActivityAt: now,
+      readyAt: now,
+    })
+
+    const response = await get(server, '/api/rooms')
+
+    expect(response.json()).toEqual({ rooms: [] })
+    expect(await findRoomRow(server, room.id)).not.toBeNull()
+  })
+})
+
+describe('GET /api/rooms/:code', () => {
+  it('returns the room and its roster, matching the code case-insensitively', async () => {
+    const [member] = await signInMany(server, 1)
+    const room = await createRoom(server, host, { gameId })
+    await joinAll(server, room.code, [member!])
+
+    const response = await get(server, `/api/rooms/${room.code.toLowerCase()}`, host)
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json<{ room: unknown; players: unknown[] }>()
+    expect(roomSchema.parse(body.room)).toMatchObject({ id: room.id, code: room.code })
+    expect(body.players.map((player) => playerSchema.parse(player))).toEqual(
+      expect.arrayContaining([
+        { id: host.id, name: host.name, image: host.image, isHost: true },
+        { id: member!.id, name: member!.name, image: member!.image, isHost: false },
+      ])
+    )
+    expect(body.players).toHaveLength(2)
+  })
+
+  it('answers anonymous callers with the public projection, without invite or roster', async () => {
+    const room = await createRoom(server, host, { gameId })
+
+    const response = await get(server, `/api/rooms/${room.code}`)
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json<{ room: Record<string, unknown> }>()
+    expect(body.room).toMatchObject({ id: room.id, code: room.code })
+    expect(body.room).not.toHaveProperty('discordLink')
+    expect(body).not.toHaveProperty('players')
+    expect(response.body).not.toContain(DISCORD_INVITE)
+  })
+
+  it('answers 404 to non-members of a Ready Room, even with the code', async () => {
+    const { room } = await createFullRoom(host)
+
+    const anonymous = await get(server, `/api/rooms/${room.code}`)
+    const [outsider] = await signInMany(server, 1)
+    const asOutsider = await get(server, `/api/rooms/${room.code}`, outsider)
+
+    expect(anonymous.statusCode).toBe(404)
+    expect(anonymous.json()).toMatchObject({ error: 'ROOM_NOT_FOUND' })
+    expect(asOutsider.statusCode).toBe(404)
+    expect(asOutsider.json()).toMatchObject({ error: 'ROOM_NOT_FOUND' })
+  })
+
+  it('serves the lobby to a member of a Ready Room during retention', async () => {
+    const { room } = await createFullRoom(host)
+
+    const response = await get(server, `/api/rooms/${room.code}`, host)
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json<{ room: { discordLink: string }; players: unknown[] }>()
+    expect(body.room.discordLink).toBe(DISCORD_INVITE)
+    expect(body.players).toHaveLength(2)
+  })
+
+  it('answers 404 for an Open Room past lastActivityAt + 24h, before deletion', async () => {
+    const room = await createRoom(server, host, { gameId })
+    const backdated = new Date(Date.now() - 25 * 60 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: backdated,
+      lastActivityAt: backdated,
+      readyAt: null,
+    })
+
+    const asMember = await get(server, `/api/rooms/${room.code}`, host)
+
+    expect(asMember.statusCode).toBe(404)
+    expect(asMember.json()).toMatchObject({ error: 'ROOM_NOT_FOUND' })
+    // The scheduler has not deleted the row yet.
+    expect(await findRoomRow(server, room.id)).not.toBeNull()
+  })
+
+  it('answers 404 for a Ready Room past readyAt + 60min, before deletion', async () => {
+    const { room } = await createFullRoom(host)
+    const readyAt = new Date(Date.now() - 61 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: readyAt,
+      lastActivityAt: readyAt,
+      readyAt,
+    })
+
+    const asMember = await get(server, `/api/rooms/${room.code}`, host)
+
+    expect(asMember.statusCode).toBe(404)
+    expect(asMember.json()).toMatchObject({ error: 'ROOM_NOT_FOUND' })
+    expect(await findRoomRow(server, room.id)).not.toBeNull()
+  })
+
+  it('answers 404 ROOM_NOT_FOUND for an unknown code', async () => {
+    const response = await get(server, '/api/rooms/zzzzzz')
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toEqual({
+      error: 'ROOM_NOT_FOUND',
+      message: 'Room "ZZZZZZ" not found',
+    })
+  })
+
+  it('answers 400 VALIDATION_ERROR for a code that is not 6 characters', async () => {
+    const response = await get(server, '/api/rooms/ABC')
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      error: 'VALIDATION_ERROR',
+      message: 'params/code Too small: expected string to have >=6 characters',
+    })
+  })
+})
+
+describe('POST /api/rooms/:code/join', () => {
+  it('adds a durable membership and returns it', async () => {
+    const [member] = await signInMany(server, 1)
+    const room = await createRoom(server, host, { gameId })
+
+    const response = await roomAction(server, member!, room.code, 'join')
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json<{ message: string; roomMember: unknown }>()
+    expect(body.message).toBe('Joined room successfully')
+    expect(roomMemberSchema.parse(body.roomMember)).toMatchObject({
+      roomId: room.id,
+      userId: member!.id,
+    })
+    expect(await countMembers(server, room.id)).toBe(2)
+  })
+
+  it('is idempotent for an existing member', async () => {
+    const [member] = await signInMany(server, 1)
+    const room = await createRoom(server, host, { gameId })
+
+    const first = await roomAction(server, member!, room.code, 'join')
+    const second = await roomAction(server, member!, room.code, 'join')
+
+    expect(second.statusCode).toBe(200)
+    expect(second.json()).toEqual(first.json())
+    expect(await countMembers(server, room.id)).toBe(2)
+  })
+
+  it('requires authentication', async () => {
+    const room = await createRoom(server, host, { gameId })
+
+    const response = await roomAction(server, null, room.code, 'join')
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual(UNAUTHORIZED)
+  })
+
+  it('answers 404 ROOM_NOT_FOUND for an unknown code', async () => {
+    const response = await roomAction(server, host, 'ZZZZZZ', 'join')
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toEqual({
+      error: 'ROOM_NOT_FOUND',
+      message: 'Room "ZZZZZZ" not found',
+    })
+  })
+
+  it('fills the room, marks it ready and rejects the next player with 422 ROOM_FULL', async () => {
+    const [member, late] = await signInMany(server, 2)
+    const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
+
+    await joinAll(server, room.code, [member!])
+    const response = await roomAction(server, late!, room.code, 'join')
+
+    expect(response.statusCode).toBe(422)
+    expect(response.json()).toEqual({
+      error: 'ROOM_FULL',
+      message: `Room "${room.id}" is full`,
+    })
+    const row = await findRoomRow(server, room.id)
+    expect(row?.readyAt).toBeInstanceOf(Date)
+    expect(await countMembers(server, room.id)).toBe(2)
+  })
+})
+
+describe('POST /api/rooms/:code/leave', () => {
+  it('removes a non-host membership and keeps the room', async () => {
+    const [member] = await signInMany(server, 1)
+    const room = await createRoom(server, host, { gameId })
+    await joinAll(server, room.code, [member!])
+
+    const response = await roomAction(server, member!, room.code, 'leave')
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ message: 'Left room successfully', success: true })
+    expect(await countMembers(server, room.id)).toBe(1)
+    expect((await get(server, `/api/rooms/${room.code}`)).statusCode).toBe(200)
+  })
+
+  it('deletes the room and every membership when the host leaves', async () => {
+    const [member] = await signInMany(server, 1)
+    const room = await createRoom(server, host, { gameId })
+    await joinAll(server, room.code, [member!])
+
+    const response = await roomAction(server, host, room.code, 'leave')
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ message: 'Left room successfully', success: true })
+    expect(await findRoomRow(server, room.id)).toBeNull()
+    expect(await countMembers(server, room.id)).toBe(0)
+    expect((await get(server, `/api/rooms/${room.code}`)).statusCode).toBe(404)
+  })
+
+  it('answers 422 NOT_ROOM_MEMBER for a caller without membership', async () => {
+    const [outsider] = await signInMany(server, 1)
+    const room = await createRoom(server, host, { gameId })
+
+    const response = await roomAction(server, outsider!, room.code, 'leave')
+
+    expect(response.statusCode).toBe(422)
+    expect(response.json()).toEqual({
+      error: 'NOT_ROOM_MEMBER',
+      message: `User "${outsider!.id}" is not a member of room "${room.id}"`,
+    })
+    expect(await countMembers(server, room.id)).toBe(1)
+  })
+
+  it('answers 422 ROOM_READY once the room is full', async () => {
+    const [member] = await signInMany(server, 1)
+    const room = await createRoom(server, host, { gameId, maxPlayers: 2 })
+    await joinAll(server, room.code, [member!])
+
+    const response = await roomAction(server, member!, room.code, 'leave')
+
+    expect(response.statusCode).toBe(422)
+    expect(response.json()).toEqual({
+      error: 'ROOM_READY',
+      message: `Room "${room.id}" is ready — players cannot leave`,
+    })
+    expect(await countMembers(server, room.id)).toBe(2)
+  })
+
+  it('answers 404 ROOM_NOT_FOUND to a non-member leaving a Ready room, and keeps the room', async () => {
+    const { room } = await createFullRoom(host)
+    const [outsider] = await signInMany(server, 1)
+
+    const response = await roomAction(server, outsider!, room.code, 'leave')
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toEqual({
+      error: 'ROOM_NOT_FOUND',
+      message: `Room "${room.code}" not found`,
+    })
+    expect(await countMembers(server, room.id)).toBe(2)
+  })
+
+  it('answers 404 ROOM_NOT_FOUND to a member of an expired room, before deletion', async () => {
+    const [member] = await signInMany(server, 1)
+    const room = await createRoom(server, host, { gameId })
+    await joinAll(server, room.code, [member!])
+    const backdated = new Date(Date.now() - 25 * 60 * 60_000)
+    await setRoomLifecycle(server, room.id, {
+      createdAt: backdated,
+      lastActivityAt: backdated,
+      readyAt: null,
+    })
+
+    const response = await roomAction(server, member!, room.code, 'leave')
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toEqual({
+      error: 'ROOM_NOT_FOUND',
+      message: `Room "${room.code}" not found`,
+    })
+    // The scheduler has not deleted the row yet, and the membership is untouched.
+    expect(await findRoomRow(server, room.id)).not.toBeNull()
+    expect(await countMembers(server, room.id)).toBe(2)
+  })
+
+  it('requires authentication', async () => {
+    const room = await createRoom(server, host, { gameId })
+
+    const response = await roomAction(server, null, room.code, 'leave')
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual(UNAUTHORIZED)
+  })
+
+  it('answers 404 ROOM_NOT_FOUND for an unknown code', async () => {
+    const response = await roomAction(server, host, 'ZZZZZZ', 'leave')
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json()).toMatchObject({ error: 'ROOM_NOT_FOUND' })
+  })
+})
+
+describe('GET /api/rooms/my', () => {
+  it('groups active rooms into hosted and joined, newest first, with memberCount', async () => {
+    const [member, other] = await signInMany(server, 2)
+    const mine = await createRoom(server, host, { gameId, name: 'Mine' })
+    const older = await createRoom(server, member!, { gameId, name: 'Older' })
+    const newer = await createRoom(server, other!, { gameId, name: 'Newer' })
+    await joinAll(server, mine.code, [member!])
+    await joinAll(server, older.code, [host])
+    await joinAll(server, newer.code, [host])
+
+    const response = await get(server, '/api/rooms/my', host)
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json<{ hosted: unknown[]; joined: unknown[] }>()
+    expect(body.hosted).toMatchObject([{ id: mine.id, memberCount: 2, isMember: true }])
+    expect(body.joined).toMatchObject([
+      { id: newer.id, memberCount: 2, isMember: true },
+      { id: older.id, memberCount: 2, isMember: true },
+    ])
+  })
+
+  it('requires authentication', async () => {
+    const response = await get(server, '/api/rooms/my')
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual(UNAUTHORIZED)
+  })
+})

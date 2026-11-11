@@ -1,6 +1,4 @@
 {
-  "framework": "vite",
-  "buildCommand": "cd .. && bun run build:client",
-  "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+  "framework": "nextjs",
+  "buildCommand": "cd .. && bun run build:client"
 }

@@ -1,0 +1,393 @@
+import { describe, expect, expectTypeOf, it } from 'vitest'
+import type { PlayerDto, PublicRoomDto } from './index'
+import {
+  protocolAnnouncementSchema,
+  REALTIME_PROTOCOL_VERSION,
+  roomCreatedMessageSchema,
+  wsIncomingMessageSchema,
+  wsServerEnvelopeSchema,
+  wsServerEventPayloadSchemas,
+  wsServerMessageSchema,
+} from './ws'
+import type { WsServerEventPayload, WsServerMessage } from './ws'
+
+const ROOM_ID = '3fa85f64-5717-4562-b3fc-2c963f66afa6'
+const INVITE = 'https://discord.gg/squadzr'
+
+const publicRoom = {
+  id: ROOM_ID,
+  code: 'ABC123',
+  name: 'Ranked 5v5',
+  hostId: 'user-1',
+  gameId: '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+  game: {
+    id: '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+    name: 'Counter-Strike 2',
+    slug: 'cs2',
+    genres: [{ slug: 'shooter', name: 'Shooter' }],
+    aliases: ['cs2'],
+    coverUrl: 'https://cdn.squadzr.test/cs2.webp',
+    coverThumbUrl: 'https://cdn.squadzr.test/cs2-thumb.webp',
+  },
+  maxPlayers: 5,
+  tags: [],
+  language: 'en',
+  platform: null,
+  memberPreview: [{ id: 'user-1', name: 'Caio', image: null }],
+  createdAt: '2026-09-27T12:30:00.000Z',
+  updatedAt: '2026-09-27T12:30:00.000Z',
+}
+const player = { id: 'user-1', name: 'Caio', image: null, isHost: true }
+
+const notification = {
+  id: '9b2f7a1e-4c3d-4e5f-8a6b-1c2d3e4f5a6b',
+  userId: 'user-1',
+  type: 'room_ready',
+  title: 'Room ready: your squad is full',
+  message: 'Ranked 5v5 is ready. Your Discord invite is now available.',
+  payload: {
+    roomId: ROOM_ID,
+    roomCode: 'ABC123',
+    roomName: 'Ranked 5v5',
+    gameName: 'League of Legends',
+    players: [{ name: 'Caio', image: null }],
+    discordLink: INVITE,
+  },
+  readAt: null,
+  createdAt: '2026-09-27T12:30:00.000Z',
+}
+
+const serverMessages = [
+  { type: 'protocol', payload: { version: 5 } },
+  {
+    type: 'room_snapshot',
+    payload: {
+      room: { ...publicRoom, discordLink: INVITE },
+      players: [player],
+      readyAt: null,
+      expiresAt: publicRoom.updatedAt,
+      presence: [{ playerId: player.id, online: true, offlineSince: null }],
+    },
+  },
+  {
+    type: 'presence_updated',
+    payload: {
+      roomCode: 'ABC123',
+      playerId: player.id,
+      online: false,
+      offlineSince: '2026-10-24T12:00:00.000Z',
+    },
+  },
+  { type: 'room_removed', payload: { roomId: ROOM_ID, roomCode: 'ABC123' } },
+  { type: 'error', payload: { code: 'ROOM_NOT_FOUND', message: 'Room not found' } },
+  { type: 'pong' },
+  { type: 'lobby_subscribed', payload: { message: 'Subscribed' } },
+  { type: 'room_created', payload: { room: publicRoom } },
+  { type: 'room_updated', payload: { roomId: ROOM_ID, roomCode: 'ABC123', memberCount: 2 } },
+  { type: 'room_deleted', payload: { roomId: ROOM_ID, roomCode: 'ABC123' } },
+  { type: 'notification', payload: { notification } },
+].map((message) => ({ ...message, timestamp: 1_769_000_000_000 }))
+
+describe('wsIncomingMessageSchema', () => {
+  it.each([
+    [{ type: 'join_room', payload: { roomCode: 'ABC123' } }],
+    [{ type: 'leave_room', payload: { roomCode: 'ABC123' } }],
+    [{ type: 'subscribe_lobby' }],
+    [{ type: 'unsubscribe_lobby' }],
+    [{ type: 'ping' }],
+  ])('accepts %j and stamps it with a timestamp', (message) => {
+    const parsed = wsIncomingMessageSchema.parse(message)
+
+    expect(parsed).toMatchObject(message)
+    expect(parsed.timestamp).toEqual(expect.any(Number))
+  })
+
+  it.each([
+    ['a retired server type', { type: 'room_joined', payload: {} }],
+    ['an unknown type', { type: 'game_start' }],
+    ['a missing payload', { type: 'join_room' }],
+    ['a room code with the wrong length', { type: 'join_room', payload: { roomCode: 'ABC' } }],
+    ['a value that is not an object', 42],
+  ])('rejects %s', (_label, message) => {
+    expect(wsIncomingMessageSchema.safeParse(message).success).toBe(false)
+  })
+})
+
+describe('wsServerMessageSchema', () => {
+  it.each(serverMessages.map((message) => [message.type, message] as const))(
+    'accepts a %s message',
+    (_type, message) => {
+      expect(wsServerMessageSchema.parse(message)).toEqual(message)
+    }
+  )
+
+  it.each([
+    ['a client-only type', { type: 'join_room', payload: { roomCode: 'ABC123' } }],
+    ['an unknown type', { type: 'presence_changed', payload: {} }],
+    ['a payload that breaks its event contract', { type: 'room_updated', payload: { n: 1 } }],
+    [
+      'a roster entry without a name',
+      {
+        type: 'room_snapshot',
+        payload: {
+          room: { ...publicRoom, discordLink: INVITE },
+          players: [{ id: 'u' }],
+          readyAt: null,
+          expiresAt: publicRoom.updatedAt,
+          presence: [],
+        },
+      },
+    ],
+  ])('rejects %s', (_label, message) => {
+    expect(wsServerMessageSchema.safeParse({ ...message, timestamp: 0 }).success).toBe(false)
+  })
+
+  it('discriminates the payload type by message type', () => {
+    type Created = Extract<WsServerMessage, { type: 'room_created' }>
+    type Snapshot = Extract<WsServerMessage, { type: 'room_snapshot' }>
+
+    expectTypeOf<Created['payload']['room']>().toEqualTypeOf<PublicRoomDto>()
+    expectTypeOf<Snapshot['payload']['players']>().toEqualTypeOf<PlayerDto[]>()
+    expectTypeOf<WsServerEventPayload<'room_created'>>().toEqualTypeOf<Created['payload']>()
+  })
+})
+
+describe('member presence', () => {
+  const snapshotWith = (presence: unknown[]) => ({
+    type: 'room_snapshot',
+    timestamp: 0,
+    payload: {
+      room: { ...publicRoom, discordLink: INVITE },
+      players: [player],
+      readyAt: null,
+      expiresAt: publicRoom.updatedAt,
+      presence,
+    },
+  })
+  const updateWith = (offlineSince?: unknown) => ({
+    type: 'presence_updated',
+    timestamp: 0,
+    payload: {
+      roomCode: 'ABC123',
+      playerId: player.id,
+      online: false,
+      ...(offlineSince === undefined ? {} : { offlineSince }),
+    },
+  })
+
+  it.each([
+    ['an ISO time', '2026-10-24T12:00:00.000Z'],
+    ['null', null],
+  ])('accepts offlineSince as %s in a snapshot and an update', (_label, offlineSince) => {
+    const entry = { playerId: player.id, online: false, offlineSince }
+
+    expect(wsServerMessageSchema.safeParse(snapshotWith([entry])).success).toBe(true)
+    expect(wsServerMessageSchema.safeParse(updateWith(offlineSince)).success).toBe(true)
+  })
+
+  it.each([
+    ['a missing offlineSince', undefined],
+    ['a value that is not an ISO time', 'yesterday'],
+    ['a timestamp number', 1_769_000_000_000],
+  ])('rejects %s', (_label, offlineSince) => {
+    const entry = { playerId: player.id, online: false, offlineSince }
+
+    expect(wsServerMessageSchema.safeParse(snapshotWith([entry])).success).toBe(false)
+    expect(wsServerMessageSchema.safeParse(updateWith(offlineSince)).success).toBe(false)
+  })
+})
+
+describe('REALTIME_PROTOCOL_VERSION', () => {
+  it('is 5 and is the only version the protocol message accepts', () => {
+    expect(REALTIME_PROTOCOL_VERSION).toBe(5)
+    expect(
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 5 } })
+        .success
+    ).toBe(true)
+    expect(
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 4 } })
+        .success
+    ).toBe(false)
+  })
+})
+
+describe('room_created', () => {
+  it('carries the public projection only: an invite on the wire is dropped', () => {
+    const parsed = roomCreatedMessageSchema.parse({
+      type: 'room_created',
+      timestamp: 0,
+      payload: { room: { ...publicRoom, discordLink: INVITE } },
+    })
+
+    expect(parsed.payload.room).toEqual(publicRoom)
+    expect(JSON.stringify(parsed)).not.toContain(INVITE)
+    expectTypeOf(parsed.payload.room).not.toHaveProperty('discordLink')
+  })
+})
+
+describe('member preview on realtime payloads', () => {
+  const sixMembers = Array.from({ length: 6 }, (_, i) => ({
+    id: `u${i}`,
+    name: `P${i}`,
+    image: null,
+  }))
+
+  it('rides on room_created and on the room_snapshot room', () => {
+    const [snapshot] = serverMessages.filter((message) => message.type === 'room_snapshot')
+    const [created] = serverMessages.filter((message) => message.type === 'room_created')
+
+    expect(wsServerMessageSchema.parse(created)).toMatchObject({
+      payload: { room: { memberPreview: publicRoom.memberPreview } },
+    })
+    expect(wsServerMessageSchema.parse(snapshot)).toMatchObject({
+      payload: { room: { memberPreview: publicRoom.memberPreview } },
+    })
+  })
+
+  it('rejects a sixth entry in room_created and in room_snapshot', () => {
+    const room = { ...publicRoom, memberPreview: sixMembers }
+
+    expect(
+      wsServerMessageSchema.safeParse({ type: 'room_created', timestamp: 0, payload: { room } })
+        .success
+    ).toBe(false)
+    expect(
+      wsServerMessageSchema.safeParse({
+        type: 'room_snapshot',
+        timestamp: 0,
+        payload: {
+          room: { ...room, discordLink: INVITE },
+          players: [player],
+          readyAt: null,
+          expiresAt: publicRoom.updatedAt,
+          presence: [],
+        },
+      }).success
+    ).toBe(false)
+  })
+
+  it('requires the preview on room_created', () => {
+    const { memberPreview: _preview, ...room } = publicRoom
+
+    expect(
+      wsServerMessageSchema.safeParse({ type: 'room_created', timestamp: 0, payload: { room } })
+        .success
+    ).toBe(false)
+  })
+})
+
+describe('notification pushes of every type', () => {
+  const squad = {
+    roomId: ROOM_ID,
+    roomCode: 'ABC123',
+    roomName: 'Ranked 5v5',
+    gameName: 'League of Legends',
+  }
+  const person = { name: 'Caio', image: null }
+  const base = {
+    id: notification.id,
+    userId: 'user-1',
+    title: 'Title',
+    message: 'Message',
+    readAt: null,
+    createdAt: '2026-09-27T12:30:00.000Z',
+  }
+  const pushes = [
+    {
+      ...base,
+      type: 'room_ready',
+      payload: {
+        ...squad,
+        players: [person],
+        discordLink: INVITE,
+        leftSquads: [{ roomCode: 'DEF456', roomName: 'Other' }],
+      },
+    },
+    {
+      ...base,
+      type: 'host_transferred',
+      payload: { ...squad, previousHost: person, reason: 'squad_completed' },
+    },
+    {
+      ...base,
+      type: 'member_left',
+      payload: { ...squad, member: person, reason: 'squad_completed' },
+    },
+    {
+      ...base,
+      type: 'room_closed',
+      payload: { ...squad, previousHost: person, reason: 'no_eligible_host' },
+    },
+    {
+      ...base,
+      type: 'room_closed_by_admin',
+      payload: { ...squad, reason: 'Offensive name' },
+    },
+  ]
+
+  it.each(pushes.map((push) => [push.type, push] as const))('accepts a %s push', (_type, push) => {
+    const message = { type: 'notification', timestamp: 1, payload: { notification: push } }
+
+    expect(wsServerMessageSchema.parse(message)).toEqual(message)
+  })
+
+  it('rejects a push whose payload belongs to another type', () => {
+    const crossed = { ...pushes[1], type: 'member_left' }
+
+    expect(
+      wsServerMessageSchema.safeParse({
+        type: 'notification',
+        timestamp: 1,
+        payload: { notification: crossed },
+      }).success
+    ).toBe(false)
+  })
+})
+
+describe('wsServerEventPayloadSchemas', () => {
+  it('has one payload schema for every server message that carries a payload', () => {
+    const typesWithPayload = serverMessages
+      .filter((message) => 'payload' in message)
+      .map((message) => message.type)
+
+    expect(Object.keys(wsServerEventPayloadSchemas).sort()).toEqual(typesWithPayload.sort())
+  })
+
+  it('validates each payload on its own, as the client receives it', () => {
+    for (const message of serverMessages) {
+      if (!('payload' in message)) continue
+      const schema =
+        wsServerEventPayloadSchemas[message.type as keyof typeof wsServerEventPayloadSchemas]
+
+      expect(schema.safeParse(message.payload).success, message.type).toBe(true)
+      expect(schema.safeParse({}).success, message.type).toBe(false)
+    }
+  })
+})
+
+describe('wsServerEnvelopeSchema', () => {
+  it('requires a string type and leaves the payload for the per-event contract', () => {
+    expect(wsServerEnvelopeSchema.parse({ type: 'pong', timestamp: 1 })).toEqual({ type: 'pong' })
+    expect(wsServerEnvelopeSchema.parse({ type: 'x', payload: { n: 1 } })).toEqual({
+      type: 'x',
+      payload: { n: 1 },
+    })
+    expect(wsServerEnvelopeSchema.safeParse({ payload: {} }).success).toBe(false)
+    expect(wsServerEnvelopeSchema.safeParse(42).success).toBe(false)
+  })
+})
+
+describe('protocolAnnouncementSchema', () => {
+  it('accepts any positive version so a mismatched build can react before its own contract', () => {
+    expect(protocolAnnouncementSchema.parse({ version: 2 })).toEqual({ version: 2 })
+    expect(protocolAnnouncementSchema.parse({ version: 3 })).toEqual({ version: 3 })
+  })
+
+  it.each([
+    ['a non-numeric version', { version: 'two' }],
+    ['a fractional version', { version: 2.5 }],
+    ['a missing version', {}],
+  ])('rejects %s', (_label, payload) => {
+    expect(protocolAnnouncementSchema.safeParse(payload).success).toBe(false)
+  })
+})

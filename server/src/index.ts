@@ -1,59 +1,11 @@
-import Fastify from 'fastify'
-import cors from '@fastify/cors'
-import helmet from '@fastify/helmet'
-import websocket from '@fastify/websocket'
-import { env } from '@config/env'
-import errorHandlerPlugin from '@infrastructure/plugins/error-handler.plugin'
-import databasePlugin from '@infrastructure/plugins/database.plugin'
-import authPlugin from '@infrastructure/plugins/auth.plugin'
-import swaggerPlugin from '@infrastructure/plugins/swagger.plugin'
-import wsPlugin from '@infrastructure/websocket/ws.plugin'
-import roomCleanupPlugin from '@infrastructure/plugins/room-cleanup.plugin'
-import { registerRoutes } from '@interface/routes'
-
-async function buildServer() {
-  const fastify = Fastify({
-    trustProxy: true,
-    logger: {
-      level: env.LOG_LEVEL,
-      ...(env.NODE_ENV !== 'production' && {
-        transport: {
-          target: 'pino-pretty',
-          options: { colorize: true },
-        },
-      }),
-    },
-  })
-
-  await fastify.register(errorHandlerPlugin)
-
-  await fastify.register(cors, {
-    origin: env.CORS_ORIGIN,
-    credentials: true,
-  })
-
-  await fastify.register(helmet, {
-    contentSecurityPolicy: env.NODE_ENV === 'production',
-  })
-
-  await fastify.register(websocket, {
-    options: {
-      maxPayload: 1048576,
-    },
-  })
-
-  await fastify.register(swaggerPlugin)
-  await fastify.register(databasePlugin)
-  await fastify.register(authPlugin)
-  await fastify.register(wsPlugin)
-  await fastify.register(roomCleanupPlugin)
-  await registerRoutes(fastify)
-
-  return fastify
-}
+// Production entry point: the only module that starts a listener. Everything it
+// wires lives in `./app`, which is side-effect free and safe to import in tests.
+import { loadEnv } from '@config/env'
+import { buildApp } from './app'
 
 async function start(): Promise<void> {
-  const server = await buildServer()
+  const env = loadEnv()
+  const server = await buildApp({ env })
 
   const shutdown = async (signal: string) => {
     server.log.info(`Received ${signal}, shutting down gracefully...`)

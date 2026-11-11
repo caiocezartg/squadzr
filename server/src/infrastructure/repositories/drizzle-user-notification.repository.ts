@@ -1,45 +1,19 @@
 import { and, desc, eq, isNull } from 'drizzle-orm'
-import { userNotificationPayloadSchema, userNotificationTypeSchema } from '@squadzr/schemas'
-import type {
-  CreateUserNotificationInput,
-  UserNotification,
-  UserNotificationPayload,
-} from '@domain/entities/user-notification.entity'
+import type { UserNotification } from '@domain/entities/user-notification.entity'
 import type { IUserNotificationRepository } from '@domain/repositories/user-notification.repository'
+import type { Clock } from '@domain/services/clock.interface'
 import type { Database } from '@infrastructure/database/drizzle'
-import {
-  userNotifications,
-  type UserNotificationRow,
-} from '@infrastructure/database/schema/user-notifications'
-
-function payloadToRecord(payload: UserNotificationPayload): Record<string, unknown> {
-  return {
-    roomId: payload.roomId,
-    roomCode: payload.roomCode,
-    roomName: payload.roomName,
-    gameName: payload.gameName,
-    players: payload.players,
-    discordLink: payload.discordLink,
-  }
-}
-
-function mapRowToEntity(row: UserNotificationRow): UserNotification {
-  return {
-    id: row.id,
-    userId: row.userId,
-    type: userNotificationTypeSchema.parse(row.type),
-    title: row.title,
-    message: row.message,
-    payload: userNotificationPayloadSchema.parse(row.payload),
-    readAt: row.readAt,
-    createdAt: row.createdAt,
-  }
-}
+import { userNotifications } from '@infrastructure/database/schema/user-notifications'
+import { ROOM } from '@config/constants'
+import { mapUserNotificationRow } from './user-notification-mapping'
 
 export class DrizzleUserNotificationRepository implements IUserNotificationRepository {
-  constructor(private readonly db: Database) {}
+  constructor(
+    private readonly db: Database,
+    private readonly clock: Clock
+  ) {}
 
-  async findByUserId(userId: string, limit = 20): Promise<UserNotification[]> {
+  async findByUserId(userId: string, limit = ROOM.NOTIFICATION_LIMIT): Promise<UserNotification[]> {
     const result = await this.db
       .select()
       .from(userNotifications)
@@ -47,34 +21,14 @@ export class DrizzleUserNotificationRepository implements IUserNotificationRepos
       .orderBy(desc(userNotifications.createdAt))
       .limit(limit)
 
-    return result.map(mapRowToEntity)
-  }
-
-  async create(input: CreateUserNotificationInput): Promise<UserNotification> {
-    const result = await this.db
-      .insert(userNotifications)
-      .values({
-        userId: input.userId,
-        type: input.type,
-        title: input.title,
-        message: input.message,
-        payload: payloadToRecord(input.payload),
-      })
-      .returning()
-
-    const row = result[0]
-    if (!row) {
-      throw new Error('Failed to create user notification')
-    }
-
-    return mapRowToEntity(row)
+    return result.map(mapUserNotificationRow)
   }
 
   async markAsRead(id: string, userId: string): Promise<boolean> {
     const result = await this.db
       .update(userNotifications)
       .set({
-        readAt: new Date(),
+        readAt: this.clock.now(),
       })
       .where(
         and(
@@ -92,7 +46,7 @@ export class DrizzleUserNotificationRepository implements IUserNotificationRepos
     const result = await this.db
       .update(userNotifications)
       .set({
-        readAt: new Date(),
+        readAt: this.clock.now(),
       })
       .where(and(eq(userNotifications.userId, userId), isNull(userNotifications.readAt)))
       .returning({ id: userNotifications.id })

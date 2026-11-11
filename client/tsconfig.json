@@ -6,6 +6,11 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": [
+    "next.config.ts",
+    "vite.config.ts",
+    "cloudflare.config.ts",
+    "src/**/*"
+  ],
   "exclude": ["node_modules", "dist"]
 }

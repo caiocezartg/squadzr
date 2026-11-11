@@ -1,6 +1,7 @@
 import { vi, type Mock } from 'vitest'
-import type { User, CreateUserInput, UpdateUserInput } from '@domain/entities/user.entity'
-import type { IUserRepository } from '@domain/repositories/user.repository'
+import type { NewAuditEntry } from '@domain/entities/audit-entry.entity'
+import type { User } from '@domain/entities/user.entity'
+import type { GrantRoleOutcome, IUserRepository } from '@domain/repositories/user.repository'
 
 export function createMockUser(overrides?: Partial<User>): User {
   return {
@@ -8,6 +9,7 @@ export function createMockUser(overrides?: Partial<User>): User {
     email: 'test@example.com',
     name: 'Test User',
     avatarUrl: null,
+    role: 'user',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     ...overrides,
@@ -22,20 +24,14 @@ export function createMockUserRepository(): MockUserRepository {
   return {
     findById: vi.fn<(id: string) => Promise<User | null>>().mockResolvedValue(null),
     findByIds: vi.fn<(ids: string[]) => Promise<User[]>>().mockResolvedValue([]),
-    findByEmail: vi.fn<(email: string) => Promise<User | null>>().mockResolvedValue(null),
-    findAll: vi.fn<() => Promise<User[]>>().mockResolvedValue([]),
-    create: vi.fn<(input: CreateUserInput) => Promise<User>>().mockImplementation((input) =>
-      Promise.resolve(
-        createMockUser({
-          email: input.email,
-          name: input.name,
-          avatarUrl: input.avatarUrl ?? null,
-        })
-      )
-    ),
-    update: vi
-      .fn<(id: string, input: UpdateUserInput) => Promise<User | null>>()
+    findByIdOrDiscordId: vi
+      .fn<(identifier: string) => Promise<User | null>>()
       .mockResolvedValue(null),
-    delete: vi.fn<(id: string) => Promise<boolean>>().mockResolvedValue(false),
+    findOwner: vi.fn<() => Promise<User | null>>().mockResolvedValue(null),
+    grantRole: vi
+      .fn<
+        (userId: string, role: 'admin' | 'owner', audit: NewAuditEntry) => Promise<GrantRoleOutcome>
+      >()
+      .mockResolvedValue('granted'),
   }
 }

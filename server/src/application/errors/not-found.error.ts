@@ -1,11 +1,11 @@
 import { AppError } from './base.error'
 
-export class NotFoundError extends AppError {
+export class GameNotFoundError extends AppError {
   readonly statusCode = 404
-  readonly code = 'NOT_FOUND'
+  readonly code = 'GAME_NOT_FOUND'
 
-  constructor(resource: string, identifier: string) {
-    super(`${resource} "${identifier}" not found`)
+  constructor(gameId: string) {
+    super(`Game "${gameId}" not found`)
   }
 }
 

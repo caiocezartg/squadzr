@@ -1,74 +1,78 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { WebSocketClient, type WebSocketEventHandler } from '@/lib/ws-client'
-
-interface UseWebSocketOptions {
-  url: string
-  autoConnect?: boolean
-  reconnectInterval?: number
-  maxReconnectAttempts?: number
-}
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type {
+  WsIncomingMessageInput,
+  WsServerEventPayload,
+  WsServerEventType,
+} from '@squadzr/schemas/ws'
+import {
+  WebSocketClient,
+  type RealtimeChannelHandlers,
+  type RealtimeStatus,
+  type RealtimeSubscription,
+} from '@/lib/ws-client'
+import { reloadAfterSessionEnded, reloadToMatchingBuild } from '@/lib/realtime-update'
 
 interface UseWebSocketReturn {
-  isConnected: boolean
-  connect: () => void
-  disconnect: () => void
-  send: (type: string, data: unknown) => void
-  on: (event: string, handler: WebSocketEventHandler) => () => void
+  status: RealtimeStatus
+  send: (message: WsIncomingMessageInput) => void
+  on: <T extends WsServerEventType>(
+    type: T,
+    handler: (payload: WsServerEventPayload<T>) => void
+  ) => () => void
+  subscribe: (subscription: RealtimeSubscription, handlers: RealtimeChannelHandlers) => () => void
 }
 
-export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
-  const { url, autoConnect = true, reconnectInterval, maxReconnectAttempts } = options
+const noop = () => {
+  // noop
+}
 
-  const [isConnected, setIsConnected] = useState(false)
+/**
+ * Opens the realtime connection of a screen. The socket lives for the mount and reconnects on its
+ * own; the screen only sends frames and registers handlers. A protocol mismatch reloads the app
+ * into the matching build, and a session the server ended reloads it signed out.
+ */
+export function useWebSocket(url: string): UseWebSocketReturn {
+  const [status, setStatus] = useState<RealtimeStatus>('closed')
   const clientRef = useRef<WebSocketClient | null>(null)
 
   useEffect(() => {
     const client = new WebSocketClient({
       url,
-      reconnectInterval,
-      maxReconnectAttempts,
-      onOpen: () => setIsConnected(true),
-      onClose: () => setIsConnected(false),
-      onError: (error) => console.error('WebSocket error:', error),
+      onProtocolFailure: reloadToMatchingBuild,
+      onSessionEnded: reloadAfterSessionEnded,
     })
 
     clientRef.current = client
-
-    if (autoConnect) {
-      client.connect()
-    }
+    const unsubscribeStatus = client.onStatusChange(setStatus)
+    client.connect()
 
     return () => {
+      unsubscribeStatus()
       client.disconnect()
+      clientRef.current = null
     }
-  }, [url, autoConnect, reconnectInterval, maxReconnectAttempts])
+  }, [url])
 
-  const connect = useCallback(() => {
-    clientRef.current?.connect()
+  const send = useCallback((message: WsIncomingMessageInput) => {
+    clientRef.current?.send(message)
   }, [])
 
-  const disconnect = useCallback(() => {
-    clientRef.current?.disconnect()
-  }, [])
+  const on = useCallback(
+    <T extends WsServerEventType>(
+      type: T,
+      handler: (payload: WsServerEventPayload<T>) => void
+    ): (() => void) => {
+      return clientRef.current?.on(type, handler) ?? noop
+    },
+    []
+  )
 
-  const send = useCallback((type: string, data: unknown) => {
-    clientRef.current?.send(type, data)
-  }, [])
+  const subscribe = useCallback(
+    (subscription: RealtimeSubscription, handlers: RealtimeChannelHandlers): (() => void) => {
+      return clientRef.current?.subscribe(subscription, handlers) ?? noop
+    },
+    []
+  )
 
-  const on = useCallback((event: string, handler: WebSocketEventHandler) => {
-    if (!clientRef.current) {
-      return () => {
-        // noop
-      }
-    }
-    return clientRef.current.on(event, handler)
-  }, [])
-
-  return {
-    isConnected,
-    connect,
-    disconnect,
-    send,
-    on,
-  }
+  return { status, send, on, subscribe }
 }

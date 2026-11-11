@@ -1,17 +1,41 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import fp from 'fastify-plugin'
-import { auth, type Session } from '@infrastructure/auth'
+import { createAuth, type Auth, type AuthConfig, type Session } from '@infrastructure/auth'
 
 declare module 'fastify' {
   interface FastifyInstance {
-    auth: typeof auth
+    auth: Auth
   }
   interface FastifyRequest {
     session: Session | null
   }
 }
 
-async function authPlugin(fastify: FastifyInstance): Promise<void> {
+export interface AuthPluginOptions {
+  config: AuthConfig
+}
+
+/**
+ * The headers Better Auth reads. It takes the client address from the leftmost x-forwarded-for entry,
+ * which the client writes itself, and keys its sign-in rate limit on it; so the header carries only the
+ * address Fastify resolved through the trusted proxy hops.
+ */
+export function authRequestHeaders(
+  incoming: Record<string, string | string[] | undefined>,
+  clientIp: string
+): Headers {
+  const headers = new Headers()
+  for (const [key, value] of Object.entries(incoming)) {
+    if (!value || key.toLowerCase() === 'x-forwarded-for') continue
+    headers.append(key, Array.isArray(value) ? value.join(', ') : value)
+  }
+  headers.set('x-forwarded-for', clientIp)
+  return headers
+}
+
+async function authPlugin(fastify: FastifyInstance, options: AuthPluginOptions): Promise<void> {
+  const auth = createAuth(fastify.db, options.config)
+
   fastify.decorate('auth', auth)
   fastify.decorateRequest('session', null)
 
@@ -24,10 +48,7 @@ async function authPlugin(fastify: FastifyInstance): Promise<void> {
       try {
         const url = new URL(request.url, `http://${request.headers.host}`)
 
-        const headers = new Headers()
-        Object.entries(request.headers).forEach(([key, value]) => {
-          if (value) headers.append(key, Array.isArray(value) ? value.join(', ') : value)
-        })
+        const headers = authRequestHeaders(request.headers, request.ip)
 
         const req = new Request(url.toString(), {
           method: request.method,
@@ -63,14 +84,18 @@ async function authPlugin(fastify: FastifyInstance): Promise<void> {
     },
   })
 
-  // Session hook for API and WebSocket routes
+  // Session hook for API and WebSocket routes. It reads the session without renewing it: only
+  // Better Auth's own endpoints renew it, because only their responses carry the renewed cookie. It runs
+  // before schema validation so a guard can answer 401 or 403 ahead of a 400, which tells a signed-out
+  // visitor nothing about a route's input.
   const sessionRoutes = ['/api/', '/ws']
-  fastify.addHook('preHandler', async (request: FastifyRequest) => {
+  fastify.addHook('preValidation', async (request: FastifyRequest) => {
     if (!sessionRoutes.some((prefix) => request.url.startsWith(prefix))) return
     if (request.url.startsWith('/api/auth')) return
 
     const session = await auth.api.getSession({
       headers: request.headers as Record<string, string>,
+      query: { disableRefresh: true },
     })
     request.session = session
   })
@@ -79,4 +104,5 @@ async function authPlugin(fastify: FastifyInstance): Promise<void> {
 export default fp(authPlugin, {
   name: 'auth',
   fastify: '5.x',
+  dependencies: ['database'],
 })

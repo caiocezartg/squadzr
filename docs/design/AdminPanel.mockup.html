@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@800;900&family=Plus+Jakarta+Sans:wght@500;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07080A;--menu:#0B0C0F;--panel:#0F1013;--card:#121317;--raised:#17181D;--raised2:#1A1B20;--line:#1F2026;--track:#24252B;--text:#F2F3F5;--text2:#C9CBD1;--text3:#A9ABB3;--muted:#80838C;--faint:#5F626B;--mint:#00FFA2;--mintink:#03140D;--amber:#FFB547;--discord:#4E5AE8;--dsoft:#8B93F5;--danger:#FF8A8A}
+*{box-sizing:border-box;margin:0}
+body{background:#030405;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);padding:28px 16px 60px}
+.wrap{max-width:1280px;margin:0 auto}
+.cap{font:700 11px 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.sec{margin:46px 0 12px;display:flex;gap:14px;align-items:baseline}
+.sec h2{font:900 28px 'Big Shoulders';text-transform:uppercase}
+.note{font:500 13px/1.6 'Plus Jakarta Sans';color:var(--text3);margin:12px 2px 0;max-width:860px}
+.note b{color:var(--text2)}
+.doc-h{font:900 64px/0.96 'Big Shoulders';text-transform:uppercase}
+.doc-h span{color:var(--mint)}
+/* app frame */
+.frame{display:grid;grid-template-columns:232px 1fr;background:var(--bg);min-height:600px;box-shadow:0 0 0 1px var(--line);overflow:hidden}
+.side{background:var(--menu);box-shadow:inset -1px 0 0 #16171B;padding:22px 16px;display:flex;flex-direction:column;gap:4px}
+.logo{font:900 26px 'Big Shoulders';text-transform:uppercase;letter-spacing:.01em;display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.logo i{width:10px;height:10px;background:var(--mint);display:block}
+.badge{font:700 10px 'JetBrains Mono';letter-spacing:.14em;color:var(--mintink);background:var(--mint);padding:3px 6px;align-self:flex-start;margin-bottom:18px}
+.nav{display:flex;align-items:center;gap:10px;height:42px;padding:0 12px;font:700 14px 'Plus Jakarta Sans';color:var(--text3)}
+.nav svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:2}
+.nav.on{background:var(--raised);color:var(--text);box-shadow:inset 2px 0 0 var(--mint)}
+.nav em{margin-left:auto;font:700 11px 'JetBrains Mono';font-style:normal;color:var(--faint)}
+.side .back{margin-top:auto;font:700 13px 'Plus Jakarta Sans';color:var(--muted);padding:10px 12px;box-shadow:inset 0 1px 0 #16171B}
+.user{display:flex;gap:10px;align-items:center;padding:12px;background:var(--card)}
+.av{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;font:800 12px 'Plus Jakarta Sans'}
+.a1{background:#0E4D3A;color:#B9FFE4}.a2{background:#3A2A5C;color:#E7DBFF}.a3{background:#5C3A1E;color:#FFE2C7}.a4{background:#1E3A5C;color:#CFE6FF}.a5{background:#5C1E3A;color:#FFD1E6}.a6{background:#1E4A4A;color:#C6F4F4}
+.user b{font:800 13px 'Plus Jakarta Sans';display:block}.user span{font:500 11.5px 'Plus Jakarta Sans';color:var(--muted)}
+.main{padding:30px 36px 40px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.ph{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.ph h1{font:900 52px/0.96 'Big Shoulders';text-transform:uppercase}
+.ph p{font:500 14px 'Plus Jakarta Sans';color:var(--muted);margin-top:6px}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);box-shadow:inset 0 0 0 1px var(--line);background:var(--panel)}
+.stat{padding:18px 20px}
+.stat+.stat{box-shadow:inset 1px 0 0 var(--line)}
+.stat .v{font:800 48px/1 'Big Shoulders';margin-top:12px;display:flex;align-items:center;gap:10px}
+.stat .s{font:500 12.5px 'Plus Jakarta Sans';color:var(--muted);margin-top:8px}
+.live{width:9px;height:9px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 4px rgba(0,255,162,.14)}
+.grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
+.panel{background:var(--panel);box-shadow:inset 0 0 0 1px var(--line);padding:20px}
+.panel h3{font:900 24px 'Big Shoulders';text-transform:uppercase;margin-top:6px}
+.ph2{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;font:800 13.5px 'Plus Jakarta Sans';background:var(--mint);color:var(--mintink);white-space:nowrap}
+.btn.sm{height:36px;padding:0 14px;font-size:12.5px}
+.btn.sec2{background:var(--raised2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.btn.ghost{background:transparent;color:var(--text2);box-shadow:inset 0 0 0 1px var(--line)}
+.btn.danger{background:rgba(239,68,68,.10);color:var(--danger)}
+.btn.dis{background:var(--track);color:var(--faint)}
+/* table */
+.tbl{width:100%;border-collapse:collapse;font:500 13.5px 'Plus Jakarta Sans'}
+.tbl th{text-align:left;font:700 10.5px 'JetBrains Mono';letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:0 12px 10px;white-space:nowrap}
+.tbl td{padding:12px;box-shadow:inset 0 1px 0 #16171B;color:var(--text2);vertical-align:middle;white-space:nowrap}
+.tbl tr.hl td{background:var(--raised)}
+.tbl td.num{font:800 18px 'Big Shoulders';color:var(--text)}
+.tbl .mono{font:700 11.5px 'JetBrains Mono';letter-spacing:.06em;color:var(--faint)}
+.sq{display:flex;align-items:center;gap:12px}
+.poster{width:30px;height:40px;flex:none;background-size:cover;background-position:center}
+.p1{background:linear-gradient(160deg,#ff4655,#3b0d14)}.p2{background:linear-gradient(160deg,#c89b3c,#0a1428)}.p3{background:linear-gradient(160deg,#f5a623,#1b2a3a)}.p4{background:linear-gradient(160deg,#9b2fae,#120a24)}.p5{background:linear-gradient(160deg,#3ddc84,#0b2018)}
+.sq b{font:800 14px 'Plus Jakarta Sans';color:var(--text);display:block}.sq span{font:500 12px 'Plus Jakarta Sans';color:var(--muted)}
+.meter{display:flex;gap:3px;align-items:center}
+.meter i{width:14px;height:5px;background:var(--track);display:block}.meter i.f{background:var(--mint)}.meter i.a{background:var(--amber)}
+.ct{font:800 16px 'Big Shoulders';color:var(--text);margin-left:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font:700 10.5px 'JetBrains Mono';letter-spacing:.12em;text-transform:uppercase;padding:4px 8px;background:var(--raised2);color:var(--text2)}
+.pill.ok{color:var(--mint);background:rgba(0,255,162,.08)}
+.pill.run{color:var(--dsoft);background:rgba(78,90,232,.14)}
+.pill.fail{color:var(--danger);background:rgba(239,68,68,.10)}
+.pill.warn{color:var(--amber);background:rgba(255,181,71,.10)}
+.pill.adm{color:var(--mint);background:rgba(0,255,162,.08)}
+.pill.mod{color:var(--dsoft);background:rgba(78,90,232,.14)}
+.pill.own{color:var(--mintink);background:var(--mint)}
+.pill .d{width:6px;height:6px;border-radius:50%;background:currentColor}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.search{flex:1;min-width:220px;height:46px;background:var(--card);box-shadow:inset 0 0 0 1px var(--track);display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--faint);font:500 14px 'Plus Jakarta Sans'}
+.search svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.chip{height:46px;display:inline-flex;align-items:center;gap:8px;padding:0 14px;background:var(--panel);box-shadow:inset 0 0 0 1px var(--line);font:700 13px 'Plus Jakarta Sans';color:var(--text2)}
+.pag{display:flex;gap:6px;justify-content:flex-end;margin-top:14px}
+.pag i{width:36px;height:36px;display:grid;place-items:center;background:var(--raised);font:800 13px 'Plus Jakarta Sans';font-style:normal;color:var(--text3)}
+.pag i.on{background:var(--mint);color:var(--mintink)}
+/* overlay */
+.ovl{position:relative}
+.scrim{position:absolute;inset:0;background:rgba(4,5,6,.74);z-index:3}
+.drawer{position:absolute;z-index:4;top:0;right:0;bottom:0;width:440px;background:var(--panel);box-shadow:-1px 0 0 var(--line),-30px 0 80px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.dh{padding:22px 24px;display:flex;gap:14px;align-items:flex-start;box-shadow:inset 0 -1px 0 var(--line)}
+.dh .poster{width:54px;height:72px}
+.dh h3{font:800 28px/1.05 'Big Shoulders';text-transform:uppercase}
+.x{margin-left:auto;width:32px;height:32px;display:grid;place-items:center;color:var(--text3);box-shadow:inset 0 0 0 1px var(--line);flex:none}
+.db{padding:20px 24px;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.kv{display:grid;grid-template-columns:1fr 1fr;box-shadow:inset 0 0 0 1px var(--line)}
+.kv div{padding:12px 14px;font:700 14px 'Plus Jakarta Sans'}
+.kv div:nth-child(even){box-shadow:inset 1px 0 0 var(--line)}
+.kv div:nth-child(n+3){box-shadow:inset 0 1px 0 var(--line)}
+.kv div:nth-child(4){box-shadow:inset 1px 1px 0 var(--line)}
+.kv .cap{display:block;margin-bottom:6px;font-size:10px}
+.mrow{display:flex;align-items:center;gap:12px;padding:9px 0}
+.mrow+.mrow{box-shadow:inset 0 1px 0 #16171B}
+.mrow b{font:800 14px 'Plus Jakarta Sans'}.mrow span{font:500 12px 'Plus Jakarta Sans';color:var(--muted);margin-left:auto}
+.crown{color:var(--amber);font:700 10px 'JetBrains Mono';letter-spacing:.12em;margin-left:6px}
+.df{margin-top:auto;padding:16px 24px;box-shadow:inset 0 1px 0 var(--line);display:flex;gap:10px;justify-content:flex-end}
+.modal{position:absolute;z-index:5;left:50%;top:50%;width:520px;transform:translate(-50%,-50%);background:var(--panel);box-shadow:0 0 0 1px var(--line),0 30px 80px rgba(0,0,0,.6);padding:26px}
+.modal h3{font:900 34px/1 'Big Shoulders';text-transform:uppercase;margin-top:8px}
+.modal p{font:500 14px/1.6 'Plus Jakarta Sans';color:var(--text3);margin-top:10px}
+.field{margin-top:18px}
+.ta{margin-top:8px;height:96px;background:var(--card);box-shadow:inset 0 0 0 1px var(--mint);padding:12px 14px;font:500 14px/1.5 'Plus Jakarta Sans';color:var(--text)}
+.cnt{display:flex;justify-content:space-between;margin-top:8px;font:500 12px 'Plus Jakarta Sans';color:var(--muted)}
+.mf{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+/* user card */
+.ucard{display:grid;grid-template-columns:1fr 1.3fr;gap:18px}
+.uid{display:flex;gap:16px;align-items:center}
+.uid .av{width:72px;height:72px;font-size:22px}
+.uid h3{font:900 36px/1 'Big Shoulders';text-transform:uppercase}
+.role{display:flex;margin-top:16px;box-shadow:inset 0 0 0 1px var(--line);width:max-content}
+.role span{height:40px;display:grid;place-items:center;padding:0 18px;font:800 13px 'Plus Jakarta Sans';color:var(--text3)}
+.role span.on{background:var(--raised);color:var(--text);box-shadow:inset 0 -2px 0 var(--mint)}
+.hint{font:500 12.5px/1.5 'Plus Jakarta Sans';color:var(--muted);margin-top:10px}
+/* import */
+.runp{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}
+.nums{display:flex;gap:26px;margin-top:14px;flex-wrap:wrap}
+.nums div{font:800 26px/1 'Big Shoulders'}.nums small{display:block;font:700 10px 'JetBrains Mono';letter-spacing:.14em;color:var(--faint);margin-top:6px;text-transform:uppercase}
+.lock{font:500 12.5px 'Plus Jakarta Sans';color:var(--muted);margin-top:8px;text-align:right}
+/* notification */
+.ntf{display:flex;gap:12px;padding:14px 16px;background:var(--raised);box-shadow:inset 2px 0 0 var(--mint);width:400px}
+.ntf .poster{width:38px;height:50px}
+.ntf b{font:800 14px 'Plus Jakarta Sans';display:block}
+.ntf .m{font:500 12.5px/1.5 'Plus Jakarta Sans';color:var(--text3);margin-top:3px}
+.ntf .r{margin-top:8px;padding:8px 10px;background:var(--card);font:500 12.5px/1.45 'Plus Jakarta Sans';color:var(--text2);box-shadow:inset 2px 0 0 var(--danger)}
+.ntf .t{font:500 11.5px 'Plus Jakarta Sans';color:var(--faint);margin-top:6px}
+/* mobile */
+.phones{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:390px;max-width:100%;background:var(--bg);box-shadow:0 0 0 1px var(--line);overflow:hidden}
+.top{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:var(--menu);box-shadow:inset 0 -1px 0 #16171B}
+.top .logo{font-size:22px;margin:0}
+.burger{width:44px;height:44px;display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--line);color:var(--text2)}
+.pm{padding:20px 16px 24px;display:flex;flex-direction:column;gap:14px}
+.pm h1{font:900 40px/0.96 'Big Shoulders';text-transform:uppercase}
+.phone .stats{grid-template-columns:1fr 1fr}
+.phone .stat{padding:14px 16px}
+.phone .stat .v{font-size:36px}
+.phone .stat:nth-child(3){box-shadow:inset 0 1px 0 var(--line)}
+.phone .stat:nth-child(4){box-shadow:inset 1px 1px 0 var(--line)}
+.rowcard{background:var(--panel);box-shadow:inset 0 0 0 1px var(--line);padding:14px;display:flex;gap:12px;align-items:center}
+.rowcard .grow{flex:1;min-width:0}
+.rowcard b{font:800 14px 'Plus Jakarta Sans';display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rowcard span{font:500 12px 'Plus Jakarta Sans';color:var(--muted)}
+.legend{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:22px}
+.legend div{background:var(--panel);box-shadow:inset 0 0 0 1px var(--line);padding:16px;font:500 13px/1.55 'Plus Jakarta Sans';color:var(--text3)}
+.legend b{display:block;font:800 14px 'Plus Jakarta Sans';color:var(--text);margin-bottom:4px}
+/* period + chart */
+.seg{display:flex;box-shadow:inset 0 0 0 1px var(--line)}
+.seg button,.tabs button{all:unset;cursor:pointer;height:40px;padding:0 16px;display:grid;place-items:center;font:800 13px 'Plus Jakarta Sans';color:var(--text3)}
+.seg button[aria-pressed=true]{background:var(--raised);color:var(--text);box-shadow:inset 0 -2px 0 var(--mint)}
+.tabs{display:flex;flex-wrap:wrap;gap:2px}
+.tabs button{height:36px;padding:0 12px;font-size:12.5px;background:var(--card)}
+.tabs button[aria-selected=true]{background:var(--raised2);color:var(--text);box-shadow:inset 0 0 0 1px var(--track)}
+.s .w{color:var(--text2)}
+.dl{font:700 11px 'JetBrains Mono';letter-spacing:.04em;margin-left:4px;white-space:nowrap}
+.dl.up{color:var(--mint)}.dl.dn{color:var(--danger)}
+.ch-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.ch-total{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.chartp .ph2{flex-wrap:wrap}
+.ch-total #ch-sum{font:800 40px/1 'Big Shoulders'}
+.legend2{display:flex;gap:18px;font:700 12px 'Plus Jakarta Sans';color:var(--text3)}
+.legend2 span{display:flex;align-items:center;gap:8px}
+.lg{display:block;width:18px;height:0;border-top:2px solid var(--mint)}
+.lg.prev{border-top:2px dashed var(--muted)}
+.chart{position:relative;height:270px;padding-left:44px}
+.chart svg{display:block;width:100%;height:240px;overflow:visible}
+.yl{position:absolute;left:0;top:0;height:240px;width:40px}
+.yl span{position:absolute;right:6px;transform:translateY(-50%);font:700 10.5px 'JetBrains Mono';color:var(--faint)}
+.xl{position:relative;height:24px;margin-top:6px}
+.xl span{position:absolute;transform:translateX(-50%);}
+.xl span.first{transform:none}.xl span.last{transform:translateX(-100%)}
+.xl span{font:700 10.5px 'JetBrains Mono';color:var(--faint);white-space:nowrap}
+.xhair{position:absolute;top:0;height:240px;width:1px;background:var(--track);display:none;pointer-events:none}
+.dot{position:absolute;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);display:none;pointer-events:none;box-shadow:0 0 0 2px var(--panel)}
+.dot.cur{background:var(--mint)}.dot.prev{background:var(--muted)}
+.tip{position:absolute;top:8px;display:none;pointer-events:none;background:var(--raised);box-shadow:0 0 0 1px var(--track),0 12px 30px rgba(0,0,0,.5);padding:10px 12px;min-width:180px;font:500 12.5px 'Plus Jakarta Sans';color:var(--text2);z-index:2}
+.tip .cap{font-size:10px;margin-bottom:6px;display:block}
+.tip div{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-top:3px}
+.tip b{font:800 15px 'Big Shoulders';color:var(--text)}
+.tip i{display:inline-block;width:12px;margin-right:6px;border-top:2px solid var(--mint);vertical-align:middle}
+.tip i.p{border-top:2px dashed var(--muted)}
+.ch-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font:500 12.5px 'Plus Jakarta Sans';color:var(--muted);margin-top:6px}
+.tbl-link{color:var(--text2);text-decoration:underline;text-underline-offset:3px}
+@media (max-width:640px){.tabs{flex-wrap:nowrap;overflow-x:auto;width:100%}.tabs button{flex:none}.chart{padding-left:34px}.yl{width:30px}}
+@media (max-width:900px){.frame{grid-template-columns:1fr}.side{display:none}.stats{grid-template-columns:1fr 1fr}.grid2,.ucard,.legend{grid-template-columns:1fr}.drawer,.modal{width:auto;left:12px;right:12px;transform:translateY(-50%)}.drawer{left:12px}.tblwrap{overflow-x:auto}}
+</style></head><body><div class="wrap">
+
+<div class="cap" style="color:var(--mint)">Mockup · Painel admin V1</div>
+<div class="doc-h" style="margin-top:10px">Painel <span>admin</span></div>
+<p class="note">Referência visual da spec. Mesmo design system do app (tokens, tipografia, cantos retos), em um layout próprio em <b>/admin</b>: sidebar de administração no lugar da sidebar de squads, conteúdo em <b>tabelas densas</b> no lugar dos cards. Os textos de interface ficam em português, como o resto do app.</p>
+<div class="legend">
+  <div><b>Acesso</b>Moderador, admin ou dono abrem o painel. Para os usuários comuns, <b>/admin</b> responde 404. O link “Admin” aparece no menu da conta para esses três papéis.</div>
+  <div><b>Ações destrutivas</b>Sempre em um diálogo de confirmação. Fechar um squad exige um motivo, que vai para a auditoria e para os membros; mudar um papel não pede motivo.</div>
+  <div><b>Responsivo</b>Abaixo de 1024px a sidebar vira drawer (mesmo padrão do app); abaixo de 640px as tabelas viram listas de linhas.</div>
+</div>
+
+<!-- 1. OVERVIEW -->
+<div class="sec"><span class="cap">01</span><h2>Visão geral</h2></div>
+<div class="frame">
+  <aside class="side">
+    <div class="logo"><i></i>Squadzr</div>
+    <span class="badge">ADMIN</span>
+    <div class="nav on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Visão geral</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M15 20c0-2 1.5-4 4-4"/></svg>Squads</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Usuários</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M8 4v16"/></svg>Catálogo</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M9 11h6M9 15h6"/></svg>Auditoria</div>
+    <div class="back">← Voltar ao Squadzr</div>
+    <div class="user"><div class="av a1">CA</div><div><b>Caio</b><span>Admin</span></div></div>
+  </aside>
+  <main class="main">
+    <div class="ph"><div><div class="cap">Admin</div><h1>Visão geral</h1><p>Atualizado agora · os números de usuários online vêm das conexões ao vivo</p></div>
+      <div class="seg" role="group" aria-label="Período"><button data-p="7">7 dias</button><button data-p="30" aria-pressed="true">30 dias</button><button data-p="90">90 dias</button></div></div>
+    <div class="stats">
+      <div class="stat"><div class="cap">Usuários online</div><div class="v"><span class="live"></span>312</div><div class="s">Pico no período: <b class="w">488</b> <span class="dl up">▲ 9%</span></div></div>
+      <div class="stat"><div class="cap">Usuários cadastrados</div><div class="v">12.418</div><div class="s">+1.204 no período <span class="dl up">▲ 18%</span></div></div>
+      <div class="stat"><div class="cap">Squads abertos</div><div class="v">184</div><div class="s">Pico no período: <b class="w">261</b> <span class="dl dn">▼ 4%</span></div></div>
+      <div class="stat"><div class="cap">Squads completados</div><div class="v">9.731</div><div class="s">+2.131 no período <span class="dl up">▲ 7%</span></div></div>
+    </div>
+    <section class="panel chartp">
+      <div class="ph2"><div><div class="cap">Atividade</div><h3 id="ch-title">Squads completados por dia</h3></div>
+        <div class="tabs" role="tablist"><button data-m="squads" aria-selected="true">Completados</button><button data-m="users">Cadastros</button><button data-m="online">Pico online</button><button data-m="open">Squads abertos</button></div></div>
+      <div class="ch-head"><div class="ch-total"><span id="ch-sum">2.316</span><span class="dl up" id="ch-delta">▲ 12% vs 30 dias anteriores</span></div>
+        <div class="legend2"><span><i class="lg cur"></i>Últimos 30 dias</span><span><i class="lg prev"></i>30 dias anteriores</span></div></div>
+      <div class="chart" id="chart">
+        <div class="yl" id="yl"></div>
+        <svg id="svg" viewBox="0 0 1000 240" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="xhair" id="xh"></div><div class="dot cur" id="d1"></div><div class="dot prev" id="d2"></div>
+        <div class="tip" id="tip"></div>
+        <div class="xl" id="xl"></div>
+      </div>
+      <div class="ch-foot"><span id="ch-note">Histórico completo: cada Squad Record guarda o instante em que o squad ficou pronto.</span><span class="tbl-link">Ver como tabela</span></div>
+    </section>
+    <div class="grid2">
+      <section class="panel">
+        <div class="ph2"><div><div class="cap">Catalog Import</div><h3>Última execução</h3></div><span class="pill ok"><span class="d"></span>Concluída</span></div>
+        <div style="font:500 13.5px 'Plus Jakarta Sans';color:var(--text3)">Hoje, 04:00 UTC · agendada (cron) · 3 min 12 s</div>
+        <div class="nums"><div>4<small>Adicionados</small></div><div>2<small>Retirados</small></div><div>1<small>Recolocados</small></div><div>1.684<small>No catálogo</small></div></div>
+      </section>
+      <section class="panel">
+        <div class="ph2"><div><div class="cap">Auditoria</div><h3>Ações recentes</h3></div><span class="btn sm ghost">Ver tudo</span></div>
+        <div class="mrow"><div class="av a1" style="width:28px;height:28px;font-size:10px">CA</div><b style="font-size:13px">Fechou “Ranked 5x5 sexta”</b><span>há 12 min</span></div>
+        <div class="mrow"><div class="av a1" style="width:28px;height:28px;font-size:10px">CA</div><b style="font-size:13px">Executou o Catalog Import</b><span>ontem</span></div>
+        <div class="mrow"><div class="av a1" style="width:28px;height:28px;font-size:10px">CA</div><b style="font-size:13px">Tornou Marina Rocha admin</b><span>3 dias</span></div>
+      </section>
+    </div>
+  </main>
+</div>
+<p class="note">Os quatro números combinados. “Usuários online” tem o ponto mint pulsando (mesmo “live dot” do app). A última execução do import usa os estados <span class="pill ok">Concluída</span> <span class="pill run">Em andamento</span> <span class="pill warn">Parada de segurança</span> <span class="pill fail">Falhou</span> <span class="pill">Interrompida</span> <span class="pill">Na fila</span>.</p>
+
+<!-- 2. SQUADS -->
+<div class="sec"><span class="cap">02</span><h2>Squads abertos · detalhe e fechamento</h2></div>
+<div class="frame ovl">
+  <aside class="side">
+    <div class="logo"><i></i>Squadzr</div><span class="badge">ADMIN</span>
+    <div class="nav"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Visão geral</div>
+    <div class="nav on"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M15 20c0-2 1.5-4 4-4"/></svg>Squads</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Usuários</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M8 4v16"/></svg>Catálogo</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M9 11h6M9 15h6"/></svg>Auditoria</div>
+  </aside>
+  <main class="main">
+    <div class="ph"><div><div class="cap">Admin</div><h1>Squads abertos</h1><p>184 formando agora</p></div></div>
+    <div class="toolbar">
+      <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Buscar por nome, código ou host</div>
+      <div class="chip">Jogo: todos ▾</div>
+    </div>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Squad</th><th>Código</th><th>Host</th><th>Vagas</th><th>Criado</th><th>Atividade</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td><div class="sq"><div class="poster p1"></div><div><b>Ranked 5x5 sexta</b><span>Valorant · PC</span></div></div></td><td class="mono">#VLR7K2</td><td>Diego Alves</td><td><div class="meter"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><span class="ct">4/5</span></div></td><td>há 18 min</td><td>há 2 min</td></tr>
+        <tr><td><div class="sq"><div class="poster p2"></div><div><b>Flex de boa sem tilt</b><span>League of Legends · PC</span></div></div></td><td class="mono">#LOL4QX</td><td>Ana Lima</td><td><div class="meter"><i class="f"></i><i class="f"></i><i></i><i></i><i></i><span class="ct">2/5</span></div></td><td>há 25 min</td><td>há 9 min</td></tr>
+        <tr><td><div class="sq"><div class="poster p3"></div><div><b>Premier tryhard</b><span>Counter-Strike 2 · PC</span></div></div></td><td class="mono">#CS2M8P</td><td>Rafa</td><td><div class="meter"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><span class="ct">4/5</span></div></td><td>há 31 min</td><td>há 4 min</td></tr>
+        <tr><td><div class="sq"><div class="poster p4"></div><div><b>Turbo night</b><span>Dota 2 · PC</span></div></div></td><td class="mono">#DTA2ZW</td><td>Lucas P.</td><td><div class="meter"><i class="f"></i><i></i><i></i><i></i><i></i><span class="ct">1/5</span></div></td><td>há 47 min</td><td>há 30 min</td></tr>
+        <tr><td><div class="sq"><div class="poster p5"></div><div><b>Duo pra subir</b><span>Fortnite · PS5</span></div></div></td><td class="mono">#FNT9RA</td><td>Bia</td><td><div class="meter"><i class="f"></i><i class="a"></i><span class="ct">1/2</span></div></td><td>há 1 h</td><td>há 12 min</td></tr>
+      </tbody></table></div>
+    <div class="pag"><i>‹</i><i class="on">1</i><i>2</i><i>3</i><i>›</i></div>
+  </main>
+  <div class="scrim"></div>
+  <aside class="drawer">
+    <div class="dh"><div class="poster p1"></div><div><div class="cap">Valorant · PC · #VLR7K2</div><h3>Ranked 5x5 sexta</h3></div><div class="x">✕</div></div>
+    <div class="db">
+      <div class="kv"><div><span class="cap">Vagas</span>4 / 5</div><div><span class="cap">Idioma</span>Português</div><div><span class="cap">Criado</span>há 18 min</div><div><span class="cap">Discord</span>discord.gg/ranked5x</div></div>
+      <div><div class="cap" style="margin-bottom:6px">Membros · 4</div>
+        <div class="mrow"><div class="av a3">DA</div><b>Diego Alves<span class="crown">HOST</span></b><span>entrou há 18 min</span></div>
+        <div class="mrow"><div class="av a2">MR</div><b>Marina Rocha</b><span>há 12 min</span></div>
+        <div class="mrow"><div class="av a4">JP</div><b>João Pedro</b><span>há 6 min</span></div>
+        <div class="mrow"><div class="av a6">TS</div><b>Thaís</b><span>há 2 min</span></div>
+      </div>
+    </div>
+    <div class="df"><span class="btn ghost">Abrir no app</span><span class="btn danger">Fechar squad</span></div>
+  </aside>
+</div>
+<p class="note">Clicar numa linha abre o detalhe num <b>painel lateral</b> (bottom sheet no celular), sem sair da lista. O convite do Discord aparece por completo só aqui, para o admin conferir se é suspeito.</p>
+
+<div class="frame ovl" style="min-height:430px;margin-top:18px;grid-template-columns:1fr">
+  <main class="main" style="opacity:.4"><div class="ph"><div><div class="cap">Admin</div><h1>Squads abertos</h1></div></div></main>
+  <div class="scrim"></div>
+  <div class="modal">
+    <div class="cap" style="color:var(--danger)">Ação irreversível</div>
+    <h3>Fechar “Ranked 5x5 sexta”?</h3>
+    <p>O squad é apagado agora. Os <b style="color:var(--text)">4 membros</b> saem do lobby na hora e recebem uma notificação com o motivo abaixo.</p>
+    <div class="field"><div class="cap">Motivo (visível aos membros)</div>
+      <div class="ta">Nome do squad com linguagem ofensiva.</div>
+      <div class="cnt"><span>Obrigatório</span><span>38/280</span></div></div>
+    <div class="mf"><span class="btn ghost">Cancelar</span><span class="btn danger">Fechar squad</span></div>
+  </div>
+</div>
+
+<div style="margin-top:18px;display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+  <div class="ntf"><div class="poster p1"></div><div><b>Ranked 5x5 sexta</b><div class="m">Squad fechado pela moderação do Squadzr.</div><div class="r">“Nome do squad com linguagem ofensiva.”</div><div class="t">Valorant · agora</div></div></div>
+  <p class="note" style="margin:0;max-width:420px">O que cada membro (host incluído) vê no sino: a notificação nova <b>room_closed_by_admin</b>, no mesmo componente <b>NotificationItem</b>, com o motivo destacado por uma borda <i>danger</i>.</p>
+</div>
+
+<!-- 3. USERS -->
+<div class="sec"><span class="cap">03</span><h2>Usuários · ficha e papel</h2></div>
+<div class="frame">
+  <aside class="side">
+    <div class="logo"><i></i>Squadzr</div><span class="badge">ADMIN</span>
+    <div class="nav"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Visão geral</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M15 20c0-2 1.5-4 4-4"/></svg>Squads</div>
+    <div class="nav on"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Usuários</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M8 4v16"/></svg>Catálogo</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M9 11h6M9 15h6"/></svg>Auditoria</div>
+  </aside>
+  <main class="main">
+    <div class="ph"><div><div class="cap">Admin · Usuários</div><h1>Marina Rocha</h1></div><span class="btn ghost sm">← Todos os usuários</span></div>
+    <div class="ucard">
+      <section class="panel">
+        <div class="uid"><div class="av a2">MR</div><div><div class="cap">ID Discord · 2849…1173</div><h3 style="margin-top:6px">Marina Rocha</h3><div style="font:500 13px 'Plus Jakarta Sans';color:var(--muted);margin-top:6px">Membro desde out. 2026 · online agora</div></div></div>
+        <div class="cap" style="margin-top:22px">Papel</div>
+        <div class="role"><span>Usuário</span><span>Moderador</span><span class="on">Admin</span></div>
+        <div class="hint">Você não pode mudar o seu próprio papel. A mudança vale na próxima requisição da pessoa e fica na auditoria.</div>
+        <div class="kv" style="margin-top:18px"><div><span class="cap">Squads completados</span>47</div><div><span class="cap">Jogos</span>6</div><div><span class="cap">Squads abertos</span>2 / 3</div><div><span class="cap">Hospedando</span>1 / 1</div></div>
+      </section>
+      <section class="panel">
+        <div class="ph2"><div><div class="cap">Agora</div><h3>Squads abertos</h3></div></div>
+        <div class="rowcard" style="margin-bottom:8px"><div class="poster p1"></div><div class="grow"><b>Ranked 5x5 sexta</b><span>Valorant · 4/5 · membro</span></div><span class="mono" style="font:700 11px 'JetBrains Mono';color:var(--faint)">#VLR7K2</span></div>
+        <div class="rowcard"><div class="poster p2"></div><div class="grow"><b>Flex de boa sem tilt <span class="crown">HOST</span></b><span>League of Legends · 2/5</span></div><span style="font:700 11px 'JetBrains Mono';color:var(--faint)">#LOL4QX</span></div>
+        <div class="ph2" style="margin-top:22px"><div><div class="cap">Histórico</div><h3>Últimos completados</h3></div></div>
+        <table class="tbl"><tbody>
+          <tr><td><div class="sq"><div class="poster p3"></div><div><b>Premier tryhard</b><span>Counter-Strike 2 · 5 jogadores</span></div></div></td><td style="text-align:right">ontem</td></tr>
+          <tr><td><div class="sq"><div class="poster p1"></div><div><b>Unrated chill</b><span>Valorant · 5 jogadores</span></div></div></td><td style="text-align:right">3 nov.</td></tr>
+        </tbody></table>
+      </section>
+    </div>
+  </main>
+</div>
+<p class="note">A lista de usuários (não desenhada aqui) é uma tabela com avatar, nome, ID do Discord, data de entrada, papel (<span class="pill">Usuário</span> <span class="pill mod">Moderador</span> <span class="pill adm">Admin</span> <span class="pill own">Dono</span>, o dono em mint cheio) e squads abertos, com busca por nome ou ID do Discord. A ficha soma o que o admin precisa para suporte: limites atuais (2/3 squads, 1/1 hospedando), squads abertos agora e histórico.</p>
+<p class="note">Papéis: o dono muda o papel de qualquer outra pessoa entre Usuário, Moderador e Admin; um admin muda só o de usuários e moderadores; ninguém muda o próprio papel nem o do dono. O seletor fica travado com o motivo embaixo (“Você não pode mudar o seu próprio papel.”, “O papel do dono não pode ser alterado.”, “Só o dono pode mudar o papel de um admin.”). Um moderador vê a ficha sem o seletor, e o menu dele mostra só Visão geral, Squads e Usuários.</p>
+
+<!-- 4. CATALOG -->
+<div class="sec"><span class="cap">04</span><h2>Catálogo · Catalog Import</h2></div>
+<div class="frame">
+  <aside class="side">
+    <div class="logo"><i></i>Squadzr</div><span class="badge">ADMIN</span>
+    <div class="nav"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Visão geral</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M15 20c0-2 1.5-4 4-4"/></svg>Squads</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Usuários</div>
+    <div class="nav on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M8 4v16"/></svg>Catálogo</div>
+    <div class="nav"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M9 11h6M9 15h6"/></svg>Auditoria</div>
+  </aside>
+  <main class="main">
+    <div class="ph"><div><div class="cap">Admin</div><h1>Catalog Import</h1><p>Sincroniza o catálogo com a IGDB. Roda todo dia às 04:00 UTC.</p></div></div>
+    <section class="panel runp">
+      <div><div class="cap">Execução manual</div><h3>Rodar agora</h3><div class="hint" style="max-width:520px">Executa o mesmo import do cron, com as mesmas checagens de segurança. Uma execução manual a cada 24 h; o cron não conta.</div></div>
+      <div><span class="btn dis">Rodar import</span><div class="lock">Disponível de novo hoje às 18:42</div></div>
+    </section>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Início</th><th>Origem</th><th>Status</th><th>Duração</th><th>Adic.</th><th>Retir.</th><th>Recol.</th><th>Catálogo</th></tr></thead>
+      <tbody>
+        <tr><td>Hoje, 04:00</td><td>Cron</td><td><span class="pill ok"><span class="d"></span>Concluída</span></td><td>3 min 12 s</td><td class="num">4</td><td class="num">2</td><td class="num">1</td><td class="num">1.684</td></tr>
+        <tr><td>Ontem, 18:42</td><td>Caio</td><td><span class="pill ok"><span class="d"></span>Concluída</span></td><td>3 min 05 s</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">1.681</td></tr>
+        <tr><td>Ontem, 04:00</td><td>Cron</td><td><span class="pill warn"><span class="d"></span>Parada de segurança</span></td><td>2 min 48 s</td><td class="num" style="color:var(--faint)">—</td><td class="num" style="color:var(--faint)">—</td><td class="num" style="color:var(--faint)">—</td><td class="num">1.681</td></tr>
+        <tr><td>3 nov., 04:00</td><td>Cron</td><td><span class="pill fail"><span class="d"></span>Falhou</span></td><td>0 min 14 s</td><td class="num" style="color:var(--faint)">—</td><td class="num" style="color:var(--faint)">—</td><td class="num" style="color:var(--faint)">—</td><td class="num">1.681</td></tr>
+      </tbody></table></div>
+  </main>
+</div>
+<p class="note">Durante uma execução, o botão some e a linha do topo mostra <span class="pill run"><span class="d"></span>Em andamento</span>. Clicar numa execução com falha ou parada de segurança mostra a mensagem do erro. Fora do limite de 24 h, o botão fica <b>mint</b> e pede confirmação antes de rodar.</p>
+
+<!-- 5. AUDIT + MOBILE -->
+<div class="sec"><span class="cap">05</span><h2>Auditoria · celular</h2></div>
+<div class="phones">
+  <div class="phone">
+    <div class="top"><div class="logo"><i></i>Squadzr</div><div class="burger">☰</div></div>
+    <div class="pm">
+      <div><div class="cap">Admin</div><h1>Visão geral</h1></div>
+      <div class="stats">
+        <div class="stat"><div class="cap">Online</div><div class="v"><span class="live"></span>312</div></div>
+        <div class="stat"><div class="cap">Cadastrados</div><div class="v">12.418</div></div>
+        <div class="stat"><div class="cap">Abertos</div><div class="v">184</div></div>
+        <div class="stat"><div class="cap">Completados</div><div class="v">9.731</div></div>
+      </div>
+      <div class="rowcard"><div class="grow"><div class="cap">Último import</div><b style="margin-top:6px">Hoje, 04:00 · cron</b></div><span class="pill ok"><span class="d"></span>OK</span></div>
+    </div>
+  </div>
+  <div class="phone">
+    <div class="top"><div class="logo"><i></i>Squadzr</div><div class="burger">☰</div></div>
+    <div class="pm">
+      <div><div class="cap">Admin</div><h1>Auditoria</h1></div>
+      <div class="rowcard"><div class="av a1">CA</div><div class="grow"><b>Fechou um squad</b><span>Ranked 5x5 sexta · “Nome do squad com linguagem ofensiva.”</span></div><span>12 min</span></div>
+      <div class="rowcard"><div class="av a1">CA</div><div class="grow"><b>Executou o Catalog Import</b><span>Execução manual</span></div><span>ontem</span></div>
+      <div class="rowcard"><div class="av a1">CA</div><div class="grow"><b>Mudou um papel</b><span>Marina Rocha · usuário → admin</span></div><span>3 dias</span></div>
+      <div class="pag"><i>‹</i><i class="on">1</i><i>2</i><i>›</i></div>
+    </div>
+  </div>
+  <p class="note" style="max-width:380px;margin:0">No desktop a auditoria é uma tabela simples: <b>quando</b>, <b>quem</b>, <b>ação</b>, <b>alvo</b> e <b>motivo</b>, paginada, mais recente primeiro. No celular, tabelas viram listas de linhas como estas. Sem filtros na V1.</p>
+</div>
+
+</div>
+<script>
+(function(){
+  // Deterministic mock series: [current, previous] per day.
+  function rnd(seed){return function(){seed=(seed*16807)%2147483647;return (seed-1)/2147483646}}
+  function series(n,base,amp,trend,seed,weekly){var r=rnd(seed),out=[];for(var i=0;i<n;i++){var wk=weekly?Math.sin((i%7)/7*Math.PI*2-1.2)*weekly:0;out.push(Math.max(0,Math.round(base+trend*i+wk+(r()-.5)*amp)))}return out}
+  var M={
+    squads:{title:'Squads completados por dia',kind:'sum',b:[70,26,.25,11,14],note:'Histórico completo: cada Squad Record guarda o instante em que o squad ficou pronto.'},
+    users:{title:'Cadastros por dia',kind:'sum',b:[36,16,.18,23,6],note:'Histórico completo: vem da data de criação de cada conta.'},
+    online:{title:'Pico de usuários online por dia',kind:'max',b:[360,90,1.2,37,70],note:'Amostrado a cada 5 min pela API desde o lançamento do painel; antes disso não há dado.'},
+    open:{title:'Pico de squads abertos por dia',kind:'max',b:[205,50,.3,41,30],note:'Amostrado a cada 5 min pela API desde o lançamento do painel; antes disso não há dado.'}
+  };
+  var period=30,metric='squads';
+  var svg=document.getElementById('svg'),chart=document.getElementById('chart');
+  function fmt(n){return n.toLocaleString('pt-BR')}
+  function data(){var b=M[metric].b;var cur=series(period,b[0],b[1],b[2],b[3],b[4]);var prev=series(period,b[0]*.9,b[1],b[2],b[3]+101,b[4]);return {cur:cur,prev:prev}}
+  function agg(a){return M[metric].kind==='sum'?a.reduce(function(x,y){return x+y},0):Math.max.apply(null,a)}
+  function nice(v){var p=Math.pow(10,Math.floor(Math.log10(v))),s=[1,2,2.5,5,10];for(var i=0;i<s.length;i++)if(s[i]*p>=v)return s[i]*p;return 10*p}
+  var D,max;
+  function x(i){return i/(period-1)*1000}
+  function y(v){return 240-v/max*228}
+  function path(a){return a.map(function(v,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)}).join(' ')}
+  function day(i){var d=new Date(2026,10,5);d.setDate(d.getDate()-(period-1-i));return d}
+  function lbl(d){return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}).replace('.','')}
+  function draw(){
+    D=data();max=nice(Math.max.apply(null,D.cur.concat(D.prev))*1.05);
+    var g='';for(var k=0;k<=4;k++){var yy=240-k*57;g+='<line x1="0" x2="1000" y1="'+yy+'" y2="'+yy+'" stroke="'+(k?'#1A1B20':'#24252B')+'" stroke-width="1" vector-effect="non-scaling-stroke"/>'}
+    svg.innerHTML=g+'<path d="'+path(D.prev)+'" fill="none" stroke="#80838C" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>'+
+      '<path d="'+path(D.cur)+'" fill="none" stroke="#00FFA2" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+    var yl='';for(k=0;k<=4;k++){yl+='<span style="top:'+(240-k*57)+'px">'+fmt(Math.round(max*k*57/228))+'</span>'}document.getElementById('yl').innerHTML=yl;
+    var narrow=chart.clientWidth<500,step=period===7?(narrow?3:1):period===30?(narrow?14:7):(narrow?44:21),xl='';for(var i=period-1;i>=0;i-=step){xl+='<span class="'+(i===period-1?'last':i===0?'first':'')+'" style="left:'+(i/(period-1)*100)+'%">'+lbl(day(i))+'</span>'}document.getElementById('xl').innerHTML=xl;
+    var c=agg(D.cur),p=agg(D.prev),dp=Math.round((c-p)/p*100),el=document.getElementById('ch-delta');
+    document.getElementById('ch-sum').textContent=fmt(c)+(M[metric].kind==='max'?' pico':'');
+    el.textContent=(dp>=0?'▲ ':'▼ ')+Math.abs(dp)+'% vs '+period+' dias anteriores';el.className='dl '+(dp>=0?'up':'dn');
+    document.getElementById('ch-title').textContent=M[metric].title;document.getElementById('ch-note').textContent=M[metric].note;
+    var lg=document.querySelectorAll('.legend2 span');lg[0].lastChild.textContent='Últimos '+period+' dias';lg[1].lastChild.textContent=period+' dias anteriores';
+    hide();
+  }
+  function hide(){['xh','d1','d2','tip'].forEach(function(id){document.getElementById(id).style.display='none'})}
+  svg.addEventListener('mousemove',function(e){
+    var r=svg.getBoundingClientRect(),i=Math.round((e.clientX-r.left)/r.width*(period-1));i=Math.max(0,Math.min(period-1,i));
+    var px=44+i/(period-1)*r.width,sy=r.height/240;
+    var xh=document.getElementById('xh');xh.style.display='block';xh.style.left=px+'px';
+    var d1=document.getElementById('d1'),d2=document.getElementById('d2');
+    d1.style.display=d2.style.display='block';d1.style.left=d2.style.left=px+'px';d1.style.top=y(D.cur[i])*sy+'px';d2.style.top=y(D.prev[i])*sy+'px';
+    var t=document.getElementById('tip'),dd=D.cur[i]-D.prev[i];
+    t.innerHTML='<span class="cap">'+lbl(day(i))+'</span><div><span><i></i>Atual</span><b>'+fmt(D.cur[i])+'</b></div><div><span><i class="p"></i>Período anterior</span><b>'+fmt(D.prev[i])+'</b></div><div><span>Diferença</span><span class="dl '+(dd>=0?'up':'dn')+'">'+(dd>=0?'+':'')+fmt(dd)+'</span></div>';
+    t.style.display='block';var tw=t.offsetWidth;t.style.left=(px+14+tw>chart.clientWidth?px-14-tw:px+14)+'px';
+  });
+  svg.addEventListener('mouseleave',hide);
+  document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.seg button').forEach(function(o){o.setAttribute('aria-pressed',o===b)});period=+b.dataset.p;draw()})});
+  document.querySelectorAll('.tabs button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.tabs button').forEach(function(o){o.setAttribute('aria-selected',o===b)});metric=b.dataset.m;draw()})});
+  draw(); window.addEventListener('resize',draw);
+})();
+</script>
+</body></html>

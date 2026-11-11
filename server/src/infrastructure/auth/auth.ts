@@ -1,32 +1,82 @@
-import { betterAuth } from 'better-auth'
+import { betterAuth, type BetterAuthAdvancedOptions } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { db } from '@infrastructure/database/drizzle'
-import { env } from '@config/env'
+import type { Database } from '@infrastructure/database/drizzle'
+import type { Env } from '@config/env'
 
-const isProduction = env.NODE_ENV === 'production'
+export type AuthConfig = Pick<
+  Env,
+  | 'NODE_ENV'
+  | 'BETTER_AUTH_SECRET'
+  | 'BETTER_AUTH_URL'
+  | 'BETTER_AUTH_COOKIE_DOMAIN'
+  | 'CORS_ORIGIN'
+  | 'DISCORD_CLIENT_ID'
+  | 'DISCORD_CLIENT_SECRET'
+>
 
-export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: 'pg',
-  }),
-  secret: env.BETTER_AUTH_SECRET,
-  baseURL: env.BETTER_AUTH_URL,
-  trustedOrigins: [env.CORS_ORIGIN],
-  socialProviders: {
-    discord: {
-      clientId: env.DISCORD_CLIENT_ID,
-      clientSecret: env.DISCORD_CLIENT_SECRET,
+export function createAuth(db: Database, config: AuthConfig) {
+  return betterAuth({
+    database: drizzleAdapter(db, {
+      provider: 'pg',
+    }),
+    secret: config.BETTER_AUTH_SECRET,
+    baseURL: config.BETTER_AUTH_URL,
+    trustedOrigins: [config.CORS_ORIGIN, config.BETTER_AUTH_URL],
+    socialProviders: {
+      discord: {
+        clientId: config.DISCORD_CLIENT_ID,
+        clientSecret: config.DISCORD_CLIENT_SECRET,
+        // Refresh name and image on every sign-in: Discord drops the old avatar file
+        // when its hash changes, so the stored image URL would answer 404.
+        overrideUserInfoOnSignIn: true,
+      },
     },
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // 1 day
-  },
-  advanced: {
-    // Required for cross-origin auth (client and server on different domains)
-    defaultCookieAttributes: isProduction ? { sameSite: 'none', secure: true } : {},
-  },
-})
+    user: {
+      additionalFields: {
+        // The role (`user`, `moderator`, `admin` or `owner`). Input is off, so neither sign-up nor a
+        // profile update can set it; the `admin:grant` script and the panel's use cases write it. It
+        // reaches the session as a plain string; `@squadzr/schemas` narrows it (the session contract).
+        // No Better Auth admin plugin (ADR 0005).
+        role: { type: 'string', required: false, defaultValue: 'user', input: false },
+      },
+    },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
+      updateAge: 60 * 60 * 24, // 1 day
+    },
+    // Better Auth limits its routes per client address (the one the trusted proxy saw) in production, and
+    // sign-in hardest. The session read is left out: the Next server reads every visitor's session from
+    // its own few addresses, so a shared limit would sign visitors out under load.
+    rateLimit: {
+      enabled: config.NODE_ENV === 'production',
+      customRules: { '/get-session': false },
+    },
+    advanced: cookieAdvancedOptions(config),
+  })
+}
 
-export type Session = typeof auth.$Infer.Session
-export type User = typeof auth.$Infer.Session.user
+/**
+ * Cookie settings of the session cookie. Without a cookie domain, the app and the API sit on
+ * unrelated domains, so production cookies are `SameSite=None`. With one, they sit on subdomains
+ * of the same parent domain: the cookie spans them, and `SameSite=Lax` still reaches the API
+ * because subdomains of one parent domain are same-site.
+ */
+function cookieAdvancedOptions(config: AuthConfig): BetterAuthAdvancedOptions {
+  const isProduction = config.NODE_ENV === 'production'
+
+  if (config.BETTER_AUTH_COOKIE_DOMAIN) {
+    return {
+      crossSubDomainCookies: { enabled: true, domain: config.BETTER_AUTH_COOKIE_DOMAIN },
+      defaultCookieAttributes: isProduction ? { sameSite: 'lax', secure: true } : {},
+    }
+  }
+
+  // Required for cross-origin auth (client and server on different domains)
+  return {
+    defaultCookieAttributes: isProduction ? { sameSite: 'none', secure: true } : {},
+  }
+}
+
+export type Auth = ReturnType<typeof createAuth>
+export type Session = Auth['$Infer']['Session']
+export type User = Session['user']

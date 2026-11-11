@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Squadzr — Landing page</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;800;900&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080A}
+a{color:#00FFA2}a:hover{color:#7CFFCF}
+/* Design system states: components keep inline styles, so hover and motion live here */
+.ds-btn{transition:background-color .2s,box-shadow .25s,color .2s,transform .15s}
+.ds-btn:active{transform:scale(.97)}
+.ds-btn-primary:hover{background-color:#5CFFC4 !important}
+.ds-btn-secondary:hover{background-color:#24252B !important}
+.ds-btn-ghost:hover{background-color:#1A1B20 !important}
+.ds-btn-link:hover{color:#7CFFCF !important}
+.ds-btn-danger:hover{background-color:rgba(239,68,68,0.18) !important}
+.ds-btn-discord:hover{background-color:#5D68F0 !important}
+.ds-btn-light:hover{box-shadow:0 0 0 5px rgba(255,255,255,0.18) !important}
+.ds-btn-dark:hover{background-color:#1A1B20 !important}
+.ds-btn-glass:hover{background-color:rgba(255,255,255,0.24) !important}
+.ds-btn-off:active{transform:none}
+.ds-chip{transition:background-color .15s}
+.ds-chip-removable:hover{background-color:#2A2B31 !important}
+.ds-chip-suggest:hover,.ds-chip-toggle[aria-pressed="false"]:hover{background-color:rgba(0,255,162,0.16) !important}
+.ds-chip-toggle[aria-pressed="true"]:hover{background-color:#5CFFC4 !important}
+.ds-seg{transition:background-color .15s,color .15s}
+.ds-seg[aria-pressed="false"]:hover{color:#F2F3F5 !important}
+.ds-pg{transition:background-color .15s}
+.ds-pg-idle:hover{background-color:#1F2026 !important}
+.ds-notif{transition:background-color .15s}
+.ds-notif:hover{background-color:#1F2026 !important}
+.ds-notif-row .ds-notif-x{opacity:0;transition:opacity .15s}
+.ds-notif-row:hover .ds-notif-x,.ds-notif-x:focus-visible{opacity:1}
+@keyframes ds-halo{0%{box-shadow:0 0 0 2px #00FFA2,0 0 0 2px rgba(0,255,162,0.45)}70%,100%{box-shadow:0 0 0 2px #00FFA2,0 0 0 9px rgba(0,255,162,0)}}
+.ds-in-room{animation:ds-halo 2.4s ease-out infinite}
+@keyframes ds-wait{0%,100%{opacity:.55}50%{opacity:1}}
+.ds-wait{animation:ds-wait 2.4s ease-in-out infinite}
+@keyframes ds-sheen{0%,55%{transform:translateX(-120%) skewX(-18deg)}85%,100%{transform:translateX(420%) skewX(-18deg)}}
+.ds-sheen{animation:ds-sheen 5s ease-in-out infinite}
+@keyframes ds-pop{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+.ds-pop{animation:ds-pop .5s cubic-bezier(.22,1,.36,1) both}
+input::placeholder{color:#5F626B}
+@media (prefers-reduced-motion:reduce){.ds-in-room,.ds-wait,.ds-sheen,.ds-pop{animation:none !important}}
+.nav-l{transition:color .2s}.nav-l:hover{color:#F2F3F5 !important}
+.g-row{transition:background-color .2s}
+.g-row:hover{background-color:#16171B !important}
+.foot-l{transition:color .2s}.foot-l:hover{color:#F2F3F5 !important}
+details summary{list-style:none;cursor:pointer}
+details summary::-webkit-details-marker{display:none}
+details .faq-ico{transition:transform .25s cubic-bezier(.22,1,.36,1)}
+details[open] .faq-ico{transform:rotate(45deg);color:#00FFA2}
+details[open]{background-color:#121317 !important}
+
+/* Hero demo: a 12s loop of a squad filling up */
+@keyframes j3{0%,12%{opacity:0;transform:scale(.5)}15%{opacity:1;transform:scale(1.14)}17%,93%{opacity:1;transform:scale(1)}97%,100%{opacity:0;transform:scale(1)}}
+@keyframes j4{0%,28%{opacity:0;transform:scale(.5)}31%{opacity:1;transform:scale(1.14)}33%,93%{opacity:1;transform:scale(1)}97%,100%{opacity:0;transform:scale(1)}}
+@keyframes j5{0%,44%{opacity:0;transform:scale(.5)}47%{opacity:1;transform:scale(1.14)}49%,93%{opacity:1;transform:scale(1)}97%,100%{opacity:0;transform:scale(1)}}
+@keyframes c2{0%,13%{opacity:1}14%,96%{opacity:0}97%,100%{opacity:1}}
+@keyframes c3{0%,13%{opacity:0}14%,29%{opacity:1}30%,100%{opacity:0}}
+@keyframes c4{0%,29%{opacity:0}30%,45%{opacity:1}46%,100%{opacity:0}}
+@keyframes c5{0%,45%{opacity:0}46%,96%{opacity:1}97%,100%{opacity:0}}
+@keyframes t1{0%,12%{opacity:0;transform:translateX(14px)}14%,24%{opacity:1;transform:none}26%,100%{opacity:0;transform:translateX(14px)}}
+@keyframes t2{0%,28%{opacity:0;transform:translateX(14px)}30%,40%{opacity:1;transform:none}42%,100%{opacity:0;transform:translateX(14px)}}
+@keyframes t3{0%,44%{opacity:0;transform:translateX(14px)}46%,56%{opacity:1;transform:none}58%,100%{opacity:0;transform:translateX(14px)}}
+@keyframes dIn{0%,52%{opacity:0;transform:translateY(18px)}57%,92%{opacity:1;transform:none}96%,100%{opacity:0;transform:translateY(18px)}}
+@keyframes glow{0%,48%{box-shadow:0 0 0 1px rgba(255,255,255,0.06)}52%,92%{box-shadow:0 0 0 1px rgba(0,255,162,0.55),0 30px 80px -30px rgba(0,255,162,0.55)}96%,100%{box-shadow:0 0 0 1px rgba(255,255,255,0.06)}}
+.a-j3{animation:j3 12s infinite both}.a-j4{animation:j4 12s infinite both}.a-j5{animation:j5 12s infinite both}
+.a-c2{animation:c2 12s infinite both}.a-c3{animation:c3 12s infinite both}.a-c4{animation:c4 12s infinite both}.a-c5{animation:c5 12s infinite both}
+.a-t1{animation:t1 12s infinite both}.a-t2{animation:t2 12s infinite both}.a-t3{animation:t3 12s infinite both}
+.a-dIn{animation:dIn 12s infinite both}.a-glow{animation:glow 12s infinite both}
+@keyframes live{0%,100%{opacity:1}50%{opacity:.35}}
+.live{animation:live 1.6s ease-in-out infinite}
+
+/* Como funciona: one 24s playthrough, each step lights up in turn */
+@keyframes n1{0%,32%{color:#00FFA2;-webkit-text-stroke-color:#00FFA2}34%,100%{color:transparent;-webkit-text-stroke-color:rgba(255,255,255,0.16)}}
+@keyframes n2{0%,32%{color:transparent;-webkit-text-stroke-color:rgba(255,255,255,0.16)}34%,65%{color:#00FFA2;-webkit-text-stroke-color:#00FFA2}67%,100%{color:transparent;-webkit-text-stroke-color:rgba(255,255,255,0.16)}}
+@keyframes n3{0%,65%{color:transparent;-webkit-text-stroke-color:rgba(255,255,255,0.16)}67%,99%{color:#00FFA2;-webkit-text-stroke-color:#00FFA2}100%{color:transparent;-webkit-text-stroke-color:rgba(255,255,255,0.16)}}
+@keyframes p1{0%{width:0}33%,99%{width:100%}100%{width:0}}
+@keyframes p2{0%,33%{width:0}66%,99%{width:100%}100%{width:0}}
+@keyframes p3{0%,66%{width:0}99%{width:100%}100%{width:0}}
+@keyframes s1cur{0%{opacity:0;transform:translate(70px,46px)}8%{opacity:1;transform:translate(0,0)}11%{transform:scale(.82)}13%{transform:scale(1)}18%,100%{opacity:0;transform:translate(0,0)}}
+@keyframes s1btn{0%,11%{opacity:1;transform:scale(1)}12%{transform:scale(.94)}14%{opacity:1;transform:scale(1)}17%,97%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
+@keyframes s1chip{0%,16%{opacity:0;transform:translateY(8px)}20%,96%{opacity:1;transform:none}99%,100%{opacity:0;transform:translateY(8px)}}
+@keyframes s2type{0%,36%{width:0}44%,96%{width:5.6em}99%,100%{width:0}}
+@keyframes s2r1{0%,45%{opacity:0;transform:translateY(10px)}49%,96%{opacity:1;transform:none}99%,100%{opacity:0;transform:translateY(10px)}}
+@keyframes s2r2{0%,48%{opacity:0;transform:translateY(10px)}52%,96%{opacity:1;transform:none}99%,100%{opacity:0;transform:translateY(10px)}}
+@keyframes s2pick{0%,58%{box-shadow:inset 0 0 0 1px rgba(255,255,255,0)}61%,96%{box-shadow:inset 0 0 0 1.5px #00FFA2}99%,100%{box-shadow:inset 0 0 0 1px rgba(255,255,255,0)}}
+@keyframes s2cur{0%,51%{opacity:0;transform:translate(60px,40px)}57%{opacity:1;transform:translate(0,0)}59%{transform:scale(.82)}61%{transform:scale(1)}66%,100%{opacity:0}}
+@keyframes s3j4{0%,69%{opacity:0;transform:scale(.5)}72%{opacity:1;transform:scale(1.14)}74%,96%{opacity:1;transform:scale(1)}99%,100%{opacity:0}}
+@keyframes s3j5{0%,75%{opacity:0;transform:scale(.5)}78%{opacity:1;transform:scale(1.14)}80%,96%{opacity:1;transform:scale(1)}99%,100%{opacity:0}}
+@keyframes s3inv{0%,82%{opacity:0;transform:translateY(12px)}86%,96%{opacity:1;transform:none}99%,100%{opacity:0;transform:translateY(12px)}}
+@keyframes caret{0%,49%{opacity:1}50%,100%{opacity:0}}
+.a-n1{animation:n1 24s infinite both}.a-n2{animation:n2 24s infinite both}.a-n3{animation:n3 24s infinite both}
+.a-p1{animation:p1 24s linear infinite both}.a-p2{animation:p2 24s linear infinite both}.a-p3{animation:p3 24s linear infinite both}
+.a-s1cur{animation:s1cur 24s infinite both}.a-s1btn{animation:s1btn 24s infinite both}.a-s1chip{animation:s1chip 24s infinite both}
+.a-s2type{animation:s2type 24s steps(6,end) infinite both}.a-s2r1{animation:s2r1 24s infinite both}.a-s2r2{animation:s2r2 24s infinite both}
+.a-s2pick{animation:s2pick 24s infinite both}.a-s2cur{animation:s2cur 24s infinite both}
+.a-s3j4{animation:s3j4 24s infinite both}.a-s3j5{animation:s3j5 24s infinite both}.a-s3inv{animation:s3inv 24s infinite both}
+.caret{animation:caret 1s steps(1) infinite}
+.num{-webkit-text-stroke:2px #00FFA2;color:#00FFA2}
+
+@media (max-width:900px){
+.hero-toast{display:none !important}
+.step-grid{grid-template-columns:minmax(0,1fr) !important}
+.games-wrap{flex-direction:column !important}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="background: #07080A; color: #F2F3F5; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden">
+
+  <!-- ========== HEADER ========== -->
+  <header style="position: relative; z-index: 5; max-width: 1240px; margin: 0 auto; padding: 22px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 40px">
+      <a href="#topo" aria-label="Squadzr — início"><img src="/_blob/a53a58cb1aebfcc434e14d442843d8c5" alt="Squadzr" style="width: 104px; display: block"></a>
+      <nav aria-label="Principal" style="display: flex; flex-wrap: wrap; gap: 28px">
+        <a class="nav-l" href="Board.dc.html" style="color: #A9ABB3; text-decoration: none; font-size: 14px; font-weight: 600">Explorar squads</a>
+        <a class="nav-l" href="#jogos" style="color: #A9ABB3; text-decoration: none; font-size: 14px; font-weight: 600">Jogos</a>
+        <a class="nav-l" href="#como-funciona" style="color: #A9ABB3; text-decoration: none; font-size: 14px; font-weight: 600">Como funciona</a>
+        <a class="nav-l" href="#faq" style="color: #A9ABB3; text-decoration: none; font-size: 14px; font-weight: 600">FAQ</a>
+      </nav>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px">
+      <dc-import name="Segmented" size="sm" label="Idioma" options="{{langs}}" value="pt" hint-size="80px,32px"></dc-import>
+      <dc-import name="Button" variant="discord" label="Entrar com Discord" icon="discord" href="Board.dc.html" hint-size="190px,44px"></dc-import>
+    </div>
+  </header>
+
+  <!-- ========== HERO ========== -->
+  <section id="topo" style="position: relative; padding: 48px 24px 120px">
+    <div aria-hidden="true" style="position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px); background-size: 64px 64px; pointer-events: none"></div>
+    <div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 240px; background: linear-gradient(to top, #07080A, rgba(7,8,10,0)); pointer-events: none"></div>
+
+    <div style="position: relative; max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 64px">
+      <!-- Copy -->
+      <div style="flex: 1 1 460px; min-width: 0; display: flex; flex-direction: column; gap: 28px">
+        <span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #C9CBD1; background: #121317; padding: 9px 14px 9px 12px">
+          <span class="live" style="width: 8px; height: 8px; border-radius: 50%; background: #00FFA2; box-shadow: 0 0 10px #00FFA2"></span>
+          19 JOGOS · SQUADS ABERTOS AGORA
+        </span>
+        <h1 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: clamp(88px, 11vw, 176px); line-height: 0.94; letter-spacing: -0.005em; text-transform: uppercase">
+          Falta só<br><span style="color: #00FFA2">você.</span>
+        </h1>
+        <p style="margin: 0; max-width: 500px; font-size: 18px; line-height: 1.6; color: #A9ABB3">
+          Crie ou entre em squads de LoL, CS2, Valorant e mais 16 jogos. Quando a última vaga fecha, <strong style="color: #F2F3F5">o convite do Discord chega pro time inteiro.</strong>
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px">
+          <dc-import name="Button" variant="primary" size="lg" label="Explorar squads" icon="arrow" icon-pos="end" href="Board.dc.html" hint-size="200px,56px"></dc-import>
+          <dc-import name="Button" variant="secondary" size="lg" label="Criar squad" icon="plus" href="CriarSquad.dc.html" hint-size="180px,56px"></dc-import>
+        </div>
+        <form style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 440px">
+          <label for="hero-code" style="font-size: 13px; color: #A9ABB3">Tem um código?</label>
+          <span style="flex: 1 1 200px; display: flex; align-items: center; gap: 6px; background: #121317; padding: 4px 4px 4px 14px">
+            <span aria-hidden="true" style="font-family: 'JetBrains Mono', monospace; color: #80838C; font-size: 15px">#</span>
+            <input id="hero-code" type="text" placeholder="ABC12" maxlength="5" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: #F2F3F5; font: 700 15px 'JetBrains Mono', monospace; letter-spacing: 0.12em; padding: 10px 0; text-transform: uppercase">
+            <button type="submit" style="border: 0; cursor: pointer; background: #24252B; color: #F2F3F5; font: 700 13px 'Plus Jakarta Sans', sans-serif; padding: 11px 14px; min-height: 40px">Entrar</button>
+          </span>
+        </form>
+        <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; color: #80838C">
+          <li style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 5px; height: 5px; background: #00FFA2"></span>LOGIN COM DISCORD</li>
+          <li style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 5px; height: 5px; background: #00FFA2"></span>2 A 20 JOGADORES</li>
+          <li style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 5px; height: 5px; background: #00FFA2"></span>100% GRATUITO</li>
+        </ul>
+      </div>
+
+      <!-- Demo: a squad filling up -->
+      <div style="flex: 1 1 520px; min-width: 0; position: relative; padding: 24px 0 24px 0">
+        <!-- HUD corners -->
+        <span aria-hidden="true" style="position: absolute; left: -14px; top: 6px; width: 26px; height: 26px; border-left: 2px solid rgba(0,255,162,0.6); border-top: 2px solid rgba(0,255,162,0.6)"></span>
+        <span aria-hidden="true" style="position: absolute; right: -14px; bottom: 6px; width: 26px; height: 26px; border-right: 2px solid rgba(0,255,162,0.6); border-bottom: 2px solid rgba(0,255,162,0.6)"></span>
+
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <div class="a-glow" style="display: grid; grid-template-columns: 196px minmax(0, 1fr); background: #111216; box-shadow: 0 0 0 1px rgba(0,255,162,0.55), 0 30px 80px -30px rgba(0,255,162,0.55)">
+            <div style="position: relative; min-height: 262px">
+              <img src="/_blob/48d569e7ccecf944cc19cb2d19ae7720" alt="Valorant" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block">
+            </div>
+            <div style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: #F2F3F5">VALORANT</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #5F626B">#VLR77</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <span style="font-family: 'Big Shoulders', sans-serif; font-weight: 800; font-size: 36px; line-height: 1.08">Premier quinta à noite</span>
+                <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px">
+                  <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #F2F3F5; background: #1F2026; padding: 4px 9px">
+                    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a14 14 0 0 1 0 18"></path><path d="M12 3a14 14 0 0 0 0 18"></path></svg>
+                    Português (BR)
+                  </span>
+                  <span style="color: #A9ABB3">#premier</span>
+                  <span style="color: #A9ABB3">#mic</span>
+                </span>
+              </div>
+              <div style="flex-grow: 1"></div>
+              <div style="display: flex; flex-direction: column; gap: 12px; background: #17181D; padding: 14px 16px">
+                <div style="display: flex; align-items: center; justify-content: flex-end">
+                  <span style="position: relative; display: block; width: 80px; height: 26px; font-family: 'Big Shoulders', sans-serif; font-size: 26px; font-weight: 800; line-height: 1; text-align: right">
+                    <span class="a-c2" style="position: absolute; right: 0; top: 0; opacity: 0; white-space: nowrap; color: #5F626B"><b style="color: #F2F3F5">2</b>/5</span>
+                    <span class="a-c3" style="position: absolute; right: 0; top: 0; opacity: 0; white-space: nowrap; color: #5F626B"><b style="color: #F2F3F5">3</b>/5</span>
+                    <span class="a-c4" style="position: absolute; right: 0; top: 0; opacity: 0; white-space: nowrap; color: #5F626B"><b style="color: #F2F3F5">4</b>/5</span>
+                    <span class="a-c5" style="position: absolute; right: 0; top: 0; white-space: nowrap; color: #00FFA2">5/5</span>
+                  </span>
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <span style="position: relative; width: 48px; height: 48px; flex-shrink: 0">
+                    <span style="position: absolute; inset: 0; border-radius: 50%; background: #0E4D3A; color: #B9FFE4; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #00FFA2">CC</span>
+                    <span aria-label="Dono do squad" style="position: absolute; left: 50%; top: -9px; transform: translateX(-50%); width: 20px; height: 20px; border-radius: 50%; background: #FFB547; color: #2A1A00; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #17181D"><svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5L3 7z"></path></svg></span>
+                  </span>
+                  <span style="width: 48px; height: 48px; flex-shrink: 0; border-radius: 50%; background: #3A2A5C; color: #E7DBFF; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #00FFA2">MF</span>
+                  <span style="position: relative; width: 48px; height: 48px; flex-shrink: 0">
+                    <span style="position: absolute; inset: 0; border-radius: 50%; background: #24252B; box-shadow: inset 0 0 0 1.5px #34353C"></span>
+                    <span class="a-j3" style="position: absolute; inset: 0; border-radius: 50%; background: #5C3A1E; color: #FFE2C7; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #00FFA2">BR</span>
+                  </span>
+                  <span style="position: relative; width: 48px; height: 48px; flex-shrink: 0">
+                    <span style="position: absolute; inset: 0; border-radius: 50%; background: #24252B; box-shadow: inset 0 0 0 1.5px #34353C"></span>
+                    <span class="a-j4" style="position: absolute; inset: 0; border-radius: 50%; background: #1E3A5C; color: #CFE6FF; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #00FFA2">KZ</span>
+                  </span>
+                  <span style="position: relative; width: 48px; height: 48px; flex-shrink: 0">
+                    <span style="position: absolute; inset: 0; border-radius: 50%; background: #24252B; box-shadow: inset 0 0 0 1.5px #34353C"></span>
+                    <span class="a-j5" style="position: absolute; inset: 0; border-radius: 50%; background: #5C1E3A; color: #FFD1E6; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #00FFA2">LU</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Discord invite, revealed at 5/5 -->
+          <div class="a-dIn" style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; background: #4E5AE8; color: #FFFFFF; padding: 14px 14px 14px 18px">
+            <span style="width: 44px; height: 44px; flex-shrink: 0; background: rgba(255,255,255,0.16); display: flex; align-items: center; justify-content: center">
+              <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.319 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.011c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"></path></svg>
+            </span>
+            <span style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 15px; font-weight: 800">Squad completo — convite liberado</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; opacity: 0.9">discord.gg/premier-qui</span>
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 8px; background: #FFFFFF; color: #2B33A8; font-size: 13px; font-weight: 800; padding: 12px 16px">Abrir Discord
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Activity toasts -->
+        <div class="hero-toast" aria-hidden="true" style="position: absolute; right: -28px; top: -6px; width: 250px; height: 60px">
+          <span class="a-t1" style="position: absolute; inset: 0; opacity: 0; display: flex; align-items: center; gap: 10px; background: #1A1B20; padding: 10px 14px 10px 10px; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.8)">
+            <span style="width: 32px; height: 32px; border-radius: 50%; background: #5C3A1E; color: #FFE2C7; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center">BR</span>
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700">Brunão entrou</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #A9ABB3">3/5 · agora</span></span>
+          </span>
+          <span class="a-t2" style="position: absolute; inset: 0; opacity: 0; display: flex; align-items: center; gap: 10px; background: #1A1B20; padding: 10px 14px 10px 10px; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.8)">
+            <span style="width: 32px; height: 32px; border-radius: 50%; background: #1E3A5C; color: #CFE6FF; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center">KZ</span>
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700">kz_dex entrou</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FFB547">4/5 · falta 1</span></span>
+          </span>
+          <span class="a-t3" style="position: absolute; inset: 0; opacity: 0; display: flex; align-items: center; gap: 10px; background: #1A1B20; padding: 10px 14px 10px 10px; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.8)">
+            <span style="width: 32px; height: 32px; border-radius: 50%; background: #5C1E3A; color: #FFD1E6; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center">LU</span>
+            <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700">luhzinha entrou</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #00FFA2">5/5 · squad fechado</span></span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== JOGOS DISPONÍVEIS ========== -->
+  <section id="jogos" style="padding: 96px 24px 120px; background: #0B0C0F">
+    <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px">
+        <div style="display: flex; flex-direction: column; gap: 14px; max-width: 640px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #00FFA2">JOGOS DISPONÍVEIS</span>
+          <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: clamp(56px, 6.4vw, 92px); line-height: 1; letter-spacing: 0; text-transform: uppercase">Do 2v2 ao raid<br>de 40.</h2>
+        </div>
+        <p style="margin: 0; max-width: 380px; font-size: 16px; line-height: 1.6; color: #A9ABB3">19 jogos multiplayer, cada um com o tamanho de squad certo. Escolha um pra ver como os times se formam nele.</p>
+      </div>
+
+      <div class="games-wrap" style="display: flex; gap: 28px; align-items: stretch">
+        <!-- Spotlight -->
+        <article style="flex: 1 1 560px; min-width: 0; display: flex; flex-wrap: wrap; background: #121317">
+          <div style="position: relative; flex: 0 0 auto; width: 250px; max-width: 100%; aspect-ratio: 3 / 4">
+            <img src="{{g.cover}}" alt="{{g.name}}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block">
+          </div>
+          <div style="flex: 1 1 260px; min-width: 0; padding: 30px 30px 28px; display: flex; flex-direction: column; gap: 22px; box-sizing: border-box">
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: #A9ABB3">{{g.genre}}</span>
+              <h3 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 56px; line-height: 1.02; text-transform: uppercase">{{g.name}}</h3>
+            </div>
+            <dl style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px">
+              <div style="background: #191A1F; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+                <dt style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #80838C">TAMANHO DO SQUAD</dt>
+                <dd style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 800; font-size: 34px; line-height: 1">{{g.range}}</dd>
+              </div>
+              <div style="background: #191A1F; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+                <dt style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #80838C">ABERTOS AGORA</dt>
+                <dd style="margin: 0; display: flex; align-items: center; gap: 8px; font-family: 'Big Shoulders', sans-serif; font-weight: 800; font-size: 34px; line-height: 1"><span class="live" style="width: 8px; height: 8px; border-radius: 50%; background: #00FFA2"></span>{{g.open}}</dd>
+              </div>
+            </dl>
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #80838C">TAGS MAIS USADAS</span>
+              <span style="display: flex; flex-wrap: wrap; gap: 6px">
+                <sc-for list="{{g.tags}}" as="t" hint-placeholder-count="3">
+                  <span style="font-size: 13px; font-weight: 600; color: #C9CBD1; background: #191A1F; padding: 6px 11px">#{{t}}</span>
+                </sc-for>
+              </span>
+            </div>
+            <div style="flex-grow: 1"></div>
+            <a href="Board.dc.html" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 14px; font-weight: 800">
+              Ver squads de {{g.name}}
+              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+            </a>
+          </div>
+        </article>
+
+        <!-- Index -->
+        <div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+          <sc-for list="{{games}}" as="r" hint-placeholder-count="10">
+            <button type="button" class="g-row" onClick="{{r.pick}}" aria-pressed="{{r.pressed}}" style="display: grid; grid-template-columns: 40px minmax(0, 1fr) 90px 44px; gap: 14px; align-items: center; border: 0; cursor: pointer; text-align: left; background: {{r.bg}}; color: #F2F3F5; padding: 6px 14px; min-height: 58px; font-family: 'Plus Jakarta Sans', sans-serif">
+              <img src="{{r.cover}}" alt="" style="width: 34px; height: 46px; object-fit: cover; display: block">
+              <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+                <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span>
+                <span style="font-size: 12px; color: #80838C">{{r.genre}}</span>
+              </span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: #C9CBD1">{{r.range}}</span>
+              <span style="justify-self: end; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: {{r.arrow}}">
+                <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+              </span>
+            </button>
+          </sc-for>
+          <a href="Board.dc.html" style="margin-top: 12px; padding: 0 14px; font-size: 14px; font-weight: 700; text-decoration: none">+ 9 jogos: Roblox, GTA Online, World of Warcraft, Among Us…</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== COMO FUNCIONA ========== -->
+  <section id="como-funciona" style="padding: 120px 24px">
+    <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px">
+      <div style="display: flex; flex-direction: column; gap: 14px; max-width: 720px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #00FFA2">COMO FUNCIONA</span>
+        <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: clamp(56px, 6.4vw, 92px); line-height: 1; letter-spacing: 0; text-transform: uppercase">Do login ao time<br>fechado em 1 minuto.</h2>
+      </div>
+
+      <ol class="step-grid" style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px">
+        <!-- 01 -->
+        <li style="display: flex; flex-direction: column; gap: 22px">
+          <div style="display: flex; flex-direction: column; gap: 14px">
+            <span class="num a-n1" aria-hidden="true" style="font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 176px; line-height: 0.78; letter-spacing: -0.01em">01</span>
+            <span aria-hidden="true" style="display: block; height: 3px; background: #1F2026"><span class="a-p1" style="display: block; height: 100%; width: 100%; background: #00FFA2"></span></span>
+          </div>
+          <div style="position: relative; height: 210px; background: #111216; display: flex; align-items: center; justify-content: center; overflow: hidden">
+            <!-- The real header, signed out → signed in -->
+            <span style="position: absolute; left: 0; right: 0; top: 0; height: 44px; background: #0C0D10; display: flex; align-items: center; padding: 0 14px; gap: 8px">
+              <img src="/_blob/a53a58cb1aebfcc434e14d442843d8c5" alt="" style="width: 58px; display: block; opacity: 0.9">
+              <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #80838C">PT</span>
+            </span>
+            <span style="position: relative; width: 210px; height: 50px; margin-top: 30px">
+              <span class="a-s1btn" style="position: absolute; inset: 0; opacity: 0; display: flex; align-items: center; justify-content: center; gap: 9px; background: #4E5AE8; color: #FFFFFF; font-size: 14px; font-weight: 700">
+                <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.319 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.011c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"></path></svg>
+                Entrar com Discord
+              </span>
+              <span class="a-s1chip" style="position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; background: #1A1B20; padding: 0 14px 0 8px">
+                <span style="position: relative; width: 34px; height: 34px; border-radius: 50%; background: #0E4D3A; color: #B9FFE4; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center">CC<span style="position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: #00FFA2; box-shadow: 0 0 0 2px #1A1B20"></span></span>
+                <span style="font-size: 13px; font-weight: 700">caiocezar</span>
+                <svg aria-hidden="true" style="margin-left: auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80838C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+              </span>
+              <svg class="a-s1cur" aria-hidden="true" style="position: absolute; left: 60%; top: 58%; opacity: 0" width="22" height="22" viewBox="0 0 24 24" fill="#F2F3F5" stroke="#07080A" stroke-width="1.2"><path d="M5 2v17l4.6-4.4 3.2 7.2 2.6-1.1-3.1-7.1H19L5 2z"></path></svg>
+            </span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <h3 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 800; font-size: 30px; line-height: 1; text-transform: uppercase">Entre com o Discord</h3>
+            <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #A9ABB3">Um clique, sem formulário nem senha. Seu avatar e nome do Discord viram sua identidade no Squadzr.</p>
+          </div>
+        </li>
+
+        <!-- 02 -->
+        <li style="display: flex; flex-direction: column; gap: 22px">
+          <div style="display: flex; flex-direction: column; gap: 14px">
+            <span class="num a-n2" aria-hidden="true" style="font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 176px; line-height: 0.78; letter-spacing: -0.01em">02</span>
+            <span aria-hidden="true" style="display: block; height: 3px; background: #1F2026"><span class="a-p2" style="display: block; height: 100%; width: 100%; background: #00FFA2"></span></span>
+          </div>
+          <div style="position: relative; height: 210px; background: #111216; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; overflow: hidden">
+            <!-- The real board: search + filters, then results -->
+            <span style="display: flex; gap: 6px">
+              <span style="flex: 1; display: flex; align-items: center; gap: 8px; background: #1A1B20; padding: 0 12px; height: 38px">
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80838C" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+                <span class="a-s2type" style="display: inline-block; width: 5.6em; overflow: hidden; white-space: nowrap; font-size: 13px; font-weight: 600">valorant</span><span class="caret" style="width: 1.5px; height: 15px; background: #00FFA2; margin-left: -6px"></span>
+              </span>
+              <span style="display: flex; align-items: center; gap: 6px; background: #1A1B20; padding: 0 11px; height: 38px; font-size: 12px; font-weight: 700">Filtros<span style="background: #00FFA2; color: #03140D; font-size: 10px; font-weight: 800; padding: 1px 5px">2</span></span>
+            </span>
+            <span class="a-s2r1 a-s2pick" style="position: relative; display: flex; align-items: center; gap: 10px; background: #17181D; padding: 6px; box-shadow: inset 0 0 0 1.5px #00FFA2">
+              <img src="/_blob/48d569e7ccecf944cc19cb2d19ae7720" alt="" style="width: 34px; height: 46px; object-fit: cover; display: block">
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #A9ABB3">VALORANT · PT-BR</span>
+                <span style="font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Premier quinta à noite</span>
+              </span>
+              <span style="display: flex">
+                <span style="width: 18px; height: 18px; border-radius: 50%; background: #0E4D3A; box-shadow: 0 0 0 2px #17181D"></span>
+                <span style="width: 18px; height: 18px; margin-left: -5px; border-radius: 50%; background: #3A2A5C; box-shadow: 0 0 0 2px #17181D"></span>
+                <span style="width: 18px; height: 18px; margin-left: -5px; border-radius: 50%; background: #5C3A1E; box-shadow: 0 0 0 2px #17181D"></span>
+                <span style="width: 18px; height: 18px; margin-left: -5px; border-radius: 50%; background: #2A2B31; box-shadow: 0 0 0 2px #17181D"></span>
+              </span>
+              <svg class="a-s2cur" aria-hidden="true" style="position: absolute; right: 26px; bottom: -8px; opacity: 0" width="20" height="20" viewBox="0 0 24 24" fill="#F2F3F5" stroke="#07080A" stroke-width="1.2"><path d="M5 2v17l4.6-4.4 3.2 7.2 2.6-1.1-3.1-7.1H19L5 2z"></path></svg>
+            </span>
+            <span class="a-s2r2" style="display: flex; align-items: center; gap: 10px; background: #17181D; padding: 6px">
+              <img src="/_blob/48d569e7ccecf944cc19cb2d19ae7720" alt="" style="width: 34px; height: 46px; object-fit: cover; display: block">
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; color: #A9ABB3">VALORANT · PT-BR</span>
+                <span style="font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Unrated sem tilt</span>
+              </span>
+              <span style="display: flex">
+                <span style="width: 18px; height: 18px; border-radius: 50%; background: #1E4A4A; box-shadow: 0 0 0 2px #17181D"></span>
+                <span style="width: 18px; height: 18px; margin-left: -5px; border-radius: 50%; background: #2A2B31; box-shadow: 0 0 0 2px #17181D"></span>
+                <span style="width: 18px; height: 18px; margin-left: -5px; border-radius: 50%; background: #2A2B31; box-shadow: 0 0 0 2px #17181D"></span>
+              </span>
+            </span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <h3 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 800; font-size: 30px; line-height: 1; text-transform: uppercase">Encontre ou crie um squad</h3>
+            <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #A9ABB3">Busque por jogo, idioma ou tag. Não achou? Crie o seu com o link de convite do seu servidor.</p>
+          </div>
+        </li>
+
+        <!-- 03 -->
+        <li style="display: flex; flex-direction: column; gap: 22px">
+          <div style="display: flex; flex-direction: column; gap: 14px">
+            <span class="num a-n3" aria-hidden="true" style="font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: 176px; line-height: 0.78; letter-spacing: -0.01em">03</span>
+            <span aria-hidden="true" style="display: block; height: 3px; background: #1F2026"><span class="a-p3" style="display: block; height: 100%; width: 100%; background: #00FFA2"></span></span>
+          </div>
+          <div style="position: relative; height: 210px; background: #111216; padding: 18px 16px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 16px; overflow: hidden">
+            <!-- The real squad room: slots fill, invite unlocks -->
+            <span style="display: flex; gap: 8px">
+              <span style="width: 40px; height: 40px; border-radius: 50%; background: #0E4D3A; color: #B9FFE4; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #00FFA2">CC</span>
+              <span style="width: 40px; height: 40px; border-radius: 50%; background: #3A2A5C; color: #E7DBFF; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #00FFA2">MF</span>
+              <span style="width: 40px; height: 40px; border-radius: 50%; background: #5C3A1E; color: #FFE2C7; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #00FFA2">BR</span>
+              <span style="position: relative; width: 40px; height: 40px">
+                <span style="position: absolute; inset: 0; border-radius: 50%; background: #24252B; box-shadow: inset 0 0 0 1.5px #34353C"></span>
+                <span class="a-s3j4" style="position: absolute; inset: 0; border-radius: 50%; background: #1E3A5C; color: #CFE6FF; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #00FFA2">KZ</span>
+              </span>
+              <span style="position: relative; width: 40px; height: 40px">
+                <span style="position: absolute; inset: 0; border-radius: 50%; background: #24252B; box-shadow: inset 0 0 0 1.5px #34353C"></span>
+                <span class="a-s3j5" style="position: absolute; inset: 0; border-radius: 50%; background: #5C1E3A; color: #FFD1E6; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #00FFA2">LU</span>
+              </span>
+            </span>
+            <span class="a-s3inv" style="display: flex; align-items: center; gap: 10px; background: #4E5AE8; color: #FFFFFF; padding: 9px 10px 9px 12px">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.319 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.011c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"></path></svg>
+              <span style="flex: 1; font-size: 12.5px; font-weight: 800">Convite liberado</span>
+              <span style="background: #FFFFFF; color: #2B33A8; font-size: 11.5px; font-weight: 800; padding: 6px 10px">Abrir</span>
+            </span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <h3 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 800; font-size: 30px; line-height: 1; text-transform: uppercase">Feche o time e jogue</h3>
+            <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #A9ABB3">Na última vaga, o link do Discord é liberado pra todo mundo. É só entrar na call e começar a partida.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ========== FAQ ========== -->
+  <section id="faq" style="padding: 112px 24px; background: #0B0C0F">
+    <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 56px">
+      <div style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #00FFA2">FAQ</span>
+        <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: clamp(56px, 6.4vw, 92px); line-height: 1; letter-spacing: 0; text-transform: uppercase">Perguntas<br>frequentes</h2>
+        <p style="margin: 0; max-width: 340px; font-size: 16px; line-height: 1.6; color: #A9ABB3">Tudo o que você precisa saber antes de montar o seu time.</p>
+      </div>
+      <div style="flex: 2 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+        <sc-for list="{{faq}}" as="f" hint-placeholder-count="8">
+          <details style="background: #0F1013">
+            <summary style="display: flex; align-items: center; gap: 18px; padding: 20px 22px; min-height: 44px">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #80838C; width: 28px; flex-shrink: 0">{{f.n}}</span>
+              <span style="flex: 1; font-size: 17px; font-weight: 700">{{f.q}}</span>
+              <span class="faq-ico" aria-hidden="true" style="width: 32px; height: 32px; flex-shrink: 0; background: #1A1B20; color: #C9CBD1; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></span>
+            </summary>
+            <p style="margin: 0; padding: 0 72px 22px 68px; font-size: 15px; line-height: 1.65; color: #A9ABB3">{{f.a}}</p>
+          </details>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CTA ========== -->
+  <section style="padding: 0 24px">
+    <div style="position: relative; max-width: 1240px; margin: 0 auto; background: #00FFA2; color: #03140D; overflow: hidden; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 32px; padding: 64px 56px; box-sizing: border-box; transform: translateY(64px)">
+      <div aria-hidden="true" style="position: absolute; right: -70px; top: -150px; width: 700px; display: flex; align-items: flex-start; gap: 12px; transform: rotate(-9deg); opacity: 0.2; pointer-events: none">
+        <sc-for list="{{wall}}" as="col" hint-placeholder-count="5">
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding-top: {{col.y}}">
+            <sc-for list="{{col.posters}}" as="w" hint-placeholder-count="3">
+              <img src="{{w}}" alt="" style="width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; filter: grayscale(1)">
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+      <div style="position: relative; display: flex; flex-direction: column; gap: 14px; max-width: 640px">
+        <h2 style="margin: 0; font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: clamp(64px, 7.4vw, 112px); line-height: 0.96; letter-spacing: 0; text-transform: uppercase">Tem vaga<br><span style="font-style: italic">te esperando.</span></h2>
+        <p style="margin: 0; font-size: 17px; line-height: 1.55; font-weight: 600; color: #0B3A27">Entre com o Discord e ache o seu squad agora — ou abra o seu e deixa o time vir até você.</p>
+      </div>
+      <div style="position: relative; display: flex; flex-wrap: wrap; gap: 12px">
+        <dc-import name="Button" variant="dark" size="lg" label="Explorar squads" icon="arrow" icon-pos="end" href="Board.dc.html" hint-size="200px,56px"></dc-import>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <footer style="background: #0B0C0F; padding: 136px 24px 40px">
+    <div style="max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 40px">
+        <div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 16px; max-width: 340px">
+          <img src="/_blob/a53a58cb1aebfcc434e14d442843d8c5" alt="Squadzr" style="width: 128px; display: block">
+          <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #A9ABB3">Encontre seu time gamer. Squads em tempo real pra LoL, CS2, Valorant e mais 16 jogos.</p>
+        </div>
+        <nav aria-label="Rodapé" style="display: flex; flex-wrap: wrap; gap: 56px">
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #80838C">PRODUTO</span>
+            <a class="foot-l" href="Board.dc.html" style="color: #C9CBD1; text-decoration: none; font-size: 14px">Explorar squads</a>
+            <a class="foot-l" href="Board.dc.html" style="color: #C9CBD1; text-decoration: none; font-size: 14px">Criar squad</a>
+            <a class="foot-l" href="Squad.dc.html" style="color: #C9CBD1; text-decoration: none; font-size: 14px">Meus squads</a>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: #80838C">AJUDA</span>
+            <a class="foot-l" href="#como-funciona" style="color: #C9CBD1; text-decoration: none; font-size: 14px">Como funciona</a>
+            <a class="foot-l" href="#faq" style="color: #C9CBD1; text-decoration: none; font-size: 14px">Perguntas frequentes</a>
+            <a class="foot-l" href="#jogos" style="color: #C9CBD1; text-decoration: none; font-size: 14px">Jogos disponíveis</a>
+          </div>
+        </nav>
+      </div>
+      <div aria-hidden="true" style="font-family: 'Big Shoulders', sans-serif; font-weight: 900; font-size: clamp(120px, 24vw, 340px); line-height: 0.78; letter-spacing: 0; color: transparent; -webkit-text-stroke: 1.5px #1F2026; text-transform: uppercase; white-space: nowrap">Squadzr</div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding-top: 22px; box-shadow: inset 0 1px 0 #1A1B20">
+        <span style="font-size: 13px; color: #80838C">© 2026 Squadzr — Encontre seu time gamer</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #80838C">Capas de jogos via IGDB</span>
+      </div>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":5400}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sel: 0 };
+  }
+  renderVals() {
+    const C = {
+      val: '/_blob/48d569e7ccecf944cc19cb2d19ae7720',
+      lol: '/_blob/8df3967d6379fe20d30cbe81ffa8f1d7',
+      cs2: '/_blob/e99d5c165ccede7035df3d33d9ff414d',
+      dota: '/_blob/e8d23f4989fa54ac73bc2796502155ee',
+      fn: '/_blob/a3d71f50b7601b33d7801a2798b59bf8',
+      apex: '/_blob/54ef0dd62a2c3285ea217f850f06e169',
+      r6: '/_blob/16df06ac0181241d0eed0a32ac9805a4',
+      ow: '/_blob/828fcf6511c34f6726bd1bd2e3b4f956',
+      rl: '/_blob/3da18b4f80fcb7241cfffd5337ec7c83',
+      mc: '/_blob/27f1b58c3da08be4ee09f50b803963d5'
+    };
+    const list = [
+      { name: 'Valorant', genre: 'FPS TÁTICO', range: '2–5', open: 14, cover: C.val, tags: ['ranked', 'premier', 'mic'] },
+      { name: 'League of Legends', genre: 'MOBA', range: '2–5', open: 21, cover: C.lol, tags: ['ranked', 'flex', 'aram'] },
+      { name: 'Counter-Strike 2', genre: 'FPS TÁTICO', range: '2–5', open: 17, cover: C.cs2, tags: ['premier', 'gc', 'competitive'] },
+      { name: 'Dota 2', genre: 'MOBA', range: '2–5', open: 6, cover: C.dota, tags: ['ranked', 'turbo'] },
+      { name: 'Fortnite', genre: 'BATTLE ROYALE', range: '2–4', open: 9, cover: C.fn, tags: ['zerobuild', 'ranked'] },
+      { name: 'Apex Legends', genre: 'BATTLE ROYALE', range: '2–3', open: 5, cover: C.apex, tags: ['ranked', 'trio'] },
+      { name: 'Rainbow Six Siege', genre: 'FPS TÁTICO', range: '2–5', open: 4, cover: C.r6, tags: ['ranked', 'call'] },
+      { name: 'Overwatch', genre: 'HERO SHOOTER', range: '2–5', open: 7, cover: C.ow, tags: ['rolequeue', 'comp'] },
+      { name: 'Rocket League', genre: 'ESPORTE', range: '2–4', open: 3, cover: C.rl, tags: ['2v2', 'ranked'] },
+      { name: 'Minecraft', genre: 'SANDBOX', range: '2–10', open: 8, cover: C.mc, tags: ['survival', 'smp'] }
+    ];
+    const sel = this.state.sel;
+    const g = list[sel];
+    // The CTA's poster wall: 5 columns of 3 with one fixed gap; odd columns drop half a poster so the rows interlock.
+    const order = ['lol', 'cs2', 'val', 'dota', 'fn', 'ow', 'apex', 'r6', 'mc', 'rl', 'val', 'dota', 'lol', 'fn', 'cs2'];
+    const wall = Array.from({ length: 5 }, (_, c) => ({ y: c % 2 === 1 ? '56px' : '0px', posters: [0, 1, 2].map((r) => C[order[r * 5 + c]]) }));
+    return {
+      g,
+      wall,
+      langs: [{ value: 'pt', label: 'PT' }, { value: 'en', label: 'EN' }],
+      games: list.map((x, i) => ({
+        name: x.name,
+        genre: x.genre.charAt(0) + x.genre.slice(1).toLowerCase(),
+        range: x.range,
+        cover: x.cover,
+        bg: i === sel ? '#17181D' : '#0F1013',
+        arrow: i === sel ? '#00FFA2' : '#4A4C54',
+        pressed: i === sel ? 'true' : 'false',
+        pick: () => this.setState({ sel: i })
+      })),
+      faq: [
+        { n: '01', q: 'O Squadzr é gratuito?', a: 'Sim, 100% gratuito. Sem cartão de crédito e sem planos premium. É só entrar com sua conta do Discord e começar a jogar.' },
+        { n: '02', q: 'Preciso criar uma conta?', a: 'Você entra com sua conta do Discord em um clique — sem formulários e sem senhas extras. Seu avatar e nome de usuário do Discord são sua identidade no Squadzr.' },
+        { n: '03', q: 'Quantos squads posso criar?', a: 'Sem limite. Você pode criar quantos squads quiser, para qualquer jogo disponível na plataforma.' },
+        { n: '04', q: 'Quando o link do Discord é compartilhado?', a: 'Assim que o squad atinge o número máximo de jogadores. Quando a última vaga é preenchida, todos os membros recebem acesso ao link.' },
+        { n: '05', q: 'O que acontece se o dono sair?', a: 'Se o criador do squad sair, o squad é encerrado e todos os membros são removidos. Membros comuns podem sair sem afetar o squad.' },
+        { n: '06', q: 'Posso escolher o número de jogadores?', a: 'Sim. Por padrão o squad usa o máximo do jogo escolhido, mas você pode definir entre 2 e 20 jogadores ao criar.' },
+        { n: '07', q: 'Quais jogos são suportados?', a: 'Hoje são 19 jogos, incluindo League of Legends, Valorant, CS2, Dota 2, Fortnite e Overwatch. A lista é atualizada constantemente.' },
+        { n: '08', q: 'Posso entrar em um squad por código?', a: 'Sim. Cada squad tem um código único que pode ser compartilhado. Basta digitar o código para entrar direto no squad.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

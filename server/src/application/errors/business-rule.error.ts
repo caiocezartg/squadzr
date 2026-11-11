@@ -1,14 +1,5 @@
 import { AppError } from './base.error'
 
-export class RoomNotWaitingError extends AppError {
-  readonly statusCode = 422
-  readonly code = 'ROOM_NOT_WAITING'
-
-  constructor(roomId: string, status: string) {
-    super(`Room "${roomId}" is not accepting players (status: ${status})`)
-  }
-}
-
 export class RoomFullError extends AppError {
   readonly statusCode = 422
   readonly code = 'ROOM_FULL'
@@ -18,12 +9,16 @@ export class RoomFullError extends AppError {
   }
 }
 
-export class RoomCompletedError extends AppError {
+export class RoomReadyError extends AppError {
   readonly statusCode = 422
-  readonly code = 'ROOM_COMPLETED'
+  readonly code = 'ROOM_READY'
 
-  constructor(roomId: string) {
-    super(`Room "${roomId}" is completed — players cannot leave`)
+  constructor(roomId: string, action: 'join' | 'leave' = 'leave') {
+    super(
+      action === 'join'
+        ? `Room "${roomId}" is ready — it no longer accepts members`
+        : `Room "${roomId}" is ready — players cannot leave`
+    )
   }
 }
 
@@ -36,12 +31,21 @@ export class NotRoomMemberError extends AppError {
   }
 }
 
+export class InvalidDiscordInviteError extends AppError {
+  readonly statusCode = 422
+  readonly code = 'INVALID_DISCORD_INVITE'
+
+  constructor() {
+    super('The Discord invite does not exist or has expired')
+  }
+}
+
 export class RoomCreateLimitReachedError extends AppError {
   readonly statusCode = 422
   readonly code = 'ROOM_CREATE_LIMIT_REACHED'
 
   constructor(limit: number) {
-    super(`You can only host ${limit} active rooms at a time`)
+    super(`You can only host ${limit} open ${limit === 1 ? 'squad' : 'squads'} at a time`)
   }
 }
 
@@ -50,6 +54,15 @@ export class RoomJoinLimitReachedError extends AppError {
   readonly code = 'ROOM_JOIN_LIMIT_REACHED'
 
   constructor(limit: number) {
-    super(`You can only be in ${limit} active rooms at a time`)
+    super(`You can only be in ${limit} open ${limit === 1 ? 'squad' : 'squads'} at a time`)
+  }
+}
+
+export class RoomNotReadyError extends AppError {
+  readonly statusCode = 422
+  readonly code = 'ROOM_NOT_READY'
+
+  constructor(roomId: string) {
+    super(`Room "${roomId}" is not ready yet`)
   }
 }

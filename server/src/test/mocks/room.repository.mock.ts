@@ -1,6 +1,8 @@
 import { vi, type Mock } from 'vitest'
-import type { Room, CreateRoomInput, UpdateRoomInput } from '@domain/entities/room.entity'
-import type { IRoomRepository } from '@domain/repositories/room.repository'
+import type { Room, NewRoom } from '@domain/entities/room.entity'
+import type { CreateRoomOutcome, IRoomRepository } from '@domain/repositories/room.repository'
+import { FIXED_NOW } from './clock.mock'
+import { createMockGame } from './game.repository.mock'
 
 export function createMockRoom(overrides?: Partial<Room>): Room {
   return {
@@ -9,13 +11,15 @@ export function createMockRoom(overrides?: Partial<Room>): Room {
     name: 'Test Room',
     hostId: 'user-uuid-1',
     gameId: 'game-uuid-1',
-    status: 'waiting',
+    game: createMockGame(),
     maxPlayers: 5,
     discordLink: null,
     tags: [],
     language: 'pt-br' as const,
-    completedAt: null,
-    readyNotifiedAt: null,
+    platform: null,
+    memberPreview: [],
+    readyAt: null,
+    lastActivityAt: new Date('2024-01-01'),
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     ...overrides,
@@ -28,18 +32,16 @@ export type MockRoomRepository = {
 
 export function createMockRoomRepository(): MockRoomRepository {
   return {
-    findById: vi.fn<(id: string) => Promise<Room | null>>().mockResolvedValue(null),
     findByCode: vi.fn<(code: string) => Promise<Room | null>>().mockResolvedValue(null),
-    findByHostId: vi.fn<(hostId: string) => Promise<Room[]>>().mockResolvedValue([]),
-    findAll: vi.fn<() => Promise<Room[]>>().mockResolvedValue([]),
-    findAvailable: vi.fn<() => Promise<Room[]>>().mockResolvedValue([]),
-    countActiveByHostId: vi.fn<(hostId: string) => Promise<number>>().mockResolvedValue(0),
+    findByIds: vi.fn<(ids: readonly string[]) => Promise<Room[]>>().mockResolvedValue([]),
+    findAvailable: vi.fn<(now: Date) => Promise<Room[]>>().mockResolvedValue([]),
     findMyRooms: vi
-      .fn<(userId: string) => Promise<{ hosted: Room[]; joined: Room[] }>>()
+      .fn<(userId: string, now: Date) => Promise<{ hosted: Room[]; joined: Room[] }>>()
       .mockResolvedValue({ hosted: [], joined: [] }),
-    create: vi.fn<(input: CreateRoomInput) => Promise<Room>>().mockImplementation((input) =>
-      Promise.resolve(
-        createMockRoom({
+    create: vi.fn<(input: NewRoom) => Promise<CreateRoomOutcome>>().mockImplementation((input) =>
+      Promise.resolve({
+        status: 'created',
+        room: createMockRoom({
           name: input.name,
           hostId: input.hostId,
           gameId: input.gameId,
@@ -47,16 +49,20 @@ export function createMockRoomRepository(): MockRoomRepository {
           discordLink: input.discordLink ?? null,
           tags: input.tags ?? [],
           language: (input.language ?? 'pt-br') as 'en' | 'pt-br',
-        })
-      )
+          platform: input.platform ?? null,
+          lastActivityAt: FIXED_NOW,
+          createdAt: FIXED_NOW,
+          updatedAt: FIXED_NOW,
+        }),
+        hostMember: {
+          id: 'room-member-uuid-1',
+          roomId: 'room-uuid-1',
+          userId: input.hostId,
+          joinedAt: FIXED_NOW,
+        },
+      })
     ),
-    findExpiredRooms: vi.fn<(beforeDate: Date) => Promise<Room[]>>().mockResolvedValue([]),
-    update: vi
-      .fn<(id: string, input: UpdateRoomInput) => Promise<Room | null>>()
-      .mockResolvedValue(null),
-    markReadyNotified: vi
-      .fn<(roomId: string, notifiedAt: Date) => Promise<boolean>>()
-      .mockResolvedValue(false),
-    delete: vi.fn<(id: string) => Promise<boolean>>().mockResolvedValue(false),
+    findExpiredRooms: vi.fn<(now: Date) => Promise<Room[]>>().mockResolvedValue([]),
+    deleteExpired: vi.fn<(id: string, now: Date) => Promise<boolean>>().mockResolvedValue(false),
   }
 }

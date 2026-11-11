@@ -1,17 +1,95 @@
 import type { WebSocket } from '@fastify/websocket'
+import type { WsServerMessage } from '@squadzr/schemas/ws'
 import type { WsClient } from './types'
+import type { OnlinePresence } from '@domain/services/online-presence.interface'
 
-export class WsConnectionManager {
+export class WsConnectionManager implements OnlinePresence {
+  private readonly sockets = new Set<WebSocket>()
   private readonly rooms: Map<string, Set<WebSocket>> = new Map()
   private readonly clientData: WeakMap<WebSocket, WsClient> = new WeakMap()
   private readonly lobbySubscribers: Set<WebSocket> = new Set()
+  private readonly userSockets: Map<string, Set<WebSocket>> = new Map()
+
+  constructor(private readonly transportFailure: (socket: WebSocket) => void = () => {}) {}
 
   setClientData(socket: WebSocket, data: WsClient): void {
     this.clientData.set(socket, data)
+    this.sockets.add(socket)
   }
 
   getClientData(socket: WebSocket): WsClient | undefined {
     return this.clientData.get(socket)
+  }
+
+  get connectionCount(): number {
+    return this.sockets.size
+  }
+
+  get roomCount(): number {
+    return this.rooms.size
+  }
+
+  isConnected(socket: WebSocket): boolean {
+    return this.sockets.has(socket)
+  }
+
+  disconnect(socket: WebSocket): boolean {
+    if (!this.sockets.delete(socket)) return false
+    const client = this.clientData.get(socket)
+    if (client?.userId) this.removeUserSocket(client.userId, socket)
+    if (client?.roomCode) this.removeFromRoom(client.roomCode, socket)
+    this.unsubscribeLobby(socket)
+    if (client) {
+      client.roomCode = null
+      client.isInLobby = false
+    }
+    return true
+  }
+
+  /** Every connected socket whose session must stay live, with that session's id. */
+  sessionSockets(): Array<{ socket: WebSocket; sessionId: string }> {
+    const result: Array<{ socket: WebSocket; sessionId: string }> = []
+    for (const socket of this.sockets) {
+      const sessionId = this.clientData.get(socket)?.sessionId
+      if (sessionId) result.push({ socket, sessionId })
+    }
+    return result
+  }
+
+  clear(): void {
+    for (const socket of this.sockets) this.disconnect(socket)
+  }
+
+  /** Indexes an authenticated socket so user-targeted pushes (notifications) can reach it. */
+  addUserSocket(userId: string, socket: WebSocket): void {
+    let sockets = this.userSockets.get(userId)
+    if (!sockets) {
+      sockets = new Set()
+      this.userSockets.set(userId, sockets)
+    }
+    sockets.add(socket)
+  }
+
+  removeUserSocket(userId: string, socket: WebSocket): void {
+    const sockets = this.userSockets.get(userId)
+    if (!sockets) return
+
+    sockets.delete(socket)
+    if (sockets.size === 0) {
+      this.userSockets.delete(userId)
+    }
+  }
+
+  countOnlineUsers(): number {
+    return this.userSockets.size
+  }
+
+  isUserOnline(userId: string): boolean {
+    return this.userSockets.has(userId)
+  }
+
+  getUserSockets(userId: string): Set<WebSocket> | undefined {
+    return this.userSockets.get(userId)
   }
 
   addToRoom(roomCode: string, socket: WebSocket): void {
@@ -27,11 +105,11 @@ export class WsConnectionManager {
     const roomSockets = this.rooms.get(roomCode)
     if (!roomSockets) return false
 
-    roomSockets.delete(socket)
+    const removed = roomSockets.delete(socket)
     if (roomSockets.size === 0) {
       this.rooms.delete(roomCode)
     }
-    return true
+    return removed
   }
 
   getRoomSockets(roomCode: string): Set<WebSocket> | undefined {
@@ -39,6 +117,10 @@ export class WsConnectionManager {
   }
 
   deleteRoom(roomCode: string): void {
+    for (const socket of this.rooms.get(roomCode) ?? []) {
+      const client = this.clientData.get(socket)
+      if (client) client.roomCode = null
+    }
     this.rooms.delete(roomCode)
   }
 
@@ -50,31 +132,18 @@ export class WsConnectionManager {
     this.lobbySubscribers.delete(socket)
   }
 
-  broadcastToRoom(roomCode: string, message: unknown, excludeSocket?: WebSocket): void {
-    const roomSockets = this.rooms.get(roomCode)
-    if (!roomSockets) return
-
-    for (const socket of roomSockets) {
-      if (socket !== excludeSocket) {
-        this.sendToSocket(socket, message)
-      }
-    }
+  getLobbySockets(): ReadonlySet<WebSocket> {
+    return this.lobbySubscribers
   }
 
-  broadcastToLobby(message: unknown): void {
-    for (const socket of this.lobbySubscribers) {
-      this.sendToSocket(socket, message)
-    }
-  }
-
-  broadcastToRoomAndLobby(roomCode: string, message: unknown): void {
-    this.broadcastToLobby(message)
-    this.broadcastToRoom(roomCode, message)
-  }
-
-  private sendToSocket(socket: WebSocket, message: unknown): void {
-    if (socket.readyState === socket.OPEN) {
-      socket.send(JSON.stringify(message))
+  sendToSocket(socket: WebSocket, message: WsServerMessage): void {
+    if (!this.isConnected(socket) || socket.readyState !== socket.OPEN) return
+    try {
+      socket.send(JSON.stringify(message), (error?: Error) => {
+        if (error) this.transportFailure(socket)
+      })
+    } catch {
+      this.transportFailure(socket)
     }
   }
 }

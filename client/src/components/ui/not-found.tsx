@@ -1,49 +1,44 @@
-import * as motion from 'motion/react-client'
-import { Link } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
-import { Compass } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { ArrowLeft, LayoutGrid } from 'lucide-react'
+import { Button } from '@/components/ds/button'
+import { NoticeScreen } from '@/components/ds/notice-screen'
+import { AppLink } from '@/components/layout/app-link'
 
+/**
+ * The App Router's not-found content. It has no motion, so it is visible in the server HTML as is. The
+ * logo floats over the screen, so the content centres in the whole viewport.
+ */
 export function NotFound() {
-  const { t } = useTranslation()
+  const t = useTranslations()
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4 py-24">
-      <motion.div
-        className="flex flex-col items-center text-center max-w-md w-full"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeInOut' }}
+    <>
+      <header className="absolute top-0 left-0 z-10 px-4 pt-6 sm:px-8">
+        <AppLink
+          href="/"
+          aria-label={t('ds.shell.home')}
+          className="focus-visible:outline-mint block w-fit focus-visible:outline-2 focus-visible:outline-offset-4"
+        >
+          <img src="/squadzr-logo.svg" alt="" className="block w-26" />
+        </AppLink>
+      </header>
+      <NoticeScreen
+        mark={
+          <span aria-hidden="true" className="type-display text-text block">
+            404
+          </span>
+        }
+        title={t('notFound.title')}
+        description={t('notFound.description')}
+        className="min-h-dvh"
       >
-        {/* Icon */}
-        <div className="relative mb-6">
-          <div className="absolute inset-0 rounded-full bg-accent/10 blur-2xl scale-150" />
-          <div className="relative size-20 rounded-2xl bg-surface border border-accent/20 flex items-center justify-center shadow-[0_0_32px_rgba(0,255,162,0.08)]">
-            <Compass
-              className="size-9 text-accent"
-              strokeWidth={1.5}
-              style={{ filter: 'drop-shadow(0 0 8px rgba(0,255,162,0.5))' }}
-            />
-          </div>
-        </div>
-
-        {/* Heading */}
-        <h1 className="font-heading text-2xl font-bold text-offwhite sm:text-3xl mb-2">
-          {t('notFound.title')}
-        </h1>
-
-        {/* Description */}
-        <p className="text-sm text-muted leading-relaxed mb-8">{t('notFound.description')}</p>
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          <Link to="/" className="btn-accent w-full sm:w-auto text-center">
-            {t('notFound.backToHome')}
-          </Link>
-          <Link to="/rooms" search={{}} className="btn-ghost w-full sm:w-auto text-center">
-            {t('notFound.exploreRooms')}
-          </Link>
-        </div>
-      </motion.div>
-    </div>
+        <Button href="/" full icon={<ArrowLeft />} className="sm:w-auto">
+          {t('notFound.backToHome')}
+        </Button>
+        <Button href="/squads" variant="secondary" full icon={<LayoutGrid />} className="sm:w-auto">
+          {t('notFound.exploreSquads')}
+        </Button>
+      </NoticeScreen>
+    </>
   )
 }

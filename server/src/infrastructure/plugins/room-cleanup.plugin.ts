@@ -1,62 +1,63 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyBaseLogger, FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
-import { DrizzleRoomRepository } from '@infrastructure/repositories/drizzle-room.repository'
-import { DeleteExpiredRoomsUseCase } from '@application/use-cases/room/delete-expired-rooms.use-case'
+import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
+import type { IDeleteExpiredRoomsUseCase } from '@application/use-cases/room/delete-expired-rooms.use-case'
 import { ROOM } from '@config/constants'
 
-async function markLegacyFullRooms(fastify: FastifyInstance): Promise<void> {
-  const repository = new DrizzleRoomRepository(fastify.db)
-  const waitingRooms = await repository.findAvailable()
-  const fullRooms = waitingRooms.filter(
-    (room) =>
-      room.memberCount !== undefined &&
-      room.memberCount >= room.maxPlayers &&
-      room.completedAt === null
-  )
+export interface RoomCleanupPluginOptions {
+  /** Built by the composition root from the database and the clock. */
+  readonly deleteExpiredRoomsUseCase: IDeleteExpiredRoomsUseCase
+}
 
-  for (const room of fullRooms) {
-    await repository.update(room.id, {
-      completedAt: new Date(),
-    })
-  }
+/**
+ * One cleanup pass. Every failure path is contained here: a scheduler failure
+ * is logged and retried on the next tick, never brought down Fastify.
+ */
+export async function runRoomCleanup(
+  log: FastifyBaseLogger,
+  useCase: IDeleteExpiredRoomsUseCase,
+  broadcaster: IRoomBroadcaster
+): Promise<void> {
+  try {
+    const result = await useCase.execute()
 
-  if (fullRooms.length > 0) {
-    fastify.log.info(`Marked ${fullRooms.length} legacy full room(s) for cleanup`)
+    for (const room of result.deletedRooms) {
+      log.info({ roomId: room.id, roomCode: room.code, reason: room.reason }, 'Room expired')
+
+      try {
+        broadcaster.broadcastRoomDeleted(room.id, room.code)
+      } catch (error) {
+        log.error(
+          { err: error, roomId: room.id, roomCode: room.code },
+          'Room deletion broadcast failed'
+        )
+      }
+
+      log.info({ roomId: room.id, roomCode: room.code }, 'Room deleted')
+    }
+  } catch (error) {
+    log.error({ err: error }, 'Room cleanup failed')
   }
 }
 
-async function roomCleanupPlugin(fastify: FastifyInstance): Promise<void> {
+async function roomCleanupPlugin(
+  fastify: FastifyInstance,
+  { deleteExpiredRoomsUseCase }: RoomCleanupPluginOptions
+): Promise<void> {
   let intervalId: ReturnType<typeof setInterval>
 
   fastify.addHook('onReady', async () => {
-    // Mark any existing full rooms that were never transitioned to 'finished'
-    try {
-      await markLegacyFullRooms(fastify)
-    } catch (error) {
-      fastify.log.error(error, 'Failed to mark legacy full rooms')
-    }
-
     fastify.log.info(
-      `Room cleanup scheduler started (interval: ${ROOM.CLEANUP_INTERVAL_MS / 1000}s, expiration: ${ROOM.EXPIRATION_MINUTES}min)`
+      {
+        intervalMs: ROOM.CLEANUP_INTERVAL_MS,
+        openRoomTtlMs: ROOM.OPEN_ROOM_TTL_MS,
+        readyRoomRetentionMs: ROOM.READY_ROOM_RETENTION_MS,
+      },
+      'Room cleanup scheduler started'
     )
 
-    const cleanupRepository = new DrizzleRoomRepository(fastify.db)
-    const cleanupUseCase = new DeleteExpiredRoomsUseCase(cleanupRepository)
-
-    intervalId = setInterval(async () => {
-      try {
-        const result = await cleanupUseCase.execute({ expirationMinutes: ROOM.EXPIRATION_MINUTES })
-
-        for (const room of result.deletedRooms) {
-          fastify.broadcaster.broadcastRoomDeleted(room.id, room.code)
-        }
-
-        if (result.deletedRooms.length > 0) {
-          fastify.log.info(`Cleaned up ${result.deletedRooms.length} expired room(s)`)
-        }
-      } catch (error) {
-        fastify.log.error(error, 'Room cleanup failed')
-      }
+    intervalId = setInterval(() => {
+      void runRoomCleanup(fastify.log, deleteExpiredRoomsUseCase, fastify.broadcaster)
     }, ROOM.CLEANUP_INTERVAL_MS)
   })
 

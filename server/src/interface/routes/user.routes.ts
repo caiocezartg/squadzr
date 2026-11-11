@@ -1,19 +1,22 @@
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
-import { z } from 'zod'
 import { requireAuth } from '@interface/hooks/auth.hook'
 import { createUserController } from '@interface/factories/user.factory'
-import { userSchema, userNotificationSchema } from '@squadzr/schemas'
-import { listNotificationsQuerySchema, notificationIdParamSchema } from '@application/dtos'
-
-const errorResponse = z.object({
-  error: z.string(),
-  message: z.string(),
-})
+import {
+  errorResponseSchema as errorResponse,
+  listNotificationsQuerySchema,
+  notificationChangeResponseSchema,
+  notificationIdParamSchema,
+  notificationsResponseSchema,
+  playerProfileParamsSchema,
+  playerProfileResponseSchema,
+  readAllNotificationsResponseSchema,
+  userResponseSchema,
+} from '@squadzr/schemas'
 
 export async function userRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
-  const userController = createUserController(fastify.db)
+  const userController = createUserController(fastify.db, fastify.clock)
 
   app.get('/api/users/me', {
     schema: {
@@ -22,13 +25,28 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       description: 'Returns the authenticated user profile. Requires authentication.',
       security: [{ session: [] }],
       response: {
-        200: z.object({ user: userSchema }),
+        200: userResponseSchema,
         401: errorResponse,
         404: errorResponse,
       },
     },
     preHandler: requireAuth,
     handler: userController.me.bind(userController),
+  })
+
+  app.get('/api/users/:id/profile', {
+    schema: {
+      tags: ['Users'],
+      summary: 'Get a Player Profile',
+      description:
+        'Returns the public profile of a person: name, photo, member since, completed Squads and most played Games. Public, never carries the email.',
+      params: playerProfileParamsSchema,
+      response: {
+        200: playerProfileResponseSchema,
+        404: errorResponse,
+      },
+    },
+    handler: userController.playerProfile.bind(userController),
   })
 
   app.get('/api/notifications', {
@@ -39,9 +57,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       security: [{ session: [] }],
       querystring: listNotificationsQuerySchema,
       response: {
-        200: z.object({
-          notifications: z.array(userNotificationSchema),
-        }),
+        200: notificationsResponseSchema,
         401: errorResponse,
       },
     },
@@ -57,7 +73,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       security: [{ session: [] }],
       params: notificationIdParamSchema,
       response: {
-        200: z.object({ success: z.boolean() }),
+        200: notificationChangeResponseSchema,
         401: errorResponse,
       },
     },
@@ -72,7 +88,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       description: 'Marks all unread notifications as read for the authenticated user.',
       security: [{ session: [] }],
       response: {
-        200: z.object({ success: z.boolean(), count: z.number() }),
+        200: readAllNotificationsResponseSchema,
         401: errorResponse,
       },
     },
@@ -88,7 +104,7 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
       security: [{ session: [] }],
       params: notificationIdParamSchema,
       response: {
-        200: z.object({ success: z.boolean() }),
+        200: notificationChangeResponseSchema,
         401: errorResponse,
       },
     },

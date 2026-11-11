@@ -1,26 +1,20 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { tanstackRouter } from '@tanstack/router-plugin/vite'
-import path from 'path'
+import vinext from 'vinext'
+import { cloudflare } from '@cloudflare/vite-plugin'
+import { kvDataAdapter } from '@vinext/cloudflare/cache/kv-data-adapter'
+import { imagesOptimizer } from '@vinext/cloudflare/images/images-optimizer'
 
 export default defineConfig({
-  plugins: [tanstackRouter(), react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
+  plugins: [
+    vinext({
+      cache: { data: kvDataAdapter() },
+      images: { optimizer: imagesOptimizer() },
+    }),
+    cloudflare({
+      viteEnvironment: {
+        name: 'rsc',
+        childEnvironments: ['ssr'],
       },
-      '/ws': {
-        target: 'ws://localhost:3000',
-        ws: true,
-        changeOrigin: true,
-      },
-    },
-  },
+    }),
+  ],
 })

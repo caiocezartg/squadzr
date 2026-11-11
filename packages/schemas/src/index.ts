@@ -1,122 +1,268 @@
-import { z } from 'zod'
-
-// Room status schema
-export const roomStatusSchema = z.enum(['waiting', 'playing', 'finished'])
-
-// User schema
-export const userSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  email: z.email(),
-  image: z.string().nullable(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-})
-
-export type UserDto = z.infer<typeof userSchema>
-
-// Game schema
-export const gameSchema = z.object({
-  id: z.uuid(),
-  name: z.string(),
-  slug: z.string(),
-  coverUrl: z.url(),
-  minPlayers: z.number().int(),
-  maxPlayers: z.number().int(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-})
-
-export type GameDto = z.infer<typeof gameSchema>
-
-// Room schema
-export const roomSchema = z.object({
-  id: z.uuid(),
-  code: z.string(),
-  name: z.string(),
-  hostId: z.string(),
-  gameId: z.uuid(),
-  status: roomStatusSchema,
-  maxPlayers: z.number().int(),
-  discordLink: z.url().nullable(),
-  tags: z.array(z.string()).default([]),
-  language: z.enum(['en', 'pt-br']).default('pt-br'),
-  memberCount: z.number().int().optional(),
-  isMember: z.boolean().optional(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-})
-
-export type RoomDto = z.infer<typeof roomSchema>
-
-// Player schema (used in room lobby)
-export const playerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  image: z.string().nullable(),
-  isHost: z.boolean(),
-})
-
-export type PlayerDto = z.infer<typeof playerSchema>
-
-// Room member schema
-export const roomMemberSchema = z.object({
-  id: z.uuid(),
-  roomId: z.uuid(),
-  userId: z.string(),
-  joinedAt: z.coerce.date(),
-})
-
-export type RoomMemberDto = z.infer<typeof roomMemberSchema>
-
-// User notification schema
-export const userNotificationTypeSchema = z.enum(['room_ready'])
-
-export const userNotificationPayloadSchema = z.object({
-  roomId: z.uuid(),
-  roomCode: z.string().length(6),
-  roomName: z.string(),
-  gameName: z.string(),
-  players: z.array(z.object({ name: z.string(), image: z.string().nullable() })),
-  discordLink: z.url().nullable(),
-})
-
-export const userNotificationSchema = z.object({
-  id: z.uuid(),
-  userId: z.string(),
-  type: userNotificationTypeSchema,
-  title: z.string(),
-  message: z.string(),
-  payload: userNotificationPayloadSchema,
-  readAt: z.coerce.date().nullable(),
-  createdAt: z.coerce.date(),
-})
-
-export type UserNotificationDto = z.infer<typeof userNotificationSchema>
-
-// Create room input schema
-export const createRoomInputSchema = z.object({
-  name: z.string().trim().min(1, 'Room name is required').max(30, 'Room name too long'),
-  gameId: z.uuid({ error: 'Invalid game ID' }),
-  maxPlayers: z.number().int().min(2).max(20).optional(),
-  discordLink: z
-    .url({ error: 'Invalid Discord link' })
-    .refine(
-      (url) =>
-        url.startsWith('https://discord.gg/') || url.startsWith('https://discord.com/invite/'),
-      { message: 'Discord link must be a valid Discord invite URL' }
-    ),
-  tags: z
-    .array(
-      z
-        .string()
-        .trim()
-        .max(15, 'Tag too long')
-        .transform((t) => t.replace(/^#+/, '').toLowerCase())
-    )
-    .max(5, 'Max 5 tags')
-    .default([]),
-  language: z.enum(['en', 'pt-br']).default('pt-br'),
-})
-
-export type CreateRoomInput = z.infer<typeof createRoomInputSchema>
+export {
+  describeContractIssues,
+  errorResponseSchema,
+  type ContractIssue,
+  type ErrorResponse,
+} from './error'
+export {
+  DISCORD_INVITE_PREFIXES,
+  discordInviteCheckResponseSchema,
+  discordInviteCode,
+  discordInviteCodeParamSchema,
+  discordPreviewResponseSchema,
+  discordServerPreviewSchema,
+  parseDiscordInvite,
+  type DiscordInviteCheckResponse,
+  type DiscordInviteLink,
+  type DiscordPreviewResponse,
+  type DiscordServerPreviewDto,
+} from './discord'
+export {
+  IGDB_PLATFORM_IDS,
+  PLATFORMS,
+  PLATFORM_LABELS,
+  platformSchema,
+  platformsFromIgdbIds,
+  type Platform,
+} from './platform'
+export { normalizeSearchText } from './search-text'
+export { healthResponseSchema, type HealthResponse } from './health'
+export {
+  ASSIGNABLE_ROLES,
+  AUDIT_ACTIONS,
+  USER_ROLES,
+  assignableRoleSchema,
+  auditActionSchema,
+  auditDetailsSchema,
+  auditEntriesResponseSchema,
+  auditEntrySchema,
+  auditTargetSchema,
+  canAccessAdminPanel,
+  grantableRoles,
+  hasFullAdminAccess,
+  userRoleSchema,
+  type AssignableRole,
+  type AuditAction,
+  type AuditDetails,
+  type AuditEntriesResponse,
+  type AuditEntryDto,
+  type AuditTarget,
+  type UserRole,
+} from './admin'
+export {
+  PAGE_SIZE,
+  pageQuerySchema,
+  paginatedResponseSchema,
+  type PageQuery,
+  type PaginatedResponse,
+} from './pagination'
+export { sessionResponseSchema, type SessionDto } from './session'
+export {
+  PROFILE_TOP_GAMES_LIMIT,
+  playerProfileParamsSchema,
+  playerProfileResponseSchema,
+  playerProfileSchema,
+  profileGameSchema,
+  userResponseSchema,
+  type PlayerProfileDto,
+  type PlayerProfileResponse,
+  type ProfileGameDto,
+  type UserDto,
+} from './user'
+export {
+  GAME_SEARCH_MAX_LENGTH,
+  gameGenreSchema,
+  gameIdParamSchema,
+  gameResponseSchema,
+  gameSummarySchema,
+  gamesQuerySchema,
+  gamesResponseSchema,
+  popularGameSchema,
+  popularGamesQuerySchema,
+  popularGamesResponseSchema,
+  type GameDto,
+  type GameGenreDto,
+  type GameSummaryDto,
+  type GamesQuery,
+  type GamesResponse,
+  type PopularGameDto,
+  type PopularGamesQuery,
+  type PopularGamesResponse,
+} from './game'
+export {
+  createRoomInputSchema,
+  createRoomResponseSchema,
+  isRoomLobbyResponse,
+  joinRoomResponseSchema,
+  leaveRoomResponseSchema,
+  MEMBER_PREVIEW_LIMIT,
+  memberPreviewSchema,
+  myRoomsResponseSchema,
+  playerSchema,
+  publicRoomSchema,
+  roomCodeParamSchema,
+  roomLanguageSchema,
+  type RoomLanguage,
+  roomLobbyResponseSchema,
+  roomMemberSchema,
+  roomResponseSchema,
+  roomSchema,
+  roomsResponseSchema,
+  type CreateRoomInput,
+  type CreateRoomResponse,
+  type JoinRoomResponse,
+  type MemberPreviewDto,
+  type MyRoomsResponse,
+  type PlayerDto,
+  type PublicRoomDto,
+  type RoomDto,
+  type RoomLobbyResponse,
+  type RoomMemberDto,
+  type RoomResponse,
+  type RoomsResponse,
+} from './room'
+export {
+  listNotificationsQuerySchema,
+  notificationChangeResponseSchema,
+  notificationIdParamSchema,
+  notificationsResponseSchema,
+  hostTransferredNotificationPayloadSchema,
+  leftSquadSchema,
+  memberLeftNotificationPayloadSchema,
+  notificationPersonSchema,
+  readAllNotificationsResponseSchema,
+  roomClosedByAdminNotificationPayloadSchema,
+  roomClosedNotificationPayloadSchema,
+  roomReadyNotificationPayloadSchema,
+  userNotificationPayloadSchema,
+  userNotificationSchema,
+  userNotificationTypeSchema,
+  type LeftSquadDto,
+  type NotificationsResponse,
+  type UserNotificationDto,
+  type UserNotificationPayloadDto,
+  type UserNotificationTypeDto,
+} from './notification'
+export {
+  ADMIN_USER_LATEST_COMPLETED_LIMIT,
+  ADMIN_USER_SEARCH_MAX_LENGTH,
+  adminUserCompletedSquadSchema,
+  adminUserDetailSchema,
+  adminUserListItemSchema,
+  adminUserParamsSchema,
+  adminUserResponseSchema,
+  adminUserSchema,
+  adminUserSquadSchema,
+  adminUsersQuerySchema,
+  adminUsersResponseSchema,
+  changeUserRoleInputSchema,
+  changeUserRoleResponseSchema,
+  type AdminUserCompletedSquadDto,
+  type AdminUserDetailDto,
+  type AdminUserDto,
+  type AdminUserListItemDto,
+  type AdminUserResponse,
+  type AdminUserSquadDto,
+  type AdminUsersQuery,
+  type AdminUsersResponse,
+  type ChangeUserRoleInput,
+  type ChangeUserRoleResponse,
+} from './admin-users'
+export {
+  ACTIVITY_METRICS,
+  DEFAULT_OVERVIEW_PERIOD,
+  OVERVIEW_AUDIT_LIMIT,
+  OVERVIEW_PERIODS,
+  activityMetricSchema,
+  activityQuerySchema,
+  activityResponseSchema,
+  activityRowSchema,
+  calendarDaySchema,
+  overviewLiveSchema,
+  overviewPeriodQuerySchema,
+  overviewPeriodSchema,
+  overviewQuerySchema,
+  overviewResponseSchema,
+  periodComparisonSchema,
+  peakComparisonSchema,
+  type ActivityMetric,
+  type ActivityQuery,
+  type ActivityResponse,
+  type ActivityRowDto,
+  type OverviewLiveDto,
+  type OverviewPeriod,
+  type OverviewQuery,
+  type OverviewResponse,
+  type PeriodComparisonDto,
+  type PeakComparisonDto,
+} from './admin-overview'
+export {
+  ADMIN_CLOSURE_REASON_MAX,
+  ADMIN_CLOSURE_REASON_MIN,
+  ADMIN_SQUAD_SEARCH_MAX_LENGTH,
+  ADMIN_SQUAD_SORTS,
+  adminSquadDetailResponseSchema,
+  adminSquadDetailSchema,
+  adminSquadMemberSchema,
+  adminSquadSchema,
+  adminSquadSortSchema,
+  adminSquadsQuerySchema,
+  adminSquadsResponseSchema,
+  adminSquadIdParamSchema,
+  closeSquadInputSchema,
+  type AdminSquadDetailDto,
+  type AdminSquadDetailResponse,
+  type AdminSquadDto,
+  type AdminSquadMemberDto,
+  type AdminSquadSort,
+  type AdminSquadsQuery,
+  type AdminSquadsResponse,
+  type CloseSquadInput,
+} from './admin-squads'
+export {
+  ACTIVE_CATALOG_IMPORT_RUN_STATUSES,
+  CATALOG_IMPORT_RUN_STATUSES,
+  CATALOG_IMPORT_RUN_TRIGGERS,
+  MANUAL_CATALOG_IMPORT_LIMIT_MS,
+  manualCatalogImportAvailabilitySchema,
+  requestCatalogImportRunResponseSchema,
+  catalogImportRunSchema,
+  catalogImportRunStatusSchema,
+  catalogImportRunSummarySchema,
+  catalogImportRunTriggerSchema,
+  catalogImportRunsResponseSchema,
+  type CatalogImportRunDto,
+  type CatalogImportRunStatus,
+  type CatalogImportRunSummaryDto,
+  type CatalogImportRunTrigger,
+  type CatalogImportRunsResponse,
+  type ManualCatalogImportAvailability,
+} from './admin-catalog'
+export {
+  ADMIN_GAME_CHANGE_NAMES_LIMIT,
+  ADMIN_GAME_OPEN_SQUADS_LIMIT,
+  ADMIN_GAME_SEARCH_MAX_LENGTH,
+  ADMIN_GAME_SORTS,
+  ADMIN_GAME_STATUSES,
+  adminGameChangeSchema,
+  adminGameDetailResponseSchema,
+  adminGameDetailSchema,
+  adminGameIdParamSchema,
+  adminGameSchema,
+  adminGameSortSchema,
+  adminGameStatusSchema,
+  adminGameUsageSchema,
+  adminGamesQuerySchema,
+  adminGamesResponseSchema,
+  adminGamesSummarySchema,
+  type AdminGameChangeDto,
+  type AdminGameDetailDto,
+  type AdminGameDetailResponse,
+  type AdminGameDto,
+  type AdminGameSort,
+  type AdminGameStatus,
+  type AdminGameUsageDto,
+  type AdminGamesQuery,
+  type AdminGamesResponse,
+  type AdminGamesSummaryDto,
+} from './admin-catalog-games'

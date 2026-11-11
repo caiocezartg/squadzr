@@ -1,25 +1,29 @@
-import type { Room } from '@domain/entities/room.entity'
+import type { Game } from '@domain/entities/game.entity'
+import type { NewRoom, Room } from '@domain/entities/room.entity'
 import type { RoomMember } from '@domain/entities/room-member.entity'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
-import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
-import { InvalidGameError, RoomCreateLimitReachedError } from '@application/errors'
+import type { IUserRepository } from '@domain/repositories/user.repository'
+import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
+import { discordInviteCode, type Platform } from '@squadzr/schemas'
+import {
+  GameNotAvailableError,
+  InvalidDiscordInviteError,
+  InvalidGameError,
+  PlatformNotAvailableError,
+  RoomCreateLimitReachedError,
+  RoomJoinLimitReachedError,
+  UserNotFoundError,
+} from '@application/errors'
 import { ROOM } from '@config/constants'
-
-export interface CreateRoomInput {
-  readonly name: string
-  readonly hostId: string
-  readonly gameId: string
-  readonly maxPlayers?: number
-  readonly discordLink: string
-  readonly tags?: string[]
-  readonly language?: 'en' | 'pt-br'
-}
 
 export interface CreateRoomOutput {
   readonly room: Room
   readonly hostMember: RoomMember
 }
+
+/** maxPlayers may be omitted: the game's capacity applies. */
+export type CreateRoomInput = Omit<NewRoom, 'maxPlayers'> & { readonly maxPlayers?: number }
 
 export interface ICreateRoomUseCase {
   execute(input: CreateRoomInput): Promise<CreateRoomOutput>
@@ -29,7 +33,8 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
   constructor(
     private readonly roomRepository: IRoomRepository,
     private readonly gameRepository: IGameRepository,
-    private readonly roomMemberRepository: IRoomMemberRepository
+    private readonly userRepository: IUserRepository,
+    private readonly discordPreviews: DiscordInvitePreviewProvider
   ) {}
 
   async execute(input: CreateRoomInput): Promise<CreateRoomOutput> {
@@ -38,15 +43,29 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       throw new InvalidGameError(input.gameId)
     }
 
-    // Enforce host limit: max 3 active rooms
-    const activeRoomCount = await this.roomRepository.countActiveByHostId(input.hostId)
-    if (activeRoomCount >= ROOM.CREATE_LIMIT) {
-      throw new RoomCreateLimitReachedError(ROOM.CREATE_LIMIT)
+    // A Game removed from the catalog is still readable by id, but no new Squad
+    // may point at it.
+    if (!game.listed) {
+      throw new GameNotAvailableError(input.gameId)
+    }
+
+    const platform = this.resolvePlatform(game, input)
+
+    await this.assertDiscordInviteExists(input.discordLink)
+
+    // A new Squad has only its host, so the host's entry is the whole preview.
+    // Read before creating: a missing host fails here, before any Squad exists.
+    const host = await this.userRepository.findById(input.hostId)
+    if (!host) {
+      throw new UserNotFoundError(input.hostId)
     }
 
     const maxPlayers = input.maxPlayers ?? game.maxPlayers
 
-    const room = await this.roomRepository.create({
+    // Room and host Membership are one transaction, with Room Activity stamped
+    // by the repository's clock after the user row lock. The host limit uses
+    // that same instant inside the transaction.
+    const outcome = await this.roomRepository.create({
       name: input.name,
       hostId: input.hostId,
       gameId: input.gameId,
@@ -54,13 +73,54 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       discordLink: input.discordLink,
       tags: input.tags,
       language: input.language,
+      platform,
     })
 
-    const hostMember = await this.roomMemberRepository.create({
-      roomId: room.id,
-      userId: input.hostId,
-    })
+    if (outcome.status === 'limit_reached') {
+      throw new RoomCreateLimitReachedError(ROOM.CREATE_LIMIT)
+    }
+    if (outcome.status === 'join_limit_reached') {
+      throw new RoomJoinLimitReachedError(ROOM.JOIN_LIMIT)
+    }
 
-    return { room, hostMember }
+    // The Game read to validate `gameId` is the one the response and the
+    // `room_created` broadcast carry: the create path never reads it again.
+    return {
+      room: {
+        ...outcome.room,
+        game,
+        memberPreview: [{ id: host.id, name: host.name, image: host.avatarUrl }],
+      },
+      hostMember: outcome.hostMember,
+    }
+  }
+
+  /**
+   * A Game with platforms needs one of them; a Game without any takes none. Anything else
+   * is refused, so a Squad never carries a platform its Game cannot be played on.
+   */
+  private resolvePlatform(game: Game, input: CreateRoomInput): Platform | null {
+    const platform = input.platform ?? null
+    if (game.platforms.length === 0) {
+      if (platform !== null) throw new PlatformNotAvailableError(game.id, platform)
+      return null
+    }
+    if (platform === null || !game.platforms.includes(platform)) {
+      throw new PlatformNotAvailableError(game.id, platform)
+    }
+    return platform
+  }
+
+  /**
+   * Refuses an invite Discord says it does not know. Discord being slow, down or rate limiting says nothing
+   * about the invite, so those let the Squad through: an outage must not stop anyone from creating one. An
+   * invite that expires is allowed too: the create form warns about it.
+   */
+  private async assertDiscordInviteExists(discordLink: string): Promise<void> {
+    const inviteCode = discordInviteCode(discordLink)
+    if (!inviteCode) throw new InvalidDiscordInviteError()
+
+    const outcome = await this.discordPreviews.fetch(inviteCode)
+    if (outcome.kind === 'invalid') throw new InvalidDiscordInviteError()
   }
 }

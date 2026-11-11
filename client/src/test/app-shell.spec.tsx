@@ -1,0 +1,222 @@
+/**
+ * The app shell (CCC-106). The sidebar and the top bar sit around the app pages, and every shell link
+ * navigates through the Next router. The shell's server render is in app-layout.spec.tsx.
+ */
+
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it } from 'vitest'
+import type { UserNotification } from '@/types'
+import {
+  boardSquads,
+  roomClosedNotification,
+  squadReadyNotification,
+  type RoomReadyNotification,
+} from './fixtures'
+import { renderSquadsFlow } from './harness'
+import { httpOk, onHttp } from './http-router'
+import type { FakeSessionUser } from './stubs'
+
+const ALPHA_ID = squadReadyNotification.id
+const BETA_ID = '3f1c2b4a-5d6e-4f70-8a9b-0c1d2e3f4a5b'
+
+let notifications: UserNotification[] = []
+
+function squadNotification(
+  id: string,
+  squadName: string,
+  readAt: string | null
+): RoomReadyNotification {
+  return {
+    ...squadReadyNotification,
+    id,
+    readAt,
+    payload: { ...squadReadyNotification.payload, roomName: squadName },
+  }
+}
+
+/** The page at `url` inside the shell; `/` is a page the shell shows no content for. */
+function renderShell(url: string, user?: FakeSessionUser | null) {
+  return renderSquadsFlow(url, { shell: true, user })
+}
+
+/** The sidebar column: the shell's complementary landmark. The top bar is its banner. */
+function sidebar(): HTMLElement {
+  return screen.getByRole('complementary', { name: 'Menu' })
+}
+
+beforeEach(() => {
+  notifications = []
+  onHttp('GET', '/api/rooms', () => httpOk(boardSquads))
+  onHttp('GET', '/api/notifications', () => httpOk({ notifications }))
+  onHttp('POST', '/api/notifications/:id/read', ({ params }) => {
+    notifications = notifications.map((n) =>
+      n.id === params.id ? { ...n, readAt: n.readAt ?? n.createdAt } : n
+    )
+    return httpOk({ success: true })
+  })
+  onHttp('POST', '/api/notifications/read-all', () => {
+    notifications = notifications.map((n) => ({ ...n, readAt: n.readAt ?? n.createdAt }))
+    return httpOk({ success: true, count: 2 })
+  })
+})
+
+describe('shell navigation', () => {
+  it('sends the sidebar logo to the landing', async () => {
+    const { user, navigation } = renderShell('/squads')
+
+    await user.click(within(sidebar()).getByRole('link', { name: 'Squadzr — home' }))
+
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/' }])
+  })
+
+  it('sends the top bar logo to the landing', async () => {
+    const { user, navigation } = renderShell('/squads')
+    const topBar = within(screen.getByRole('banner'))
+
+    await user.click(topBar.getByRole('link', { name: 'Squadzr — home' }))
+
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/' }])
+  })
+
+  it('sends All squads from a page the shell does not own to the board', async () => {
+    const { user, navigation } = renderShell('/')
+
+    await user.click(within(sidebar()).getByRole('link', { name: /^All squads/ }))
+
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads' }])
+  })
+
+  it('marks All squads as the current page on the board only', async () => {
+    const { navigation } = renderShell('/squads')
+    const allSquads = within(sidebar()).getByRole('link', { name: /^All squads/ })
+
+    expect(allSquads).toHaveAttribute('aria-current', 'page')
+    // The current item takes its edge at once: it carries no transition of its own.
+    expect(allSquads.className).not.toMatch(/transition|press/)
+
+    navigation.history.push('/')
+    await waitFor(() => expect(allSquads).not.toHaveAttribute('aria-current'))
+  })
+
+  it('sends a closed squad notification to the Squad Board, because its Lobby is gone', async () => {
+    notifications = [roomClosedNotification]
+    const { user, navigation } = renderShell('/squads')
+
+    await user.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }))
+    await user.click(
+      await screen.findByRole('link', {
+        name: `${roomClosedNotification.payload.roomName} was closed, Unread`,
+      })
+    )
+
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/squads' }])
+  })
+
+  it('hands a squad notification to the Next router', async () => {
+    notifications = [squadNotification(ALPHA_ID, 'Alpha squad', null)]
+    const { user, navigation } = renderShell('/squads')
+
+    await user.click(await screen.findByRole('button', { name: 'Notifications, 1 unread' }))
+    await user.click(await screen.findByRole('link', { name: /^Alpha squad/ }))
+
+    expect(navigation.calls).toEqual([
+      { method: 'push', href: `/squads/${squadReadyNotification.payload.roomCode}` },
+    ])
+  })
+})
+
+describe('shell document title', () => {
+  it('puts the unread count in front of the active route title', async () => {
+    notifications = [
+      squadNotification(ALPHA_ID, 'Alpha squad', null),
+      squadNotification(BETA_ID, 'Beta squad', null),
+    ]
+    // The App Router writes the route title on the server; the test starts from that title.
+    document.title = 'Squads · Squadzr'
+    const { user } = renderShell('/squads')
+
+    await waitFor(() => expect(document.title).toBe('(2) Squads · Squadzr'))
+
+    await user.click(await screen.findByRole('button', { name: 'Notifications, 2 unread' }))
+    await user.click(await screen.findByRole('button', { name: 'Mark all as read' }))
+    await waitFor(() => expect(document.title).toBe('Squads · Squadzr'))
+  })
+})
+
+const SHELL_USER: FakeSessionUser = {
+  id: 'user-1',
+  name: 'Caio Cezar',
+  email: 'c@squadzr.test',
+  image: null,
+}
+
+describe('shell account', () => {
+  it('shows the initials in the account button when the viewer has no avatar', async () => {
+    renderShell('/squads', {
+      id: 'user-1',
+      name: 'Caio Cezar',
+      email: 'c@squadzr.test',
+      image: null,
+    })
+
+    const account = await within(sidebar()).findByRole('button', { name: 'Caio Cezar' })
+    expect(within(account).getByText('CC')).toBeInTheDocument()
+  })
+
+  it('shows the initials once the avatar image fails to load', async () => {
+    renderShell('/squads', {
+      id: 'user-1',
+      name: 'Caio Cezar',
+      email: 'c@squadzr.test',
+      image: 'https://cdn.discordapp.com/avatars/1/broken.png',
+    })
+
+    const account = await within(sidebar()).findByRole('button', { name: 'Caio Cezar' })
+    const image = account.querySelector('img')
+    if (!image) throw new Error('The avatar image is not rendered')
+    fireEvent.error(image)
+
+    expect(within(account).getByText('CC')).toBeInTheDocument()
+    expect(account.querySelector('img')).toBeNull()
+  })
+
+  it('shows no Admin entry in the account menu of a user', async () => {
+    const { user } = renderShell('/squads', { ...SHELL_USER, role: 'user' })
+
+    await user.click(await within(sidebar()).findByRole('button', { name: 'Caio Cezar' }))
+
+    expect(await screen.findByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument()
+  })
+
+  it('leads an admin to the panel from the account menu', async () => {
+    const { user, navigation } = renderShell('/squads', { ...SHELL_USER, role: 'admin' })
+
+    await user.click(await within(sidebar()).findByRole('button', { name: 'Caio Cezar' }))
+    const admin = await screen.findByRole('link', { name: 'Admin' })
+    expect(admin).toHaveAttribute('href', '/admin')
+    await user.click(admin)
+
+    expect(navigation.calls).toEqual([{ method: 'push', href: '/admin' }])
+  })
+
+  it.each(['moderator', 'owner'] as const)(
+    'leads a %s to the panel from the account menu',
+    async (role) => {
+      const { user } = renderShell('/squads', { ...SHELL_USER, role })
+
+      await user.click(await within(sidebar()).findByRole('button', { name: 'Caio Cezar' }))
+
+      expect(await screen.findByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin')
+    }
+  )
+
+  it('replaces the account button with Sign in with Discord for a visitor', () => {
+    renderShell('/squads', null)
+
+    expect(
+      within(sidebar()).getByRole('button', { name: 'Sign in with Discord' })
+    ).toBeInTheDocument()
+    expect(within(sidebar()).queryByRole('button', { name: 'Caio' })).not.toBeInTheDocument()
+  })
+})

@@ -1,0 +1,31 @@
+# Shared toolchain setup for every CI job: the Bun version pinned in the root
+# package.json (`packageManager`) and a frozen-lockfile install.
+name: Setup Bun workspace
+description: Install the pinned Bun version and the workspace dependencies from bun.lock.
+
+runs:
+  using: composite
+  steps:
+    - name: Install pinned Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: package.json
+
+    - name: Assert Bun matches packageManager
+      shell: bash
+      run: |
+        expected="$(bun -e 'console.log(require("./package.json").packageManager.replace(/^bun@/, ""))')"
+        actual="$(bun --version)"
+        echo "packageManager pins bun@${expected}; runner has bun@${actual}"
+        test "${expected}" = "${actual}"
+
+    - name: Cache Bun install cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.bun/install/cache
+        key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+        restore-keys: bun-${{ runner.os }}-
+
+    - name: Install dependencies (frozen lockfile)
+      shell: bash
+      run: bun install --frozen-lockfile
