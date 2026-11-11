@@ -1,13 +1,16 @@
 import { bindings, defineConfig, defineWorker } from 'cf/config'
 
+// SPIKE (#150): a throwaway Worker on workers.dev. Never deployed under the `squadzr-web` name.
 export default defineConfig({
   worker: defineWorker({
-    name: 'squadzr-web',
+    name: 'squadzr-og-spike',
     entrypoint: 'vinext/server/fetch-handler',
     compatibilityDate: '2026-11-10',
     compatibilityFlags: ['nodejs_compat'],
-    // The Worker serves the apex; `www.squadzr.app` is redirected to it by a Cloudflare rule.
-    domains: ['squadzr.app'],
+    workersDev: true,
+    // Workers Cache (docs: developers.cloudflare.com/workers/cache): serves a repeat request without running the Worker.
+    cache: { enabled: true },
+    observability: { enabled: true, headSamplingRate: 1 },
     assets: {
       htmlHandling: 'none',
       notFoundHandling: 'none',
@@ -15,8 +18,6 @@ export default defineConfig({
     },
     env: {
       ASSETS: bindings.assets(),
-      // The edge secret the Next server sends to the API. Set once with `cf`, never in the repository.
-      EDGE_AUTH_TOKEN: bindings.secret(),
     },
   }),
 })
