@@ -104,6 +104,9 @@ export default defineRailway(() => {
       BETTER_AUTH_SECRET: preserve(),
       DISCORD_CLIENT_ID: preserve(),
       DISCORD_CLIENT_SECRET: preserve(),
+      // The origin lock: the same secret the Cloudflare Transform Rule writes and the Worker sends. The
+      // owner sets it in Railway when the lock is turned on, and changes it together with those two.
+      EDGE_AUTH_TOKEN: preserve(),
       // The manual Catalog Import from the admin panel reads the same IGDB credentials as the cron.
       IGDB_CLIENT_ID: gamesImport.env.IGDB_CLIENT_ID,
       IGDB_CLIENT_SECRET: gamesImport.env.IGDB_CLIENT_SECRET,

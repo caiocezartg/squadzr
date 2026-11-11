@@ -1,7 +1,7 @@
 import 'server-only'
 import type { z } from 'zod'
-import { errorResponseSchema } from '@squadzr/schemas'
-import { API_INTERNAL_URL } from '@/env.server'
+import { EDGE_AUTH_HEADER, errorResponseSchema } from '@squadzr/schemas'
+import { API_INTERNAL_URL, EDGE_AUTH_TOKEN } from '@/env.server'
 import { ApiClientError, parseApiResponse } from '@/lib/api-contract'
 
 /** How long a public response stays in Next's data cache before a request refreshes it. */
@@ -41,10 +41,12 @@ export interface GetOptions {
 
 /**
  * The fetch options a policy stands for. The cookie goes out only with a viewer call. The viewer's
- * address does not: the API believes only the address its own edge proxy saw.
+ * address does not: the API believes only the address its own edge proxy saw. The edge secret goes out
+ * with every call, so the API's origin lock lets the Next server in whether or not the edge stamps it.
  */
 function requestInit(policy: RequestPolicy, { timeoutMs }: GetOptions): ServerFetchInit {
   const headers = new Headers({ accept: 'application/json' })
+  if (EDGE_AUTH_TOKEN) headers.set(EDGE_AUTH_HEADER, EDGE_AUTH_TOKEN)
   if (policy.credentials === 'viewer') {
     if (policy.cookie) headers.set('cookie', policy.cookie)
   }

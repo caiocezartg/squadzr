@@ -7,10 +7,10 @@ never deploys.**
 
 ## Branch model
 
-| Branch        | Role                                                             | Receives                                        |
-| ------------- | ---------------------------------------------------------------- | ----------------------------------------------- |
-| `development` | Integration branch                                               | Every task pull request                         |
-| `main`        | Release-only branch; Vercel deploys it to Production (see below) | Promotion pull requests from `development` only |
+| Branch        | Role                                                        | Receives                                        |
+| ------------- | ----------------------------------------------------------- | ----------------------------------------------- |
+| `development` | Integration branch                                          | Every task pull request                         |
+| `main`        | Release-only branch; production deploys from it (see below) | Promotion pull requests from `development` only |
 
 ## Stable required-check names
 
@@ -97,22 +97,23 @@ Documentation alone does not satisfy CCC-30. After applying the rulesets:
 To verify the `main` promotion rule, open a pull request from any other branch into `main` and
 confirm `promotion-source` fails and merging is blocked.
 
-## Deployment link (Vercel / Railway)
+## Deployment link (Cloudflare Workers / Railway)
 
-Recorded on 2026-09-29, before any destructive migration in CCC-35:
+CI never deploys; each host deploys on its own trigger, and both wait for CI on `main`
+([ADR 0006](../adr/0006-host-on-cloudflare-workers-and-railway.md)). `development` is the pre-test
+branch and deploys nothing.
 
-| Host    | Linked service                                        | Production trigger                                                                                           | Evidence                                                                                                                                                                                              |
-| ------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vercel  | Client (`client/vercel.json`, `bun run build:client`) | Vercel Git integration: `main` → `Production`, every other branch/PR → `Preview`. Not gated by these checks. | GitHub deployments API: 14 `Production` deployments (latest `25ae3d1`, the `main` head) and 28 `Preview` deployments by `vercel[bot]`; commit status context `Vercel`                                 |
-| Railway | None (removed)                                        | **None.** The server has no hosted deployment.                                                               | Owner deleted the `squadzr` Railway project (services `server`, `Postgres`, `Postgres-AVPC`); `railway list --json` on 2026-09-29 shows it scheduled for deletion (`deletedAt: 2026-10-01T20:58:55Z`) |
+| Host               | Service                                                  | Production trigger                                                                                                                                                                                                          |
+| ------------------ | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare Workers | Client, Worker `squadzr-web` at `https://squadzr.app`    | `.github/workflows/deploy-client.yml`: runs when the `CI` workflow succeeds on a push to `main` and deploys the commit CI tested. A failing `CI` run deploys nothing. Workers Builds is not used (it does not wait for CI). |
+| Railway            | `api` and `games-import` in the `production` environment | Railway's "Wait for CI" on the branch `main`, limited by watch patterns (`docs/ops/catalog-import-railway.md`).                                                                                                             |
 
-There is no production server or production PostgreSQL today, so no destructive migration in CCC-35
-can reach hosted data. Choosing where the server runs belongs to roadmap issue 18 (CCC-44).
+Consequences:
 
-Consequences until roadmap issue 18 (gated automatic delivery):
-
-- Merging a promotion pull request into `main` triggers Vercel Production for the client. The
-  `main` ruleset ensures that merge only happens after every required check passes.
-- Vercel `Preview` deployments on task branches are not production and are unaffected.
-- The `Vercel` commit status is **not** a required check; it must not become one of the stable
-  names above.
+- Merging a promotion pull request into `main` is what puts a version online. The `main` ruleset ensures
+  that merge only happens after every required check passes, and the deploy workflow checks again that the
+  push's `CI` run succeeded.
+- The deploy workflow is not a required check and must not become one of the stable names above: it runs
+  after the merge.
+- It needs two repository secrets, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+  (`docs/ops/client-on-cloudflare-workers.md`).

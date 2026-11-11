@@ -5,8 +5,11 @@ import { parseServerEnv } from './src/env.server-schema'
 import './src/env'
 
 // Next loads this file for `next dev`, `next build` and `next start` before the server handles a
-// request, so a bad API_INTERNAL_URL stops the start instead of failing every request.
-parseServerEnv({ API_INTERNAL_URL: process.env.API_INTERNAL_URL })
+// request, so a bad server variable stops the start instead of failing every request.
+parseServerEnv({
+  API_INTERNAL_URL: process.env.API_INTERNAL_URL,
+  EDGE_AUTH_TOKEN: process.env.EDGE_AUTH_TOKEN,
+})
 
 // Scripts load only from the app. Next writes its bootstrap inline, so inline scripts stay allowed (a
 // nonce would force every page to render per request); the dev server also evaluates code. Plugins,

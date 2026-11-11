@@ -1,4 +1,0 @@
-{
-  "framework": "nextjs",
-  "buildCommand": "cd .. && bun run build:client"
-}

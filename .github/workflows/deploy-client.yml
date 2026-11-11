@@ -1,0 +1,47 @@
+# Deploys the client to the `squadzr-web` Cloudflare Worker (squadzr.app) after the CI workflow has
+# succeeded on a push to `main`. `development` is the pre-test branch and deploys nothing; a push to
+# `main` is a merged promotion pull request. The Worker is deployed from this workflow, not by
+# Workers Builds, because Workers Builds deploys on push without waiting for checks
+# (docs/adr/0006-host-on-cloudflare-workers-and-railway.md). A failing CI run never reaches this job.
+name: Deploy client
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+# One deploy at a time; a deploy that is running is never cancelled halfway.
+concurrency:
+  group: deploy-client
+  cancel-in-progress: false
+
+jobs:
+  deploy-client:
+    name: deploy-client
+    # CI also runs on pull requests and by hand; only its push run on `main` deploys.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The commit CI tested, not whatever `main` points at by now.
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: ./.github/actions/setup-bun
+      - name: Build and deploy the Worker
+        working-directory: client
+        run: bun run deploy:vinext
+        env:
+          # Read at build time: the browser and the Next server both call this API.
+          NEXT_PUBLIC_API_URL: https://api.squadzr.app
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

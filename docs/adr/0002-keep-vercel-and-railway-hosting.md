@@ -1,8 +1,11 @@
 ---
-status: accepted
+status: superseded
+superseded-by: 0006
 ---
 
 # Keep Vercel and Railway as deployment targets
+
+> Superseded by [ADR 0006](0006-host-on-cloudflare-workers-and-railway.md): the client no longer runs on Vercel. The text below is the decision as it was taken; its two amendments, on the cookie domain and the proxy hops, were carried into ADR 0006.
 
 The React client remains hosted on Vercel, while the single Fastify instance and managed PostgreSQL database remain on Railway. The modernization cycle adds repository-owned GitHub Actions checks but does not migrate hosting providers, keeping infrastructure change separate from application and architecture refactoring. Merges to `main` deploy automatically only after formatting, lint, typecheck, integration tests, and builds pass; required database migrations run as a controlled pre-deploy gate.
 
