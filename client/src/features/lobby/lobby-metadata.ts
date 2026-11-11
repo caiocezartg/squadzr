@@ -1,12 +1,17 @@
 import 'server-only'
 import type { Metadata } from 'next'
 import { PLATFORM_LABELS, type PublicRoomDto } from '@squadzr/schemas'
+import { lobbyHref } from '@/lib/squad-links'
+import { DEFAULT_PREVIEW, SITE_OPEN_GRAPH, SITE_TITLE } from '@/lib/site-metadata'
 import messages from '@/locales/en.json'
 import { publicSquadSource } from './server-squad-source'
 import { readSquadDetails } from './squad-details'
 
-/** The metadata of a page with no Squad to preview: a missing, Ready or expired Squad, or a failed read. */
-const GENERIC_METADATA: Metadata = { title: { absolute: 'Squadzr' } }
+/**
+ * The metadata of a page with no Squad to preview: a missing, Ready or expired Squad, or a failed read.
+ * It shows the landing's preview, never Squad details.
+ */
+const GENERIC_METADATA: Metadata = { title: { absolute: SITE_TITLE }, ...DEFAULT_PREVIEW }
 
 /**
  * The invite preview of a Squad link. The Squad and its game come from the public projection, read
@@ -34,7 +39,7 @@ function invitePreview(squad: PublicRoomDto): Metadata {
   return {
     title,
     description,
-    openGraph: { title, description, images },
+    openGraph: { ...SITE_OPEN_GRAPH, url: lobbyHref(squad.code), title, description, images },
     twitter: { card: 'summary_large_image', title, description, images },
   }
 }
