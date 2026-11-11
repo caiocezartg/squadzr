@@ -20,6 +20,16 @@ const parentDomainSchema = z
     'BETTER_AUTH_COOKIE_DOMAIN must be a parent domain such as squadzr.app'
   )
 
+// A whole number from a string variable, `fallback` when it is unset. `min` is 0 unless a limit cannot be off.
+function wholeNumber(name: string, fallback: number, min = 0) {
+  return z
+    .string()
+    .regex(/^\d+$/, `${name} must be a whole number`)
+    .default(String(fallback))
+    .transform(Number)
+    .pipe(z.number().min(min, `${name} must be at least ${min}`).max(Number.MAX_SAFE_INTEGER))
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
@@ -45,6 +55,15 @@ const envSchema = z.object({
       .min(32, 'EDGE_AUTH_TOKEN must be at least 32 characters')
       .optional()
   ),
+
+  // Abuse limits, per client address (`request.ip`, which behind the origin lock is the visitor's). Every
+  // route allows `RATE_LIMIT_MAX` requests per `RATE_LIMIT_WINDOW_MS` (IPv6 addresses count by /64), the
+  // health checks aside. A WebSocket upgrade is limited harder, and a client address may hold only so many
+  // sockets at once. 0 turns a limit off.
+  RATE_LIMIT_MAX: wholeNumber('RATE_LIMIT_MAX', 300),
+  RATE_LIMIT_WINDOW_MS: wholeNumber('RATE_LIMIT_WINDOW_MS', 60_000, 1),
+  WS_UPGRADES_PER_MINUTE: wholeNumber('WS_UPGRADES_PER_MINUTE', 20),
+  WS_MAX_CONNECTIONS_PER_IP: wholeNumber('WS_MAX_CONNECTIONS_PER_IP', 10),
 
   // Better Auth
   BETTER_AUTH_SECRET: z.string().min(32),

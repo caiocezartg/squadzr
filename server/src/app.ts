@@ -6,7 +6,6 @@ import Fastify, {
 } from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
-import rateLimit from '@fastify/rate-limit'
 import websocket from '@fastify/websocket'
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod'
 import { WS_MAX_PAYLOAD_BYTES } from '@squadzr/schemas/ws'
@@ -14,10 +13,10 @@ import type { Env } from '@config/env'
 import type { Clock } from '@domain/services/clock.interface'
 import type { IGameCatalogSource } from '@domain/services/game-catalog-source.interface'
 import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
-import { RateLimitedError } from '@application/errors'
 import { SystemClock } from '@infrastructure/services/system-clock'
 import errorHandlerPlugin from '@infrastructure/plugins/error-handler.plugin'
 import edgeGuardPlugin from '@infrastructure/plugins/edge-guard.plugin'
+import requestRateLimitPlugin from '@infrastructure/plugins/request-rate-limit.plugin'
 import originGuardPlugin from '@infrastructure/plugins/origin-guard.plugin'
 import databasePlugin from '@infrastructure/plugins/database.plugin'
 import authPlugin from '@infrastructure/plugins/auth.plugin'
@@ -160,13 +159,10 @@ export async function buildApp({
     contentSecurityPolicy: env.NODE_ENV === 'production',
   })
 
-  // Opt-in per route (`config.rateLimit`). It runs in `preHandler`, after a route's authentication, so a
-  // limited route can key on the signed-in user and an anonymous request never spends anyone's quota.
-  // The error handler shapes the 429 like every other error.
-  await fastify.register(rateLimit, {
-    global: false,
-    hook: 'preHandler',
-    errorResponseBuilder: () => new RateLimitedError(),
+  // After the edge guard, which sets the address the limit counts.
+  await fastify.register(requestRateLimitPlugin, {
+    max: env.RATE_LIMIT_MAX,
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
   })
 
   await fastify.register(websocket, {
@@ -181,6 +177,10 @@ export async function buildApp({
   await fastify.register(authPlugin, { config: env })
   await fastify.register(wsPlugin, {
     realtime: createRealtime(fastify.db, fastify.clock, fastify.log),
+    limits: {
+      upgradesPerMinute: env.WS_UPGRADES_PER_MINUTE,
+      connectionsPerAddress: env.WS_MAX_CONNECTIONS_PER_IP,
+    },
   })
   await fastify.register(roomCleanupPlugin, {
     deleteExpiredRoomsUseCase: createRoomCleanupUseCase(fastify.db, fastify.clock),
