@@ -10,6 +10,7 @@ import { RealtimeUpdateNotice } from '@/components/layout/realtime-update-notice
 import { ClockProvider } from '@/hooks/use-clock'
 import { SessionProvider } from '@/hooks/use-session'
 import { getRequestSession } from '@/lib/server/session'
+import { ROOT_METADATA } from '@/lib/site-metadata'
 import '../styles/globals.css'
 
 // The design system's families (docs/design/reference.md, Typography): display, body and mono.
@@ -41,19 +42,7 @@ const fontVariables = [bigShoulders, plusJakartaSans, jetBrainsMono]
   .map((font) => font.variable)
   .join(' ')
 
-export const metadata: Metadata = {
-  // Each route fills in its own title, and the template adds the app name to it.
-  title: { default: 'Squadzr', template: '%s · Squadzr' },
-  icons: {
-    icon: [
-      { url: '/favicon.ico', type: 'image/x-icon' },
-      { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
-      { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
-    ],
-    apple: { url: '/apple-touch-icon.png', sizes: '180x180' },
-  },
-  manifest: '/site.webmanifest',
-}
+export const metadata: Metadata = ROOT_METADATA
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // The locale comes from the request (cookie, then Accept-Language), so the first render, the
