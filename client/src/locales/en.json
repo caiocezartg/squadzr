@@ -397,6 +397,11 @@
   "lobby": {
     "backToSquads": "Back to squads",
     "cannotLeave": "Cannot leave a full squad",
+    "preview": {
+      "openSpots": "{open, plural, =0 {Full squad} one {# of {total} spots left} other {# of {total} spots left}}",
+      "language": "English",
+      "imageAlt": "Open {game} squad: {filled} of {total} slots filled"
+    },
     "signInPrompt": {
       "title": "Sign in to view this squad",
       "description": "You can browse squads as a guest, but viewing a squad requires signing in with Discord.",

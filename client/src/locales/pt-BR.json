@@ -397,6 +397,11 @@
   "lobby": {
     "backToSquads": "Voltar aos squads",
     "cannotLeave": "Não é possível sair de um squad cheio",
+    "preview": {
+      "openSpots": "{open, plural, =0 {Squad completo} one {Falta # de {total}} other {Faltam # de {total}}}",
+      "language": "Português",
+      "imageAlt": "Squad aberto de {game}: {filled} de {total} vagas preenchidas"
+    },
     "signInPrompt": {
       "title": "Entre para ver este squad",
       "description": "Você pode explorar os squads como visitante, mas ver um squad exige entrar com o Discord.",
