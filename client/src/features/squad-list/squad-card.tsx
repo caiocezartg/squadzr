@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { avatarRail, type RailSlot } from '@squadzr/schemas'
 import { AppLink } from '@/components/layout/app-link'
 import { Avatar } from '@/components/ds/avatar'
 import { Tag } from '@/components/ds/tag'
@@ -8,7 +9,6 @@ import { languageBadgeKey } from '@/lib/language-badge'
 import { lobbyHref } from '@/lib/squad-links'
 import { cn } from '@/lib/utils'
 import type { PublicSquad } from '@/types'
-import { avatarRail, type RailSlot } from './avatar-rail'
 import { useFittingCircles } from './use-fitting-circles'
 
 export interface SquadCardProps {

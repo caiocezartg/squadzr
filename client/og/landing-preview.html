@@ -1,14 +1,25 @@
 <!doctype html>
 <!--
-  The source of client/public/og-landing.png, the landing's link preview (GitHub #151).
+  The source of client/public/og-landing.png, the landing's link preview (GitHub #151, laid out again in #152).
   The PNG is rendered once and committed; nothing renders it per request. To regenerate it, from client/:
 
     "C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --hide-scrollbars \
-      --force-device-scale-factor=1 --window-size=1200,630 --virtual-time-budget=5000 \
+      --force-device-scale-factor=1 --window-size=1200,630 --virtual-time-budget=8000 \
       --screenshot="%CD%\public\og-landing.png" "file:///%CD%/og/landing-preview.html"
 
-  (Any Chromium works; on macOS or Linux use $PWD.) The fonts are the site's own, loaded from Google Fonts.
-  The content sits in the middle 600px column (15px inside the 630px square), so the image still reads when WhatsApp crops it to a square.
+  The screenshot is a full-colour PNG of about 600 KB, above the roughly 300 KB WhatsApp shows, so reduce it to a
+  256-colour palette (libimagequant, through sharp; about 160 KB with no visible change), from a folder outside
+  the repository where sharp is installed:
+
+    node -e "require('sharp')('<client>/public/og-landing.png').png({ palette: true, quality: 90, effort: 10 })
+      .toBuffer().then((b) => require('fs').writeFileSync('<client>/public/og-landing.png', b))"
+
+  (Any Chromium works; on macOS or Linux use $PWD.) The fonts are the site's own, loaded from Google Fonts,
+  and the covers are twenty of the hero wall's (WALL_COVER_IDS in
+  src/components/landing/hero-showcase-data.ts), loaded from IGDB: both only while this page renders. The
+  image uses its full width, the wide card Discord, X and WhatsApp show: the text on the left and the
+  tilted cover wall of the hero and the closing banner on the right, inside 84px margins. Keep the PNG
+  under about 300 KB, the most WhatsApp shows.
 -->
 <html lang="en">
   <head>
@@ -17,7 +28,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@900&family=Plus+Jakarta+Sans:wght@600&display=block"
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@900&family=Plus+Jakarta+Sans:wght@600;800&display=block"
       rel="stylesheet"
     />
     <style>
@@ -25,10 +36,8 @@
         --bg: #07080a;
         --text: #f2f3f5;
         --text-2: #c9cbd1;
-        --faint: #5f626b;
         --mint: #00ffa2;
-        --discord: #4e5ae8;
-        --card: #121317;
+        --mint-ink: #04140d;
       }
       * {
         margin: 0;
@@ -44,18 +53,59 @@
       body {
         position: relative;
         background:
-          radial-gradient(640px 520px at 1080px 40px, rgba(0, 255, 162, 0.2), transparent 70%),
-          radial-gradient(680px 540px at 100px 620px, rgba(78, 90, 232, 0.26), transparent 70%),
+          radial-gradient(680px 540px at 100px 620px, rgba(78, 90, 232, 0.24), transparent 70%),
           var(--bg);
         font-family: 'Plus Jakarta Sans', sans-serif;
         color: var(--text);
       }
-      .column {
+      /* The cover wall: tilted columns, odd ones half a poster lower, as on the hero and the banner. */
+      .wall {
         position: absolute;
-        top: 56px;
-        bottom: 56px;
-        left: 300px;
-        width: 600px;
+        top: -190px;
+        left: 600px;
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        transform: rotate(-9deg);
+        transform-origin: top left;
+      }
+      .column {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 156px;
+      }
+      .column:nth-child(even) {
+        padding-top: 104px;
+      }
+      .column img {
+        display: block;
+        width: 156px;
+        aspect-ratio: 3 / 4;
+        object-fit: cover;
+        border-radius: 10px;
+      }
+      /* The ground runs in from the left, so the copy sits on dark and the wall fades in behind it. */
+      .fade {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(90deg, var(--bg) 0%, var(--bg) 46%, rgba(7, 8, 10, 0.72) 60%, rgba(7, 8, 10, 0.12) 78%),
+          linear-gradient(180deg, rgba(7, 8, 10, 0.35), transparent 30%, transparent 70%, rgba(7, 8, 10, 0.5));
+      }
+      /* The banner's mint, as a light from the wall. */
+      .glow {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(520px 420px at 980px 320px, rgba(0, 255, 162, 0.18), transparent 70%);
+        mix-blend-mode: screen;
+      }
+      .text {
+        position: absolute;
+        top: 84px;
+        bottom: 84px;
+        left: 84px;
+        width: 560px;
         display: flex;
         flex-direction: column;
       }
@@ -64,12 +114,11 @@
         align-self: flex-start;
       }
       h1 {
-        margin-top: 72px;
+        margin-top: auto;
         font-family: 'Big Shoulders', sans-serif;
         font-weight: 900;
-        font-size: 80px;
-        white-space: nowrap;
-        line-height: 0.92;
+        font-size: 92px;
+        line-height: 0.9;
         letter-spacing: 0.005em;
         text-transform: uppercase;
       }
@@ -83,65 +132,60 @@
         font-weight: 600;
         color: var(--text-2);
       }
-      .slots {
-        margin-top: auto;
-        align-self: flex-start;
-        display: flex;
-        gap: 14px;
-      }
-      .slot {
-        width: 76px;
-        height: 76px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-      }
-      .slot.filled {
-        background: rgba(0, 255, 162, 0.1);
-        border: 3px solid var(--mint);
-        color: var(--mint);
-      }
-      .slot.open {
-        background: var(--card);
-        border: 3px dashed rgba(201, 203, 209, 0.6);
-        color: rgba(201, 203, 209, 0.75);
-      }
-      .slot svg {
-        width: 34px;
-        height: 34px;
+      /* The banner's mint call, as a tag at the foot of the wall. */
+      .call {
+        position: absolute;
+        right: 84px;
+        bottom: 84px;
+        padding: 14px 22px;
+        background: var(--mint);
+        color: var(--mint-ink);
+        font-weight: 800;
+        font-size: 24px;
+        letter-spacing: 0.01em;
       }
     </style>
   </head>
   <body>
-    <div class="column">
+    <div class="wall">
+      <div class="column">
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/cocqbp.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/cocxbi.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/coc89g.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co8fu7.jpg" alt="" />
+      </div>
+      <div class="column">
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/coc99o.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/cod2we.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/coabbf.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/coco22.jpg" alt="" />
+      </div>
+      <div class="column">
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/coaczd.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/cocyri.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/cocsmb.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co2558.jpg" alt="" />
+      </div>
+      <div class="column">
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/cobfk4.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co5ive.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/cod6ev.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/coamcz.jpg" alt="" />
+      </div>
+      <div class="column">
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/cocqh2.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co9rk1.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co7n02.jpg" alt="" />
+        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co1y2f.jpg" alt="" />
+      </div>
+    </div>
+    <div class="fade"></div>
+    <div class="glow"></div>
+    <div class="text">
       <img class="logo" src="../public/squadzr-logo.svg" alt="Squadzr" />
       <h1>Build your squad.<span class="accent">Play tonight.</span></h1>
       <p class="games">LoL, CS, Valorant, Dota and more</p>
-      <div class="slots">
-        <span class="slot filled"
-          ><svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="8" r="4.5" />
-            <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
-        ></span>
-        <span class="slot filled"
-          ><svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="8" r="4.5" />
-            <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
-        ></span>
-        <span class="slot filled"
-          ><svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="8" r="4.5" />
-            <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" /></svg
-        ></span>
-        <span class="slot open"
-          ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-            <path d="M12 5v14M5 12h14" /></svg
-        ></span>
-        <span class="slot open"
-          ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-            <path d="M12 5v14M5 12h14" /></svg
-        ></span>
-      </div>
     </div>
+    <div class="call">There's a slot waiting for you</div>
   </body>
 </html>

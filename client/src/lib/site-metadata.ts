@@ -12,8 +12,9 @@ export const SITE_DESCRIPTION =
   'Fill your team for LoL, CS, Valorant, Dota and more. Find the players your squad is missing, sign in with Discord and get into the match tonight. Free.'
 
 /**
- * The branded 1200×630 preview, a static file rendered once from `client/og/landing-preview.html`. Its
- * content stays in the middle 600px, so it still reads when WhatsApp crops it to a square.
+ * The branded 1200×630 preview, a static file rendered once from `client/og/landing-preview.html`. It uses
+ * the full width of the wide card Discord, X and WhatsApp show: the text on the left, the landing's tilted
+ * wall of game covers on the right.
  */
 export const SITE_PREVIEW_IMAGE = {
   url: '/og-landing.png',

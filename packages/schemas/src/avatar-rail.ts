@@ -1,16 +1,14 @@
-import type { PublicSquad } from '@/types'
+import type { MemberPreviewDto } from './room'
 
 /** The rail never draws more circles than this; the slots beyond them are the `+N` that follows. */
-const RAIL_LIMIT = 5
-
-type MemberPreview = PublicSquad['memberPreview'][number]
+export const RAIL_LIMIT = 5
 
 /**
  * One circle of the rail. A member comes from the preview; a filled slot is a member the preview
- * does not carry (the preview can be shorter than the count); a vacant slot is still open.
+ * does not carry (the preview can be shorter than the count, or absent); a vacant slot is still open.
  */
 export type RailSlot =
-  | { readonly kind: 'member'; readonly member: MemberPreview }
+  | { readonly kind: 'member'; readonly member: MemberPreviewDto }
   | { readonly kind: 'filled' }
   | { readonly kind: 'vacant' }
 
@@ -21,14 +19,15 @@ export interface AvatarRail {
 }
 
 /**
- * The rail of a Squad card (reference, Components, SquadCard): `min(maxPlayers, 5)` circles, the
- * first `min(memberCount, 5)` filled from the preview in order, the rest vacant. The member count
- * stays the authority on how full the Squad is, so a short preview never shrinks the filled part.
+ * The rail of a Squad (reference, Components, SquadCard): `min(maxPlayers, 5)` circles, the first
+ * `min(memberCount, 5)` filled from the preview in order, the rest vacant, then `+N` for the slots past
+ * five. The member count stays the authority on how full the Squad is, so a short preview never shrinks
+ * the filled part. The Squad card and the invite preview image both draw it.
  */
 export function avatarRail(
   memberCount: number,
   maxPlayers: number,
-  preview: readonly MemberPreview[]
+  preview: readonly MemberPreviewDto[] = []
 ): AvatarRail {
   const shown = Math.max(0, Math.min(maxPlayers, RAIL_LIMIT))
   const filled = Math.max(0, Math.min(memberCount, shown))
