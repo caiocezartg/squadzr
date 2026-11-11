@@ -1,9 +1,8 @@
 import type { ReactElement } from 'react'
-import { SQUAD_PREVIEW_IMAGE_SIZE, type SquadPreviewKey } from '@squadzr/schemas'
+import { SQUAD_PREVIEW_IMAGE_SIZE, avatarRail, type SquadPreviewKey } from '@squadzr/schemas'
 import { LOGO_SRC } from './assets'
 import type { CoverImages } from './cover'
 import { imageCopy } from './copy'
-import { slotLayout, SLOTS_WIDTH, type SlotLayout } from './slot-layout'
 import { titleSize } from './title-size'
 
 /** The landing preview's palette (client/og/landing-preview.html), plus the site's amber. */
@@ -11,6 +10,7 @@ const COLORS = {
   ground: '#07080a',
   text: '#f2f3f5',
   text2: '#c9cbd1',
+  text3: '#a9abb3',
   faint: '#5f626b',
   mint: '#00ffa2',
   amber: '#ffb547',
@@ -44,23 +44,23 @@ export interface SquadImageInput {
   readonly cover: CoverImages
 }
 
+/** The rail's circles: five of them, the `+N` and a two-digit count fit the text column. */
+const RAIL = { size: 68, gap: 12 } as const
+
 /**
- * One slot as the site draws it: filled is a mint ring with a person, open is a dashed ring with a "+".
- * A plain function, not a component: the renderer serializes SVG children as they are written.
+ * One circle of the rail as the site draws it: filled is a mint ring with a person, open is a dashed ring
+ * with a "+". A plain function, not a component: the renderer serializes SVG children as they are written.
  */
-function slotShape(index: number, filled: boolean, layout: SlotLayout) {
-  const step = layout.size + layout.gap
-  const x = (index % layout.perRow) * step
-  const y = Math.floor(index / layout.perRow) * step
-  const { size, glyphs } = layout
+function railCircle(index: number, filled: boolean) {
+  const { size, gap } = RAIL
   const stroke = Math.max(2, Math.round(size / 25))
   const center = size / 2
   const glyph = size * 0.45
-  // The glyph's 24-unit box, scaled and centred in the slot.
+  // The glyph's 24-unit box, scaled and centred in the circle.
   const glyphTransform = `translate(${center - glyph / 2} ${center - glyph / 2}) scale(${glyph / 24})`
 
   return (
-    <g key={index} transform={`translate(${x} ${y})`}>
+    <g key={index} transform={`translate(${index * (size + gap)} 0)`}>
       <circle
         cx={center}
         cy={center}
@@ -70,13 +70,12 @@ function slotShape(index: number, filled: boolean, layout: SlotLayout) {
         strokeWidth={stroke}
         strokeDasharray={filled ? undefined : `${stroke * 2.4} ${stroke * 1.6}`}
       />
-      {glyphs && filled ? (
+      {filled ? (
         <g transform={glyphTransform} fill={COLORS.mint}>
           <circle cx="12" cy="8" r="4.5" />
           <path d="M3.5 21a8.5 8.5 0 0 1 17 0z" />
         </g>
-      ) : null}
-      {glyphs && !filled ? (
+      ) : (
         <g
           transform={glyphTransform}
           fill="none"
@@ -86,23 +85,40 @@ function slotShape(index: number, filled: boolean, layout: SlotLayout) {
         >
           <path d="M12 5v14M5 12h14" />
         </g>
-      ) : null}
+      )}
     </g>
   )
 }
 
 /**
- * Every slot in one SVG. A rounded, bordered box per slot, or an SVG per slot, costs the rasterizer
- * several times more: each becomes its own nested image.
+ * The Squad's rail, by the site's rule (`avatarRail` in `@squadzr/schemas`, as the Squad card draws it):
+ * at most five circles, filled first, then `+N` in the mono face for the slots past them. The circles
+ * are one SVG: an SVG or a bordered box per circle costs the rasterizer several times more.
  */
-function Slots({ filled, total }: { filled: number; total: number }) {
-  const layout = slotLayout(total)
-  const rows = Math.ceil(total / layout.perRow)
-  const height = rows * layout.size + (rows - 1) * layout.gap
+function Rail({ filled, total }: { filled: number; total: number }) {
+  const { slots, extra } = avatarRail(filled, total)
+  const width = slots.length * RAIL.size + (slots.length - 1) * RAIL.gap
+
   return (
-    <svg width={SLOTS_WIDTH} height={height} viewBox={`0 0 ${SLOTS_WIDTH} ${height}`}>
-      {Array.from({ length: total }, (_, index) => slotShape(index, index < filled, layout))}
-    </svg>
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      <svg width={width} height={RAIL.size} viewBox={`0 0 ${width} ${RAIL.size}`}>
+        {slots.map((slot, index) => railCircle(index, slot.kind !== 'vacant'))}
+      </svg>
+      {extra > 0 ? (
+        <div
+          style={{
+            display: 'flex',
+            marginLeft: 20,
+            fontFamily: 'JetBrains Mono',
+            fontWeight: 700,
+            fontSize: 30,
+            color: COLORS.text3,
+          }}
+        >
+          {`+${extra}`}
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -293,11 +309,12 @@ export function SquadImage({ previewKey, gameName, cover }: SquadImageInput): Re
             marginTop: 'auto',
           }}
         >
-          <Slots filled={filled} total={total} />
+          <Rail filled={filled} total={total} />
           <div
             style={{
               display: 'flex',
               alignItems: 'baseline',
+              marginLeft: 32,
               fontFamily: 'Big Shoulders',
               fontWeight: 900,
               fontSize: 72,

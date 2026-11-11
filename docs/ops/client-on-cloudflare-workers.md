@@ -119,9 +119,12 @@ image is rendered once and served as `Cache-Control: public, max-age=31536000, i
 - The layout uses the full width of the wide card (box art on the left, text on the right, 84px
   margins). A square crop of the centre keeps the kicker, the status line and the slots, and part of the
   game's name.
+- The slots follow the Squad card's rail (`avatarRail` in `@squadzr/schemas`, the one rule both draw
+  from): at most five circles, filled first, then `+N` in the site's mono face for the slots past five,
+  next to the full `filled/total` count.
 - One render costs about 1.0 s of CPU (median; p95 about 2.1 s), measured on Workers on 2026-11-11. Most of it is
   the rasterizer, so the layout avoids what it is slow at: no blur filter (the backdrop is IGDB's 35px
-  micro cover stretched, which reads as a blur), no blurred shadow, every slot in one SVG, and the 264px
+  micro cover stretched, which reads as a blur), no blurred shadow, the rail's circles in one SVG, and the 264px
   cover for the box art.
 - The fonts are the site's (Big Shoulders 900, Plus Jakarta Sans 600 and 800) as WOFF in `og/src/fonts/`,
   because satori cannot read WOFF2. The logo is `client/public/squadzr-logo.svg`, which `og/turbo.json`

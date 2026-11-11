@@ -279,3 +279,4 @@ export {
   squadPreviewKeySchema,
   type SquadPreviewKey,
 } from './squad-preview'
+export { RAIL_LIMIT, avatarRail, type AvatarRail, type RailSlot } from './avatar-rail'

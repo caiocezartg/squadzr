@@ -13,8 +13,8 @@ export const SITE_DESCRIPTION =
 
 /**
  * The branded 1200×630 preview, a static file rendered once from `client/og/landing-preview.html`. It uses
- * the full width of the wide card Discord, X and WhatsApp show: the text on the left, a squad of slots on
- * the right.
+ * the full width of the wide card Discord, X and WhatsApp show: the text on the left, the landing's tilted
+ * wall of game covers on the right.
  */
 export const SITE_PREVIEW_IMAGE = {
   url: '/og-landing.png',

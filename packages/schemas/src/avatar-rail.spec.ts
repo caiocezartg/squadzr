@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { previewMembers } from '@/test/fixtures'
 import { avatarRail } from './avatar-rail'
+import type { MemberPreviewDto } from './room'
+
+function previewMembers(count: number): MemberPreviewDto[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `user-${index + 1}`,
+    name: `Player ${index + 1}`,
+    image: null,
+  }))
+}
 
 function kinds(memberCount: number, maxPlayers: number, previewCount = memberCount) {
   const rail = avatarRail(memberCount, maxPlayers, previewMembers(previewCount))
@@ -50,5 +58,12 @@ describe('avatarRail', () => {
 
   it('never fills more circles than the squad has slots', () => {
     expect(kinds(7, 4, 4)).toEqual({ kinds: Array(4).fill('member'), extra: 0 })
+  })
+
+  it('draws filled and vacant circles without a preview, as the invite image does', () => {
+    const rail = avatarRail(20, 40)
+
+    expect(rail.slots.map((slot) => slot.kind)).toEqual(Array(5).fill('filled'))
+    expect(rail.extra).toBe(35)
   })
 })

@@ -25,20 +25,22 @@ inventory (see the equivalence proof below).
 | ---------------------------- | -------------------- | ----------- | -------------------------------- | ------ | ----- |
 | `server`                     | `server:unit`        | `node`      | `src/**/*.spec.ts`               | 66     | 541   |
 | `server`                     | `server:integration` | `node`      | `tests/integration/**/*.test.ts` | 43     | 427   |
-| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 114    | 1359  |
-| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 13     | 363   |
-| `og`                         | `og:unit`            | `node`      | `src/**/*.spec.{ts,tsx}`         | 5      | 55    |
+| `client`                     | `client:unit`        | `jsdom`     | `src/**/*.spec.{ts,tsx}`         | 113    | 1351  |
+| `@squadzr/schemas`           | `schemas:unit`       | `node`      | `src/**/*.spec.ts`               | 14     | 372   |
+| `og`                         | `og:unit`            | `node`      | `src/**/*.spec.{ts,tsx}`         | 5      | 46    |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
 Issue #152 (Squad invite preview image) adds the `og` workspace, the `squadzr-og` image Worker, as a fourth Vitest
-project in `vitest.workspace.ts`. `og:unit` has 5 files and 55 tests: `handle-request.spec.ts` (the key that renders, a Squad over
+project in `vitest.workspace.ts`. `og:unit` has 5 files and 46 tests: `handle-request.spec.ts` (the key that renders, a Squad over
 its game's player limit, HEAD, cached 404s for a bad path, a missing design version, too many slots, an unknown language and any query
 string, an unknown game, a cover off IGDB never fetched, an uncached 502, the method check), `sources.spec.ts` (the game read with the
 edge secret and a timeout, its failures and their reasons, the IGDB cover allowlist, the cover reads with no redirect, a timeout, the
 JPEG or PNG type and the size cap, the Worker bindings), `copy.spec.ts` (the image copy in both languages, a full Squad never called
-open), `layout.spec.ts` (slot sizes up to 40, title sizes) and `image-response.spec.ts` (the 200 headers). `schemas:unit` gains
+open), `title-size.spec.ts` (the title sizes) and `image-response.spec.ts` (the 200 headers). `schemas:unit` gains
 `squad-preview.spec.ts` (the key path with its design version, its counts from 1 of 2 to 40 of 40, and every spelling it rejects).
-`client:unit` keeps its files; `lobby-metadata.spec.ts` covers the per-Squad title and description in both languages, the image key,
+The rail of a Squad (at most five circles, then `+N`) moves to `@squadzr/schemas` so the Squad card and the image share it:
+`avatar-rail.spec.ts` moves from `client:unit` to `schemas:unit` with its 8 tests, plus one for a rail drawn without a preview, as
+the image draws it, so `client:unit` goes down one file and 8 tests. `lobby-metadata.spec.ts` covers the per-Squad title and description in both languages, the image key,
 its declared size, alt text and type, a full Squad's alt text, a Squad over its game's limit and the generic fallback. The rows above
 are the counts measured on this branch.
 
