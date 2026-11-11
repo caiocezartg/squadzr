@@ -92,7 +92,10 @@ export default defineRailway(() => {
       CORS_ORIGIN: 'https://squadzr.app',
       BETTER_AUTH_URL: 'https://api.squadzr.app',
       BETTER_AUTH_COOKIE_DOMAIN: 'squadzr.app',
-      // Railway's edge is the one proxy in front of the API until Cloudflare joins it (then 2).
+      // Railway's edge is the one proxy whose x-forwarded-for is believed. It replaces the header with the
+      // address that connected to it, which behind Cloudflare is Cloudflare's: more hops would trust nothing
+      // more. The visitor's address comes from CF-Connecting-IP, adopted only on a request that carries the
+      // edge secret (EDGE_AUTH_TOKEN).
       TRUST_PROXY_HOPS: '1',
       // SIGTERM closes the sockets and lets a running Catalog Import finish before the kill.
       RAILWAY_DEPLOYMENT_DRAINING_SECONDS: '60',
