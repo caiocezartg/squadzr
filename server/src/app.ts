@@ -17,6 +17,7 @@ import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invi
 import { RateLimitedError } from '@application/errors'
 import { SystemClock } from '@infrastructure/services/system-clock'
 import errorHandlerPlugin from '@infrastructure/plugins/error-handler.plugin'
+import edgeGuardPlugin from '@infrastructure/plugins/edge-guard.plugin'
 import originGuardPlugin from '@infrastructure/plugins/origin-guard.plugin'
 import databasePlugin from '@infrastructure/plugins/database.plugin'
 import authPlugin from '@infrastructure/plugins/auth.plugin'
@@ -140,6 +141,9 @@ export async function buildApp({
   fastify.setSerializerCompiler(serializerCompiler)
 
   await fastify.register(errorHandlerPlugin, { config: env })
+
+  // First of all: a request that did not come through the edge gets nothing, not even a CORS answer.
+  await fastify.register(edgeGuardPlugin, { token: env.EDGE_AUTH_TOKEN })
 
   await fastify.register(cors, {
     origin: env.CORS_ORIGIN,

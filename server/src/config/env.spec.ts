@@ -24,6 +24,39 @@ describe('TRUST_PROXY_HOPS', () => {
   })
 })
 
+describe('EDGE_AUTH_TOKEN', () => {
+  const TOKEN = 'edge-secret-0123456789abcdef-0123456789'
+
+  it('is unset by default: the origin lock is off', () => {
+    expect(parseEnv(REQUIRED_ENV).EDGE_AUTH_TOKEN).toBeUndefined()
+  })
+
+  it('reads an empty value as unset', () => {
+    expect(parseEnv({ ...REQUIRED_ENV, EDGE_AUTH_TOKEN: '' }).EDGE_AUTH_TOKEN).toBeUndefined()
+  })
+
+  it('reads a token as it is', () => {
+    expect(parseEnv({ ...REQUIRED_ENV, EDGE_AUTH_TOKEN: TOKEN }).EDGE_AUTH_TOKEN).toBe(TOKEN)
+  })
+
+  it.each([
+    ['shorter than 32 characters', 'short-secret'],
+    ['holding a space', `${TOKEN} x`],
+    ['holding a newline', `${TOKEN}\n`],
+    ['holding a non-ASCII character', `${TOKEN}é`],
+  ])('refuses a token %s', (_label, value) => {
+    expect(() => parseEnv({ ...REQUIRED_ENV, EDGE_AUTH_TOKEN: value })).toThrow()
+  })
+
+  it('does not repeat a refused token in the error', () => {
+    const refused = `${TOKEN} refused`
+
+    expect(() => parseEnv({ ...REQUIRED_ENV, EDGE_AUTH_TOKEN: refused })).toThrow(
+      expect.objectContaining({ message: expect.not.stringContaining(refused) })
+    )
+  })
+})
+
 describe('BETTER_AUTH_COOKIE_DOMAIN', () => {
   it('is unset by default', () => {
     expect(parseEnv(REQUIRED_ENV).BETTER_AUTH_COOKIE_DOMAIN).toBeUndefined()
