@@ -1,15 +1,12 @@
 import { defineConfig } from 'vite'
 import vinext from 'vinext'
 import { cloudflare } from '@cloudflare/vite-plugin'
-import { kvDataAdapter } from '@vinext/cloudflare/cache/kv-data-adapter'
-import { imagesOptimizer } from '@vinext/cloudflare/images/images-optimizer'
 
+// No cache adapter and no image optimizer: `revalidate` keeps its response in each isolate's memory
+// and `next/image` serves Discord avatars from their own CDN (docs/adr/0006).
 export default defineConfig({
   plugins: [
-    vinext({
-      cache: { data: kvDataAdapter() },
-      images: { optimizer: imagesOptimizer() },
-    }),
+    vinext(),
     cloudflare({
       viteEnvironment: {
         name: 'rsc',

@@ -27,6 +27,7 @@ export {
 } from './platform'
 export { normalizeSearchText } from './search-text'
 export { healthResponseSchema, type HealthResponse } from './health'
+export { EDGE_AUTH_HEADER } from './edge'
 export {
   ASSIGNABLE_ROLES,
   AUDIT_ACTIONS,
