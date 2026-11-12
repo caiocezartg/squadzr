@@ -10,7 +10,7 @@ import requestRateLimitPlugin from './request-rate-limit.plugin'
 // replaced by a route's own limit, and counting the visitor behind the origin lock.
 
 const TOKEN = 'edge-secret-0123456789abcdef-0123456789'
-const RAILWAY_EDGE = '100.64.0.1'
+const PROXY_PEER = '100.64.0.1'
 
 let app: FastifyInstance | undefined
 
@@ -52,7 +52,7 @@ function get(url: string, address: string, headers: Record<string, string> = {})
   return app!.inject({
     method: 'GET',
     url,
-    remoteAddress: RAILWAY_EDGE,
+    remoteAddress: PROXY_PEER,
     headers: { 'x-forwarded-for': address, ...headers },
   })
 }

@@ -4,8 +4,8 @@ import errorHandlerPlugin from './error-handler.plugin'
 import edgeGuardPlugin, { EDGE_AUTH_HEADER } from './edge-guard.plugin'
 
 const TOKEN = 'edge-secret-0123456789abcdef-0123456789'
-const RAILWAY_EDGE = '100.64.0.1'
-// What the Railway edge writes into x-forwarded-for: the address that connected to it.
+// A proxy in front of the API, as the platform presents it to Fastify.
+const PROXY_PEER = '100.64.0.1'
 const CLOUDFLARE = '172.69.138.8'
 const VISITOR = '203.0.113.9'
 
@@ -29,7 +29,7 @@ async function clientAddress(headers: Record<string, string>): Promise<string> {
   const response = await app!.inject({
     method: 'GET',
     url: '/ip',
-    remoteAddress: RAILWAY_EDGE,
+    remoteAddress: PROXY_PEER,
     headers: { 'x-forwarded-for': CLOUDFLARE, ...headers },
   })
   return response.json<{ ip: string }>().ip
@@ -96,7 +96,7 @@ describe('a request without the right secret', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/ip',
-      remoteAddress: RAILWAY_EDGE,
+      remoteAddress: PROXY_PEER,
       headers: { 'cf-connecting-ip': VISITOR, [EDGE_AUTH_HEADER]: 'wrong' },
     })
 
@@ -118,7 +118,7 @@ describe('the Worker zone', () => {
       await fastify.inject({
         method: 'GET',
         url: '/ip',
-        remoteAddress: RAILWAY_EDGE,
+        remoteAddress: PROXY_PEER,
         headers: {
           [EDGE_AUTH_HEADER]: TOKEN,
           ...(zone === undefined ? {} : { 'x-squadzr-worker-zone': zone }),

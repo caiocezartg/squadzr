@@ -8,6 +8,21 @@ const REQUIRED_ENV = {
   DISCORD_CLIENT_SECRET: 'env-spec-client-secret',
 }
 
+describe('HOST', () => {
+  it('listens on every IPv4 address by default, which keeps local development unchanged', () => {
+    expect(parseEnv(REQUIRED_ENV).HOST).toBe('0.0.0.0')
+  })
+
+  it.each(['::', '0.0.0.0', '127.0.0.1', '::1', 'localhost'])('reads %j', (host) => {
+    expect(parseEnv({ ...REQUIRED_ENV, HOST: host }).HOST).toBe(host)
+  })
+
+  it.each(['', '0.0.0,0', '256.0.0.1', 'example.com', ':::'])('refuses %j', (host) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => parseEnv({ ...REQUIRED_ENV, HOST: host })).toThrow()
+  })
+})
+
 describe('TRUST_PROXY_HOPS', () => {
   it('trusts one edge proxy by default', () => {
     expect(parseEnv(REQUIRED_ENV).TRUST_PROXY_HOPS).toBe(1)

@@ -2,14 +2,13 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createLogCapture } from '@test/harness/logging'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
-// Behind Cloudflare the proxy chain only names a Cloudflare address: the Railway edge replaces
-// x-forwarded-for with the address that connected to it. The visitor's address is CF-Connecting-IP,
-// believed only on a request that carries the edge secret. Better Auth's sign-in limit (production, 3 per
-// window) and the request log are the consumers observed here.
+// The proxy chain may name only a Cloudflare address (a request the Worker made names the Worker). The
+// visitor's address is CF-Connecting-IP, believed only on a request that carries the edge secret. Better
+// Auth's sign-in limit (production, 3 per window) and the request log are the consumers observed here.
 
 const HEADER = 'x-squadzr-edge-auth'
 const TOKEN = 'edge-secret-0123456789abcdef-0123456789'
-const RAILWAY_EDGE = '100.64.0.1'
+const PROXY_PEER = '100.64.0.1'
 const CLOUDFLARE = '172.69.138.8'
 
 // Better Auth keeps its rate-limit counters in memory shared by every server of the process, so each test
@@ -26,7 +25,7 @@ function signIn(headers: Record<string, string>, proxyChainAddress = CLOUDFLARE)
   return server!.app.inject({
     method: 'POST',
     url: '/api/auth/sign-in/social',
-    remoteAddress: RAILWAY_EDGE,
+    remoteAddress: PROXY_PEER,
     headers: { 'x-forwarded-for': proxyChainAddress, ...headers },
     payload: { provider: 'discord', callbackURL: 'http://localhost:5173/squads' },
   })
@@ -101,7 +100,7 @@ describe('with the lock on', () => {
       await server.app.inject({
         method: 'GET',
         url: '/api/rooms',
-        remoteAddress: RAILWAY_EDGE,
+        remoteAddress: PROXY_PEER,
         headers: { 'x-forwarded-for': CLOUDFLARE, [HEADER]: TOKEN, 'cf-connecting-ip': address },
       })
     }

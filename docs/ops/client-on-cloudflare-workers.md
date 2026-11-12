@@ -8,12 +8,12 @@ renders the link preview image of Squad invites on `squadzr.app/og/*` (see "The 
 
 ## What is in the repository
 
-|                    |                                                                                                                                                |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Worker config      | `client/cloudflare.config.ts`: the name, the `squadzr.app` custom domain, `nodejs_compat`, the static assets and the `EDGE_AUTH_TOKEN` secret |
-| Build config       | `client/vite.config.ts`: the vinext and Cloudflare Vite plugins, with no cache adapter and no image optimizer                                  |
-| Deploy workflow    | `.github/workflows/deploy-client.yml`                                                                                                          |
-| Scripts            | `bun run build:vinext`, `bun run start:vinext` (local preview in workerd), `bun run deploy:vinext` (build and deploy), all in `client/`        |
+|                     |                                                                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Worker config       | `client/cloudflare.config.ts`: the name, the `squadzr.app` custom domain, `nodejs_compat`, the static assets and the `EDGE_AUTH_TOKEN` secret |
+| Build config        | `client/vite.config.ts`: the vinext and Cloudflare Vite plugins, with no cache adapter and no image optimizer                                 |
+| Deploy workflow     | `.github/workflows/deploy-client.yml`                                                                                                         |
+| Scripts             | `bun run build:vinext`, `bun run start:vinext` (local preview in workerd), `bun run deploy:vinext` (build and deploy), all in `client/`       |
 | Generated (ignored) | `client/.vinext/` and `client/.cloudflare/`                                                                                                   |
 
 `next dev`, `next build` and the CI `build` gate do not use the Cloudflare files.
@@ -85,11 +85,11 @@ design version (`SQUAD_PREVIEW_DESIGN_VERSION`) live in `packages/schemas/src/sq
 Squad in the same state shares one image, and a Squad that gains a member points at the next key, so each
 image is rendered once and served as `Cache-Control: public, max-age=31536000, immutable`.
 
-|                 |                                                                                                    |
-| --------------- | -------------------------------------------------------------------------------------------------- |
-| Worker config   | `og/cloudflare.config.ts`: the name, the `squadzr.app/og/*` route, the Worker cache, the secret   |
-| Code            | `og/src/`: the request handler, the layout (satori), the rasterizer (resvg) and the JPEG encoder |
-| Scripts         | `bun run build`, `bun run deploy` and `bun run dev`, in `og/`                                     |
+|               |                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| Worker config | `og/cloudflare.config.ts`: the name, the `squadzr.app/og/*` route, the Worker cache, the secret  |
+| Code          | `og/src/`: the request handler, the layout (satori), the rasterizer (resvg) and the JPEG encoder |
+| Scripts       | `bun run build`, `bun run deploy` and `bun run dev`, in `og/`                                    |
 
 - It is a separate Worker so the renderer (about 0.85 MB gzip of WASM and JavaScript) stays out of
   `squadzr-web`, and so the **Worker cache**, which bills every request it sees, is on for this Worker
@@ -183,7 +183,14 @@ These live in the `squadzr.app` zone (Free plan), outside this repository:
   A route wins over the custom domain for its paths, so `squadzr-web` serves everything else.
 - **Redirect rule.** `www.squadzr.app/*` → `https://squadzr.app/${path}` (301, query string kept).
 - **Transform Rule** on `api.squadzr.app`: see "The edge secret". It also sets `x-squadzr-worker-zone` to
-  the zone of the Worker that made the request.
+  the zone of the Worker that made the request (empty, so removed, for a request no Worker made; our own Workers
+  were observed with it empty in November 2026, and the WAF rule allows empty and `squadzr.app` only).
+- **DNS for the API.** `api.squadzr.app` is a proxied CNAME to the Cloudflare Tunnel `squadzr-api`
+  (`<tunnel id>.cfargotunnel.com`), not to a Railway domain. The tunnel, its token and its ingress rule are
+  described in `docs/ops/catalog-import-railway.md`, "The tunnel", with how to rotate the token and how to roll
+  back to a public Railway domain. The Workers keep calling `https://api.squadzr.app`: the rules below apply to
+  tunnel traffic as they did to the public domain, and a Worker's subrequest still carries `x-real-ip` as the
+  visitor's `CF-Connecting-IP`.
 - **Rate limiting rule** (the one the Free plan allows): sign-in and OAuth callback of `api.squadzr.app`,
   5 requests per 10 seconds per IP. Every other route is limited by the API itself, per visitor
   (`docs/ops/catalog-import-railway.md`, "Abuse limits").
