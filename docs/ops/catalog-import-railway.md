@@ -450,6 +450,58 @@ on a request whose edge secret matched) was observed empty for the app's own ren
 Cloudflare documents `cf.worker.upstream_zone` as the calling Worker's zone. Empty and `squadzr.app` both mean the
 app's own renders; the WAF rule blocks any other zone before the request gets here.
 
+## Capacity
+
+Measured on 2026-11-12 against production (one `api` replica of 1 vCPU and 512 MiB, `postgres` of 1 vCPU and 512 MiB, `cloudflared` x2), from a single machine in Brazil, so every latency includes about 140 ms of round trip. Each step connected N players with a session and a WebSocket each, made and joined their Squads, then read the Squad Board with the players' cookies for 45 to 60 seconds.
+
+| N players | Board reads/s | Sockets connected | p50 / p95       | Errors                   | `api` CPU / RAM (peak) | `postgres` CPU / RAM (peak) |
+| --------- | ------------- | ----------------- | --------------- | ------------------------ | ---------------------- | --------------------------- |
+| 10        | 18            | 10 / 10           | 139 / 151 ms    | 0 %                      | 0.18 vCPU / 0.17 GB    | 0.01 vCPU / 0.09 GB         |
+| 25        | 50            | 25 / 25           | 141 / 156 ms    | 0 %                      | 0.23 vCPU / 0.20 GB    | 0.10 vCPU / 0.12 GB         |
+| 50        | 100           | 50 / 50           | 157 / 180 ms    | 0 %                      | 0.69 vCPU / 0.23 GB    | 0.51 vCPU / 0.12 GB         |
+| 100       | 200           | 100 / 100         | 164 / 207 ms    | 0 %                      | 0.68 vCPU / 0.28 GB    | 0.40 vCPU / 0.12 GB         |
+| 400       | 100           | 400 / 400         | 176 / 237 ms    | 0 %                      | 0.79 vCPU / 0.33 GB    | 0.80 vCPU / 0.13 GB         |
+| 800       | 20            | 800 / 800         | 175 / 235 ms    | 0 %                      | 0.49 vCPU / 0.37 GB    | 0.13 vCPU / 0.11 GB         |
+| 200       | 250           | 200 / 200         | 8.0 s / 11.4 s  | 0.01 %                   | 1.02 vCPU / 0.24 GB    | 0.24 vCPU / 0.12 GB         |
+| 100       | 400           | 100 / 100         | 14.5 s / 15.0 s | 43 % (timeouts)          | 1.02 vCPU / 0.29 GB    | 0.86 vCPU / 0.13 GB         |
+| 800       | 100           | 800, then 73      | 7.9 s / 12.1 s  | 4 % (502, 520, timeouts) | 1.10 vCPU / 0.37 GB    | 0.54 vCPU / 0.13 GB         |
+
+What it means:
+
+- **The `api` CPU gave out first.** The Fastify server is one Bun process, so it cannot use more than one vCPU; authenticated Squad Board reads saturate it between 200 and 250 requests a second, whatever the number of players (200 a second was still at p95 207 ms). `postgres` reached 0.86 vCPU at 400 requests a second, after the API. Memory was never the limit: the peak was 0.37 GB of 0.54 GB, with 800 sockets.
+- **Sockets are cheap, requests are not.** 800 connected players reading the board at 20 requests a second held, and 400 players at 100 requests a second held. The same 800 at 100 requests a second saturated the CPU and the sockets dropped (73 left).
+- **Past about 250 requests a second Railway also drops log lines** (its limit is 500 lines a second per replica, and each request writes two).
+- **Cloudflare never challenged or blocked the test address** (no `cf-mitigated` response). The 502 and 520 answers came only from the overloaded step.
+- The limits (1 vCPU and 512 MiB for `api` and `postgres`) stay as they are. More CPU does not help a single Bun process, and both are ceilings, not reservations: Railway bills what is used. More capacity means a second `api` replica, which also doubles the base memory cost.
+- The per-address abuse limits of "Abuse limits" were raised for the test and put back: the 301st request in a minute answers `429` with `Retry-After: 60`, the 11th concurrent socket is accepted and closed with code `1013` ("Too many connections"), and the 21st upgrade in a minute answers `429`.
+
+### Running the load test
+
+The script makes throwaway players straight in the database (no Discord, no sign-in route), so its database side runs inside the `api` service, where `DATABASE_URL` and `BETTER_AUTH_SECRET` already exist; neither leaves the service. It needs an SSH key registered with Railway (`railway ssh keys add`, remove it afterwards) and the repository linked (`railway link`):
+
+```sh
+cd server
+export LOAD_TEST_DATA_COMMAND="bash $(pwd)/src/interface/scripts/load-test/railway-data.sh"
+# Only if the Railway CLI is not `railway` on the PATH: export RAILWAY_BIN=/path/to/railway
+
+# N players, a board read rate, a duration; the tag marks every row the run creates
+bun src/interface/scripts/load-test.ts run --target https://api.squadzr.app --players 50 --rps 100 --duration-seconds 60
+```
+
+- All players come from one address, so the per-address limits of "Abuse limits" block any run bigger than 10 players. Raise `RATE_LIMIT_MAX`, `WS_UPGRADES_PER_MINUTE` and `WS_MAX_CONNECTIONS_PER_IP` on `api` for the test window only (for example 100000, 5000 and 2000), and restore them right after. **Deleting a variable does not redeploy**: run `railway redeploy --service api --yes` afterwards and check `x-ratelimit-limit: 300` on any response.
+- The run prints connected sockets, p50/p95/p99 and the error rate of the board reads, then deletes its players, Squads and Squad Records and prints the remaining counts, which must all be 0. It stops early when more than half of the board reads fail. On Ctrl+C or a failure it still cleans up; if the connection to Railway fails, rerun `railway-data.sh cleanup --tag <tag>` and `verify --tag <tag>` (`cleanup` and `verify` without a tag cover every run).
+- Every row carries the tag: the players' emails are `lt-<tag>-<n>@loadtest.squadzr.test`, their names `LT <tag> <n>` and the Squads are named `<tag>-<n>`. `audit_entries` is append-only and the run never writes to it; the Activity Sampler (not the test) adds its usual rows.
+- The Squads need a real Discord invite, because the API asks Discord before it accepts one: `--discord-invite` defaults to `https://discord.gg/discord-api`.
+- Memory and CPU come from the Railway metrics. A step's window can take a minute or two to appear; query it afterwards with `railway api 'query { metrics(environmentId: "<id>", serviceId: "<id>", startDate: "<ISO>", endDate: "<ISO>", measurements: [CPU_USAGE, MEMORY_USAGE_GB], sampleRateSeconds: 30) { measurement values { ts value } } }'`.
+
+To check the abuse limits themselves, run `limits` from a place that always presents one address, such as the `api` service itself: a home connection can show different addresses to the API (IPv4 and IPv6, or a shared pool), which spreads the count and hides the limit. Bundle the script and send it over SSH:
+
+```sh
+cd server
+bun build src/interface/scripts/load-test.ts --target bun --external zod --outfile /tmp/load-test.js
+railway ssh --service api -- 'f=server/.load-test.js; trap "rm -f $f" EXIT; cat > $f && cd server && bun --no-env-file .load-test.js limits --target https://api.squadzr.app' < /tmp/load-test.js
+```
+
 ## Migrations
 
 The pre-deploy command applies the checked-in migrations with the runtime entry point
