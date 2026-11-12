@@ -478,41 +478,17 @@ What it means:
 - The limits (1 vCPU and 512 MiB for `api` and `postgres`) stay as they are. More CPU does not help a single Bun process, and both are ceilings, not reservations: Railway bills what is used. More capacity means a second `api` replica, which also doubles the base memory cost.
 - The per-address abuse limits of "Abuse limits" were raised for the test and put back (they are pinned in `.railway/railway.ts`, so `railway config apply` restores them): the 301st request in a minute answers `429` with `Retry-After: 60`, the 11th concurrent socket is accepted and closed with code `1013` ("Too many connections"), and the 21st upgrade in a minute answers `429`.
 
-### Running the load test
+### The load script and the raised limits
 
-The script makes throwaway players straight in the database (no Discord, no sign-in route), so its database side runs inside the `api` service, where `DATABASE_URL` and `BETTER_AUTH_SECRET` already exist; neither leaves the service. It needs an SSH key registered with Railway (`railway ssh keys add`, remove it afterwards) and the repository linked (`railway link`):
+The numbers were measured on 2026-11-12 with a load script that is not in the tree: it lives only in git history, at commit `47997bad8774ff90a9478531b759c46fcc04a602`. Recover it with `git checkout 47997ba -- server/src/interface/scripts/load-test server/src/interface/scripts/load-test.ts`. Its usage, the off-hours warning (the test Squads are open on the real board) and the cleanup guard for other people's data are documented in that commit.
 
-```sh
-cd server
-export LOAD_TEST_DATA_COMMAND="bash $(pwd)/src/interface/scripts/load-test/railway-data.sh"
-# Only if the Railway CLI is not `railway` on the PATH: export RAILWAY_BIN=/path/to/railway
-
-# N players, a board read rate, a duration; the tag marks every row the run creates
-bun src/interface/scripts/load-test.ts run --target https://api.squadzr.app --players 50 --rps 100 --duration-seconds 60
-```
-
-- **Test Squads are real while the run lasts.** They are open on the real Squad Board, so anyone can see and join them. Run off-hours (no real users yet, or the early morning in Brazil).
-- All players come from one address, so the per-address limits of "Abuse limits" block any run bigger than 10 players. The three limits are pinned at 300, 20 and 10 in `.railway/railway.ts`. To raise them for the test window only, set the variables (this redeploys `api`; wait for the deployment to reach SUCCESS and for `x-ratelimit-limit` to show the new value):
-
-  ```sh
-  railway variable set RATE_LIMIT_MAX=100000 WS_UPGRADES_PER_MINUTE=5000 WS_MAX_CONNECTIONS_PER_IP=2000 --service api
-  ```
-
-  Restore them right after the last run with `railway config apply --yes`: it puts the pinned values back and redeploys `api`. Then check that the deployment is SUCCESS, that `/health/ready` answers 200, that any response carries `x-ratelimit-limit: 300`, and that `railway config plan --detailed-exit-code` exits 0 (it exits 2 while the raised values are in place). **Do not restore by deleting the variables: deleting does not redeploy, so the container keeps the raised limits.**
-
-- The run prints connected sockets, p50/p95/p99 and the error rate of the board reads, then deletes its players, Squads and Squad Records and prints the remaining counts, which must all be 0. It stops early when more than half of the board reads fail. On Ctrl+C or a failure it still cleans up; if the connection to Railway fails, rerun `railway-data.sh cleanup --tag <tag>` and `verify --tag <tag>` (`cleanup` and `verify` without a tag cover every run).
-- **The cleanup refuses to delete other people's data.** Before deleting, it counts the Memberships and Squad Record entries of players outside the run that hang from the run's Squads (a real player may have joined one). With any, it prints only the counts, deletes nothing and exits with code 3. Rerun with `railway-data.sh cleanup --tag <tag> --allow-foreign-members` only when losing those links is acceptable; the Squads are deleted with their host either way.
-- Every row carries the tag: the players' emails are `lt-<tag>-<n>@loadtest.squadzr.test`, their names `LT <tag> <n>` and the Squads are named `<tag>-<n>`. `audit_entries` is append-only and the run never writes to it; the Activity Sampler (not the test) adds its usual rows.
-- The Squads need a real Discord invite, because the API asks Discord before it accepts one: `--discord-invite` defaults to `https://discord.gg/discord-api`.
-- Memory and CPU come from the Railway metrics. A step's window can take a minute or two to appear; query it afterwards with `railway api 'query { metrics(environmentId: "<id>", serviceId: "<id>", startDate: "<ISO>", endDate: "<ISO>", measurements: [CPU_USAGE, MEMORY_USAGE_GB], sampleRateSeconds: 30) { measurement values { ts value } } }'`.
-
-To check the abuse limits themselves, run `limits` from a place that always presents one address, such as the `api` service itself: a home connection can show different addresses to the API (IPv4 and IPv6, or a shared pool), which spreads the count and hides the limit. Bundle the script and send it over SSH:
+A run from one address needs the per-address limits of "Abuse limits" raised, for the test window only. They are pinned at 300, 20 and 10 in `.railway/railway.ts`. Raise them by setting the variables (this redeploys `api`; wait for SUCCESS and for `x-ratelimit-limit` to show the new value):
 
 ```sh
-cd server
-bun build src/interface/scripts/load-test.ts --target bun --external zod --outfile /tmp/load-test.js
-railway ssh --service api -- 'f=server/.load-test.js; trap "rm -f $f" EXIT; cat > $f && cd server && bun --no-env-file .load-test.js limits --target https://api.squadzr.app' < /tmp/load-test.js
+railway variable set RATE_LIMIT_MAX=100000 WS_UPGRADES_PER_MINUTE=5000 WS_MAX_CONNECTIONS_PER_IP=2000 --service api
 ```
+
+Restore them right after the last run with `railway config apply --yes`: it puts the pinned values back and redeploys `api`. Then check that the deployment is SUCCESS, that `/health/ready` answers 200, that any response carries `x-ratelimit-limit: 300`, and that `railway config plan --detailed-exit-code` exits 0 (it exits 2 while the raised values are in place). **Do not restore by deleting the variables: deleting does not redeploy, so the container keeps the raised limits.**
 
 ## Migrations
 
