@@ -33,7 +33,9 @@ function wholeNumber(name: string, fallback: number, min = 0) {
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
-  HOST: z.string().default('0.0.0.0'),
+  // The address the server listens on: an IPv4 or IPv6 address (`::` for every interface, IPv6 and IPv4) or
+  // `localhost`. Not a name resolved at start, so a typo fails here instead of binding the wrong interface.
+  HOST: z.union([z.ipv4(), z.ipv6(), z.literal('localhost')]).default('0.0.0.0'),
   DATABASE_URL: z.url(),
   CORS_ORIGIN: z.url({ error: 'CORS_ORIGIN must be a valid URL' }).default('http://localhost:5173'),
   // Proxies in front of the API whose x-forwarded-for entries are believed: one edge proxy by default. Only

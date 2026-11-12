@@ -83,20 +83,22 @@ export default defineRailway(() => {
       healthcheckPath: '/health/ready',
       limitOverride: { containers: { cpu: 1, memoryBytes: 512 * MIB } },
     },
-    networking: {
-      customDomains: { 'api.squadzr.app': {} },
-    },
     env: {
       NODE_ENV: 'production',
       LOG_LEVEL: 'info',
       CORS_ORIGIN: 'https://squadzr.app',
       BETTER_AUTH_URL: 'https://api.squadzr.app',
       BETTER_AUTH_COOKIE_DOMAIN: 'squadzr.app',
-      // Railway's edge is the one proxy whose x-forwarded-for is believed. It replaces the header with the
-      // address that connected to it, which behind Cloudflare is Cloudflare's: more hops would trust nothing
-      // more. The visitor's address comes from CF-Connecting-IP, adopted only on a request that carries the
-      // edge secret (EDGE_AUTH_TOKEN).
+      // cloudflared is the one proxy whose x-forwarded-for is believed: it forwards the header with the
+      // address Cloudflare's edge appended (the visitor's), and more hops would trust nothing more. The
+      // visitor's address comes from CF-Connecting-IP, adopted only on a request that carries the edge
+      // secret (EDGE_AUTH_TOKEN); the proxy chain is the fallback.
       TRUST_PROXY_HOPS: '1',
+      // The API has no public Railway domain: cloudflared reaches it on the private network at
+      // `api.railway.internal:3000`, and Railway's private network can be IPv6-only. `::` listens on every IPv6
+      // address and, dual-stack, on IPv4 too, so Railway's health check (IPv4) still gets through.
+      HOST: '::',
+      PORT: '3000',
       // SIGTERM closes the sockets and lets a running Catalog Import finish before the kill.
       RAILWAY_DEPLOYMENT_DRAINING_SECONDS: '60',
       DATABASE_URL: postgres.env.DATABASE_URL,
@@ -113,5 +115,25 @@ export default defineRailway(() => {
     },
   })
 
-  return project('squadzr', { resources: [postgres, postgresData, api, gamesImport] })
+  // The API has no public address: Cloudflare reaches it through this remotely managed tunnel. Two replicas,
+  // so one failing agent does not take the API down.
+  const cloudflared = service('cloudflared', {
+    // The official image, pinned to an exact release. Upgrading it is a reviewed change to this line.
+    source: image('cloudflare/cloudflared:2026.10.7'),
+    regions: { 'us-east4-eqdc4a': 2 },
+    deploy: {
+      // `--metrics` serves /ready, which answers 200 only while the agent holds a connection to Cloudflare.
+      startCommand: 'cloudflared tunnel --no-autoupdate --metrics 0.0.0.0:2000 run',
+      healthcheckPath: '/ready',
+      limitOverride: { containers: { cpu: 0.25, memoryBytes: 128 * MIB } },
+    },
+    env: {
+      PORT: '2000',
+      // The tunnel's token (cloudflared reads it from this variable). The owner sets it in Railway; it
+      // is never in the repository.
+      TUNNEL_TOKEN: preserve(),
+    },
+  })
+
+  return project('squadzr', { resources: [postgres, postgresData, api, gamesImport, cloudflared] })
 })

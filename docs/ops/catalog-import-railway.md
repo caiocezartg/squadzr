@@ -11,7 +11,8 @@ runs next to it as the `api` service and owns the schema migrations (see "The `a
 | Project        | `squadzr`                                                                                                                                |
 | Environment    | `production` (the only one; it was called `staging` until #133)                                                                          |
 | Database       | `postgres`, PostgreSQL 16 (`ghcr.io/railwayapp-templates/postgres-ssl:16`), volume `postgres-data` mounted at `/var/lib/postgresql/data` |
-| API service    | `api`, deployed from `caiocezartg/squadzr` branch `main`, at `https://api.squadzr.app`                            |
+| API service    | `api`, deployed from `caiocezartg/squadzr` branch `main`, at `https://api.squadzr.app` through the tunnel (no Railway domain)            |
+| Tunnel service | `cloudflared`, the official image pinned to an exact version, 2 replicas (see "The tunnel")                                              |
 | Cron service   | `games-import`, deployed from `caiocezartg/squadzr` branch `main`                                                                        |
 | Config as code | `.railway/railway.ts` (Railway Infrastructure as Code)                                                                                   |
 
@@ -247,8 +248,9 @@ entry must be listed for the backup requirement to hold.
 
 The `api` service runs the Fastify server (`cd server && bun --no-env-file src/index.ts`) from the same
 repository, built with `bun install --frozen-lockfile`. It is reachable at `https://api.squadzr.app`
-(a proxied CNAME in Cloudflare, SSL mode Full (strict), see "The edge" below); `/health/ready` is its health
-check, and a deployment that does not answer it never takes traffic.
+(a proxied CNAME to a Cloudflare Tunnel, see "The edge" and "The tunnel" below) and has no Railway domain, public
+or custom: nothing answers for it on Railway's edge. `/health/ready` is its health check, which Railway probes
+over its own internal path, and a deployment that does not answer it never takes traffic.
 
 - **Deploys.** A push to `main` deploys it only after the push's GitHub checks pass (`checkSuites`),
   and only when it touches `server/**`, `packages/**`, `package.json` or `bun.lock`: a push that touches
@@ -261,7 +263,8 @@ check, and a deployment that does not answer it never takes traffic.
 - **Limits.** `api` and `postgres` are capped at 1 vCPU and 512 MiB each (`limitOverride`). They are
   ceilings: Railway bills what the services use.
 - **Variables.** `NODE_ENV`, `LOG_LEVEL`, `CORS_ORIGIN`, `BETTER_AUTH_URL`, `BETTER_AUTH_COOKIE_DOMAIN`,
-  `TRUST_PROXY_HOPS=1` (Railway's edge, see "The edge") and `DATABASE_URL` (a reference to `postgres`) are in the authoring file, and the
+  `TRUST_PROXY_HOPS=1` (`cloudflared`, see "The edge"), `HOST=::` and `PORT=3000` (where the tunnel reaches it, see "The
+  tunnel") and `DATABASE_URL` (a reference to `postgres`) are in the authoring file, and the
   IGDB credentials are references to the `games-import` ones. `BETTER_AUTH_SECRET`, `DISCORD_CLIENT_ID`,
   `DISCORD_CLIENT_SECRET` and `EDGE_AUTH_TOKEN` are `preserve()`d: they exist only in Railway, never in the
   repository.
@@ -269,14 +272,17 @@ check, and a deployment that does not answer it never takes traffic.
 
 ### The edge
 
-`api.squadzr.app` is proxied by Cloudflare (zone `squadzr.app`, Free plan, SSL mode Full (strict): Railway's
-Let's Encrypt certificate for the custom domain is what Cloudflare validates). Three things live in the
-Cloudflare zone, outside this repository:
+`api.squadzr.app` is proxied by Cloudflare (zone `squadzr.app`, Free plan) and reaches the API through a Cloudflare
+Tunnel (see "The tunnel"). The rules below match on the host name, so they apply to tunnel traffic exactly as they
+did to the public domain (checked on the tunnel: the Transform Rule stamps the header, the rate limiting rule
+answers 429 to the sign-in burst, and a `workers.dev` Worker, which is not in the zone, gets Cloudflare's 403 page). Four things live in
+the Cloudflare zone, outside this repository:
 
 - **Transform Rule** (`http_request_late_transform`): on host `api.squadzr.app` it **sets** (overwrites)
   the request header `x-squadzr-edge-auth` to the edge secret, so a client cannot choose it, and the header
   `x-squadzr-worker-zone` to `cf.worker.upstream_zone`, the zone of the Worker that made the request (empty,
-  so the header is removed, for a request no Worker made).
+  so the header is removed, for a request no Worker made; the app's own Workers were observed with it empty
+  in November 2026, and `squadzr.app` would mean the same, so the WAF rule below allows both and no other zone).
 - **Rate limiting rule** (`http_ratelimit`, the one the Free plan allows): `/api/auth/sign-in/*` and
   `/api/auth/callback/*` on that host, 5 requests per 10 seconds per IP (the Free plan counts per IP and per
   Cloudflare data center), then blocked for 10 seconds with a 429. Every other route is limited by the API
@@ -284,7 +290,8 @@ Cloudflare zone, outside this repository:
 - **WAF custom rule**: blocks a request to that host that another zone's Worker made
   (`http.host eq "api.squadzr.app" and not cf.worker.upstream_zone in {"" "squadzr.app"}`). Only the browser
   and this app's own Worker reach the API.
-- **DNS**: the `api` CNAME is proxied; the `_railway-verify.api` TXT stays DNS-only.
+- **DNS**: the `api` CNAME is proxied and points at `<tunnel id>.cfargotunnel.com`. The `_railway-verify.api` TXT
+  from the days of the Railway custom domain stays DNS-only and unused; it is harmless.
 
 The API reads the secret from the optional `EDGE_AUTH_TOKEN` variable, a `preserve()`d variable of the
 authoring file. Set, a request without the matching `x-squadzr-edge-auth` header gets 403
@@ -296,21 +303,116 @@ are one value and change together (`docs/ops/client-on-cloudflare-workers.md`, "
 At `LOG_LEVEL=debug` each request logs `Edge request headers` with `edgeAuthHeader` (`present` or `absent`,
 never the value) and `cfConnectingIp`.
 
-**Client address.** Railway's edge replaces `x-forwarded-for` with the address that connected to it, so the
-proxy chain alone never names the visitor: at `TRUST_PROXY_HOPS=1` it names a Railway edge node, and at 2 or
-3 a Cloudflare address (measured on the hosted API). The visitor's
-address is `CF-Connecting-IP`, which anyone who reaches the Railway origin directly can write. So the API
-believes it only on a request whose edge secret matched (`EDGE_AUTH_TOKEN` set and the header right): it
+**Client address.** Behind the tunnel the peer is `cloudflared` on Railway's private network, and it forwards the
+`x-forwarded-for` Cloudflare's edge wrote, so at `TRUST_PROXY_HOPS=1` the proxy chain names the visitor for a browser
+request (measured on the hosted API: the info line's `remoteAddress`, which is `request.ip` before the edge guard
+runs, was the tester's own address, with and without the secret). A Worker's subrequest names the Worker there.
+The address that holds for both is `CF-Connecting-IP`, which anyone who reaches the origin some other way can write.
+So the API believes it only on a request whose edge secret matched (`EDGE_AUTH_TOKEN` set and the header right): it
 then becomes the single `x-forwarded-for` entry, and `request.ip` (the app rate limits, the Discord invite
 check), the Better Auth rate limiter and the log's `clientIp` field all read it. Better Auth is fed from
 `request.ip` and keys its limiter on the one header the server writes (its documented setup for an address
 the server code sets), so it needs no option of its own. With the lock off, or with a missing or invalid
 `CF-Connecting-IP` (a warning, never the token), the proxy chain's address is used. `TRUST_PROXY_HOPS` stays
-at 1: Railway's edge is the only proxy whose header is believed, and a larger count would trust nothing more.
+at 1: `cloudflared` is the only proxy whose header is believed, and a larger count would trust nothing more.
 Setting it to 0 trusts no header at all, this one included. The info-level "incoming request" line is written
-before any hook runs and keeps the connecting (Railway edge) address as `remoteAddress`; the visitor is the
+before any hook runs, so its `remoteAddress` is the proxy chain's address; the address the API counts by is the
 `clientIp` of the same request's "request completed" line. While the lock is off, requests are attributed to
 the proxy chain's address.
+
+### The tunnel
+
+`api.squadzr.app` reaches the API through a remotely managed Cloudflare Tunnel (`squadzr-api`, id `fa41f989-e6f5-486f-977c-1d2b78da8877`, Zero Trust, free on
+every plan; it needs no Access policy or paid feature). The pieces:
+
+- **`cloudflared` service** (`.railway/railway.ts`): the official `cloudflare/cloudflared` image pinned to an exact
+  release, started with `cloudflared tunnel --no-autoupdate --metrics 0.0.0.0:2000 run`, two replicas in
+  `us-east4-eqdc4a`, capped at 0.25 vCPU and 128 MiB each (`limitOverride`). The agent reads its token from the
+  `preserve()`d variable `TUNNEL_TOKEN`; the health check is `/ready` on the metrics port (`PORT=2000`), which
+  answers 200 only while the agent holds a connection to Cloudflare. Each replica opens 4 connections, so a healthy
+  tunnel shows 8.
+- **Tunnel and route** (Cloudflare, outside the repository): the ingress rules are `api.squadzr.app` →
+  `http://api.railway.internal:3000` and a catch-all `http_status:404`. The API listens on `HOST=::`, `PORT=3000`:
+  Railway's private network can be IPv6-only, and `::` is dual-stack, so the health check, which arrives over IPv4
+  (`::ffff:100.64.0.1`), still gets through.
+- **DNS**: `api.squadzr.app` is a proxied CNAME to `<tunnel id>.cfargotunnel.com`.
+- **No Railway domain**: `api` has neither a service domain nor a custom domain. The IaC engine does not remove a
+  domain it no longer declares, so deleting one is `railway domain delete <domain> --service api --yes`; list
+  what is left with `railway domain list --service api`. A request to Railway's edge with `Host: api.squadzr.app`
+  answers 404 `Application not found`.
+
+Health and checks:
+
+```sh
+# Tunnel status and connections: 2 clients with 4 connections each. $CF_API_TOKEN is an API token with
+# Cloudflare Tunnel Read, $CF_ACCOUNT_ID the account id, and $TUNNEL_ID the tunnel id given above.
+curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
+  "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/connections"
+# The same tunnel's status (healthy, degraded or down)
+curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
+  "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID"
+railway logs --service cloudflared --lines 50   # "Registered tunnel connection" x4 per replica
+```
+
+Stopping one replica does not take the site down: with the replicas scaled to one (`regions` count 1, applied),
+the probe of `/health/ready` every second had no failure, and a Squad could be created and joined over the
+WebSocket. Scale it back with the authoring file (`regions: { 'us-east4-eqdc4a': 2 }`) and `config apply`.
+Usage measured on the hosted tunnel with light traffic: about 0.004 vCPU and 41 MiB for the service (peaks
+0.01 vCPU and 48 MiB), which is under US$ 1 a month of Railway usage for the two replicas.
+
+**Cutover from the public domain** (done once; the order that kept the API up): create the tunnel, deploy the
+`cloudflared` service and wait for 8 connections while the old path still serves; change the `api` DNS record to the
+tunnel's CNAME; check `/health/ready` and a real route; only then delete the Railway domain. Cloudflare's edge takes
+up to about two minutes to follow a changed record, and both origins answer during that time, so no probe failed
+(each switch below was watched with a request every second).
+
+**Rotate the tunnel token.** Zero Trust ➜ Networks ➜ Tunnels ➜ `squadzr-api` ➜ refresh token, or the API:
+`PATCH /accounts/<account id>/cfd_tunnel/<tunnel id>` with a new `tunnel_secret` (32 random bytes, base64), then
+`GET .../cfd_tunnel/<tunnel id>/token`. The old token stops working for new connections at once. Put the new one
+in Railway without echoing it or putting it on a command line:
+
+```sh
+printf %s "$NEW_TOKEN" | railway variable set TUNNEL_TOKEN --stdin --service cloudflared
+```
+
+Setting the variable redeploys the two replicas (a rolling replacement); the site kept answering through it
+(no failed probe), and the tunnel was back to 2 clients and 8 connections. The value never goes in a commit, an
+issue, a log or a chat. The token is not the edge secret: rotate `EDGE_AUTH_TOKEN` separately
+(`docs/ops/client-on-cloudflare-workers.md`, "The edge secret").
+
+**Upgrade `cloudflared`.** Change the version tag in `.railway/railway.ts` (never `latest`) and `config apply`.
+
+**Roll back to a public Railway domain.** Two situations, both ending with `api.squadzr.app` served by Railway
+instead of the tunnel. The header lock, the WAF rule and the rate limiting rule do not depend on the path, so they
+keep working; `TRUST_PROXY_HOPS` is 1 either way.
+
+1. _While the Railway domain still exists_ (tested): change the `api` CNAME to the domain's target (`2adifz58.up.railway.app`
+   at the time), proxied. Cloudflare followed in about two minutes, then served from Railway's edge (the API logs
+   showed Railway's addresses as the peer); no probe failed. To go back to the tunnel, change the CNAME to
+   `<tunnel id>.cfargotunnel.com`; it took about 30 seconds and no probe failed.
+2. _After the Railway domain was removed_ (the state of production): see "Re-add the public domain" below.
+
+**Re-add the public domain** (the state of production, where `api` has no Railway domain). Tested on a throwaway host
+name, `rollback-test.squadzr.app`, with the same steps as for `api.squadzr.app`; the authoring file does not manage
+Railway domains (a `networking.customDomains` entry was ignored by `config plan` and `config apply` in the test), so
+this is done with the CLI:
+
+```sh
+railway domain api.squadzr.app --service api   # prints the CNAME target and the _railway-verify TXT to create
+railway domain list --service api              # the domain and its sync status
+railway domain status <domain id> --service api
+```
+
+In Cloudflare, point the `api` record at the printed target (CNAME, proxied) and make sure the
+`_railway-verify.api` TXT holds the printed value (DNS only). In the test the domain was `ACTIVE` with a valid
+certificate 16 seconds after it was created (9 seconds after the records), and `/health/ready` answered 200
+through Cloudflare. Then check `/health/ready` and a real route on `api.squadzr.app`. Nothing else changes: the
+Transform Rule, the lock (`EDGE_AUTH_TOKEN`), the WAF and rate limiting rules and `TRUST_PROXY_HOPS=1` work the
+same on this path, and `HOST=::` keeps working. Railway's edge then replaces `x-forwarded-for` with the address
+that connected to it, so the visitor's address comes from `CF-Connecting-IP` behind the lock only, as before
+the tunnel. Once the public domain is back, the `cloudflared` service can stay (the tunnel is simply unused) or
+be removed from the authoring file. Delete the throwaway test records and domain afterwards:
+`railway domain delete <domain> --service api --yes` and the two DNS records.
 
 ### Abuse limits
 
@@ -328,9 +430,11 @@ addresses by their /64). The limits are environment variables with these default
   with code 1013 ("try again later").
 
 Because the address is only the visitor's behind the lock, the limits mean what they say once
-`EDGE_AUTH_TOKEN` is set. With the lock off `request.ip` is the Railway edge node that carried the request
-(measured on the hosted API: a few `84.17.44.x` and `46.151.194.x` addresses, shared by every visitor), so
-the limits would count everyone together: turn the lock on right after the deploy that brings them.
+`EDGE_AUTH_TOKEN` is set. With the lock off, a browser request still counts by the visitor (the proxy chain
+names them behind the tunnel) but every server render counts under the Worker's address, one bucket anyone could
+exhaust: keep the lock on. The counter is the API's own, keyed on that address, so which `cloudflared` replica
+carried a request does not matter (measured: one visitor's burst from a single address was limited at 300 a
+minute while both replicas carried it).
 
 **Server renders.** The Next server's own calls reach the API from the Worker, whose address is not the
 visitor's. A call that speaks for a viewer (the session, the board, a Squad) carries the visitor's address in
@@ -342,7 +446,9 @@ shares between visitors (the landing's popular games, revalidated) carries no ad
 header would split that cache; it is counted under the Worker's address, at most one call per isolate every
 five minutes. Nothing is exempted for being a Worker call: the amplification (a page view
 becomes several API calls) is what the limit is for. The `workerZone` field of the request log (written only
-on a request whose edge secret matched) tells the app's own renders (`squadzr.app`) from anything else.
+on a request whose edge secret matched) was observed empty for the app's own renders in November 2026, although
+Cloudflare documents `cf.worker.upstream_zone` as the calling Worker's zone. Empty and `squadzr.app` both mean the
+app's own renders; the WAF rule blocks any other zone before the request gets here.
 
 ## Migrations
 
