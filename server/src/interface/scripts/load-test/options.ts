@@ -9,14 +9,24 @@ function randomTag(): string {
   return Math.random().toString(36).slice(2, 10).padEnd(8, '0')
 }
 
-/** `--players 50` or `--players=50` pairs, with kebab-case names turned into camelCase. */
-export function parseFlags(argv: readonly string[]): Record<string, string> {
+/**
+ * `--players 50` or `--players=50` pairs, with kebab-case names turned into camelCase. A name listed in
+ * `switches` takes no value and reads as "true" (`--allow-foreign-members`).
+ */
+export function parseFlags(
+  argv: readonly string[],
+  switches: readonly string[] = []
+): Record<string, string> {
   const flags: Record<string, string> = {}
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i] ?? ''
     if (!arg.startsWith('--')) throw new Error(`Unexpected argument "${arg}"`)
     const [rawName = '', inline] = arg.slice(2).split('=', 2)
     const name = rawName.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase())
+    if (inline === undefined && switches.includes(rawName)) {
+      flags[name] = 'true'
+      continue
+    }
     const value = inline ?? argv[i + 1]
     if (value === undefined || (inline === undefined && value.startsWith('--'))) {
       throw new Error(`Flag --${rawName} needs a value`)

@@ -71,6 +71,46 @@ export function verifyPlan(tag?: Tag): readonly PlanStatement[] {
   ]
 }
 
+/** The Squad Records the cleanup deletes: hosted by a run player, or with one as a member. */
+const RUN_RECORDS = `SELECT id FROM squad_records WHERE host_id IN (${TAGGED_USERS}) OR id IN (SELECT record_id FROM squad_record_members WHERE user_id IN (${TAGGED_USERS}))`
+
+/**
+ * What the cleanup would take from people outside the run, counted before it deletes anything. The run's
+ * Squads are open on the real board while it lasts, so a real player may have joined one: deleting the
+ * host removes the Squad and that person's Membership, and deleting its Squad Record removes theirs.
+ * Counts only, never who.
+ */
+export function foreignLinksPlan(tag?: Tag): readonly PlanStatement[] {
+  const values = [playerEmailPattern(tag)]
+  const count = (name: string, from: string): PlanStatement => ({
+    name,
+    text: `SELECT count(*)::int AS count FROM ${from}`,
+    values,
+  })
+  return [
+    count(
+      'squad_members',
+      `room_members WHERE room_id IN (SELECT id FROM rooms WHERE host_id IN (${TAGGED_USERS})) AND user_id NOT IN (${TAGGED_USERS})`
+    ),
+    count(
+      'squad_record_members',
+      `squad_record_members WHERE record_id IN (${RUN_RECORDS}) AND user_id NOT IN (${TAGGED_USERS})`
+    ),
+    count(
+      'squad_records_hosted_by_others',
+      `squad_records WHERE id IN (${RUN_RECORDS}) AND (host_id IS NULL OR host_id NOT IN (${TAGGED_USERS}))`
+    ),
+  ]
+}
+
+/** The exit code of a cleanup that stopped on links of people outside the run. */
+export const FOREIGN_LINKS_EXIT_CODE = 3
+
+/** The total of the foreign links; the cleanup stops when it is not zero. */
+export function foreignLinkTotal(counts: Readonly<Record<string, number>>): number {
+  return Object.values(counts).reduce((total, count) => total + count, 0)
+}
+
 export const verifyCountsSchema = z.record(z.string(), z.number().int().min(0))
 
 export type VerifyCounts = z.infer<typeof verifyCountsSchema>

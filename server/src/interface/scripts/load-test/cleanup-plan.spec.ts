@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   LOAD_TEST_EMAIL_DOMAIN,
   cleanupPlan,
+  foreignLinkTotal,
+  foreignLinksPlan,
   isClean,
   playerEmail,
   playerEmailPattern,
@@ -74,5 +76,27 @@ describe('isClean', () => {
   it('is true only when every count is zero', () => {
     expect(isClean({ users: 0, squads: 0 })).toBe(true)
     expect(isClean({ users: 0, squads: 1 })).toBe(false)
+  })
+})
+
+describe('foreignLinksPlan', () => {
+  it('counts the links of people outside the run that the cleanup would delete, and only counts', () => {
+    const plan = foreignLinksPlan('abc123')
+
+    expect(plan.map((statement) => statement.name)).toEqual([
+      'squad_members',
+      'squad_record_members',
+      'squad_records_hosted_by_others',
+    ])
+    for (const statement of plan) {
+      expect(statement.text).toMatch(/^SELECT count\(\*\)/)
+      expect(statement.text).toContain('NOT IN')
+      expect(statement.values).toEqual([`lt-abc123-%@${LOAD_TEST_EMAIL_DOMAIN}`])
+    }
+  })
+
+  it('adds the counts up', () => {
+    expect(foreignLinkTotal({ a: 0, b: 0 })).toBe(0)
+    expect(foreignLinkTotal({ a: 1, b: 2 })).toBe(3)
   })
 })

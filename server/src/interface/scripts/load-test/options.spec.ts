@@ -9,6 +9,13 @@ describe('parseFlags', () => {
     })
   })
 
+  it('reads a listed switch without a value and refuses the others', () => {
+    expect(
+      parseFlags(['--tag', 'abc123', '--allow-foreign-members'], ['allow-foreign-members'])
+    ).toEqual({ tag: 'abc123', allowForeignMembers: 'true' })
+    expect(() => parseFlags(['--allow-foreign-members'])).toThrow('needs a value')
+  })
+
   it('refuses a flag without a value and a stray argument', () => {
     expect(() => parseFlags(['--target'])).toThrow('needs a value')
     expect(() => parseFlags(['--target', '--players', '5'])).toThrow('needs a value')

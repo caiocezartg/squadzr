@@ -3,12 +3,16 @@ import pg from 'pg'
 import { z } from 'zod'
 import {
   cleanupPlan,
+  FOREIGN_LINKS_EXIT_CODE,
+  foreignLinkTotal,
+  foreignLinksPlan,
   playerEmail,
   tagSchema,
   verifyPlan,
   type PlanStatement,
   type Tag,
 } from './cleanup-plan'
+import { parseFlags } from './options'
 
 /**
  * The load test's database side: `provision` makes throwaway players with live sessions, `cleanup` deletes a
@@ -35,7 +39,15 @@ const commandSchema = z.discriminatedUnion('command', [
     tag: tagSchema,
     count: z.coerce.number().int().min(1).max(5000),
   }),
-  z.object({ command: z.literal('cleanup'), tag: tagSchema.optional() }),
+  z.object({
+    command: z.literal('cleanup'),
+    tag: tagSchema.optional(),
+    /** Delete even though people outside the run are linked to its Squads (they lose those links). */
+    allowForeignMembers: z
+      .enum(['true'])
+      .optional()
+      .transform((value) => value === 'true'),
+  }),
   z.object({ command: z.literal('verify'), tag: tagSchema.optional() }),
 ])
 
@@ -51,13 +63,11 @@ export function signedSessionCookie(token: string, secret: string, secure: boole
   return `${name}=${encodeURIComponent(`${token}.${signature}`)}`
 }
 
-function parseArguments(argv: readonly string[]) {
+const SWITCHES = ['allow-foreign-members']
+
+export function parseArguments(argv: readonly string[]) {
   const [command, ...rest] = argv
-  const flags: Record<string, string> = {}
-  for (let i = 0; i < rest.length; i += 2) {
-    flags[(rest[i] ?? '').replace(/^--/, '')] = rest[i + 1] ?? ''
-  }
-  return commandSchema.parse({ command, ...flags })
+  return commandSchema.parse({ command, ...parseFlags(rest, SWITCHES) })
 }
 
 export async function provision(
@@ -118,7 +128,30 @@ async function runPlan(
   return counts
 }
 
-export async function cleanup(client: pg.ClientBase, tag?: Tag): Promise<Record<string, number>> {
+/** Thrown when people outside the run are linked to its Squads and the operator did not allow deleting them. */
+export class ForeignLinksError extends Error {
+  constructor(readonly counts: Readonly<Record<string, number>>) {
+    super(`The cleanup would remove ${foreignLinkTotal(counts)} links of people outside the run`)
+  }
+}
+
+export function foreignLinks(client: pg.ClientBase, tag?: Tag): Promise<Record<string, number>> {
+  return runPlan(client, foreignLinksPlan(tag))
+}
+
+/**
+ * Deletes the run. Before deleting anything it counts the Memberships and Squad Record entries of people
+ * outside the run that hang from the run's Squads; with any, it deletes nothing and throws, unless
+ * `allowForeignMembers` says the operator accepts losing them.
+ */
+export async function cleanup(
+  client: pg.ClientBase,
+  tag?: Tag,
+  { allowForeignMembers = false }: { allowForeignMembers?: boolean } = {}
+): Promise<Record<string, number>> {
+  const foreign = await foreignLinks(client, tag)
+  if (!allowForeignMembers && foreignLinkTotal(foreign) > 0) throw new ForeignLinksError(foreign)
+
   await client.query('BEGIN')
   try {
     const deleted = await runPlan(client, cleanupPlan(tag))
@@ -154,7 +187,9 @@ async function main(): Promise<void> {
         )
         break
       case 'cleanup':
-        console.log(`LT_CLEANUP ${JSON.stringify(await cleanup(client, args.tag))}`)
+        console.log(
+          `LT_CLEANUP ${JSON.stringify(await cleanup(client, args.tag, { allowForeignMembers: args.allowForeignMembers }))}`
+        )
         break
       case 'verify':
         console.log(`LT_VERIFY ${JSON.stringify(await verify(client, args.tag))}`)
@@ -168,6 +203,14 @@ async function main(): Promise<void> {
 
 if (import.meta.main) {
   main().catch((error) => {
+    if (error instanceof ForeignLinksError) {
+      console.log(`LT_FOREIGN ${JSON.stringify(error.counts)}`)
+      console.error(
+        `${error.message}. Nothing was deleted; rerun with --allow-foreign-members to delete anyway.`
+      )
+      process.exitCode = FOREIGN_LINKS_EXIT_CODE
+      return
+    }
     console.error('Load test data command failed:', error instanceof Error ? error.message : error)
     process.exitCode = 1
   })

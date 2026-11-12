@@ -263,7 +263,7 @@ over its own internal path, and a deployment that does not answer it never takes
 - **Limits.** `api` and `postgres` are capped at 1 vCPU and 512 MiB each (`limitOverride`). They are
   ceilings: Railway bills what the services use.
 - **Variables.** `NODE_ENV`, `LOG_LEVEL`, `CORS_ORIGIN`, `BETTER_AUTH_URL`, `BETTER_AUTH_COOKIE_DOMAIN`,
-  `TRUST_PROXY_HOPS=1` (`cloudflared`, see "The edge"), `HOST=::` and `PORT=3000` (where the tunnel reaches it, see "The
+  `TRUST_PROXY_HOPS=1` (`cloudflared`, see "The edge"), the three abuse limits (see "Abuse limits"), `HOST=::` and `PORT=3000` (where the tunnel reaches it, see "The
   tunnel") and `DATABASE_URL` (a reference to `postgres`) are in the authoring file, and the
   IGDB credentials are references to the `games-import` ones. `BETTER_AUTH_SECRET`, `DISCORD_CLIENT_ID`,
   `DISCORD_CLIENT_SECRET` and `EDGE_AUTH_TOKEN` are `preserve()`d: they exist only in Railway, never in the
@@ -418,7 +418,9 @@ be removed from the authoring file. Delete the throwaway test records and domain
 
 The API counts requests by client address, which behind the lock is the visitor's (`request.ip`; IPv6
 addresses by their /64). The limits are environment variables with these defaults, validated at start, and
-0 turns one off:
+0 turns one off. Production pins the three below at their defaults in `.railway/railway.ts`
+(`RATE_LIMIT_MAX`, `WS_UPGRADES_PER_MINUTE`, `WS_MAX_CONNECTIONS_PER_IP`), so a temporary raise is undone by
+`railway config apply` (see "Capacity"):
 
 - `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS`: 300 requests per 60 seconds on every route, at `onRequest`
   after the edge guard. `/health` and `/health/ready` are not counted. The Discord invite check is counted
@@ -454,17 +456,18 @@ app's own renders; the WAF rule blocks any other zone before the request gets he
 
 Measured on 2026-11-12 against production (one `api` replica of 1 vCPU and 512 MiB, `postgres` of 1 vCPU and 512 MiB, `cloudflared` x2), from a single machine in Brazil, so every latency includes about 140 ms of round trip. Each step connected N players with a session and a WebSocket each, made and joined their Squads, then read the Squad Board with the players' cookies for 45 to 60 seconds.
 
-| N players | Board reads/s | Sockets connected | p50 / p95       | Errors                   | `api` CPU / RAM (peak) | `postgres` CPU / RAM (peak) |
-| --------- | ------------- | ----------------- | --------------- | ------------------------ | ---------------------- | --------------------------- |
-| 10        | 18            | 10 / 10           | 139 / 151 ms    | 0 %                      | 0.18 vCPU / 0.17 GB    | 0.01 vCPU / 0.09 GB         |
-| 25        | 50            | 25 / 25           | 141 / 156 ms    | 0 %                      | 0.23 vCPU / 0.20 GB    | 0.10 vCPU / 0.12 GB         |
-| 50        | 100           | 50 / 50           | 157 / 180 ms    | 0 %                      | 0.69 vCPU / 0.23 GB    | 0.51 vCPU / 0.12 GB         |
-| 100       | 200           | 100 / 100         | 164 / 207 ms    | 0 %                      | 0.68 vCPU / 0.28 GB    | 0.40 vCPU / 0.12 GB         |
-| 400       | 100           | 400 / 400         | 176 / 237 ms    | 0 %                      | 0.79 vCPU / 0.33 GB    | 0.80 vCPU / 0.13 GB         |
-| 800       | 20            | 800 / 800         | 175 / 235 ms    | 0 %                      | 0.49 vCPU / 0.37 GB    | 0.13 vCPU / 0.11 GB         |
-| 200       | 250           | 200 / 200         | 8.0 s / 11.4 s  | 0.01 %                   | 1.02 vCPU / 0.24 GB    | 0.24 vCPU / 0.12 GB         |
-| 100       | 400           | 100 / 100         | 14.5 s / 15.0 s | 43 % (timeouts)          | 1.02 vCPU / 0.29 GB    | 0.86 vCPU / 0.13 GB         |
-| 800       | 100           | 800, then 73      | 7.9 s / 12.1 s  | 4 % (502, 520, timeouts) | 1.10 vCPU / 0.37 GB    | 0.54 vCPU / 0.13 GB         |
+| N players | Board reads/s | Sockets connected | p50 / p95       | Errors                              | `api` CPU / RAM (peak) | `postgres` CPU / RAM (peak) |
+| --------- | ------------- | ----------------- | --------------- | ----------------------------------- | ---------------------- | --------------------------- |
+| 10        | 18            | 10 / 10           | 139 / 151 ms    | 0 %                                 | 0.18 vCPU / 0.17 GB    | 0.01 vCPU / 0.09 GB         |
+| 25        | 50            | 25 / 25           | 141 / 156 ms    | 0 %                                 | 0.23 vCPU / 0.20 GB    | 0.10 vCPU / 0.12 GB         |
+| 50        | 100           | 50 / 50           | 157 / 180 ms    | 0 %                                 | 0.69 vCPU / 0.23 GB    | 0.51 vCPU / 0.12 GB         |
+| 100       | 200           | 100 / 100         | 164 / 207 ms    | 0 %                                 | 0.68 vCPU / 0.28 GB    | 0.40 vCPU / 0.12 GB         |
+| 400       | 100           | 400 / 400         | 176 / 237 ms    | 0 %                                 | 0.79 vCPU / 0.33 GB    | 0.80 vCPU / 0.13 GB         |
+| 800       | 20            | 800 / 800         | 175 / 235 ms    | 0 %                                 | 0.49 vCPU / 0.37 GB    | 0.13 vCPU / 0.11 GB         |
+| 200       | 250           | 200 / 200         | 8.0 s / 11.4 s  | 0.01 % (timeouts ×1)                | 1.02 vCPU / 0.24 GB    | 0.24 vCPU / 0.12 GB         |
+| 100       | 400           | 100 / 100         | 14.5 s / 15.0 s | 43 % (timeouts ×7767)               | 1.02 vCPU / 0.29 GB    | 0.86 vCPU / 0.13 GB         |
+| 200       | 400           | 200 / 200         | 15.0 s / 15.0 s | 68 % (timeouts ×11572)              | 0.70 vCPU / 0.27 GB    | 0.86 vCPU / 0.12 GB         |
+| 800       | 100           | 800, then 73      | 7.9 s / 12.1 s  | 4 % (502 ×237, 520 ×3, timeouts ×9) | 1.10 vCPU / 0.37 GB    | 0.54 vCPU / 0.13 GB         |
 
 What it means:
 
@@ -473,7 +476,7 @@ What it means:
 - **Past about 250 requests a second Railway also drops log lines** (its limit is 500 lines a second per replica, and each request writes two).
 - **Cloudflare never challenged or blocked the test address** (no `cf-mitigated` response). The 502 and 520 answers came only from the overloaded step.
 - The limits (1 vCPU and 512 MiB for `api` and `postgres`) stay as they are. More CPU does not help a single Bun process, and both are ceilings, not reservations: Railway bills what is used. More capacity means a second `api` replica, which also doubles the base memory cost.
-- The per-address abuse limits of "Abuse limits" were raised for the test and put back: the 301st request in a minute answers `429` with `Retry-After: 60`, the 11th concurrent socket is accepted and closed with code `1013` ("Too many connections"), and the 21st upgrade in a minute answers `429`.
+- The per-address abuse limits of "Abuse limits" were raised for the test and put back (they are pinned in `.railway/railway.ts`, so `railway config apply` restores them): the 301st request in a minute answers `429` with `Retry-After: 60`, the 11th concurrent socket is accepted and closed with code `1013` ("Too many connections"), and the 21st upgrade in a minute answers `429`.
 
 ### Running the load test
 
@@ -488,8 +491,17 @@ export LOAD_TEST_DATA_COMMAND="bash $(pwd)/src/interface/scripts/load-test/railw
 bun src/interface/scripts/load-test.ts run --target https://api.squadzr.app --players 50 --rps 100 --duration-seconds 60
 ```
 
-- All players come from one address, so the per-address limits of "Abuse limits" block any run bigger than 10 players. Raise `RATE_LIMIT_MAX`, `WS_UPGRADES_PER_MINUTE` and `WS_MAX_CONNECTIONS_PER_IP` on `api` for the test window only (for example 100000, 5000 and 2000), and restore them right after. **Deleting a variable does not redeploy**: run `railway redeploy --service api --yes` afterwards and check `x-ratelimit-limit: 300` on any response.
+- **Test Squads are real while the run lasts.** They are open on the real Squad Board, so anyone can see and join them. Run off-hours (no real users yet, or the early morning in Brazil).
+- All players come from one address, so the per-address limits of "Abuse limits" block any run bigger than 10 players. The three limits are pinned at 300, 20 and 10 in `.railway/railway.ts`. To raise them for the test window only, set the variables (this redeploys `api`; wait for the deployment to reach SUCCESS and for `x-ratelimit-limit` to show the new value):
+
+  ```sh
+  railway variable set RATE_LIMIT_MAX=100000 WS_UPGRADES_PER_MINUTE=5000 WS_MAX_CONNECTIONS_PER_IP=2000 --service api
+  ```
+
+  Restore them right after the last run with `railway config apply --yes`: it puts the pinned values back and redeploys `api`. Then check that the deployment is SUCCESS, that `/health/ready` answers 200, that any response carries `x-ratelimit-limit: 300`, and that `railway config plan --detailed-exit-code` exits 0 (it exits 2 while the raised values are in place). **Do not restore by deleting the variables: deleting does not redeploy, so the container keeps the raised limits.**
+
 - The run prints connected sockets, p50/p95/p99 and the error rate of the board reads, then deletes its players, Squads and Squad Records and prints the remaining counts, which must all be 0. It stops early when more than half of the board reads fail. On Ctrl+C or a failure it still cleans up; if the connection to Railway fails, rerun `railway-data.sh cleanup --tag <tag>` and `verify --tag <tag>` (`cleanup` and `verify` without a tag cover every run).
+- **The cleanup refuses to delete other people's data.** Before deleting, it counts the Memberships and Squad Record entries of players outside the run that hang from the run's Squads (a real player may have joined one). With any, it prints only the counts, deletes nothing and exits with code 3. Rerun with `railway-data.sh cleanup --tag <tag> --allow-foreign-members` only when losing those links is acceptable; the Squads are deleted with their host either way.
 - Every row carries the tag: the players' emails are `lt-<tag>-<n>@loadtest.squadzr.test`, their names `LT <tag> <n>` and the Squads are named `<tag>-<n>`. `audit_entries` is append-only and the run never writes to it; the Activity Sampler (not the test) adds its usual rows.
 - The Squads need a real Discord invite, because the API asks Discord before it accepts one: `--discord-invite` defaults to `https://discord.gg/discord-api`.
 - Memory and CPU come from the Railway metrics. A step's window can take a minute or two to appear; query it afterwards with `railway api 'query { metrics(environmentId: "<id>", serviceId: "<id>", startDate: "<ISO>", endDate: "<ISO>", measurements: [CPU_USAGE, MEMORY_USAGE_GB], sampleRateSeconds: 30) { measurement values { ts value } } }'`.

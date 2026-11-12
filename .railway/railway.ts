@@ -94,6 +94,11 @@ export default defineRailway(() => {
       // visitor's address comes from CF-Connecting-IP, adopted only on a request that carries the edge
       // secret (EDGE_AUTH_TOKEN); the proxy chain is the fallback.
       TRUST_PROXY_HOPS: '1',
+      // The per-address abuse limits (ADR 0006, point 6), pinned at their defaults so a temporary raise (the
+      // load test, docs/ops/catalog-import-railway.md "Capacity") is put back by `railway config apply`.
+      RATE_LIMIT_MAX: '300',
+      WS_UPGRADES_PER_MINUTE: '20',
+      WS_MAX_CONNECTIONS_PER_IP: '10',
       // The API has no public Railway domain: cloudflared reaches it on the private network at
       // `api.railway.internal:3000`, and Railway's private network can be IPv6-only. `::` listens on every IPv6
       // address and, dual-stack, on IPv4 too, so Railway's health check (IPv4) still gets through.

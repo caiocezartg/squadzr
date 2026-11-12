@@ -15,5 +15,7 @@ trap 'rm -f "$bundle"' EXIT
 
 bun build "$here/data.ts" --target bun --external pg --external zod --outfile "$bundle" > /dev/null
 
-remote='f=server/.load-test-data.js; trap "rm -f $f" EXIT; cat > $f && cd server && bun --no-env-file .load-test-data.js '"$*"
+# Each argument is shell-quoted for the remote shell, so a metacharacter in one is data, never a command.
+args="$(printf '%q ' "$@")"
+remote='f=server/.load-test-data.js; trap "rm -f $f" EXIT; cat > $f && cd server && bun --no-env-file .load-test-data.js '"$args"
 "$railway" ssh --service api -- "$remote" < "$bundle"

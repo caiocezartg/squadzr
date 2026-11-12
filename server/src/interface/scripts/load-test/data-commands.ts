@@ -1,5 +1,11 @@
 import { z } from 'zod'
-import { isClean, verifyCountsSchema, type Tag, type VerifyCounts } from './cleanup-plan'
+import {
+  FOREIGN_LINKS_EXIT_CODE,
+  isClean,
+  verifyCountsSchema,
+  type Tag,
+  type VerifyCounts,
+} from './cleanup-plan'
 
 const playersSchema = z.array(z.object({ id: z.string(), cookie: z.string().min(1) }))
 
@@ -47,6 +53,11 @@ export function parseVerify(stdout: string): { counts: VerifyCounts; auditEntrie
   }
 }
 
+/** A failed command is tried again, except one that stopped on purpose (links of people outside the run). */
+function shouldRetry(result: CommandResult): boolean {
+  return result.code !== 0 && result.code !== FOREIGN_LINKS_EXIT_CODE
+}
+
 /** The database side of a run: provisioning the players, deleting them and proving they are gone. */
 export class DataSide {
   constructor(
@@ -57,7 +68,7 @@ export class DataSide {
   /** Runs a data command, trying again when the connection to the service fails (ssh exits with 255). */
   private async run(subcommand: string): Promise<CommandResult> {
     let result = await runShell(`${this.command} ${subcommand}`)
-    for (let attempt = 1; attempt < ATTEMPTS && result.code !== 0; attempt += 1) {
+    for (let attempt = 1; attempt < ATTEMPTS && shouldRetry(result); attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
       result = await runShell(`${this.command} ${subcommand}`)
     }
@@ -72,6 +83,13 @@ export class DataSide {
 
   async cleanup(): Promise<void> {
     const result = await this.run(`cleanup --tag ${this.tag}`)
+    if (result.code === FOREIGN_LINKS_EXIT_CODE) {
+      const counts = markerPayload(result.stdout, 'LT_FOREIGN') ?? 'unknown'
+      throw new Error(
+        `cleanup stopped, nothing deleted: people outside the run are linked to its Squads (${counts}); ` +
+          `rerun "cleanup --tag ${this.tag} --allow-foreign-members" to delete anyway`
+      )
+    }
     if (result.code !== 0) throw new Error(`cleanup exited with code ${result.code}`)
   }
 
