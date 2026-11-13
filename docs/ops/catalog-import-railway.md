@@ -484,13 +484,13 @@ What it means:
 
 The numbers were measured on 2026-11-12 with a load script that is not in the tree: it lives only in git history, at commit `47997bad8774ff90a9478531b759c46fcc04a602`. Recover it with `git checkout 47997ba -- server/src/interface/scripts/load-test server/src/interface/scripts/load-test.ts`. Its usage, the off-hours warning (the test Squads are open on the real board) and the cleanup guard for other people's data are documented in that commit.
 
-A run from one address needs the per-address limits of "Abuse limits" raised, for the test window only. They are pinned at 300, 20 and 10 in `.railway/railway.ts`. Raise them by setting the variables (this redeploys `api`; wait for SUCCESS and for `x-ratelimit-limit` to show the new value):
+A run from one address needs the per-address limits of "Abuse limits" raised, for the test window only. They are pinned at 300, 20 and 10 in `.railway/railway.ts`. Raise them by setting the variables (this redeploys `api`; wait for SUCCESS and for `x-ratelimit-limit` to show the new value on any route except `/health*`):
 
 ```sh
 railway variable set RATE_LIMIT_MAX=100000 WS_UPGRADES_PER_MINUTE=5000 WS_MAX_CONNECTIONS_PER_IP=2000 --service api
 ```
 
-Restore them right after the last run with `railway config apply --yes`: it puts the pinned values back and redeploys `api`. Then check that the deployment is SUCCESS, that `/health/ready` answers 200, that any response carries `x-ratelimit-limit: 300`, and that `railway config plan --detailed-exit-code` exits 0 (it exits 2 while the raised values are in place). **Do not restore by deleting the variables: deleting does not redeploy, so the container keeps the raised limits.**
+Restore them right after the last run with `railway config apply --yes`: it puts the pinned values back and redeploys `api`. Then check that the deployment is SUCCESS, that `/health/ready` answers 200, that a response from any route except `/health*` carries `x-ratelimit-limit: 300`, and that `railway config plan --detailed-exit-code` exits 0 (it exits 2 while the raised values are in place). **Do not restore by deleting the variables: deleting does not redeploy, so the container keeps the raised limits.**
 
 ## Migrations
 
