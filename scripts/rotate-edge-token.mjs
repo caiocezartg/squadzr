@@ -41,6 +41,7 @@ const isWin = process.platform === 'win32'
 const command = (cmd, args) =>
   isWin ? [[cmd, ...args].join(' '), [], { shell: true }] : [cmd, args, {}]
 
+// Always redact the whole output first and cut after: a cut first could leave half a token in the log.
 const tail = (text, lines) => text.trim().split('\n').slice(-lines).join(' | ').slice(0, 200)
 
 /**
@@ -62,11 +63,11 @@ function runCommand(label, cmd, args, { input, token, silent = false } = {}) {
     )
     child.on('close', (code) => {
       if (code === 0) {
-        log(silent ? `${label}: ok` : `${label}: ok ${redact(tail(out + err, 3))}`)
+        log(silent ? `${label}: ok` : `${label}: ok ${tail(redact(out + err), 3)}`)
         return resolve(out)
       }
       reject(
-        new Error(`${label} failed (exit ${code}) ${redact(tail(silent ? err : out + err, 3))}`)
+        new Error(`${label} failed (exit ${code}) ${tail(redact(silent ? err : out + err), 3)}`)
       )
     })
     child.stdin.on('error', () => {}) // the command may exit before it reads its input
@@ -88,10 +89,9 @@ const ruleBody = (token) =>
     },
   })
 
-// `name` repeats the key, as in Cloudflare's documented SecretText object ({ name, text, type }).
 const secretsBody = (token) =>
   JSON.stringify({
-    EDGE_AUTH_TOKEN: { name: 'EDGE_AUTH_TOKEN', type: 'secret_text', text: token },
+    EDGE_AUTH_TOKEN: { type: 'secret_text', text: token },
   })
 
 /** The three Cloudflare writes. `dryRun` asks each command to validate and change nothing. */
