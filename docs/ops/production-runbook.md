@@ -177,10 +177,13 @@ Expect a few seconds of 403 between steps 1 and 2. The API accepts only one toke
 from the moment the new container serves until the three Cloudflare updates finish. Rotate when few
 people are online. The script was verified with `cf` 1.0.0-beta.31.
 
-If it fails after step 1, it prints `PRODUCTION INCONSISTENT` or says that Railway already holds the new
-token. Railway then has the new token and some of Cloudflare still has the old one. The site works
-until the next `api` deploy and then answers 403. Run `rotate` again (it makes a fresh token for all
-four places) or `revert`, now. A failed Cloudflare write is tried three times first.
+If it fails after step 1, Railway has the new token and some of Cloudflare still has the old one. If the
+new container never served (the script waits 9 minutes), the slow or stuck deploy can finish at any
+moment, and then every request answers 403. If a Cloudflare write failed (after three tries), it prints
+`PRODUCTION INCONSISTENT` and the requests are failing already. Either way, run `rotate` again (it makes
+a fresh token for all four places) or `revert`, right away. If a stuck deploy needed a redeploy, the
+script runs `railway redeploy --from-source`, which deploys the latest commit of the configured branch,
+which can be newer than what was running. Ctrl+C also leaves it in this state.
 
 `revert` removes the variable from Railway and redeploys `api`. That turns the lock **off**. Use it
 only in an emergency.

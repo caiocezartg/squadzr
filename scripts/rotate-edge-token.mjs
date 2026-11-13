@@ -14,7 +14,8 @@
 // The token is made in memory. It is never printed, logged, put on a command line or committed: it reaches
 // the commands only through 0600 files in a private temporary directory (deleted in `finally`) and stdin, and
 // everything a command prints is stripped of it before it is logged or thrown.
-// If `rotate` fails after Railway has the new token, it says PRODUCTION INCONSISTENT: run it again.
+// If `rotate` fails after Railway has the new token, it says so and tells you to run it again or revert: a failed
+// Cloudflare write prints PRODUCTION INCONSISTENT, a deploy that never serves prints its own message.
 // Expect a few seconds of 403 in `rotate`: the API accepts one token, so requests fail between the new container
 // serving and the three Cloudflare writes finishing. Dual-token support was left out on purpose.
 // Verified with cf 1.0.0-beta.31 and railway 5.71.0.
@@ -178,7 +179,6 @@ function startProbe() {
   }
 }
 
-/** Waits until a new API container serves: the uptime drops below the one seen before the variable changed. */
 /** True when the newest `api` deployment is still BUILDING (a stuck build, not a slow start). */
 async function newestDeployIsBuilding() {
   try {
@@ -192,6 +192,11 @@ async function newestDeployIsBuilding() {
   }
 }
 
+/**
+ * Waits until a new API container serves: the uptime drops below the one seen before the variable changed.
+ * `redeploy --from-source` deploys the latest commit of the configured branch, which can be newer than what
+ * is running.
+ */
 async function waitForNewContainer(before, startedAt, token) {
   let redeployed = false
   let nextCheck = startedAt + 4 * 60_000
@@ -283,8 +288,8 @@ async function switchTokens(before, probe, dir, token) {
     await waitForNewContainer(before, startedAt, token)
   } catch (error) {
     throw new Error(
-      `${error.message}. Railway already holds the NEW token and Cloudflare the OLD one. The site works until ` +
-        'the next `api` deploy, then every request fails with 403. Run rotate again or revert NOW.'
+      `${error.message}. Railway already holds the NEW token and Cloudflare the OLD one. The slow or stuck deploy ` +
+        'can finish at any moment, and then every request fails with 403. Run rotate or revert RIGHT NOW.'
     )
   }
   log('the new API container is serving')
@@ -306,6 +311,16 @@ if (!MODES.includes(mode)) {
 }
 
 const dir = mkdtempSync(join(tmpdir(), 'edge-token-'))
+// Ctrl+C skips `finally`: clean up here and say what state production may be in.
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => {
+    rmSync(dir, { recursive: true, force: true })
+    console.error(
+      'Interrupted. If rotate had started, production may be inconsistent: run rotate again or revert.'
+    )
+    process.exit(130)
+  })
+}
 try {
   // On Windows the commands run through a shell with only simple quoting: refuse paths it could misread.
   if (isWin && !/^[\w:\\/.-]+$/.test(dir))
