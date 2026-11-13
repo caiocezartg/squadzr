@@ -3,13 +3,15 @@
 The Catalog Import runs as the `games-import` cron service of the `squadzr` Railway project, in the
 `production` environment. One run a day brings the hosted Game Catalog in line with IGDB. The API
 runs next to it as the `api` service and owns the schema migrations (see "The `api` service").
+For what to do when something happens (deploy, rollback, secrets, attack, limits), start at
+[`production-runbook.md`](production-runbook.md).
 
 ## Project and services
 
 |                |                                                                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Project        | `squadzr`                                                                                                                                |
-| Environment    | `production` (the only one; it was called `staging` until #133)                                                                          |
+| Environment    | `production` (the only one)                                                                                                              |
 | Database       | `postgres`, PostgreSQL 16 (`ghcr.io/railwayapp-templates/postgres-ssl:16`), volume `postgres-data` mounted at `/var/lib/postgresql/data` |
 | API service    | `api`, deployed from `caiocezartg/squadzr` branch `main`, at `https://api.squadzr.app` through the tunnel (no Railway domain)            |
 | Tunnel service | `cloudflared`, the official image pinned to an exact version, 2 replicas (see "The tunnel")                                              |
@@ -492,18 +494,20 @@ Restore them right after the last run with `railway config apply --yes`: it puts
 
 ## Migrations
 
-The pre-deploy command applies the checked-in migrations with the runtime entry point
-(`server/src/interface/scripts/migrate.ts`, no `drizzle-kit`) before the import container starts. It
-runs against the same `DATABASE_URL` and is safe to run repeatedly.
+The `api` service owns the schema. Its pre-deploy command applies the checked-in migrations with the
+runtime entry point (`server/src/interface/scripts/migrate.ts`, no `drizzle-kit`) before the new API
+container starts. It reads `DATABASE_URL`, runs all pending migrations in one transaction and is safe to
+run repeatedly. If it fails, the deployment stops and the previous one keeps serving (see
+[`production-runbook.md`](production-runbook.md), "A failed migration").
 
 After a deploy whose migration touches Game Search, such as `0007` (issue #100), run the import with
 `railway cron run` or wait for the day's run. The migration backfills `search_text` with
 `[:alnum:]`, which does not cover multibyte letters under the `C` locale, so games with Cyrillic or
 CJK names stay unsearchable until the import rewrites their rows with `normalizeSearchText`.
 
-The `api` service's pre-deploy command runs them, and `games-import` has none: exactly one service owns
-schema changes. The cron therefore runs against whatever schema the last API deploy left, so a code
-change that needs a new column deploys the API first.
+`games-import` has no pre-deploy command: exactly one service owns schema changes. The cron therefore
+runs against whatever schema the last API deploy left, so a code change that needs a new column deploys
+the API first.
 
 ## Make the first admin
 

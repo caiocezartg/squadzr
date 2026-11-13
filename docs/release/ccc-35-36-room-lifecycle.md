@@ -16,8 +16,8 @@ readiness, the two expiration clocks, and `room_ready` retry).
 The migration and the removal of `status` are never published on their own:
 
 - **Freeze:** do not open or merge the `development` → `main` promotion pull request until both
-  CCC-35 and CCC-36 are merged into `development`. `main` is the only branch Vercel deploys to
-  Production (see [`docs/ci/quality-gates.md`](../ci/quality-gates.md)), so the freeze is enforced
+  CCC-35 and CCC-36 are merged into `development`. `main` is the only branch production deploys
+  from (see [`docs/ci/quality-gates.md`](../ci/quality-gates.md)), so the freeze is enforced
   by simply not promoting.
 - The coordinated pull request(s) into `development` merge in dependency order: CCC-35 first, then
   CCC-36 rebased on it.
