@@ -39,6 +39,22 @@ railway link --project squadzr --environment production
 
 If CI fails, nothing deploys. More: [`docs/ci/quality-gates.md`](../ci/quality-gates.md).
 
+## The site or API is down and nothing was deployed
+
+Check in this order and stop at the first thing that is wrong:
+
+1. Open `https://api.squadzr.app/health`. It skips the edge lock, so it answers 200 whenever the API is up.
+2. If it does not answer, check `cloudflared`: `railway logs --service cloudflared --lines 50` and the
+   tunnel status calls in [`catalog-import-railway.md`, "The tunnel"](catalog-import-railway.md#the-tunnel)
+   (the code block under "Health and checks"). A healthy tunnel has 2 clients and 8 connections.
+3. Run `railway status` and look at `api` and `postgres`. If one crashed, `railway restart --service <name>`,
+   or `railway redeploy --service <name>` if the restart does not bring it back.
+4. Run `railway usage`. At the hard limit Railway has taken everything offline: see
+   [Railway hard limit](#railway-hard-limit).
+5. Last resort, if the tunnel itself cannot be fixed: serve `api.squadzr.app` from a public Railway domain
+   again ([`catalog-import-railway.md`, "The tunnel"](catalog-import-railway.md#the-tunnel), the paragraphs
+   "Roll back to a public Railway domain" and "Re-add the public domain").
+
 ## Roll back
 
 Roll back first, find the cause after. After any rollback, open `https://squadzr.app`, sign in, and
