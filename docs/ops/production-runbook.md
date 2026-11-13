@@ -160,17 +160,23 @@ generate one by hand. Rotate it with `scripts/rotate-edge-token.mjs`. It needs t
 them):
 
 ```sh
-bun scripts/rotate-edge-token.mjs rotate-dry   # validates the Transform Rule only, changes nothing
+bun scripts/rotate-edge-token.mjs rotate-dry   # dry-runs the rule and both Worker secrets, changes nothing
 bun scripts/rotate-edge-token.mjs rotate       # the real rotation
 ```
 
-`rotate` makes the token in memory and never prints it. Then, in this order:
+`rotate` makes the token in memory and never prints it. It stops at once, changing nothing, if
+`/health/ready` does not answer. Then, in this order:
 
 1. Sets `EDGE_AUTH_TOKEN` on Railway `api`. The old container keeps the old token until the new one
    is healthy.
 2. When the new container serves, sets the secret on `squadzr-web` and `squadzr-og` and updates the
    Transform Rule, all at once.
 3. Watches the site for 20 seconds and prints how many samples failed.
+
+If it fails after step 1, it prints `PRODUCTION INCONSISTENT` or says that Railway already holds the new
+token. Railway then has the new token and some of Cloudflare still has the old one. The site works
+until the next `api` deploy and then answers 403. Run `rotate` again (it makes a fresh token for all
+four places) or `revert`, now. A failed Cloudflare write is tried three times first.
 
 `revert` removes the variable from Railway and redeploys `api`. That turns the lock **off**. Use it
 only in an emergency.

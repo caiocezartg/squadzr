@@ -6,15 +6,17 @@
 // `railway link --project squadzr --environment production`) and the `cf` CLI (logged in, with access to the
 // squadzr.app zone and both Workers). Nothing else is read from the machine.
 //
-//   bun scripts/rotate-edge-token.mjs rotate-dry   check the rule with --validate-only; changes nothing
+//   bun scripts/rotate-edge-token.mjs rotate-dry   dry-runs the rule and both Worker secrets; changes nothing
 //   bun scripts/rotate-edge-token.mjs rotate       new token everywhere, then watch the site for a short while
 //   bun scripts/rotate-edge-token.mjs revert       WARNING: removes EDGE_AUTH_TOKEN from Railway and redeploys
 //                                                  `api`. That turns the origin lock OFF. Emergency use only.
 //
 // The token is made in memory. It is never printed, logged, put on a command line or committed: it reaches
-// the commands only through 0600 files in a private temporary directory (deleted in `finally`) and stdin.
+// the commands only through 0600 files in a private temporary directory (deleted in `finally`) and stdin, and
+// everything a command prints is stripped of it before it is logged or thrown.
+// If `rotate` fails after Railway has the new token, it says PRODUCTION INCONSISTENT: run it again.
 // Runs with `node` too (`node scripts/rotate-edge-token.mjs <mode>`).
-import { spawn, spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -26,6 +28,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const ZONE = '29d1bd618531a78681bf8e103f124b8a'
 const RULESET = '9c6ffb169b624ebfa518cfd8a1170543'
 const RULE = '3331b8035a214ec5a5dc06b37de66e54'
+const CF_ATTEMPTS = 3
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const log = (...args) => console.log(new Date().toISOString(), ...args)
 
@@ -33,31 +36,39 @@ const log = (...args) => console.log(new Date().toISOString(), ...args)
 // and temporary paths, never the token, so joining them into one command line is safe.
 const isWin = process.platform === 'win32'
 const quote = (arg) => (/\s/.test(arg) ? JSON.stringify(arg) : arg)
-const command = (cmd, args, extra) =>
-  isWin ? [[cmd, ...args].map(quote).join(' '), [], { ...extra, shell: true }] : [cmd, args, extra]
+const command = (cmd, args) =>
+  isWin ? [[cmd, ...args].map(quote).join(' '), [], { shell: true }] : [cmd, args, {}]
 
 const tail = (text, lines) => text.trim().split('\n').slice(-lines).join(' | ').slice(0, 200)
 
-/** Runs a command and throws unless it exits 0. Logs only the exit code and a short tail of its output. */
-function run(label, cmd, args, { input, cwd = ROOT } = {}) {
-  const [file, fileArgs, opts] = command(cmd, args, { input, cwd, encoding: 'utf8' })
-  const res = spawnSync(file, fileArgs, opts)
-  log(`${label}: exit=${res.status} ${tail(`${res.stdout ?? ''}${res.stderr ?? ''}`, 3)}`)
-  if (res.status !== 0) throw new Error(`${label} failed`)
-}
-
-/** The same without blocking the event loop, so the site probes keep sampling while the command runs. */
-function runAsync(label, cmd, args) {
+/**
+ * Runs a command and rejects unless it exits 0. Whatever it prints is stripped of the token before it is logged
+ * or put in an error. A `silent` command (the Cloudflare writes, whose output echoes the rule or the secrets)
+ * logs nothing on success, and on failure only a tail of its stderr.
+ */
+function runCommand(label, cmd, args, { input, token, silent = false } = {}) {
+  const redact = (text) => (token ? text.split(token).join('[redacted]') : text)
   return new Promise((resolve, reject) => {
-    const [file, fileArgs, opts] = command(cmd, args, { cwd: ROOT })
-    const child = spawn(file, fileArgs, opts)
+    const [file, fileArgs, opts] = command(cmd, args)
+    const child = spawn(file, fileArgs, { ...opts, cwd: ROOT })
     let out = ''
+    let err = ''
     child.stdout.on('data', (chunk) => (out += chunk))
-    child.stderr.on('data', (chunk) => (out += chunk))
+    child.stderr.on('data', (chunk) => (err += chunk))
+    child.on('error', (error) =>
+      reject(new Error(redact(`${label} could not start: ${error.message}`)))
+    )
     child.on('close', (code) => {
-      log(`${label}: exit=${code} ${tail(out, 2)}`)
-      code === 0 ? resolve() : reject(new Error(`${label} failed`))
+      if (code === 0) {
+        log(silent ? `${label}: ok` : `${label}: ok ${redact(tail(out + err, 3))}`)
+        return resolve()
+      }
+      reject(
+        new Error(`${label} failed (exit ${code}) ${redact(tail(silent ? err : out + err, 3))}`)
+      )
     })
+    child.stdin.on('error', () => {}) // the command may exit before it reads its input
+    child.stdin.end(input)
   })
 }
 
@@ -75,19 +86,55 @@ const ruleBody = (token) =>
     },
   })
 
-const ruleArgs = (file, validateOnly) => [
-  'rulesets',
-  'rules',
-  'update',
-  RULE,
-  '--zone',
-  ZONE,
-  '--ruleset-id',
-  RULESET,
-  '--body',
-  `@${file}`,
-  ...(validateOnly ? ['--validate-only'] : []),
-]
+// `name` repeats the key, as in Cloudflare's documented SecretText object ({ name, text, type }).
+const secretsBody = (token) =>
+  JSON.stringify({
+    EDGE_AUTH_TOKEN: { name: 'EDGE_AUTH_TOKEN', type: 'secret_text', text: token },
+  })
+
+/** The three Cloudflare writes. `dryRun` asks each command to validate and change nothing. */
+function cloudflareWrites(token, files, dryRun) {
+  const secret = (worker) => [
+    'workers',
+    'secrets',
+    'bulk',
+    '--worker',
+    worker,
+    '--secrets',
+    `@${files.secrets}`,
+    ...(dryRun ? ['--dry-run'] : []),
+  ]
+  return {
+    'squadzr-web secret': secret('squadzr-web'),
+    'squadzr-og secret': secret('squadzr-og'),
+    'Transform Rule': [
+      'rulesets',
+      'rules',
+      'update',
+      RULE,
+      '--zone',
+      ZONE,
+      '--ruleset-id',
+      RULESET,
+      '--body',
+      `@${files.rule}`,
+      ...(dryRun ? ['--validate-only'] : []),
+    ],
+  }
+}
+
+/** Runs one Cloudflare write, trying again while the temporary files still exist. */
+async function writeWithRetry(label, args, token) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await runCommand(label, 'cf', args, { token, silent: true })
+    } catch (error) {
+      if (attempt === CF_ATTEMPTS) throw error
+      log(`${error.message}; trying again`)
+      await sleep(2000)
+    }
+  }
+}
 
 /** The API's uptime in seconds, or null while it does not answer 200. A new container restarts the count. */
 async function uptime() {
@@ -118,6 +165,7 @@ function startProbe() {
     }
   })()
   return {
+    halt: () => void (running = false),
     async stop() {
       running = false
       await loop
@@ -129,25 +177,24 @@ function startProbe() {
 }
 
 /** Waits until a new API container serves: the uptime drops below the one seen before the variable changed. */
-async function waitForNewContainer(before, startedAt) {
+async function waitForNewContainer(before, startedAt, token) {
   let redeployed = false
   while (Date.now() - startedAt < 9 * 60_000) {
     const up = await uptime()
-    if (up !== null && before !== null && up < before - 5 && up < 120) return
+    if (up !== null && up < before - 5 && up < 120) return
     if (!redeployed && Date.now() - startedAt > 4 * 60_000) {
       redeployed = true
       log('deploy looks stuck: redeploying from source')
-      run('railway: redeploy', 'railway', [
-        'redeploy',
-        '--service',
-        'api',
-        '--from-source',
-        '--yes',
-      ])
+      await runCommand(
+        'railway: redeploy',
+        'railway',
+        ['redeploy', '--service', 'api', '--from-source', '--yes'],
+        { token }
+      )
     }
     await sleep(250)
   }
-  throw new Error('the API never switched to the new container')
+  throw new Error('no new API container served within 9 minutes')
 }
 
 const privateFile = (dir, name, content) => {
@@ -156,52 +203,81 @@ const privateFile = (dir, name, content) => {
   return file
 }
 
-async function rotate(dir, token) {
-  const secretsFile = privateFile(
-    dir,
-    'secrets.json',
-    JSON.stringify({ EDGE_AUTH_TOKEN: { type: 'secret_text', text: token } })
-  )
-  const ruleFile = privateFile(dir, 'rule.json', ruleBody(token))
+const makeFiles = (dir, token) => ({
+  secrets: privateFile(dir, 'secrets.json', secretsBody(token)),
+  rule: privateFile(dir, 'rule.json', ruleBody(token)),
+})
 
+async function rehearse(dir) {
+  const token = randomBytes(36).toString('base64url')
+  const writes = cloudflareWrites(token, makeFiles(dir, token), true)
+  for (const [label, args] of Object.entries(writes)) {
+    await runCommand(`${label} (dry run)`, 'cf', args, { token, silent: true })
+  }
+}
+
+/** Switches the three Cloudflare places together. Every attempt ends before the temporary files go. */
+async function switchCloudflare(dir, token) {
+  const writes = Object.entries(cloudflareWrites(token, makeFiles(dir, token), false))
+  const results = await Promise.allSettled(
+    writes.map(([label, args]) => writeWithRetry(label, args, token))
+  )
+  const done = writes.filter((_, i) => results[i].status === 'fulfilled').map(([label]) => label)
+  const missing = writes.filter((_, i) => results[i].status === 'rejected').map(([label]) => label)
+  if (missing.length) {
+    throw new Error(
+      `PRODUCTION INCONSISTENT: Railway has the new token, Cloudflare (${missing.join(', ')}) does not. ` +
+        `New token in: Railway${done.map((label) => `, ${label}`).join('')}. ` +
+        'Run rotate again (it makes a fresh token for all 4 places) or revert.'
+    )
+  }
+}
+
+async function rotate(dir) {
+  const token = randomBytes(36).toString('base64url') // 48 visible ASCII characters
+  // Nothing has changed yet, so stop here if the API is not healthy: a new deploy could not be told apart.
+  const before = await uptime()
+  if (before === null)
+    throw new Error('/health/ready does not answer 200. Nothing was changed; try again later.')
+
+  const probe = startProbe()
+  try {
+    await switchTokens(before, probe, dir, token)
+  } finally {
+    probe.halt() // a failure must not leave the sampling loop keeping the process alive
+  }
+}
+
+async function switchTokens(before, probe, dir, token) {
+  const startedAt = Date.now()
   // 1. Railway first: the variable starts a deploy, and the old container keeps enforcing the old token until
   //    the new one is healthy, so visitors notice nothing yet.
-  const before = await uptime()
-  const probe = startProbe()
-  const startedAt = Date.now()
-  run(
+  await runCommand(
     'railway: set EDGE_AUTH_TOKEN (starts the deploy)',
     'railway',
     ['variable', 'set', 'EDGE_AUTH_TOKEN', '--stdin', '--service', 'api'],
-    { input: token }
-  )
+    { input: token, token }
+  ).catch((error) => {
+    throw new Error(
+      `${error.message}. Cloudflare was not touched. Check the Railway variable, then run rotate again.`
+    )
+  })
 
-  // 2. When the new container serves, switch both Worker secrets and the Transform Rule together.
-  await waitForNewContainer(before, startedAt)
+  // 2. From here Railway holds the new token: any failure must say so.
+  try {
+    await waitForNewContainer(before, startedAt, token)
+  } catch (error) {
+    throw new Error(
+      `${error.message}. Railway already holds the NEW token and Cloudflare the OLD one. The site works until ` +
+        'the next `api` deploy, then every request fails with 403. Run rotate again or revert NOW.'
+    )
+  }
   log('the new API container is serving')
-  await Promise.all([
-    runAsync('squadzr-web: secret', 'cf', [
-      'workers',
-      'secrets',
-      'bulk',
-      '--worker',
-      'squadzr-web',
-      '--secrets',
-      `@${secretsFile}`,
-    ]),
-    runAsync('squadzr-og: secret', 'cf', [
-      'workers',
-      'secrets',
-      'bulk',
-      '--worker',
-      'squadzr-og',
-      '--secrets',
-      `@${secretsFile}`,
-    ]),
-    runAsync('transform rule', 'cf', ruleArgs(ruleFile, false)),
-  ])
 
-  // 3. Watch the site for a short while.
+  // 3. Switch both Worker secrets and the Transform Rule together.
+  await switchCloudflare(dir, token)
+
+  // 4. Watch the site for a short while.
   await sleep(20_000)
   log(`site probe: ${await probe.stop()}`)
 }
@@ -218,21 +294,23 @@ const dir = mkdtempSync(join(tmpdir(), 'edge-token-'))
 try {
   if (mode === 'revert') {
     // Deleting a variable does not redeploy, so redeploy `api` to make the lock go off.
-    run('railway: remove EDGE_AUTH_TOKEN', 'railway', [
+    await runCommand('railway: remove EDGE_AUTH_TOKEN', 'railway', [
       'variable',
       'delete',
       'EDGE_AUTH_TOKEN',
       '--service',
       'api',
     ])
-    run('railway: redeploy api', 'railway', ['redeploy', '--service', 'api', '--yes'])
+    await runCommand('railway: redeploy api', 'railway', ['redeploy', '--service', 'api', '--yes'])
   } else if (mode === 'rotate-dry') {
-    const ruleFile = privateFile(dir, 'rule.json', ruleBody(randomBytes(36).toString('base64url')))
-    run('transform rule (validate-only)', 'cf', ruleArgs(ruleFile, true))
+    await rehearse(dir)
   } else {
-    await rotate(dir, randomBytes(36).toString('base64url')) // 48 visible ASCII characters
+    await rotate(dir)
   }
   log(`done (${mode})`)
+} catch (error) {
+  console.error(new Date().toISOString(), error.message)
+  process.exitCode = 1
 } finally {
   rmSync(dir, { recursive: true, force: true })
 }
