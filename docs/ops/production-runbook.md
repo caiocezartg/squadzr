@@ -84,7 +84,7 @@ Rollback makes a new deployment of the old version at once. Cloudflare keeps the
 Source: [Cloudflare, Rollbacks](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/).
 
 **If `EDGE_AUTH_TOKEN` was rotated since the version you go back to,** check the site right after.
-It is not confirmed whether a Workers rollback restores the old secret values. If the API answers 403
+Assume a Workers rollback restores the old secret values. If the API answers 403
 `EDGE_AUTH_REQUIRED`, rotate the token again (see "The edge token").
 
 If only the invite images are wrong, do the same for `squadzr-og`.
@@ -173,6 +173,10 @@ bun scripts/rotate-edge-token.mjs rotate       # the real rotation
    Transform Rule, all at once.
 3. Watches the site for 20 seconds and prints how many samples failed.
 
+Expect a few seconds of 403 between steps 1 and 2. The API accepts only one token, so requests fail
+from the moment the new container serves until the three Cloudflare updates finish. Rotate when few
+people are online. The script was verified with `cf` 1.0.0-beta.31.
+
 If it fails after step 1, it prints `PRODUCTION INCONSISTENT` or says that Railway already holds the new
 token. Railway then has the new token and some of Cloudflare still has the old one. The site works
 until the next `api` deploy and then answers 403. Run `rotate` again (it makes a fresh token for all
@@ -243,10 +247,11 @@ limit, and again at 100% when it has stopped the workloads
 ([Railway, Cost Control](https://docs.railway.com/pricing/cost-control#hard-limit)).
 
 To bring it back, raise the limit on the Workspace Usage page or with
-`railway usage limit update --hard <dollars>`. Railway redeploys the stopped services by itself once
-the limit is raised. The minimum is US$ 10 (whole dollars). Then check that every service is running.
-Look at the current usage any time with `railway usage`. Source:
-[Railway, `railway usage`](https://docs.railway.com/cli/usage#set-workspace-compute-limits).
+`railway usage limit update --hard <dollars>` (the minimum is US$ 10, whole dollars). Railway
+redeploys the stopped services by itself once the limit is raised or removed. If that fails for a
+service, redeploy it by hand from the deployment's 3-dot menu
+([Railway, Cost Control, FAQ](https://docs.railway.com/pricing/cost-control#usage-limits-faq)). Then
+check that every service is running. Look at the current usage any time with `railway usage`.
 
 The idle cost of this setup is about US$ 3 a month. The real number after a week of use goes into
 "Actual Railway usage" below.

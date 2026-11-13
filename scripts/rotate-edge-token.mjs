@@ -15,6 +15,9 @@
 // the commands only through 0600 files in a private temporary directory (deleted in `finally`) and stdin, and
 // everything a command prints is stripped of it before it is logged or thrown.
 // If `rotate` fails after Railway has the new token, it says PRODUCTION INCONSISTENT: run it again.
+// Expect a few seconds of 403 in `rotate`: the API accepts one token, so requests fail between the new container
+// serving and the three Cloudflare writes finishing. Dual-token support was left out on purpose.
+// Verified with cf 1.0.0-beta.31 and railway 5.71.0.
 // Runs with `node` too (`node scripts/rotate-edge-token.mjs <mode>`).
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -33,11 +36,10 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const log = (...args) => console.log(new Date().toISOString(), ...args)
 
 // `railway` and `cf` are .cmd shims on Windows, which only a shell can start. The arguments are fixed words
-// and temporary paths, never the token, so joining them into one command line is safe.
+// and temporary paths (checked below), never the token, so joining them into one command line is safe.
 const isWin = process.platform === 'win32'
-const quote = (arg) => (/\s/.test(arg) ? JSON.stringify(arg) : arg)
 const command = (cmd, args) =>
-  isWin ? [[cmd, ...args].map(quote).join(' '), [], { shell: true }] : [cmd, args, {}]
+  isWin ? [[cmd, ...args].join(' '), [], { shell: true }] : [cmd, args, {}]
 
 const tail = (text, lines) => text.trim().split('\n').slice(-lines).join(' | ').slice(0, 200)
 
@@ -61,7 +63,7 @@ function runCommand(label, cmd, args, { input, token, silent = false } = {}) {
     child.on('close', (code) => {
       if (code === 0) {
         log(silent ? `${label}: ok` : `${label}: ok ${redact(tail(out + err, 3))}`)
-        return resolve()
+        return resolve(out)
       }
       reject(
         new Error(`${label} failed (exit ${code}) ${redact(tail(silent ? err : out + err, 3))}`)
@@ -177,20 +179,33 @@ function startProbe() {
 }
 
 /** Waits until a new API container serves: the uptime drops below the one seen before the variable changed. */
+/** True when the newest `api` deployment is still BUILDING (a stuck build, not a slow start). */
+async function newestDeployIsBuilding() {
+  try {
+    const args = ['deployment', 'list', '--service', 'api', '--limit', '1', '--json']
+    const list = JSON.parse(
+      await runCommand('railway: deployment status', 'railway', args, { silent: true })
+    )
+    return list[0]?.status === 'BUILDING'
+  } catch {
+    return false
+  }
+}
+
 async function waitForNewContainer(before, startedAt, token) {
   let redeployed = false
+  let nextCheck = startedAt + 4 * 60_000
   while (Date.now() - startedAt < 9 * 60_000) {
     const up = await uptime()
     if (up !== null && up < before - 5 && up < 120) return
-    if (!redeployed && Date.now() - startedAt > 4 * 60_000) {
-      redeployed = true
-      log('deploy looks stuck: redeploying from source')
-      await runCommand(
-        'railway: redeploy',
-        'railway',
-        ['redeploy', '--service', 'api', '--from-source', '--yes'],
-        { token }
-      )
+    if (!redeployed && Date.now() >= nextCheck) {
+      nextCheck = Date.now() + 60_000
+      if (await newestDeployIsBuilding()) {
+        redeployed = true
+        log('the deploy is stuck in BUILDING: redeploying from source')
+        const args = ['redeploy', '--service', 'api', '--from-source', '--yes']
+        await runCommand('railway: redeploy', 'railway', args, { token })
+      }
     }
     await sleep(250)
   }
@@ -251,7 +266,7 @@ async function rotate(dir) {
 async function switchTokens(before, probe, dir, token) {
   const startedAt = Date.now()
   // 1. Railway first: the variable starts a deploy, and the old container keeps enforcing the old token until
-  //    the new one is healthy, so visitors notice nothing yet.
+  //    the new one is healthy, and the Workers and the rule still send that old token, so nothing fails yet.
   await runCommand(
     'railway: set EDGE_AUTH_TOKEN (starts the deploy)',
     'railway',
@@ -292,6 +307,9 @@ if (!MODES.includes(mode)) {
 
 const dir = mkdtempSync(join(tmpdir(), 'edge-token-'))
 try {
+  // On Windows the commands run through a shell with only simple quoting: refuse paths it could misread.
+  if (isWin && !/^[\w:\\/.-]+$/.test(dir))
+    throw new Error(`the temporary directory path has unsupported characters: ${dir}`)
   if (mode === 'revert') {
     // Deleting a variable does not redeploy, so redeploy `api` to make the lock go off.
     await runCommand('railway: remove EDGE_AUTH_TOKEN', 'railway', [
