@@ -219,14 +219,6 @@ describe('shell account', () => {
     ).toBeInTheDocument()
     expect(within(sidebar()).queryByRole('button', { name: 'Caio' })).not.toBeInTheDocument()
   })
-
-  it('tells a visitor beside the sign-in button that they sign in on discord.com', () => {
-    renderShell('/squads', null)
-
-    expect(
-      within(sidebar()).getByText('You sign in on discord.com. Squadzr never sees your password.')
-    ).toBeInTheDocument()
-  })
 })
 
 describe('shell legal links', () => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { DiscordNotAffiliated } from '@/components/legal/discord-notices'
+import { DiscordNotAffiliated } from '@/components/legal/discord-not-affiliated'
 import { LegalLinks } from '@/components/legal/legal-links'
 
 const LINK_CLASSES =

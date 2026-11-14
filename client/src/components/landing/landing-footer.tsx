@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
-import { DiscordNotAffiliated } from '@/components/legal/discord-notices'
+import { DiscordNotAffiliated } from '@/components/legal/discord-not-affiliated'
 import { LegalLinks } from '@/components/legal/legal-links'
 import { AppLink } from '@/components/layout/app-link'
 import { useClock } from '@/hooks/use-clock'

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { useTranslations } from 'next-intl'
 import type { SessionDto } from '@squadzr/schemas'
 import { Button } from '@/components/ds/button'
-import { DiscordSignInNote } from '@/components/legal/discord-notices'
 import { DiscordIcon } from '@/components/ui/icons'
 import { useSession } from '@/hooks/use-session'
 import { signInWithDiscord } from '@/lib/auth-client'
@@ -18,7 +17,7 @@ const loadAccountPopover = () => import('./account-popover').then((m) => m.Accou
 
 /**
  * The viewer's place at the foot of the sidebar: the account button with its menu, or "Sign in with
- * Discord" for a visitor, with the note that the password is typed on discord.com.
+ * Discord" for a visitor.
  */
 export function UserMenu() {
   const session = useSession()
@@ -30,17 +29,14 @@ function SignInButton() {
   const t = useTranslations('ds.shell')
 
   return (
-    <div className="flex flex-col gap-2">
-      <Button
-        variant="discord"
-        full
-        icon={<DiscordIcon className="size-4" />}
-        onClick={() => void signInWithDiscord('/squads')}
-      >
-        {t('signIn')}
-      </Button>
-      <DiscordSignInNote className="px-1" />
-    </div>
+    <Button
+      variant="discord"
+      full
+      icon={<DiscordIcon className="size-4" />}
+      onClick={() => void signInWithDiscord('/squads')}
+    >
+      {t('signIn')}
+    </Button>
   )
 }
 

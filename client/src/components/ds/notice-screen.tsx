@@ -21,8 +21,6 @@ interface NoticeScreenProps {
   description: string
   /** The actions under the copy. */
   children?: ReactNode
-  /** A short line under the actions. */
-  footnote?: ReactNode
   /** The screen's height, which the content centres in; it depends on what sits around the screen. */
   className?: string
 }
@@ -32,14 +30,7 @@ interface NoticeScreenProps {
  * the board's language: a display mark, the panel title, and an empty squad (vacant
  * seats, an unlit meter, `00/05`) that says nobody is here.
  */
-export function NoticeScreen({
-  mark,
-  title,
-  description,
-  children,
-  footnote,
-  className,
-}: NoticeScreenProps) {
+export function NoticeScreen({ mark, title, description, children, className }: NoticeScreenProps) {
   return (
     <div
       className={cn(
@@ -61,7 +52,6 @@ export function NoticeScreen({
         {children && (
           <div className="mt-8 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">{children}</div>
         )}
-        {footnote && <div className="mt-4">{footnote}</div>}
       </div>
     </div>
   )
