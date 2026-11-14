@@ -218,13 +218,13 @@ describe('landing server HTML', () => {
     )
     expect(links.getByRole('link', { name: 'How it works' })).toHaveAttribute(
       'href',
-      '#como-funciona'
+      '/#como-funciona'
     )
     expect(links.getByRole('link', { name: 'Frequently asked questions' })).toHaveAttribute(
       'href',
-      '#faq'
+      '/#faq'
     )
-    expect(links.getByRole('link', { name: 'Available games' })).toHaveAttribute('href', '#jogos')
+    expect(links.getByRole('link', { name: 'Available games' })).toHaveAttribute('href', '/#jogos')
     expect(within(footer).getByText(/^© \d{4} Squadzr/)).toBeInTheDocument()
   })
 })
