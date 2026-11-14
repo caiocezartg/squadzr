@@ -117,3 +117,9 @@ Consequences:
   after the merge.
 - It needs two repository secrets, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
   (`docs/ops/client-on-cloudflare-workers.md`).
+- There is one hosted environment, `production`.
+- The `api` service owns the database migrations. Its pre-deploy command runs them before the new
+  container starts, a failed migration stops that deploy, and `games-import` has no pre-deploy command
+  (`docs/ops/catalog-import-railway.md`, "Migrations").
+
+How to roll back a deploy and what to do when one fails: `docs/ops/production-runbook.md`.
