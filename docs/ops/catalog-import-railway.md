@@ -65,8 +65,9 @@ override (that stays the cron's alone).
 
 The API needs the IGDB credentials for this. They are optional: without `IGDB_CLIENT_ID` and
 `IGDB_CLIENT_SECRET` the API boots normally and the request answers 503 `CATALOG_IMPORT_UNAVAILABLE`.
-Set the same two variables (and, if you changed them for the cron, `IGDB_POPULARITY_THRESHOLD` and
-`IGDB_HYPE_THRESHOLD`) on the API service to turn it on; the cron service keeps its own copy.
+`games-import` holds the two credentials, and `api` reads them by reference (`.railway/railway.ts`), so there
+is nothing to set on the API: set or rotate them on `games-import` only ("Variables" below), and the API
+follows. The thresholds are not wired to `api`, so a manual run always uses their defaults.
 
 ## Apply a config change
 
@@ -299,8 +300,9 @@ The API reads the secret from the optional `EDGE_AUTH_TOKEN` variable, a `preser
 authoring file. Set, a request without the matching `x-squadzr-edge-auth` header gets 403
 (`EDGE_AUTH_REQUIRED`), CORS preflights and WebSocket handshakes included; exactly `/health` and
 `/health/ready` are exempt, because Railway probes them directly. Unset, the API behaves as if the lock did
-not exist. Production sets it. The Transform Rule's value, the client Worker's secret and `EDGE_AUTH_TOKEN`
-are one value and change together (`docs/ops/client-on-cloudflare-workers.md`, "The edge secret").
+not exist. Production sets it. The Transform Rule's value, the secrets of the `squadzr-web` and `squadzr-og`
+Workers and `EDGE_AUTH_TOKEN` are one value in four places and change together
+(`docs/ops/client-on-cloudflare-workers.md`, "The edge secret").
 
 At `LOG_LEVEL=debug` each request logs `Edge request headers` with `edgeAuthHeader` (`present` or `absent`,
 never the value) and `cfConnectingIp`.

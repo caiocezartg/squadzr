@@ -39,10 +39,38 @@ railway link --project squadzr --environment production
 
 If CI fails, nothing deploys. More: [`docs/ci/quality-gates.md`](../ci/quality-gates.md).
 
+## The site or API is down and nothing was deployed
+
+Check in this order and stop at the first thing that is wrong:
+
+1. Open `https://api.squadzr.app/health`. It skips the edge lock, so it answers 200 whenever the API is up.
+2. If it does not answer, check `cloudflared`: `railway logs --service cloudflared --lines 50` and the
+   tunnel status calls in [`catalog-import-railway.md`, "The tunnel"](catalog-import-railway.md#the-tunnel)
+   (the code block under "Health and checks"). A healthy tunnel has 2 clients and 8 connections.
+3. Run `railway status` and look at `api` and `postgres`. If one crashed, `railway restart --service <name>`,
+   or `railway redeploy --service <name>` if the restart does not bring it back.
+4. Run `railway usage`. At the hard limit Railway has taken everything offline: see
+   [Railway hard limit](#railway-hard-limit).
+5. Last resort, if the tunnel itself cannot be fixed: serve `api.squadzr.app` from a public Railway domain
+   again ([`catalog-import-railway.md`, "The tunnel"](catalog-import-railway.md#the-tunnel), the paragraphs
+   "Roll back to a public Railway domain" and "Re-add the public domain").
+
 ## Roll back
 
 Roll back first, find the cause after. After any rollback, open `https://squadzr.app`, sign in, and
 check that `https://api.squadzr.app/health/ready` answers 200.
+
+Drill done 2026-11-13: both rollbacks were run in production and rolled forward again, one at a time
+(API with the command line below, client with `cf`). No request failed. The dashboard clicks were not
+used.
+
+Check the result of every rollback with these three, not only `/health/ready`:
+
+- `https://api.squadzr.app/api/games?limit=1` answers 200. It goes through the edge lock, so it fails
+  with 403 if the API and Cloudflare disagree about `EDGE_AUTH_TOKEN`.
+- `https://squadzr.app/` answers 200 and the landing lists the popular games. The landing hides an
+  API failure (it renders without games), so a 200 alone does not prove the Worker reaches the API.
+- Sign in with Discord.
 
 ### Roll back the API
 
@@ -51,12 +79,36 @@ check that `https://api.squadzr.app/health/ready` answers 200.
 > the old edge token and refuse every request, or a leaked auth secret would be valid again. Use the
 > second way below.
 
+To check the edge token without printing it, list the `squadzr-web` deployments with
+`cf workers deployments list --worker squadzr-web`. A deployment with the annotation
+`workers/triggered_by: secret` is a secret change. If one is newer than the deployment you want, the
+token changed after it. Railway keeps no history of variable changes, so for `BETTER_AUTH_SECRET`
+the only clue is that no `api` deployment sits between the target and the active one except the one
+you know about. The safest target is the previous deployment of the same commit.
+
 1. Open Railway → `squadzr` → `production` → `api` → Deployments.
 2. Click the three dots on the last deployment that worked, choose **Rollback**, and confirm.
    Railway restores that deployment's image **and its variables**. Then open `https://squadzr.app`
    and sign in.
 3. Rollback **does not undo migrations**. The old code now runs on the new database. If the
    migration removed or renamed something the old code needs, use the second way below instead.
+
+The same step on the command line, which the drill used (the Railway CLI has no rollback command, but
+its `api` command reaches the GraphQL API; link the repository first, see the top of this page):
+
+```sh
+railway status --json                      # ids of the environment and the services
+railway api 'query { deployments(first: 10, input: {projectId: "7ba44a9d-4c58-4075-9b3b-019793ed88d5", environmentId: "<environment id>", serviceId: "<api service id>"}) { edges { node { id status createdAt canRollback meta } } } }'
+railway api 'mutation { deploymentRollback(id: "<deployment id>") }'
+```
+
+Pick a deployment with `canRollback: true` (a `REMOVED` one is fine, it is only an old one). Rollback
+starts a **new** deployment with `meta.reason` `rollback`, built from the old image, so it has a new id.
+In the drill it served about 30 seconds later and no request failed: the old container kept serving
+until the new one answered `/health/ready`, and was removed about a minute after.
+
+To roll forward again, roll back to the deployment that was active before. It still shows
+`canRollback: true`. Compare `meta.commitHash` and `meta.imageDigest` with what you had.
 
 The second way, which is slower: revert the bad pull request on `development` (a new pull request
 with `git revert`), merge it, then promote it to `main` as usual.
@@ -69,23 +121,26 @@ Railway keeps old deployments only for the time its plan allows. An older one ha
 1. Open Cloudflare → Workers & Pages → `squadzr-web` → Deployments.
 2. Click the three dots on the version to go back to, choose **Rollback**, and confirm.
 
-The same step on the command line is the alternative. The repo does not depend on Wrangler, so it
-needs `CLOUDFLARE_API_TOKEN` (a token that can edit Workers) and `CLOUDFLARE_ACCOUNT_ID` in the
-environment:
+The same step on the command line, which the drill used. `cf` is a devDependency of `client/` (after
+`bun install`, it is in `client/node_modules/.bin`), and `cf auth whoami` shows whether it is signed
+in. The repo does not depend on Wrangler, so do not use `wrangler rollback`.
 
 ```sh
-bunx wrangler rollback --name squadzr-web --message "why"
+cf workers deployments list --worker squadzr-web      # newest first: deployment id, date, version id
+cf workers deployments create --worker squadzr-web --strategy percentage \
+  --versions '[{"version_id":"<version id to go back to>","percentage":100}]'
 ```
 
-Without a version id it goes back to the version before the latest. Pass the version id to pick
-another. `bunx wrangler deployments list --name squadzr-web` shows the recent ones.
-
-Rollback makes a new deployment of the old version at once. Cloudflare keeps the last 100 versions.
+The version ids in the list are the full ids. The second command takes effect at once: in the drill
+the site answered 200 on the first probe. To roll forward, run the same command with the version id
+that was active before. Cloudflare keeps the last 100 versions.
 Source: [Cloudflare, Rollbacks](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/).
 
-**If `EDGE_AUTH_TOKEN` was rotated since the version you go back to,** check the site right after.
-Assume a Workers rollback restores the old secret values. If the API answers 403
-`EDGE_AUTH_REQUIRED`, rotate the token again (see "The edge token").
+**If `EDGE_AUTH_TOKEN` was rotated since the version you go back to,** `cf workers deployments create`
+refuses unless you add `--bypass-deployment-checks` (its help text says so; the drill did not test
+this, because the token had not changed since the target). Do not bypass it: the old version would
+carry the old token and the API would answer 403 `EDGE_AUTH_REQUIRED`. Go back to a version newer than
+the rotation, or roll forward with a fix.
 
 If only the invite images are wrong, do the same for `squadzr-og`.
 
@@ -157,7 +212,9 @@ the Worker secret on `squadzr-web`, the Worker secret on `squadzr-og`, and the R
 `api` (`client-on-cloudflare-workers.md`, "The edge secret"). **Nobody holds the value.** Do not
 generate one by hand. Rotate it with `scripts/rotate-edge-token.mjs`. It needs the logged-in
 `railway` and `cf` CLIs on the PATH and the linked Railway project (the header of the file lists
-them):
+them). `cf` is a devDependency of `client/`: after `bun install`, add `client/node_modules/.bin` to
+the PATH, and check the login with `cf auth whoami`. `rotate-dry` was run in production on
+2026-11-13 with that `cf` (1.0.0-beta.28) and passed:
 
 ```sh
 bun scripts/rotate-edge-token.mjs rotate-dry   # dry-runs the rule and both Worker secrets, changes nothing
