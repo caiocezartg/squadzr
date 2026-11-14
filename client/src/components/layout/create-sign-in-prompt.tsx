@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
 import { Dialog } from '@/components/ds/dialog'
+import { DiscordSignInNote } from '@/components/legal/discord-notices'
 import { DiscordIcon } from '@/components/ui/icons'
 
 interface CreateSignInPromptProps {
@@ -50,6 +51,7 @@ export function CreateSignInPrompt({
             {t('squads.authModal.maybeLater')}
           </Button>
         </div>
+        <DiscordSignInNote />
       </div>
     </Dialog>
   )

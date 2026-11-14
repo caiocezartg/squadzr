@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl'
 import { LayoutGrid } from 'lucide-react'
 import { Button } from '@/components/ds/button'
 import { NoticeScreen } from '@/components/ds/notice-screen'
+import { DiscordSignInNote } from '@/components/legal/discord-notices'
 import { DiscordIcon } from '@/components/ui/icons'
 import { signInWithDiscord } from '@/lib/auth-client'
 import { SquadCodeMark } from './squad-code-mark'
@@ -19,6 +20,7 @@ export function SquadSignIn({ code }: SquadSignInProps) {
       mark={<SquadCodeMark code={code} />}
       title={t('lobby.signInPrompt.title')}
       description={t('lobby.signInPrompt.description')}
+      footnote={<DiscordSignInNote className="justify-center" />}
       // The shell's top bar is 3.5rem below 1024px; from there up the page has no bar above it.
       className="min-h-[calc(100dvh-3.5rem)] lg:min-h-dvh"
     >

@@ -10,6 +10,7 @@ import { AppLink } from './app-link'
 import { useCreateSquadLauncher } from './create-squad-launcher'
 import { LanguageToggle } from './language-toggle'
 import { SidebarCodeForm } from './sidebar-code-form'
+import { SidebarLegal } from './sidebar-legal'
 import { SidebarMySquads } from './sidebar-my-squads'
 import { UserMenu } from './user-menu'
 
@@ -20,8 +21,8 @@ interface SidebarContentProps {
 
 /**
  * What the sidebar holds, top to bottom (reference, Components, Sidebar): the logo, "Create squad",
- * the join-by-code form, "All squads" with its count, the viewer's squads, the language switch and the
- * account button. The fixed column and the drawer both render it.
+ * the join-by-code form, "All squads" with its count, the viewer's squads, the language switch, the
+ * account button, and the legal links with the notice that Squadzr is not Discord. The fixed column and the drawer both render it.
  */
 export function SidebarContent({ onNavigate }: SidebarContentProps) {
   const t = useTranslations('ds.shell')
@@ -79,6 +80,8 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         <LanguageToggle />
         <UserMenu />
       </div>
+
+      <SidebarLegal onNavigate={onNavigate} />
     </div>
   )
 }

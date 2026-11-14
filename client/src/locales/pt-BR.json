@@ -347,7 +347,8 @@
       "faq": "Perguntas frequentes",
       "games": "Jogos disponíveis",
       "copyright": "© {year} Squadzr — Encontre seu time gamer",
-      "gameDataByIgdb": "dados de jogos por IGDB"
+      "gameDataByIgdb": "dados de jogos por IGDB",
+      "legal": "LEGAL"
     }
   },
   "squads": {
@@ -1023,6 +1024,251 @@
       "loading": "Carregando a auditoria",
       "loadError": "Não foi possível carregar a auditoria.",
       "retry": "Tentar de novo"
+    }
+  },
+  "legal": {
+    "lastUpdated": "Última atualização: {date}",
+    "header": {
+      "home": "Início do Squadzr"
+    },
+    "links": {
+      "label": "Legal",
+      "privacy": "Privacidade",
+      "terms": "Termos"
+    },
+    "notAffiliated": "O Squadzr não é afiliado, endossado nem patrocinado pela Discord Inc.",
+    "signInNote": "Você entra pelo discord.com. O Squadzr nunca vê a sua senha.",
+    "privacy": {
+      "title": "Política de Privacidade",
+      "description": "Quais dados o Squadzr recebe do Discord, o que guarda e por quê, por quanto tempo, e como exercer os seus direitos pela LGPD.",
+      "intro": "Esta política explica quais dados pessoais o Squadzr coleta quando você usa o squadzr.app, por que os usamos, por quanto tempo os guardamos e como você pode exercer os seus direitos pela Lei Geral de Proteção de Dados (LGPD, Lei nº 13.709/2018).",
+      "sections": [
+        {
+          "title": "Quem somos",
+          "paragraphs": [
+            "O Squadzr é um projeto independente que ajuda jogadores a completar o time em jogos multiplayer. Ele é o controlador dos dados pessoais descritos aqui. Para qualquer dúvida ou pedido sobre privacidade, escreva para {email}.",
+            "O Squadzr não é afiliado, endossado nem patrocinado pela Discord Inc."
+          ]
+        },
+        {
+          "title": "Dados que recebemos do Discord",
+          "paragraphs": [
+            "Você entra com a sua conta do Discord. Você digita a sua senha no discord.com, nunca no Squadzr. Pedimos ao Discord apenas as permissões \"identify\" e \"email\", que nos dão:"
+          ],
+          "items": [
+            "o seu ID de usuário do Discord;",
+            "o seu nome de exibição no Discord (ou o seu nome de usuário, se você não tiver um nome de exibição);",
+            "o seu avatar, como um link para a imagem nos servidores do Discord;",
+            "o seu endereço de e-mail, e se o Discord o verificou."
+          ],
+          "notes": [
+            "O Discord também emite tokens de acesso para essas permissões. O nosso sistema de login os guarda junto com a sua conta; o Squadzr não os usa para ler mais nada da sua conta do Discord. O seu nome e o seu avatar são atualizados a partir do Discord a cada login."
+          ]
+        },
+        {
+          "title": "Dados que guardamos enquanto você usa o Squadzr",
+          "paragraphs": [],
+          "items": [
+            "Conta: os dados acima, o seu papel no app (jogador, moderador, administrador ou dono) e quando você entrou.",
+            "Sessões: a cada login guardamos uma sessão com a data de expiração, o endereço IP e o user agent do navegador da requisição. Uma sessão para de funcionar cerca de uma semana depois do último uso, ou quando você sai.",
+            "Squads: os Squads que você cria (nome, jogo, plataforma, tags, idioma e o convite do Discord que você adiciona) e os Squads em que você entra, com o horário em que entrou.",
+            "Histórico de Squads: quando um Squad fecha, guardamos um registro dele (nome, jogo, plataforma, tamanho, host, membros e quando entraram). Ele monta o seu perfil: os Squads que você completou e os jogos que você mais jogou.",
+            "Notificações: as notificações sobre os seus Squads.",
+            "Registros de auditoria: quando um moderador ou administrador age (por exemplo, fecha um Squad ou muda o papel de alguém), registramos quem agiu, sobre o quê, quando e por quê. Esses registros podem citar a sua conta. Quando um administrador inicia uma importação do catálogo de jogos, também registramos quem a iniciou.",
+            "Contagens de atividade: a cada poucos minutos registramos quantas pessoas estão online e quantos Squads estão abertos. Esses números não estão ligados a ninguém."
+          ]
+        },
+        {
+          "title": "O que outras pessoas podem ver",
+          "paragraphs": [
+            "O seu perfil público mostra o seu nome, avatar, quando você entrou, os Squads que você completou e os jogos que você mais jogou, e qualquer pessoa que use o Squadzr pode abri-lo. As pessoas veem os nomes e avatares dos membros de um Squad, e os membros de um Squad cheio veem o convite do Discord dele. O seu endereço de e-mail nunca é mostrado a outras pessoas."
+          ]
+        },
+        {
+          "title": "Por que usamos os seus dados",
+          "paragraphs": [],
+          "items": [
+            "Para criar e manter a sua conta e fazer funcionar os Squads, as notificações e o seu perfil. Base legal: execução do contrato com você (LGPD, art. 7º, V).",
+            "Para manter o seu login seguro, evitar abusos e manter a moderação responsável (sessões, endereço IP, user agent e registros de auditoria). Base legal: o nosso legítimo interesse (LGPD, art. 7º, IX)."
+          ],
+          "notes": [
+            "Não vendemos os seus dados, não os usamos para publicidade e não montamos perfis de marketing."
+          ]
+        },
+        {
+          "title": "Prestadores de serviço",
+          "paragraphs": [
+            "Usamos estes prestadores para operar o Squadzr. Eles tratam os dados apenas para nos prestar o serviço:"
+          ],
+          "items": [
+            "Cloudflare: o domínio, a rede de borda e a hospedagem do site (Cloudflare Workers).",
+            "Railway: a hospedagem da API e do banco de dados PostgreSQL que guarda os dados acima.",
+            "Discord: o login. A política de privacidade do próprio Discord vale para a sua conta do Discord.",
+            "IGDB (da Twitch): nomes e capas dos jogos. Não enviamos a ele nenhum dado sobre você."
+          ],
+          "notes": [
+            "Esses prestadores podem guardar e tratar dados fora do Brasil, inclusive nos Estados Unidos. Essas transferências seguem o artigo 33 da LGPD."
+          ]
+        },
+        {
+          "title": "Cookies e armazenamento do navegador",
+          "paragraphs": ["O Squadzr usa apenas o que precisa para funcionar:"],
+          "items": [
+            "Cookie de sessão: mantém você logado. Ele é criado quando você entra e removido quando você sai ou a sessão expira.",
+            "Cookies de login: cookies de curta duração que o nosso sistema de login pode criar enquanto o login pelo Discord acontece, para protegê-lo.",
+            "Cookie de idioma (NEXT_LOCALE): lembra o idioma que você escolher, por um ano.",
+            "Armazenamento de sessão: o seu navegador guarda um horário para que o app não recarregue várias vezes seguidas depois de uma atualização."
+          ],
+          "notes": [
+            "Não usamos cookies de análise, de publicidade nem de rastreamento, e não seguimos você em outros sites. Como tudo acima é estritamente necessário, não há banner de consentimento."
+          ]
+        },
+        {
+          "title": "Por quanto tempo guardamos os dados",
+          "paragraphs": [],
+          "items": [
+            "Conta, perfil e histórico de Squads: enquanto a sua conta existir.",
+            "Sessões: apagadas quando você sai. Uma sessão da qual você nunca sai para de funcionar cerca de uma semana depois do último uso, e o registro dela, com o endereço IP e o user agent, pode ser guardado até a sua conta ser apagada.",
+            "Squads: um Squad aberto é apagado após 24 horas sem atividade, e um Squad cheio 1 hora depois de fechar.",
+            "Notificações: até você apagá-las ou a sua conta ser apagada.",
+            "Registros de auditoria: guardados para a responsabilidade da moderação, mesmo depois que o Squad ou a conta a que se referem é apagado."
+          ]
+        },
+        {
+          "title": "Os seus direitos",
+          "paragraphs": ["Pela LGPD (art. 18) você pode nos pedir para:"],
+          "items": [
+            "confirmar se tratamos os seus dados, e dar acesso a eles;",
+            "corrigir dados incompletos ou errados (o seu nome e avatar seguem a sua conta do Discord);",
+            "apagar a sua conta e os seus dados;",
+            "entregar os seus dados em formato portável;",
+            "informar com quais prestadores compartilhamos dados."
+          ],
+          "notes": [
+            "Para fazer um pedido, envie um e-mail para {email} a partir do endereço ligado à sua conta do Discord. Respondemos em até 15 dias. Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).",
+            "Apagar a sua conta remove o seu perfil, sessões, participações, notificações e o seu lugar no histórico de Squads, e apaga os Squads em que você é host. Os registros de auditoria mantêm o nome que registraram.",
+            "Você também pode remover o acesso do Squadzr à sua conta do Discord a qualquer momento no Discord, em Configurações de Usuário, Aplicativos Autorizados."
+          ]
+        },
+        {
+          "title": "Crianças",
+          "paragraphs": [
+            "O Squadzr não é destinado a menores de 13 anos, a idade mínima que o Discord exige. Se você acredita que uma criança nos forneceu dados pessoais, escreva para {email} e nós os apagaremos."
+          ]
+        },
+        {
+          "title": "Segurança",
+          "paragraphs": [
+            "O Squadzr é servido por HTTPS, e o cookie de sessão não pode ser lido pelos scripts da página. Nenhum sistema é perfeitamente seguro: se um incidente colocar os seus dados em risco, avisaremos você e a ANPD, como a LGPD exige."
+          ]
+        },
+        {
+          "title": "Mudanças nesta política",
+          "paragraphs": [
+            "Quando mudarmos esta política, atualizaremos a data no topo desta página."
+          ]
+        },
+        {
+          "title": "Contato",
+          "paragraphs": [
+            "Para qualquer dúvida sobre esta política ou sobre os seus dados, escreva para {email}."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Termos de Uso",
+      "description": "As regras de uso do Squadzr: contas, Squads, convites do Discord, uso aceitável, moderação e responsabilidade.",
+      "intro": "Estes Termos de Uso regem o seu uso do Squadzr (squadzr.app). Ao entrar ou usar o serviço, você concorda com eles. Se não concordar, não use o Squadzr.",
+      "sections": [
+        {
+          "title": "O serviço",
+          "paragraphs": [
+            "O Squadzr ajuda jogadores a encontrar companheiros de time em jogos multiplayer. Você pode explorar Squads abertos, criar o seu e entrar em outros. Quando um Squad fecha, os membros recebem o convite do Discord que o host adicionou. O Squadzr é gratuito.",
+            "O Squadzr não é afiliado, endossado nem patrocinado pela Discord Inc. nem pelas publicadoras dos jogos que lista. Nomes, capas e marcas dos jogos pertencem aos seus donos, e os dados dos jogos vêm do IGDB."
+          ]
+        },
+        {
+          "title": "A sua conta",
+          "paragraphs": [
+            "Você entra com o Discord, então precisa de uma conta do Discord regular. Você precisa ter pelo menos 13 anos, ou a idade mínima que o Discord ou o seu país exigir, a que for maior. Você é responsável pelo que acontece na sua conta, então mantenha a sua conta do Discord segura."
+          ]
+        },
+        {
+          "title": "Squads e convites do Discord",
+          "paragraphs": [
+            "Quando você cria um Squad ou adiciona um convite do Discord, você concorda que:"
+          ],
+          "items": [
+            "o nome, o jogo e os detalhes do Squad são honestos e descrevem o que você está organizando de verdade;",
+            "o convite leva a um servidor do Discord que é seu ou que você pode compartilhar, para o jogo do Squad;",
+            "o convite nunca é usado para golpes, phishing, sorteios falsos, venda de contas ou itens, malware, nem nada que peça senhas, códigos ou pagamentos aos membros;",
+            "você segue os Termos de Serviço e as Diretrizes da Comunidade do Discord nesse servidor."
+          ],
+          "notes": [
+            "O Squadzr não administra os servidores do Discord aos quais os convites levam e não é responsável pelo que acontece neles. Nunca compartilhe a sua senha nem códigos de verificação com ninguém."
+          ]
+        },
+        {
+          "title": "Uso aceitável",
+          "paragraphs": ["Você não pode:"],
+          "items": [
+            "assediar, ameaçar ou discriminar outros jogadores, nem publicar conteúdo de ódio;",
+            "se passar por outras pessoas, inclusive pela equipe do Squadzr, do Discord ou de jogos;",
+            "fazer spam, criar Squads em massa, ou acessar o Squadzr com bots ou scrapers sem a nossa permissão;",
+            "tentar quebrar, sobrecarregar ou contornar a segurança ou os limites do serviço;",
+            "usar o Squadzr para qualquer coisa ilegal pela lei brasileira."
+          ]
+        },
+        {
+          "title": "Moderação e suspensão",
+          "paragraphs": [
+            "Podemos remover Squads ou convites, encerrar sessões e suspender ou encerrar contas que violem estes Termos ou coloquem outros jogadores em risco, com ou sem aviso. Se você achar que erramos, escreva para {email}."
+          ]
+        },
+        {
+          "title": "Encerrar o uso",
+          "paragraphs": [
+            "Você pode parar de usar o Squadzr a qualquer momento e pedir que apaguemos a sua conta escrevendo para {email}, como a Política de Privacidade explica."
+          ]
+        },
+        {
+          "title": "Sem garantias",
+          "paragraphs": [
+            "O Squadzr é oferecido \"no estado em que se encontra\" e \"conforme disponível\". Não prometemos que ele estará sempre disponível ou livre de erros, nem que você encontrará um time completo. Funcionalidades podem mudar ou acabar."
+          ]
+        },
+        {
+          "title": "Limitação de responsabilidade",
+          "paragraphs": [
+            "Na medida em que a lei permitir, o Squadzr não responde por danos indiretos, por perda de dados, nem pela conduta de outros jogadores, de servidores do Discord ou de serviços de terceiros. Nada nestes Termos limita os direitos irrenunciáveis que você tem pelo Código de Defesa do Consumidor (Lei nº 8.078/1990)."
+          ]
+        },
+        {
+          "title": "Privacidade",
+          "paragraphs": [
+            "Como tratamos dados pessoais está descrito na nossa Política de Privacidade, em squadzr.app/privacy."
+          ]
+        },
+        {
+          "title": "Mudanças nestes Termos",
+          "paragraphs": [
+            "Podemos atualizar estes Termos. A data no topo mostra a versão atual. Se você continuar usando o Squadzr depois de uma mudança, você aceita os novos Termos."
+          ]
+        },
+        {
+          "title": "Lei aplicável",
+          "paragraphs": [
+            "Estes Termos são regidos pelas leis do Brasil. Se você for consumidor, as disputas vão para o foro do seu domicílio, como a lei brasileira prevê."
+          ]
+        },
+        {
+          "title": "Contato",
+          "paragraphs": [
+            "Para qualquer dúvida sobre estes Termos, escreva para {email}."
+          ]
+        }
+      ]
     }
   }
 }

@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
+import { DiscordNotAffiliated } from '@/components/legal/discord-notices'
+import { LegalLinks } from '@/components/legal/legal-links'
 import { AppLink } from '@/components/layout/app-link'
 import { useClock } from '@/hooks/use-clock'
 
@@ -25,8 +27,9 @@ function FooterColumn({
 
 /**
  * The landing's own footer (the shell's stays off `/`): the logo and tagline, the product and help
- * links, the large outlined wordmark, and the IGDB credit. It has no motion, so it renders in the
- * server HTML. The year comes from the shared clock, which starts at the server's request time, so
+ * links, the legal links, the large outlined wordmark, the notice that Squadzr is not Discord, and
+ * the IGDB credit. Its in-page links name the landing, so they also work from the legal pages, which
+ * share it. It has no motion, so it renders in the server HTML. The year comes from the shared clock, which starts at the server's request time, so
  * the server and the first client render agree; it is read in UTC so both sides name the same year
  * whatever their time zones.
  */
@@ -52,15 +55,18 @@ export function LandingFooter() {
               </AppLink>
             </FooterColumn>
             <FooterColumn title={t('help')}>
-              <a href="#como-funciona" className={LINK_CLASSES}>
+              <a href="/#como-funciona" className={LINK_CLASSES}>
                 {t('howItWorks')}
               </a>
-              <a href="#faq" className={LINK_CLASSES}>
+              <a href="/#faq" className={LINK_CLASSES}>
                 {t('faq')}
               </a>
-              <a href="#jogos" className={LINK_CLASSES}>
+              <a href="/#jogos" className={LINK_CLASSES}>
                 {t('games')}
               </a>
+            </FooterColumn>
+            <FooterColumn title={t('legal')}>
+              <LegalLinks linkClassName={LINK_CLASSES} />
             </FooterColumn>
           </nav>
         </div>
@@ -73,7 +79,10 @@ export function LandingFooter() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 pt-5.5 shadow-[inset_0_1px_0_var(--color-raised-2)]">
-          <span className="text-muted text-[13px]">{t('copyright', { year })}</span>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-muted text-[13px]">{t('copyright', { year })}</span>
+            <DiscordNotAffiliated />
+          </div>
           <a
             href="https://www.igdb.com"
             target="_blank"

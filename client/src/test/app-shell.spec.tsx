@@ -219,4 +219,32 @@ describe('shell account', () => {
     ).toBeInTheDocument()
     expect(within(sidebar()).queryByRole('button', { name: 'Caio' })).not.toBeInTheDocument()
   })
+
+  it('tells a visitor beside the sign-in button that they sign in on discord.com', () => {
+    renderShell('/squads', null)
+
+    expect(
+      within(sidebar()).getByText('You sign in on discord.com. Squadzr never sees your password.')
+    ).toBeInTheDocument()
+  })
+})
+
+describe('shell legal links', () => {
+  it('links the Privacy Policy and the Terms of Use from the sidebar, with the Discord notice', async () => {
+    const { user, navigation } = renderShell('/squads')
+    const legal = within(sidebar()).getByRole('navigation', { name: 'Legal' })
+
+    await user.click(within(legal).getByRole('link', { name: 'Privacy' }))
+    await user.click(within(legal).getByRole('link', { name: 'Terms' }))
+
+    expect(navigation.calls).toEqual([
+      { method: 'push', href: '/privacy' },
+      { method: 'push', href: '/terms' },
+    ])
+    expect(
+      within(sidebar()).getByText(
+        'Squadzr is not affiliated with, endorsed by, or sponsored by Discord Inc.'
+      )
+    ).toBeInTheDocument()
+  })
 })
