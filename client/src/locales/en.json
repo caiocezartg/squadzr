@@ -347,7 +347,8 @@
       "faq": "Frequently asked questions",
       "games": "Available games",
       "copyright": "© {year} Squadzr — Find your gaming team",
-      "gameDataByIgdb": "game data by IGDB"
+      "gameDataByIgdb": "game data by IGDB",
+      "legal": "LEGAL"
     }
   },
   "squads": {
@@ -1023,6 +1024,250 @@
       "loading": "Loading the audit",
       "loadError": "Couldn't load the audit.",
       "retry": "Try again"
+    }
+  },
+  "legal": {
+    "lastUpdated": "Last updated: {date}",
+    "header": {
+      "home": "Squadzr home"
+    },
+    "links": {
+      "label": "Legal",
+      "privacy": "Privacy",
+      "terms": "Terms"
+    },
+    "notAffiliated": "Squadzr is not affiliated with, endorsed by, or sponsored by Discord Inc.",
+    "privacy": {
+      "title": "Privacy Policy",
+      "description": "What data Squadzr receives from Discord, what it stores and why, how long it keeps it, and how to exercise your rights under the LGPD.",
+      "intro": "This policy explains what personal data Squadzr collects when you use squadzr.app, why we use it, how long we keep it and how you can exercise your rights under Brazil's General Data Protection Law (LGPD, Law No. 13,709/2018).",
+      "sections": [
+        {
+          "title": "Who we are",
+          "paragraphs": [
+            "Squadzr is an independent project that helps players fill their teams for multiplayer games. It is the controller of the personal data described here. For any privacy question or request, write to {email}.",
+            "Squadzr is not affiliated with, endorsed by, or sponsored by Discord Inc."
+          ]
+        },
+        {
+          "title": "Data we receive from Discord",
+          "paragraphs": [
+            "You sign in with your Discord account. You type your password on discord.com, never on Squadzr. We ask Discord only for the \"identify\" and \"email\" permissions, which give us:"
+          ],
+          "items": [
+            "your Discord user ID;",
+            "your Discord display name (or your username, if you have no display name);",
+            "your avatar, as a link to the image on Discord's servers;",
+            "your email address, and whether Discord has verified it."
+          ],
+          "notes": [
+            "Discord also issues access tokens for these permissions. Our sign-in system stores them with your account; Squadzr does not use them to read anything else from your Discord account. Your name and avatar are refreshed from Discord each time you sign in."
+          ]
+        },
+        {
+          "title": "Data we store while you use Squadzr",
+          "paragraphs": [],
+          "items": [
+            "Account: the data above, your role in the app (player, moderator, administrator or owner) and when you joined.",
+            "Sessions: each time you sign in we store a session with its expiry date, the IP address and the browser user agent of the request. A session stops working about a week after you last used it, or when you sign out.",
+            "Squads: the Squads you create (name, game, platform, tags, language and the Discord invite you add) and the Squads you join, with the time you joined.",
+            "Squad history: when a Squad fills, we keep a record of it (name, game, platform, size, host, members and when they joined). It builds your profile: the Squads you completed and the games you played most.",
+            "Notifications: the notifications about your Squads.",
+            "Admin audit records: when a moderator or administrator acts (for example, closes a Squad or changes someone's role), we record who acted, on what, when and why. These records may name your account. When an administrator starts an import of the game catalog, we also record who started it.",
+            "Activity counts: every few minutes we record how many people are online and how many Squads are open. These numbers are not linked to anyone."
+          ]
+        },
+        {
+          "title": "What other people can see",
+          "paragraphs": [
+            "Your public profile shows your name, avatar, when you joined, the Squads you completed and your most played games, and anyone using Squadzr can open it. People see the names and avatars of a Squad's members, and the members of a full Squad see its Discord invite. Your email address is never shown to other people."
+          ]
+        },
+        {
+          "title": "Why we use your data",
+          "paragraphs": [],
+          "items": [
+            "To create and keep your account and to run Squads, notifications and your profile. Legal basis: performance of the contract with you (LGPD, art. 7, V).",
+            "To keep you signed in securely, prevent abuse and keep moderation accountable (sessions, IP address, user agent and audit records). Legal basis: our legitimate interest (LGPD, art. 7, IX)."
+          ],
+          "notes": [
+            "We do not sell your data, use it for advertising or build marketing profiles."
+          ]
+        },
+        {
+          "title": "Service providers",
+          "paragraphs": [
+            "We use these providers to run Squadzr. They process data only to provide their service to us:"
+          ],
+          "items": [
+            "Cloudflare: the domain, the network edge and the hosting of the website (Cloudflare Workers).",
+            "Railway: the hosting of the API and of the PostgreSQL database that stores the data above.",
+            "Discord: sign-in. Discord's own privacy policy applies to your Discord account.",
+            "IGDB (owned by Twitch): game names and covers. We send it no data about you."
+          ],
+          "notes": [
+            "These providers may store and process data outside Brazil, including in the United States. Such transfers follow article 33 of the LGPD."
+          ]
+        },
+        {
+          "title": "Cookies and browser storage",
+          "paragraphs": ["Squadzr uses only what it needs to work:"],
+          "items": [
+            "Session cookie: keeps you signed in. It is set when you sign in and is removed when you sign out or the session expires.",
+            "Sign-in cookies: short-lived cookies our sign-in system may set while the Discord sign-in runs, to protect it.",
+            "Language cookie (NEXT_LOCALE): remembers the language you choose, for one year.",
+            "Session storage: your browser keeps one timestamp so the app does not reload again and again after an update."
+          ],
+          "notes": [
+            "We do not use analytics, advertising or tracking cookies, and we do not follow you across other websites. Because everything above is strictly necessary, there is no consent banner."
+          ]
+        },
+        {
+          "title": "How long we keep data",
+          "paragraphs": [],
+          "items": [
+            "Account, profile and Squad history: while your account exists.",
+            "Sessions: deleted when you sign out. A session you never sign out of stops working about a week after its last use, and its record, with the IP address and user agent, may be kept until your account is deleted.",
+            "Squads: an open Squad is deleted after 24 hours without activity, and a full Squad 1 hour after it fills.",
+            "Notifications: until you delete them or your account is deleted.",
+            "Admin audit records: kept for moderation accountability, also after the Squad or account they refer to is deleted."
+          ]
+        },
+        {
+          "title": "Your rights",
+          "paragraphs": ["Under the LGPD (art. 18) you can ask us to:"],
+          "items": [
+            "confirm whether we process your data, and give you access to it;",
+            "correct incomplete or wrong data (your name and avatar follow your Discord account);",
+            "delete your account and your data;",
+            "give you your data in a portable format;",
+            "tell you which providers we share data with."
+          ],
+          "notes": [
+            "To make a request, email {email} from the address linked to your Discord account. We answer within 15 days. You can also file a complaint with Brazil's National Data Protection Authority (ANPD).",
+            "Deleting your account removes your profile, sessions, Memberships, notifications and your place in the Squad history, and deletes the Squads you host. Admin audit records keep the name they recorded.",
+            "You can also remove Squadzr's access to your Discord account at any time in Discord, under User Settings, Authorized Apps."
+          ]
+        },
+        {
+          "title": "Children",
+          "paragraphs": [
+            "Squadzr is not meant for children under 13, the minimum age Discord requires. If you believe a child has given us personal data, write to {email} and we will delete it."
+          ]
+        },
+        {
+          "title": "Security",
+          "paragraphs": [
+            "Squadzr is served over HTTPS, and the session cookie cannot be read by the page's scripts. No system is perfectly secure: if an incident puts your data at risk, we will tell you and the ANPD, as the LGPD requires."
+          ]
+        },
+        {
+          "title": "Changes to this policy",
+          "paragraphs": [
+            "When we change this policy, we update the date at the top of this page."
+          ]
+        },
+        {
+          "title": "Contact",
+          "paragraphs": [
+            "For any question about this policy or your data, write to {email}."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Terms of Use",
+      "description": "The rules for using Squadzr: accounts, Squads, Discord invites, acceptable use, moderation and liability.",
+      "intro": "These Terms of Use govern your use of Squadzr (squadzr.app). By signing in or using the service, you agree to them. If you do not agree, do not use Squadzr.",
+      "sections": [
+        {
+          "title": "The service",
+          "paragraphs": [
+            "Squadzr helps players find teammates for multiplayer games. You can browse open Squads, create your own and join others. When a Squad fills, its members get the Discord invite its host added. Squadzr is free.",
+            "Squadzr is not affiliated with, endorsed by, or sponsored by Discord Inc. or by the publishers of the games it lists. Game names, covers and trademarks belong to their owners, and game data comes from IGDB."
+          ]
+        },
+        {
+          "title": "Your account",
+          "paragraphs": [
+            "You sign in with Discord, so you need a Discord account in good standing. You must be at least 13 years old, or the minimum age that Discord or your country requires, whichever is higher. You are responsible for what happens under your account, so keep your Discord account secure."
+          ]
+        },
+        {
+          "title": "Squads and Discord invites",
+          "paragraphs": [
+            "When you create a Squad or add a Discord invite, you agree that:"
+          ],
+          "items": [
+            "the Squad's name, game and details are honest and describe what you are really organizing;",
+            "the invite leads to a Discord server you own or are allowed to share, for the game the Squad is about;",
+            "the invite is never used for scams, phishing, fake giveaways, account or item trading, malware, or anything that asks members for passwords, codes or payments;",
+            "you follow Discord's Terms of Service and Community Guidelines on that server."
+          ],
+          "notes": [
+            "Squadzr does not run the Discord servers that invites lead to and is not responsible for what happens there. Never share your password or verification codes with anyone."
+          ]
+        },
+        {
+          "title": "Acceptable use",
+          "paragraphs": ["You must not:"],
+          "items": [
+            "harass, threaten or discriminate against other players, or post hateful content;",
+            "impersonate other people, including Squadzr, Discord or game staff;",
+            "spam, create Squads in bulk, or access Squadzr with bots or scrapers without our permission;",
+            "try to break, overload or get around the security or the limits of the service;",
+            "use Squadzr for anything that is illegal under Brazilian law."
+          ]
+        },
+        {
+          "title": "Moderation and suspension",
+          "paragraphs": [
+            "We may remove Squads or invites, end sessions, and suspend or close accounts that break these Terms or put other players at risk, with or without notice. If you think we made a mistake, write to {email}."
+          ]
+        },
+        {
+          "title": "Ending your use",
+          "paragraphs": [
+            "You may stop using Squadzr at any time and ask us to delete your account by writing to {email}, as the Privacy Policy explains."
+          ]
+        },
+        {
+          "title": "No warranty",
+          "paragraphs": [
+            "Squadzr is provided \"as is\" and \"as available\". We do not promise that it will always be available or free of errors, or that you will find a full team. Features may change or end."
+          ]
+        },
+        {
+          "title": "Limitation of liability",
+          "paragraphs": [
+            "To the extent the law allows, Squadzr is not liable for indirect damages, for lost data, or for the conduct of other players, of Discord servers or of third-party services. Nothing in these Terms limits the rights you have under the Brazilian Consumer Protection Code (Law No. 8,078/1990) that cannot be waived."
+          ]
+        },
+        {
+          "title": "Privacy",
+          "paragraphs": [
+            "How we handle personal data is described in our Privacy Policy, at squadzr.app/privacy."
+          ]
+        },
+        {
+          "title": "Changes to these Terms",
+          "paragraphs": [
+            "We may update these Terms. The date at the top shows the current version. If you keep using Squadzr after a change, you accept the new Terms."
+          ]
+        },
+        {
+          "title": "Governing law",
+          "paragraphs": [
+            "These Terms are governed by the laws of Brazil. If you are a consumer, disputes go to the courts of your domicile, as Brazilian law provides."
+          ]
+        },
+        {
+          "title": "Contact",
+          "paragraphs": [
+            "For any question about these Terms, write to {email}."
+          ]
+        }
+      ]
     }
   }
 }
