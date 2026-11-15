@@ -167,8 +167,9 @@ export default defineRailway(() => {
       R2_ACCESS_KEY_ID: preserve(),
       R2_SECRET_ACCESS_KEY: preserve(),
       R2_BUCKET: 'squadzr-db-backups',
-      // The bucket's S3 endpoint. The account id is an identifier, not a secret.
-      R2_ENDPOINT: 'https://af4f008c752411949fbfba283157dcf9.r2.cloudflarestorage.com',
+      // The bucket's S3 endpoint (R2 > the bucket > Settings > S3 API). It is not a secret, but it carries the
+      // Cloudflare account id, which this public repository does not publish, so the owner sets it in Railway.
+      R2_ENDPOINT: preserve(),
     },
   })
 

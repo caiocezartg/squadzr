@@ -193,7 +193,10 @@ The `db-backup` service builds from `main`, so it is created only after the chan
    `TODO(#136 verify)`
 4. The owner creates the R2 key (R2 → Manage API tokens → Create Account API token, **Object Read &
    Write** on `squadzr-db-backups` only) and sets `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` on
-   `db-backup` in the Railway dashboard. The values are never written anywhere else.
+   `db-backup` in the Railway dashboard. The values are never written anywhere else. Also set
+   `R2_ENDPOINT` to the bucket's S3 endpoint (R2 → `squadzr-db-backups` → Settings → S3 API, without
+   the bucket name at the end). It is not a secret, but it carries the account id, which the public
+   repository does not publish.
 5. Run a backup by hand (below) and check the dump is in the bucket. `TODO(#136 verify)`
 
 ### Where the dumps are
