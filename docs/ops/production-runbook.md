@@ -175,9 +175,10 @@ the dashboard and read the logs.
 
 ## Backup and restore
 
-**Draft.** The code is in place ([#136](https://github.com/caiocezartg/squadzr/issues/136)); the steps
-marked `TODO(#136 verify)` have not been run in production yet. The coordinator verifies them and
-removes the marks.
+Set up and verified on 2026-11-15 ([#136](https://github.com/caiocezartg/squadzr/issues/136)): a manual
+run uploaded a dump, the dump restored into a throwaway PostgreSQL 16 database with the production row
+counts, and a run with a wrong key ended as failed. The production restore below has not been run on
+the production database.
 
 ### Set up (once)
 
@@ -189,15 +190,20 @@ The `db-backup` service builds from `main`, so it is created only after the chan
    (`catalog-import-railway.md`, "Apply a config change").
 3. Check the service's deployment trigger with the `deploymentTriggers` query in
    `catalog-import-railway.md`, with the `db-backup` service id. An empty list means later pushes to
-   `ops/db-backup/` do not redeploy it: connect the repository in the service's Settings.
-   `TODO(#136 verify)`
+   `ops/db-backup/` do not redeploy it: connect the repository in the service's Settings. On
+   2026-11-15 `config apply` created the trigger but with `checkSuites: false`, so it would not wait
+   for CI. Turn "Wait for CI" on in the service's Settings, or with
+   `railway api 'mutation { deploymentTriggerUpdate(id: "<trigger id>", input: { checkSuites: true }) { checkSuites } }'`
+   (the trigger id comes from the same query, with `id` added to the node).
 4. The owner creates the R2 key (R2 → Manage API tokens → Create Account API token, **Object Read &
    Write** on `squadzr-db-backups` only) and sets `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` on
    `db-backup` in the Railway dashboard. The values are never written anywhere else. Also set
    `R2_ENDPOINT` to the bucket's S3 endpoint (R2 → `squadzr-db-backups` → Settings → S3 API, without
    the bucket name at the end). It is not a secret, but it carries the account id, which the public
    repository does not publish.
-5. Run a backup by hand (below) and check the dump is in the bucket. `TODO(#136 verify)`
+5. Run a backup by hand (below) and check the dump is in the bucket. To prove a failure shows up,
+   do it once with made-up key values first: the run ends as **Crashed** with `InvalidArgument` from
+   `PutObject`.
 
 ### Where the dumps are
 
@@ -217,14 +223,24 @@ The `db-backup` service builds from `main`, so it is created only after the chan
 
 ### Run a backup by hand
 
-Dashboard: Railway → `squadzr` → `production` → `db-backup` → the newest deployment → **Run now**.
-`TODO(#136 verify)` the button's name; the cron schedule stays in place.
-
-Then read the log, which ends with the size and the key (never a secret):
+Deploying the service does not run it: only the schedule or a manual run does. Run it from the
+dashboard (Railway → `db-backup` → the cron run's menu), or with the API, which is how it was run on
+2026-11-15 (the service instance id comes from
+`railway api 'query { serviceInstance(environmentId: "<production id>", serviceId: "<db-backup id>") { id } }'`):
 
 ```sh
-railway logs --service db-backup --lines 20
+railway api 'mutation { deploymentInstanceExecutionCreate(input: { serviceInstanceId: "<service instance id>" }) }'
 ```
+
+The schedule stays in place. Then read the run's log, which ends with the size and the key (never a
+secret). From a folder linked to the project:
+
+```sh
+railway logs --service db-backup --environment production --deployment <deployment id>
+```
+
+A good run ends with `db-backup: done, <bytes> bytes at s3://squadzr-db-backups/postgres/<dump name>`,
+and the deployment stays **Success**. A failed run turns it **Crashed**.
 
 ### Download a dump
 
@@ -235,10 +251,10 @@ On the command line, with the `cf` CLI (a devDependency of `client/`, so it is i
 `client/node_modules/.bin` after `bun install`; `cf auth whoami` shows whether it is signed in):
 
 ```sh
-cf r2 object get squadzr-db-backups/postgres/<dump name> --file ./<dump name>   # TODO(#136 verify) the flags
+cf r2 objects get postgres/<dump name> --bucket-name squadzr-db-backups -q > ./<dump name>
 ```
 
-`cf r2 --help` lists the exact flags if they differ.
+The file starts with `PGDMP` and has the size the run logged.
 
 ### Restore into a throwaway database
 
@@ -247,24 +263,25 @@ dump in the current folder.
 
 ```sh
 docker run -d --name pg-restore-check -e POSTGRES_PASSWORD=restore postgres:16.16-alpine3.24
-docker exec pg-restore-check sh -c 'until pg_isready -U postgres; do sleep 1; done; createdb -U postgres restore_check'
+docker exec pg-restore-check sh -c 'until pg_isready -U postgres -h 127.0.0.1 -q; do sleep 1; done; createdb -U postgres restore_check'
 docker cp ./<dump name> pg-restore-check:/tmp/restore.dump
 docker exec pg-restore-check pg_restore -U postgres --no-owner --dbname restore_check /tmp/restore.dump
 docker exec pg-restore-check psql -U postgres -d restore_check -c 'select count(*) from "user"' -c 'select count(*) from rooms' -c 'select count(*) from games'
 docker rm -f pg-restore-check
 ```
 
-`pg_restore` prints nothing and exits 0 when the restore is clean. Compare the three counts with the
-same query in production (`railway connect postgres` opens a `psql` session; `TODO(#136 verify)`
-that it works on this project). The Squads table is named `rooms`.
-The counts match only if nothing changed since the dump, so compare against a dump taken at a quiet
-moment.
+`pg_restore` prints nothing and exits 0 when the restore is clean. `-h 127.0.0.1` waits for the real
+server: the image's first-start server listens only on the socket and restarts. The Squads table is
+named `rooms` and holds only open Squads. Compare the counts with production in the admin panel
+(Overview: users and open Squads; Games: the total). The production database has no public
+address, and `railway ssh` needs an SSH key registered on the account. The counts match only if
+nothing changed since the dump.
 
 ### Restore into production
 
 Only if the production database is lost or damaged. It replaces what is there with the dump, so
-everything written after the dump is lost. `TODO(#136 verify)` the whole section; it has not been run
-on the production database.
+everything written after the dump is lost. It was tested on a local copy of the schema (2026-11-15),
+not on the production database.
 
 1. Download the dump you want (above). Decide how far back to go: the newest dump is the default.
 2. **Stop the writers.** Stop `api` so nothing writes during the restore: Railway → `api` → the active
