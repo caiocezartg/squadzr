@@ -104,3 +104,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-bun
       - run: bun run build
+
+  ops-check:
+    name: ops-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # The backup cron (ops/db-backup) is shell and a Dockerfile, which the Bun gates above never read.
+      # shellcheck is preinstalled on the GitHub Ubuntu runners.
+      - run: shellcheck -s sh ops/db-backup/backup.sh
+      - run: docker build -f ops/db-backup/Dockerfile .
