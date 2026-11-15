@@ -56,6 +56,10 @@
           {
             "context": "build",
             "integration_id": 15368
+          },
+          {
+            "context": "ops-check",
+            "integration_id": 15368
           }
         ]
       }

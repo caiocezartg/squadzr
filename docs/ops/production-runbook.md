@@ -175,14 +175,131 @@ the dashboard and read the logs.
 
 ## Backup and restore
 
-**Placeholder.** Backups to Cloudflare R2 are tracked in
-[#136](https://github.com/caiocezartg/squadzr/issues/136), which is parked. Until it is done there
-is no backup of the database. Railway volume backups need the Pro plan
-(`catalog-import-railway.md`, "Backups"). The catalog can be rebuilt from IGDB. Users, Squads and
-sessions cannot.
+**Draft.** The code is in place ([#136](https://github.com/caiocezartg/squadzr/issues/136)); the steps
+marked `TODO(#136 verify)` have not been run in production yet. The coordinator verifies them and
+removes the marks.
 
-TODO when #136 is done: where the dumps are, how to restore into a throwaway database, how to
-restore into production.
+### Set up (once)
+
+The `db-backup` service builds from `main`, so it is created only after the change is there.
+
+1. Merge the change into `main` with the promotion pull request, and wait for CI to pass. If you
+   apply before this, the first build fails because `main` has no `ops/db-backup/`.
+2. `railway config plan`, read it (it should only create `db-backup`), then `railway config apply`
+   (`catalog-import-railway.md`, "Apply a config change").
+3. Check the service's deployment trigger with the `deploymentTriggers` query in
+   `catalog-import-railway.md`, with the `db-backup` service id. An empty list means later pushes to
+   `ops/db-backup/` do not redeploy it: connect the repository in the service's Settings.
+   `TODO(#136 verify)`
+4. The owner creates the R2 key (R2 → Manage API tokens → Create Account API token, **Object Read &
+   Write** on `squadzr-db-backups` only) and sets `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` on
+   `db-backup` in the Railway dashboard. The values are never written anywhere else. Also set
+   `R2_ENDPOINT` to the bucket's S3 endpoint (R2 → `squadzr-db-backups` → Settings → S3 API, without
+   the bucket name at the end). It is not a secret, but it carries the account id, which the public
+   repository does not publish.
+5. Run a backup by hand (below) and check the dump is in the bucket. `TODO(#136 verify)`
+
+### Where the dumps are
+
+- A Railway cron service, `db-backup`, runs every day at **06:00 UTC** (after the 04:00 UTC Catalog
+  Import). It runs `pg_dump --format=custom --no-owner --no-acl` with a PostgreSQL 16 client and
+  uploads the file with the AWS CLI. The code is in `ops/db-backup/`; the service is in
+  `.railway/railway.ts`.
+- The bucket is the private R2 bucket **`squadzr-db-backups`**, with no public URL and no custom
+  domain. Dumps are at `postgres/squadzr-<UTC date>T<UTC time>Z.dump`, for example
+  `postgres/squadzr-2026-11-15T060003Z.dump`.
+- A lifecycle rule, `delete-dumps-after-30-days`, deletes a dump 30 days after it was written. A second
+  rule aborts incomplete uploads after one day. Both are in the bucket's Settings in the Cloudflare
+  dashboard.
+- The recovery point is up to 24 hours. There is no point-in-time recovery.
+- A run that fails (dump or upload) exits non-zero, and Railway shows it as failed in the service's
+  Deployments. Nothing else alerts you: look at the service after the first week, then now and then.
+
+### Run a backup by hand
+
+Dashboard: Railway → `squadzr` → `production` → `db-backup` → the newest deployment → **Run now**.
+`TODO(#136 verify)` the button's name; the cron schedule stays in place.
+
+Then read the log, which ends with the size and the key (never a secret):
+
+```sh
+railway logs --service db-backup --lines 20
+```
+
+### Download a dump
+
+Dashboard: Cloudflare → R2 Object Storage → `squadzr-db-backups` → Objects → `postgres/` → the dump →
+Download.
+
+On the command line, with the `cf` CLI (a devDependency of `client/`, so it is in
+`client/node_modules/.bin` after `bun install`; `cf auth whoami` shows whether it is signed in):
+
+```sh
+cf r2 object get squadzr-db-backups/postgres/<dump name> --file ./<dump name>   # TODO(#136 verify) the flags
+```
+
+`cf r2 --help` lists the exact flags if they differ.
+
+### Restore into a throwaway database
+
+This is how to check a backup is good. It touches nothing in production. It needs Docker, and the
+dump in the current folder.
+
+```sh
+docker run -d --name pg-restore-check -e POSTGRES_PASSWORD=restore postgres:16.16-alpine3.24
+docker exec pg-restore-check sh -c 'until pg_isready -U postgres; do sleep 1; done; createdb -U postgres restore_check'
+docker cp ./<dump name> pg-restore-check:/tmp/restore.dump
+docker exec pg-restore-check pg_restore -U postgres --no-owner --dbname restore_check /tmp/restore.dump
+docker exec pg-restore-check psql -U postgres -d restore_check -c 'select count(*) from "user"' -c 'select count(*) from rooms' -c 'select count(*) from games'
+docker rm -f pg-restore-check
+```
+
+`pg_restore` prints nothing and exits 0 when the restore is clean. Compare the three counts with the
+same query in production (`railway connect postgres` opens a `psql` session; `TODO(#136 verify)`
+that it works on this project). The Squads table is named `rooms`.
+The counts match only if nothing changed since the dump, so compare against a dump taken at a quiet
+moment.
+
+### Restore into production
+
+Only if the production database is lost or damaged. It replaces what is there with the dump, so
+everything written after the dump is lost. `TODO(#136 verify)` the whole section; it has not been run
+on the production database.
+
+1. Download the dump you want (above). Decide how far back to go: the newest dump is the default.
+2. **Stop the writers.** Stop `api` so nothing writes during the restore: Railway → `api` → the active
+   deployment → **Remove** (keep the service). The 04:00 cron and the 06:00 backup only run at their
+   times; do not restore close to them.
+3. **Reach the database.** The `postgres` service has no public address. Add a temporary TCP proxy to
+   it: `postgres` → Settings → Networking → TCP Proxy → port `5432`. Copy the proxy's host and port
+   from the dashboard. The password is the `postgres` service's `POSTGRES_PASSWORD`; read it from the
+   dashboard and never paste it in a chat or a log.
+4. **Empty the database, then restore.** From a PostgreSQL 16 client (the Docker image above works:
+   `docker run --rm -it -v "$PWD:/dump" postgres:16.16-alpine3.24 sh`):
+
+   ```sh
+   export DB="postgresql://postgres@<proxy host>:<proxy port>/squadzr"
+   psql "$DB" -v ON_ERROR_STOP=1 -c 'DROP SCHEMA IF EXISTS drizzle CASCADE' -c 'DROP SCHEMA public CASCADE' -c 'CREATE SCHEMA public'
+   pg_restore --single-transaction --exit-on-error --no-owner --dbname "$DB" /dump/<dump name>
+   ```
+
+   Each command asks for the password. Dropping both schemas first matters: a table created by a
+   migration newer than the dump would otherwise survive, while the migration journal
+   (`drizzle.__drizzle_migrations`) comes back without that migration, and the next pre-deploy
+   would fail trying to create the table again. Dropping `public` also drops the `pg_trgm` and
+   `unaccent` extensions; the dump creates them again. `--single-transaction --exit-on-error` makes the
+   restore all or nothing: any error rolls it back and leaves the empty schemas, so read the error,
+   fix it and run `pg_restore` again.
+
+5. **Delete the TCP proxy.**
+6. **Start `api` again:** `api` → Deployments → the last deployment → **Redeploy**, or `railway
+redeploy --service api`. The pre-deploy command runs the migrations, so a dump older than the
+   newest migration is brought up to date. Then check `https://api.squadzr.app/health/ready`, open
+   `https://squadzr.app`, and sign in with Discord.
+
+If the database volume itself is gone, create the `postgres` service again from `.railway/railway.ts`
+(`catalog-import-railway.md`, "Apply a config change") before step 3, then restore into the empty
+database.
 
 ## Rotate secrets
 
@@ -196,14 +313,14 @@ printf %s "$(openssl rand -base64 36)" | railway variable set BETTER_AUTH_SECRET
 Setting a variable redeploys the service. If `railway config plan` ever shows a variable to delete,
 stop and read it before you apply (`catalog-import-railway.md`, "Apply a config change").
 
-| Secret                                       | Where it lives                                                            | What happens when you rotate it                                                                                                          |
-| -------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET`                         | Railway, service `api`                                                    | **Everyone is signed out.** They sign in again with Discord. The value is at least 32 characters.                                        |
-| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | Railway, service `api`                                                    | Sign-in with Discord fails until the new value is live. Create the new secret in the Discord developer portal, then update the variable. |
-| `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`       | Railway, service `games-import`; `api` reads the same values by reference | The daily import and the manual import fail until the new value is live. Rotate in the Twitch developer console.                         |
-| `EDGE_AUTH_TOKEN`                            | Four places (below)                                                       | Requests are refused with 403 `EDGE_AUTH_REQUIRED` while the four places disagree. Use `scripts/rotate-edge-token.mjs`.                  |
-| `TUNNEL_TOKEN`                               | Railway, service `cloudflared`                                            | `catalog-import-railway.md`, "The tunnel" (the paragraph "Rotate the tunnel token"). The site kept answering through the rotation.       |
-| R2 keys                                      | Not created yet                                                           | Placeholder for [#136](https://github.com/caiocezartg/squadzr/issues/136).                                                               |
+| Secret                                       | Where it lives                                                            | What happens when you rotate it                                                                                                                                                                                                                                        |
+| -------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`                         | Railway, service `api`                                                    | **Everyone is signed out.** They sign in again with Discord. The value is at least 32 characters.                                                                                                                                                                      |
+| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | Railway, service `api`                                                    | Sign-in with Discord fails until the new value is live. Create the new secret in the Discord developer portal, then update the variable.                                                                                                                               |
+| `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`       | Railway, service `games-import`; `api` reads the same values by reference | The daily import and the manual import fail until the new value is live. Rotate in the Twitch developer console.                                                                                                                                                       |
+| `EDGE_AUTH_TOKEN`                            | Four places (below)                                                       | Requests are refused with 403 `EDGE_AUTH_REQUIRED` while the four places disagree. Use `scripts/rotate-edge-token.mjs`.                                                                                                                                                |
+| `TUNNEL_TOKEN`                               | Railway, service `cloudflared`                                            | `catalog-import-railway.md`, "The tunnel" (the paragraph "Rotate the tunnel token"). The site kept answering through the rotation.                                                                                                                                     |
+| R2 keys                                      | Railway, service `db-backup` (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) | The next backup fails until the new key is live. Create it in R2 → Manage API tokens with **Object Read & Write on `squadzr-db-backups` only**. To rotate: create a new key, set both variables, run the cron by hand and check it succeeded, then delete the old key. |
 
 ### The edge token
 
