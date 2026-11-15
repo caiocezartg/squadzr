@@ -45,12 +45,18 @@ export function JoinSquadAuthModal({
           <Button
             variant="discord"
             full
+            className="sm:flex-1"
             icon={<DiscordIcon className="size-4" />}
             onClick={onSignIn}
           >
             {t('squads.authModal.continueWithDiscord')}
           </Button>
-          <Button variant="secondary" full onClick={() => onOpenChange(false)}>
+          <Button
+            variant="secondary"
+            full
+            className="sm:flex-1"
+            onClick={() => onOpenChange(false)}
+          >
             {t('squads.authModal.maybeLater')}
           </Button>
         </div>

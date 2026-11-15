@@ -41,12 +41,13 @@ export function CreateSignInPrompt({
           <Button
             variant="discord"
             full
+            className="sm:flex-1"
             icon={<DiscordIcon className="size-4" />}
             onClick={onSignIn}
           >
             {t('squads.authModal.continueWithDiscord')}
           </Button>
-          <Button variant="secondary" full onClick={onClose}>
+          <Button variant="secondary" full className="sm:flex-1" onClick={onClose}>
             {t('squads.authModal.maybeLater')}
           </Button>
         </div>
