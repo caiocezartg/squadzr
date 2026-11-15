@@ -140,5 +140,39 @@ export default defineRailway(() => {
     },
   })
 
-  return project('squadzr', { resources: [postgres, postgresData, api, gamesImport, cloudflared] })
+  // The daily database backup (#136): a cron service that runs `pg_dump` and uploads the dump to a private
+  // Cloudflare R2 bucket. The image is built from `ops/db-backup/` so the client is PostgreSQL 16, the same
+  // major as the `postgres` service; the Railpack builds of the other services have no `pg_dump`.
+  const dbBackup = service('db-backup', {
+    // checkSuites is Railway's "Wait for CI", as on the other services built from the repository.
+    source: github('caiocezartg/squadzr', { branch: 'main', checkSuites: true }),
+    build: {
+      builder: 'DOCKERFILE',
+      // The build context stays the repository root, so the path is from the root.
+      dockerfilePath: 'ops/db-backup/Dockerfile',
+      watchPatterns: ['ops/db-backup/**'],
+    },
+    deploy: {
+      // After the 04:00 UTC Catalog Import has finished, so the dump holds the day's imported catalog. The
+      // Dockerfile's ENTRYPOINT is the start command: the script dumps, uploads and exits.
+      cronSchedule: '0 6 * * *',
+      // A failed run stays failed in Railway until the next day's run; a retry loop would only repeat it.
+      restartPolicyType: 'NEVER',
+      limitOverride: { containers: { cpu: 0.5, memoryBytes: 256 * MIB } },
+    },
+    env: {
+      DATABASE_URL: postgres.env.DATABASE_URL,
+      // The owner creates the key in Cloudflare (R2 > Manage API tokens, Object Read & Write on this one
+      // bucket only) and sets both in Railway; neither is in the repository.
+      R2_ACCESS_KEY_ID: preserve(),
+      R2_SECRET_ACCESS_KEY: preserve(),
+      R2_BUCKET: 'squadzr-db-backups',
+      // The bucket's S3 endpoint. The account id is an identifier, not a secret.
+      R2_ENDPOINT: 'https://af4f008c752411949fbfba283157dcf9.r2.cloudflarestorage.com',
+    },
+  })
+
+  return project('squadzr', {
+    resources: [postgres, postgresData, api, gamesImport, cloudflared, dbBackup],
+  })
 })
