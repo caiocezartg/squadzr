@@ -9,6 +9,7 @@ import {
   createMockUser,
   createMockUserRepository,
 } from '@test/mocks'
+import { ROOM } from '@config/constants'
 import { FakeClock } from '@test/harness/clock'
 import { NotRoomMemberError, RoomNotFoundError } from '@application/errors'
 
@@ -88,10 +89,10 @@ describe('realtime snapshot access', () => {
   it('allows members until the exact Ready Room retention deadline', async () => {
     const { useCase, rooms, room, clock } = setup()
     rooms.findByCode.mockResolvedValue({ ...room, readyAt: NOW })
-    clock.advance(60 * 60_000 - 1)
+    clock.advance(ROOM.READY_ROOM_RETENTION_MS - 1)
     expect(await useCase.execute({ code: 'ABC123', userId: room.hostId })).toMatchObject({
       userId: room.hostId,
-      expiresAt: new Date(NOW.getTime() + 60 * 60_000),
+      expiresAt: new Date(NOW.getTime() + ROOM.READY_ROOM_RETENTION_MS),
       players: [expect.objectContaining({ id: room.hostId, isHost: true })],
     })
     clock.advance(1)

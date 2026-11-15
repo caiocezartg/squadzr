@@ -29,7 +29,7 @@ A Squad that is accepting new memberships while it is being formed.
 _Avoid_: Open Room, waiting room, active room
 
 **Ready Squad**:
-A Squad that has reached its required capacity and no longer accepts membership changes. The join that fills it also writes its Squad Record and runs the Squad Release of its members. The cleanup deletes it 60 minutes after it became Ready; its Squad Record stays.
+A Squad that has reached its required capacity and no longer accepts membership changes. The join that fills it also writes its Squad Record and runs the Squad Release of its members. The cleanup deletes it 24 hours after it became Ready; its Squad Record stays.
 _Avoid_: Ready Room, completed room, waiting room
 
 **Squad Record**:

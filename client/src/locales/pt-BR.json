@@ -1128,7 +1128,7 @@
           "items": [
             "Conta, perfil e histórico de Squads: enquanto a sua conta existir.",
             "Sessões: apagadas quando você sai. Uma sessão da qual você nunca sai para de funcionar cerca de uma semana depois do último uso, e o registro dela, com o endereço IP e o user agent, pode ser guardado até a sua conta ser apagada.",
-            "Squads: um Squad aberto é apagado após 24 horas sem atividade, e um Squad cheio 1 hora depois de fechar.",
+            "Squads: um Squad aberto é apagado após 24 horas sem atividade, e um Squad cheio 24 horas depois de fechar.",
             "Notificações: até você apagá-las ou a sua conta ser apagada.",
             "Registros de auditoria: guardados para a responsabilidade da moderação, mesmo depois que o Squad ou a conta a que se referem é apagado."
           ]

@@ -54,7 +54,7 @@ describe('privacy policy page', () => {
 
     expect(html).toContain('<h1')
     expect(html).toContain('Privacy Policy')
-    expect(html).toContain('Last updated: November 14, 2026')
+    expect(html).toContain('Last updated: November 15, 2026')
     expect(html).toContain('href="mailto:support@squadzr.app"')
     // What Discord sends, by the scopes Better Auth requests: identify and email.
     expect(html).toContain('email address')
@@ -67,7 +67,7 @@ describe('privacy policy page', () => {
     const html = renderIn('pt-BR', <PrivacyPage />)
 
     expect(html).toContain('Política de Privacidade')
-    expect(html).toContain('Última atualização: 14 de novembro de 2026')
+    expect(html).toContain('Última atualização: 15 de novembro de 2026')
     expect(html).toContain('LGPD')
   })
 
@@ -117,7 +117,7 @@ describe('terms of use page', () => {
     const html = renderIn('en', <TermsPage />)
 
     expect(html).toContain('Terms of Use')
-    expect(html).toContain('Last updated: November 14, 2026')
+    expect(html).toContain('Last updated: November 15, 2026')
     expect(html).toContain('Brazil')
     expect(html).toContain('href="mailto:support@squadzr.app"')
   })

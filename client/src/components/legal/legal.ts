@@ -11,4 +11,4 @@ export const LEGAL_PATHS = {
 export const LEGAL_CONTACT_EMAIL = 'support@squadzr.app'
 
 /** The day both documents last changed. Update it with any change to their text. */
-export const LEGAL_LAST_UPDATED = new Date('2026-11-14T00:00:00Z')
+export const LEGAL_LAST_UPDATED = new Date('2026-11-15T00:00:00Z')

@@ -8,8 +8,8 @@ export const ROOM = {
   NOTIFICATION_LIMIT: 20,
   /** An Open Room expires 24h after its last durable Membership change. */
   OPEN_ROOM_TTL_MS: 24 * 60 * 60_000,
-  /** A Ready Room stays accessible to its members for 60min after `readyAt`. */
-  READY_ROOM_RETENTION_MS: 60 * 60_000,
+  /** A Ready Room stays accessible to its members for 24h after `readyAt`. */
+  READY_ROOM_RETENTION_MS: 24 * 60 * 60_000,
 } as const
 
 export const ADMIN = {

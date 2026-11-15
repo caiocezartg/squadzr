@@ -1128,7 +1128,7 @@
           "items": [
             "Account, profile and Squad history: while your account exists.",
             "Sessions: deleted when you sign out. A session you never sign out of stops working about a week after its last use, and its record, with the IP address and user agent, may be kept until your account is deleted.",
-            "Squads: an open Squad is deleted after 24 hours without activity, and a full Squad 1 hour after it fills.",
+            "Squads: an open Squad is deleted after 24 hours without activity, and a full Squad 24 hours after it fills.",
             "Notifications: until you delete them or your account is deleted.",
             "Admin audit records: kept for moderation accountability, also after the Squad or account they refer to is deleted."
           ]

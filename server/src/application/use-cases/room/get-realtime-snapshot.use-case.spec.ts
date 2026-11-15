@@ -60,7 +60,7 @@ describe('realtime snapshot read', () => {
   it('answers null for a Ready Room at its exact retention deadline', async () => {
     const { useCase, rooms, room, clock } = setup()
     rooms.findByCode.mockResolvedValue({ ...room, readyAt: NOW })
-    clock.advance(60 * 60_000)
+    clock.advance(ROOM.READY_ROOM_RETENTION_MS)
     expect(await useCase.execute({ code: 'ABC123' })).toBeNull()
   })
 
