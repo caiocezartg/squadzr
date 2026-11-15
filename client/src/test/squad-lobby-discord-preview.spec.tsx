@@ -7,7 +7,13 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { DiscordPreviewResponse } from '@squadzr/schemas'
-import { boardSquads, lobbySquad, lobbySquadResponse, readyLobbySnapshot } from './fixtures'
+import {
+  boardSquads,
+  lobbySnapshot,
+  lobbySquad,
+  lobbySquadResponse,
+  readyLobbySnapshot,
+} from './fixtures'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
 import { countHttpCalls, httpError, httpOk, onHttp, type MockHttpResponse } from './http-router'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
@@ -147,6 +153,7 @@ describe('squad lobby — Discord server preview', () => {
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
 
     expect(await screen.findByRole('region', { name: 'Discord invite' })).toBeInTheDocument()
     expect(countHttpCalls('GET', '/api/rooms/:code/discord-preview')).toBe(0)

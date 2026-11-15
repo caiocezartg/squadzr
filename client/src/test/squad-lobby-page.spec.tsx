@@ -116,16 +116,17 @@ describe('the Lobby on the App Router', () => {
     expect(screen.queryByRole('link', { name: 'Open in Discord' })).not.toBeInTheDocument()
   })
 
-  it('shows a member the roster from the snapshot, with placeholders until it arrives', async () => {
+  it('shows a member the roster of the details at once, then the one of the snapshot', async () => {
     signInAsFakeUser()
     onHttp('GET', '/api/rooms/:code', () => httpOk(lobbySquadResponse))
 
     await renderLobbyRoute(lobbySquad.code)
 
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
-    expect(screen.getAllByText('Open slot')).toHaveLength(3)
-    // The HTTP response carries the roster too, but the Lobby shows only the snapshot's.
-    expect(screen.queryByText('Caio')).not.toBeInTheDocument()
+    // The member's details carry the roster, so it shows before the snapshot; the invite waits for it.
+    expect(screen.getByText('Caio')).toBeInTheDocument()
+    expect(screen.getAllByText('Open slot')).toHaveLength(2)
+    expect(screen.getByTestId('invite-skeleton')).toBeInTheDocument()
 
     openLatestWebSocket()
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })

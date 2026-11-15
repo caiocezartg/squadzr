@@ -35,6 +35,44 @@ const DIMMED_ACTIONS = [
 /** The display title both panels open with. */
 const TITLE_CLASSES = 'font-display text-[34px] leading-none font-black uppercase @2xl:text-[40px]'
 
+/**
+ * The invite panel's place before the first snapshot, which alone says whether the Squad is Ready. It is the
+ * locked panel's frame with placeholders for its words, so the column keeps its height when the panel lands.
+ */
+export function InviteSkeleton() {
+  return (
+    <div aria-hidden="true" data-testid="invite-skeleton" className="bg-panel @container">
+      <div className="flex flex-col gap-3.5 p-4.5 sm:p-5">
+        <Skeleton className="h-8.5 w-3/5 @2xl:h-10" />
+
+        <div className="bg-bg/45 flex flex-col">
+          <div className="flex items-center gap-3.5 px-3.5 pt-3.5 pb-3">
+            <Skeleton className="size-13 shrink-0 rounded-2xl" />
+            <span className="flex flex-1 flex-col gap-2">
+              <Skeleton className="h-3.5 w-full" />
+              <Skeleton className="h-3.5 w-2/3" />
+            </span>
+          </div>
+          <div className="border-line flex min-h-12 items-center justify-between gap-4 border-t px-3.5">
+            <Skeleton className="h-2 w-28" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <LinkRow
+            tone="border-line text-[#4a4c54]"
+            link={MASKED_LINK}
+            actions={DIMMED_ACTIONS.map(([label, Icon]) => (
+              <Button key={label} variant="secondary" disabled className={ACTION_CLASSES}>
+                <Skeleton className="h-3 w-14" />
+                <Icon />
+              </Button>
+            ))}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 interface LockedInviteProps {
   /** Members the Squad has. */
   readonly filled: number

@@ -87,12 +87,13 @@ export function useLobbyView(squadCode: string, channel: SquadChannel): LobbyVie
     notifySquadLeave: channel.notifySquadLeave,
   })
 
-  // Roster, Presence and readiness come from the snapshot alone. Until it arrives they stay empty, so the
-  // slots show as placeholders and nobody reads as online or ready.
-  const players = useMemo(
-    () => (channel.snapshot ? rosterFromSnapshot(channel.snapshot) : []),
-    [channel.snapshot]
-  )
+  // The roster is the snapshot's once it arrives. Before that a member's details already carry it, so the
+  // members show at once instead of empty slots. Presence and readiness come from the snapshot alone: until
+  // it arrives nobody reads as online or ready.
+  const players = useMemo(() => {
+    if (channel.snapshot) return rosterFromSnapshot(channel.snapshot)
+    return details !== null && isRoomLobbyResponse(details) ? details.players : []
+  }, [channel.snapshot, details])
   const maxPlayers = squad?.maxPlayers ?? 5
   const discordLink = channel.snapshot?.room.discordLink ?? null
 

@@ -9,7 +9,7 @@ import { MotionProvider } from '@/components/ui/motion-provider'
 import { useSession } from '@/hooks/use-session'
 import { translateErrorCode } from '@/lib/error-messages'
 import { useJoinSquad } from '@/features/squad-joining/join'
-import { LockedInvite, ReadyInvite } from './components/discord-invite'
+import { InviteSkeleton, LockedInvite, ReadyInvite } from './components/discord-invite'
 import { LobbyBackLink } from './components/lobby-back-link'
 import { LobbyActions } from './components/lobby-actions'
 import { LobbyColumns } from './components/lobby-columns'
@@ -139,7 +139,8 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
           squadCode={squadCode}
           players={lobby.players}
           maxPlayers={lobby.maxPlayers}
-          presence={lobby.presence}
+          // Until the snapshot arrives Presence is unknown, so no member reads as online or away yet.
+          presence={lobby.hasSnapshot ? lobby.presence : null}
           viewerId={session.user.id}
           isReady={lobby.isReady}
         />
@@ -164,6 +165,9 @@ function MemberInvite({ squadCode, lobby, entering }: MemberInviteProps) {
   const invite = lobby.isReady && lobby.discordLink ? parseDiscordInvite(lobby.discordLink) : null
   const discord = useDiscordPreview(squadCode, invite !== null && lobby.squad !== null)
 
+  // Readiness comes with the snapshot, so until then the panel's place holds a placeholder: a full Squad
+  // must not flash the locked panel before its invite.
+  if (!lobby.hasSnapshot) return <InviteSkeleton />
   if (!lobby.isReady) {
     return <LockedInvite filled={lobby.players.length} total={lobby.maxPlayers} />
   }

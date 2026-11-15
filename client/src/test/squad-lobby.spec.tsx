@@ -85,9 +85,10 @@ describe('squad lobby — snapshot handshake', () => {
     renderSquadsFlow('/squads/LOBBY1')
 
     expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
-    // HTTP alone does not seed the live roster: it is empty until the snapshot.
-    expect(screen.getByText('0/3 players')).toBeInTheDocument()
-    expect(screen.getAllByText('Open slot')).toHaveLength(3)
+    // The member's details seed the roster until the snapshot replaces it.
+    expect(screen.getByText('1/3 players')).toBeInTheDocument()
+    expect(screen.getByText('Caio')).toBeInTheDocument()
+    expect(screen.getAllByText('Open slot')).toHaveLength(2)
     expect(screen.getByRole('button', { name: 'End squad' })).toBeInTheDocument()
 
     openLatestWebSocket()
@@ -278,6 +279,9 @@ describe('squad lobby — readiness from the snapshot', () => {
   it('names the locked invite bar as a region, like the Ready panel', async () => {
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    await screen.findByText('Ana')
 
     // The bar is a region named by its heading, with its lock, its wait and its masked link.
     expectLockedInvite()
@@ -851,11 +855,12 @@ describe('squad lobby — the member Lobby', () => {
     expect(tiles[1]).toHaveTextContent('Open slot')
   })
 
-  it('does not animate the first snapshot, and enters a member of a later one from opacity 0 and scale 0.9', async () => {
+  it('does not animate a member already shown, and enters a newcomer from opacity 0 and scale 0.9', async () => {
     await renderLobbyWithSnapshot()
 
-    // The first snapshot renders its tiles in their final state: nothing starts from the entrance state.
-    expect(tileOf('Ana').style.opacity).toBe('1')
+    // The roster the details showed renders in its final state: nothing starts from the entrance state.
+    expect(tileOf('Caio').style.opacity).toBe('1')
+    await waitFor(() => expect(tileOf('Ana').style.opacity).toBe('1'))
 
     sendFromServer({
       type: 'room_snapshot',
