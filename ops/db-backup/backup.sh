@@ -1,6 +1,6 @@
 #!/bin/sh
 # Dumps the production database and uploads the dump to the private R2 bucket (#136).
-# Any failure exits non-zero, so Railway reports the cron run as failed. It never prints a secret.
+# Any failure exits non-zero, so Railway reports the cron run as failed. It prints no secret on purpose.
 set -eu
 
 for name in DATABASE_URL R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET R2_ENDPOINT; do

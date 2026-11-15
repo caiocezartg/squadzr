@@ -25,6 +25,7 @@ not be renamed without updating `.github/rulesets/*.json` and the live rulesets 
 | `unit-tests`        | `CI`                                            | `bun run test` (every Vitest unit project through Turbo)                             | `development`, `main` |
 | `integration-tests` | `CI`                                            | `bun run test:integration` in `server/` against a PostgreSQL 16 service              | `development`, `main` |
 | `build`             | `CI`                                            | `bun run build` (client and server production builds)                                | `development`, `main` |
+| `ops-check`         | `CI`                                            | `shellcheck` on `ops/db-backup/backup.sh` and `docker build` of its Dockerfile       | `development`, `main` |
 | `promotion-source`  | `Promotion` (`.github/workflows/promotion.yml`) | Fails any pull request into `main` whose head is not this repository's `development` | `main`                |
 
 All checks are produced by the GitHub Actions app (`integration_id` 15368), which the rulesets pin

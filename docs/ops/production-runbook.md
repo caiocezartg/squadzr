@@ -179,6 +179,23 @@ the dashboard and read the logs.
 marked `TODO(#136 verify)` have not been run in production yet. The coordinator verifies them and
 removes the marks.
 
+### Set up (once)
+
+The `db-backup` service builds from `main`, so it is created only after the change is there.
+
+1. Merge the change into `main` with the promotion pull request, and wait for CI to pass. If you
+   apply before this, the first build fails because `main` has no `ops/db-backup/`.
+2. `railway config plan`, read it (it should only create `db-backup`), then `railway config apply`
+   (`catalog-import-railway.md`, "Apply a config change").
+3. Check the service's deployment trigger with the `deploymentTriggers` query in
+   `catalog-import-railway.md`, with the `db-backup` service id. An empty list means later pushes to
+   `ops/db-backup/` do not redeploy it: connect the repository in the service's Settings.
+   `TODO(#136 verify)`
+4. The owner creates the R2 key (R2 → Manage API tokens → Create Account API token, **Object Read &
+   Write** on `squadzr-db-backups` only) and sets `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` on
+   `db-backup` in the Railway dashboard. The values are never written anywhere else.
+5. Run a backup by hand (below) and check the dump is in the bucket. `TODO(#136 verify)`
+
 ### Where the dumps are
 
 - A Railway cron service, `db-backup`, runs every day at **06:00 UTC** (after the 04:00 UTC Catalog
@@ -237,8 +254,8 @@ docker rm -f pg-restore-check
 `pg_restore` prints nothing and exits 0 when the restore is clean. Compare the three counts with the
 same query in production (`railway connect postgres` opens a `psql` session; `TODO(#136 verify)`
 that it works on this project). The Squads table is named `rooms`.
-The counts match only if nothing changed since the dump, so compare against a dump from a quiet
-moment, or against the counts logged just after the run.
+The counts match only if nothing changed since the dump, so compare against a dump taken at a quiet
+moment.
 
 ### Restore into production
 
@@ -254,16 +271,22 @@ on the production database.
    it: `postgres` → Settings → Networking → TCP Proxy → port `5432`. Copy the proxy's host and port
    from the dashboard. The password is the `postgres` service's `POSTGRES_PASSWORD`; read it from the
    dashboard and never paste it in a chat or a log.
-4. **Restore.** From a PostgreSQL 16 client (the Docker image above works: `docker run --rm -it -v
-"$PWD:/dump" postgres:16.16-alpine3.24 sh`):
+4. **Empty the database, then restore.** From a PostgreSQL 16 client (the Docker image above works:
+   `docker run --rm -it -v "$PWD:/dump" postgres:16.16-alpine3.24 sh`):
 
    ```sh
-   pg_restore --clean --if-exists --no-owner --dbname "postgresql://postgres@<proxy host>:<proxy port>/squadzr" /dump/<dump name>
+   export DB="postgresql://postgres@<proxy host>:<proxy port>/squadzr"
+   psql "$DB" -v ON_ERROR_STOP=1 -c 'DROP SCHEMA IF EXISTS drizzle CASCADE' -c 'DROP SCHEMA public CASCADE' -c 'CREATE SCHEMA public'
+   pg_restore --single-transaction --exit-on-error --no-owner --dbname "$DB" /dump/<dump name>
    ```
 
-   It asks for the password. `--clean --if-exists` drops each object before creating it, so the
-   restore works over a database that already has the schema. Errors about objects that do not exist
-   are fine; any other error, stop and read it.
+   Each command asks for the password. Dropping both schemas first matters: a table created by a
+   migration newer than the dump would otherwise survive, while the migration journal
+   (`drizzle.__drizzle_migrations`) comes back without that migration, and the next pre-deploy
+   would fail trying to create the table again. Dropping `public` also drops the `pg_trgm` and
+   `unaccent` extensions; the dump creates them again. `--single-transaction --exit-on-error` makes the
+   restore all or nothing: any error rolls it back and leaves the empty schemas, so read the error,
+   fix it and run `pg_restore` again.
 
 5. **Delete the TCP proxy.**
 6. **Start `api` again:** `api` → Deployments → the last deployment → **Redeploy**, or `railway
