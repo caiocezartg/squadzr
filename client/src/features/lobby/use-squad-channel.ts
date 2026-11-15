@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { ChatMessageDto } from '@squadzr/schemas/ws'
 import { WS_URL } from '@/env'
 import { useNotificationEvents } from '@/hooks/use-notification-events'
 import { useWebSocket } from '@/hooks/use-websocket'
@@ -9,6 +10,17 @@ import {
   type PresenceState,
   type SquadSnapshot,
 } from './squad-snapshot'
+
+/** Adds the messages the chat does not hold yet, by id, keeping the order they were sent in. */
+function mergeChatMessages(
+  current: readonly ChatMessageDto[],
+  incoming: readonly ChatMessageDto[]
+): ChatMessageDto[] {
+  const known = new Set(current.map((message) => message.id))
+  const fresh = incoming.filter((message) => !known.has(message.id))
+  if (fresh.length === 0) return current as ChatMessageDto[]
+  return [...current, ...fresh].sort((a, b) => a.sentAt.localeCompare(b.sentAt))
+}
 
 /** Squad codes travel uppercased by contract; URLs may still arrive lowercase. */
 function matchesSquadCode(eventCode: string, squadCode: string): boolean {
@@ -33,6 +45,10 @@ export interface SquadChannel {
   dismissError: () => void
   /** Tells the server this tab is leaving the squad channel (Presence only). */
   notifySquadLeave: (squadCode: string) => void
+  /** The Squad's chat, oldest first: the history of the join, then what arrives live. */
+  chatMessages: readonly ChatMessageDto[]
+  /** Sends a chat message; it shows when the server sends it back to the channel. */
+  sendChatMessage: (body: string) => void
 }
 
 /**
@@ -51,6 +67,7 @@ export function useSquadChannel({
   const [presence, setPresence] = useState<PresenceState>({})
   const [errorCode, setErrorCode] = useState<string | null>(null)
   const [membershipRevoked, setMembershipRevoked] = useState(false)
+  const [chatMessages, setChatMessages] = useState<readonly ChatMessageDto[]>([])
 
   const { status, send, on, subscribe } = useWebSocket(WS_URL)
 
@@ -80,6 +97,7 @@ export function useSquadChannel({
     setPresence({})
     setErrorCode(null)
     setMembershipRevoked(false)
+    setChatMessages([])
 
     const previousCode = joinedCodeRef.current
     joinedCodeRef.current = enabled ? squadCode : null
@@ -117,6 +135,14 @@ export function useSquadChannel({
             })
           )
         },
+        chat_history: (payload) => {
+          if (!matchesSquadCode(payload.roomCode, squadCode)) return
+          setChatMessages((current) => mergeChatMessages(current, payload.messages))
+        },
+        chat_message: (payload) => {
+          if (!matchesSquadCode(payload.roomCode, squadCode)) return
+          setChatMessages((current) => mergeChatMessages(current, [payload.message]))
+        },
         room_deleted: (payload) => {
           if (!matchesSquadCode(payload.roomCode, squadCode)) return
           onSquadRemoved(payload.roomId)
@@ -131,6 +157,7 @@ export function useSquadChannel({
             // the error alone.
             setSnapshot(null)
             setPresence({})
+            setChatMessages([])
             setMembershipRevoked(true)
           }
         },
@@ -145,6 +172,11 @@ export function useSquadChannel({
     [send]
   )
 
+  const sendChatMessage = useCallback(
+    (body: string) => send({ type: 'chat_send', payload: { roomCode: squadCode, body } }),
+    [send, squadCode]
+  )
+
   return {
     status,
     snapshot,
@@ -153,5 +185,7 @@ export function useSquadChannel({
     membershipRevoked,
     dismissError,
     notifySquadLeave,
+    chatMessages,
+    sendChatMessage,
   }
 }

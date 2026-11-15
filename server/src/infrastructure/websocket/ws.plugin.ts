@@ -9,6 +9,7 @@ import { InvalidMessages, INVALID_MESSAGE_LIMIT } from './invalid-messages'
 import { MessageRate, PING_RATE_LIMIT } from './message-rate'
 import type { Realtime, WsClient } from './types'
 import {
+  handleChatSend,
   handleJoinRoom,
   handleLeaveRoom,
   handleSubscribeLobby,
@@ -42,7 +43,16 @@ async function wsPlugin(
   { realtime, limits }: { realtime: Realtime; limits: WsLimits }
 ): Promise<void> {
   const addressConnections = new AddressConnections(limits.connectionsPerAddress)
-  const { manager, heartbeat, operations, presence, broadcaster, subscribeSnapshot } = realtime
+  const {
+    manager,
+    heartbeat,
+    operations,
+    presence,
+    broadcaster,
+    subscribeSnapshot,
+    listChatHistory,
+    sendChatMessage,
+  } = realtime
   fastify.decorate('broadcaster', broadcaster)
   fastify.decorate('realtime', realtime)
 
@@ -121,13 +131,27 @@ async function wsPlugin(
     function dispatch(message: WsIncomingMessage): void | Promise<void> {
       switch (message.type) {
         case 'join_room':
-          return handleJoinRoom(socket, message, manager, subscribeSnapshot, presence, broadcaster)
+          return handleJoinRoom(
+            socket,
+            message,
+            manager,
+            subscribeSnapshot,
+            listChatHistory,
+            presence,
+            broadcaster
+          )
         case 'leave_room':
           if (!client.userId) {
             sendError(socket, 'UNAUTHORIZED', 'Authentication required', manager, fastify.clock)
             return
           }
           return handleLeaveRoom(socket, message, manager, presence)
+        case 'chat_send':
+          if (!client.userId) {
+            sendError(socket, 'UNAUTHORIZED', 'Authentication required', manager, fastify.clock)
+            return
+          }
+          return handleChatSend(socket, message, manager, sendChatMessage, broadcaster)
         case 'subscribe_lobby':
           return handleSubscribeLobby(socket, manager, fastify.clock)
         case 'unsubscribe_lobby':

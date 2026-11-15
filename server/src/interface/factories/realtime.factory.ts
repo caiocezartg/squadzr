@@ -9,6 +9,9 @@ import { DrizzleActiveSessions } from '@infrastructure/services/drizzle-active-s
 import { GetRealtimeSnapshotUseCase } from '@application/use-cases/room/get-realtime-snapshot.use-case'
 import { GetRoomByCodeUseCase } from '@application/use-cases/room/get-room-by-code.use-case'
 import { SubscribeRealtimeSnapshotUseCase } from '@application/use-cases/room/subscribe-realtime-snapshot.use-case'
+import { ListChatHistoryUseCase } from '@application/use-cases/chat/list-chat-history.use-case'
+import { SendChatMessageUseCase } from '@application/use-cases/chat/send-chat-message.use-case'
+import { InMemoryChatMessageRepository } from '@infrastructure/repositories/in-memory-chat-message.repository'
 import { WsConnectionManager } from '@infrastructure/websocket/ws-connection-manager'
 import { WsRoomBroadcaster } from '@infrastructure/websocket/room-broadcaster.service'
 import { OrderedOperations } from '@infrastructure/websocket/ordered-operations'
@@ -39,6 +42,9 @@ export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogge
   const getRoomByCode = new GetRoomByCodeUseCase(rooms, members, users, clock)
   const subscribeSnapshot = new SubscribeRealtimeSnapshotUseCase(getRoomByCode)
   const getSnapshot = new GetRealtimeSnapshotUseCase(rooms, members, users, clock)
+  const chatMessages = new InMemoryChatMessageRepository()
+  const listChatHistory = new ListChatHistoryUseCase(chatMessages)
+  const sendChatMessage = new SendChatMessageUseCase(getRoomByCode, chatMessages, clock)
   const manager = new WsConnectionManager((socket) => {
     log.warn({ category: 'transport', event: 'send_failed' }, 'WebSocket send failed')
     disconnect(socket)
@@ -134,6 +140,8 @@ export function createRealtime(db: Database, clock: Clock, log: FastifyBaseLogge
   return {
     manager,
     subscribeSnapshot,
+    listChatHistory,
+    sendChatMessage,
     getSnapshot,
     presence,
     broadcaster,

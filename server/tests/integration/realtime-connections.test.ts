@@ -49,7 +49,7 @@ describe('connection identity', () => {
     expect(guest.protocol).toEqual({
       type: 'protocol',
       timestamp: expect.any(Number),
-      payload: { version: 5 },
+      payload: { version: 6 },
     })
 
     guest.send({ type: 'ping' })

@@ -3,7 +3,13 @@ import type { FastifyBaseLogger } from 'fastify'
 import type { Room } from '@domain/entities/room.entity'
 import type { UserNotification } from '@domain/entities/user-notification.entity'
 import type { Clock } from '@domain/services/clock.interface'
-import { toMemberRoom, toPublicRoom, toUserNotificationDto } from '@application/projections'
+import type { ChatMessage } from '@domain/entities/chat-message.entity'
+import {
+  toChatMessageDto,
+  toMemberRoom,
+  toPublicRoom,
+  toUserNotificationDto,
+} from '@application/projections'
 import type { IGetRealtimeSnapshotUseCase } from '@application/use-cases/room/get-realtime-snapshot.use-case'
 import type { RealtimeSnapshot } from '@application/use-cases/room/helpers/realtime-snapshot'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
@@ -230,6 +236,31 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
         })
       })
     }
+  }
+
+  /** A new chat message, to every socket in the Squad's channel, its author's included. */
+  broadcastChatMessage(roomCode: string, message: ChatMessage): void {
+    if (this.stopped) return
+    const payload = { roomCode, message: toChatMessageDto(message) }
+    for (const socket of this.connectionManager.getRoomSockets(roomCode) ?? []) {
+      this.publish(socket, () => {
+        if (this.connectionManager.getClientData(socket)?.roomCode !== roomCode) return
+        this.connectionManager.sendToSocket(socket, {
+          type: 'chat_message',
+          timestamp: this.clock.now().getTime(),
+          payload,
+        })
+      })
+    }
+  }
+
+  /** The chat's latest messages to a socket that has just joined the Squad's channel, after its snapshot. */
+  sendChatHistory(socket: WebSocket, roomCode: string, messages: readonly ChatMessage[]): void {
+    this.connectionManager.sendToSocket(socket, {
+      type: 'chat_history',
+      timestamp: this.clock.now().getTime(),
+      payload: { roomCode, messages: messages.map(toChatMessageDto) },
+    })
   }
 
   stop(): void {

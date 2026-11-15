@@ -18,6 +18,7 @@ import { MembersPanel } from './components/members-panel'
 import { NonMemberLobby } from './components/non-member-lobby'
 import { SquadErrorBoundary } from './components/squad-error-boundary'
 import { SquadNotFound } from './components/squad-not-found'
+import { SquadChat } from './components/squad-chat'
 import { SquadSignIn } from './components/squad-sign-in'
 import { LobbySkeleton } from './skeleton'
 import { discardFailedSquadRead } from './squad-details'
@@ -144,6 +145,12 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
           isReady={lobby.isReady}
         />
         <MemberInvite squadCode={squadCode} lobby={lobby} entering={readyEntrance} />
+        <SquadChat
+          messages={lobby.chatMessages}
+          viewerId={session.user.id}
+          canSend={lobby.canChat}
+          onSend={lobby.sendChatMessage}
+        />
       </LobbyColumns>
     </div>
   )

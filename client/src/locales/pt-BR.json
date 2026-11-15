@@ -60,6 +60,16 @@
       "statInRoom": "na sala agora",
       "statPlayers": "{count, plural, one {jogador} other {jogadores}}"
     },
+    "chat": {
+      "title": "Chat do squad",
+      "messages": "Mensagens do squad",
+      "empty": "Nenhuma mensagem ainda. Combinem a partida por aqui.",
+      "label": "Mensagem para o squad",
+      "placeholder": "Escreva uma mensagem…",
+      "connecting": "Conectando ao chat…",
+      "send": "Enviar mensagem",
+      "you": "você"
+    },
     "close": "Fechar",
     "pagination": {
       "label": "Paginação",

@@ -5,6 +5,7 @@ import { useSquadBoardCommands } from '@/features/squad-board'
 import { useSession } from '@/hooks/use-session'
 import { useAppNavigation } from '@/lib/navigation'
 import type { RealtimeStatus } from '@/lib/ws-client'
+import type { ChatMessageDto } from '@squadzr/schemas/ws'
 import type { Player, PublicSquad } from '@/types'
 import { rosterFromSnapshot, type PresenceState } from './squad-snapshot'
 import { useSquadChannel, type SquadChannel } from './use-squad-channel'
@@ -33,6 +34,11 @@ export interface LobbyView {
   errorCode: string | null
   dismissError: () => void
   leaveSquad: () => Promise<void>
+  /** The Squad's chat, oldest first. */
+  chatMessages: readonly ChatMessageDto[]
+  /** The viewer can write: the channel is open and has sent its snapshot. */
+  canChat: boolean
+  sendChatMessage: (body: string) => void
 }
 
 /**
@@ -112,5 +118,8 @@ export function useLobbyView(squadCode: string, channel: SquadChannel): LobbyVie
     errorCode: channel.errorCode,
     dismissError: channel.dismissError,
     leaveSquad,
+    chatMessages: channel.chatMessages,
+    canChat: channel.snapshot !== null && channel.status === 'open',
+    sendChatMessage: channel.sendChatMessage,
   }
 }

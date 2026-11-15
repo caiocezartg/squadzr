@@ -2,6 +2,8 @@ import type { WsServerMessage } from '@squadzr/schemas/ws'
 import type { WebSocket } from '@fastify/websocket'
 import type { IGetRealtimeSnapshotUseCase } from '@application/use-cases/room/get-realtime-snapshot.use-case'
 import type { ISubscribeRealtimeSnapshotUseCase } from '@application/use-cases/room/subscribe-realtime-snapshot.use-case'
+import type { IListChatHistoryUseCase } from '@application/use-cases/chat/list-chat-history.use-case'
+import type { ISendChatMessageUseCase } from '@application/use-cases/chat/send-chat-message.use-case'
 import type { WsConnectionManager } from './ws-connection-manager'
 import type { WsRoomBroadcaster } from './room-broadcaster.service'
 import type { OrderedOperations } from './ordered-operations'
@@ -33,6 +35,8 @@ export interface ConnectionInspection {
 export interface Realtime {
   manager: WsConnectionManager
   subscribeSnapshot: ISubscribeRealtimeSnapshotUseCase
+  listChatHistory: IListChatHistoryUseCase
+  sendChatMessage: ISendChatMessageUseCase
   getSnapshot: IGetRealtimeSnapshotUseCase
   presence: Presence
   broadcaster: WsRoomBroadcaster

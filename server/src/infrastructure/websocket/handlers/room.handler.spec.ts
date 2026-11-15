@@ -74,6 +74,7 @@ describe('handleDisconnect', () => {
     }
     const broadcaster = {
       sendSnapshot: vi.fn(),
+      sendChatHistory: vi.fn(),
       broadcastPresence: vi.fn(),
     } as unknown as WsRoomBroadcaster
     const pending = handleJoinRoom(
@@ -81,6 +82,7 @@ describe('handleDisconnect', () => {
       { type: 'join_room', timestamp: 0, payload: { roomCode: ROOM_CODE } },
       manager,
       subscribeSnapshot,
+      { execute: vi.fn(() => Promise.resolve([])) },
       presence,
       broadcaster
     )
@@ -90,6 +92,7 @@ describe('handleDisconnect', () => {
     expect(manager.getRoomSockets(ROOM_CODE)).toBeUndefined()
     expect(manager.connectionCount).toBe(0)
     expect(broadcaster.sendSnapshot).not.toHaveBeenCalled()
+    expect(broadcaster.sendChatHistory).not.toHaveBeenCalled()
     expect(broadcaster.broadcastPresence).not.toHaveBeenCalled()
   })
 })

@@ -1,7 +1,9 @@
 import type { WebSocket } from '@fastify/websocket'
-import type { JoinRoomMessage, LeaveRoomMessage } from '@squadzr/schemas/ws'
+import type { ChatSendMessage, JoinRoomMessage, LeaveRoomMessage } from '@squadzr/schemas/ws'
 import type { Clock } from '@domain/services/clock.interface'
 import type { ISubscribeRealtimeSnapshotUseCase } from '@application/use-cases/room/subscribe-realtime-snapshot.use-case'
+import type { IListChatHistoryUseCase } from '@application/use-cases/chat/list-chat-history.use-case'
+import type { ISendChatMessageUseCase } from '@application/use-cases/chat/send-chat-message.use-case'
 import type { WsConnectionManager } from '../ws-connection-manager'
 import type { WsRoomBroadcaster } from '../room-broadcaster.service'
 import type { Presence } from '../presence'
@@ -25,6 +27,7 @@ export async function handleJoinRoom(
   message: JoinRoomMessage,
   manager: WsConnectionManager,
   subscribeSnapshot: ISubscribeRealtimeSnapshotUseCase,
+  listChatHistory: IListChatHistoryUseCase,
   presence: Presence,
   broadcaster: WsRoomBroadcaster
 ): Promise<void> {
@@ -34,6 +37,8 @@ export async function handleJoinRoom(
     code: message.payload.roomCode,
     userId: client.userId,
   })
+  // Read before the checks below, so nothing is awaited between them and the sends.
+  const history = await listChatHistory.execute({ roomId: snapshot.room.id })
   const { userId } = snapshot
   // A disconnect during the query must never resurrect a subscription.
   if (!manager.isConnected(socket) || socket.readyState !== socket.OPEN) return
@@ -50,7 +55,30 @@ export async function handleJoinRoom(
   client.roomCode = snapshot.room.code
   manager.addToRoom(client.roomCode, socket)
   broadcaster.sendSnapshot(socket, snapshot)
+  // A Squad without messages sends no history: the client keeps what it has, which is nothing new.
+  if (history.length > 0) broadcaster.sendChatHistory(socket, client.roomCode, history)
   if (becameOnline) broadcaster.broadcastPresence(client.roomCode, userId, true, socket)
+}
+
+/**
+ * A chat message from a socket in the Squad's channel. The use case checks the Membership again, so a member
+ * who left the Squad from another tab cannot keep writing through a channel this tab still holds.
+ */
+export async function handleChatSend(
+  socket: WebSocket,
+  message: ChatSendMessage,
+  manager: WsConnectionManager,
+  sendChatMessage: ISendChatMessageUseCase,
+  broadcaster: WsRoomBroadcaster
+): Promise<void> {
+  const client = manager.getClientData(socket)
+  if (!client || client.roomCode !== message.payload.roomCode) return
+  const sent = await sendChatMessage.execute({
+    code: message.payload.roomCode,
+    userId: client.userId,
+    body: message.payload.body,
+  })
+  broadcaster.broadcastChatMessage(sent.roomCode, sent.message)
 }
 
 export function handleLeaveRoom(

@@ -60,6 +60,16 @@
       "statInRoom": "in the room now",
       "statPlayers": "{count, plural, one {player} other {players}}"
     },
+    "chat": {
+      "title": "Squad chat",
+      "messages": "Squad messages",
+      "empty": "No messages yet. Plan the match here.",
+      "label": "Message to the squad",
+      "placeholder": "Write a message…",
+      "connecting": "Connecting to the chat…",
+      "send": "Send message",
+      "you": "you"
+    },
     "close": "Close",
     "pagination": {
       "label": "Pagination",

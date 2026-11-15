@@ -22,9 +22,13 @@ const wsMessageTypeSchema = z.enum([
   'room_snapshot',
   'presence_updated',
   'room_removed',
+  // Squad chat
+  'chat_send',
+  'chat_message',
+  'chat_history',
 ])
 
-export const REALTIME_PROTOCOL_VERSION = 5
+export const REALTIME_PROTOCOL_VERSION = 6
 export const WS_MAX_PAYLOAD_BYTES = 16 * 1024
 /** Close code of a socket whose sign-in session was signed out or expired; the app reconnects as a visitor. */
 export const SESSION_ENDED_CLOSE_CODE = 4001
@@ -125,6 +129,46 @@ export const protocolMessageSchema = baseWsMessageSchema.extend({
   payload: z.object({ version: z.literal(REALTIME_PROTOCOL_VERSION) }),
 })
 
+/** The longest chat message a member can send, in characters. */
+export const CHAT_MESSAGE_MAX_LENGTH = 500
+/** How many of a Squad's latest chat messages a member receives when joining its channel. */
+export const CHAT_HISTORY_LIMIT = 50
+
+// One chat message as members see it. The author's name and picture are the ones they had when sending.
+export const chatMessageSchema = z.object({
+  id: z.string(),
+  authorId: z.string(),
+  authorName: z.string(),
+  authorImage: z.string().nullable(),
+  body: z.string(),
+  sentAt: isoDateTimeSchema,
+})
+
+// A member's message to the Squad they joined; the author comes from the session.
+const chatSendMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('chat_send'),
+  payload: z.object({
+    roomCode: z
+      .string()
+      .length(6)
+      .transform((code) => code.toUpperCase()),
+    body: z.string().trim().min(1).max(CHAT_MESSAGE_MAX_LENGTH),
+  }),
+})
+
+// A new message, pushed to every socket in the Squad's channel, its author's included.
+const chatMessageMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('chat_message'),
+  payload: z.object({ roomCode: z.string().length(6), message: chatMessageSchema }),
+})
+
+// The latest messages, oldest first, sent after the snapshot of a join when the chat has any. A client merges
+// them by id with what it holds, so a reconnect never repeats a message.
+const chatHistoryMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('chat_history'),
+  payload: z.object({ roomCode: z.string().length(6), messages: z.array(chatMessageSchema) }),
+})
+
 // Version-agnostic announcement: a client parses it before the version-specific
 // contract so a mismatched build can be detected and reloaded instead of being
 // rejected as an invalid payload.
@@ -169,6 +213,7 @@ export const wsIncomingMessageSchema = z.discriminatedUnion('type', [
   pingMessageSchema,
   subscribeLobbyMessageSchema,
   unsubscribeLobbyMessageSchema,
+  chatSendMessageSchema,
 ])
 
 export const wsServerMessageSchema = z.discriminatedUnion('type', [
@@ -183,6 +228,8 @@ export const wsServerMessageSchema = z.discriminatedUnion('type', [
   roomSnapshotMessageSchema,
   presenceUpdatedMessageSchema,
   roomRemovedMessageSchema,
+  chatMessageMessageSchema,
+  chatHistoryMessageSchema,
 ])
 
 // Frame envelope every server message shares, before its payload is checked per event
@@ -211,6 +258,8 @@ export const wsServerEventPayloadSchemas = {
   room_snapshot: roomSnapshotMessageSchema.shape.payload,
   presence_updated: presenceUpdatedMessageSchema.shape.payload,
   room_removed: roomRemovedMessageSchema.shape.payload,
+  chat_message: chatMessageMessageSchema.shape.payload,
+  chat_history: chatHistoryMessageSchema.shape.payload,
 } as const
 
 export type WsServerEventType = keyof typeof wsServerEventPayloadSchemas
@@ -225,3 +274,5 @@ export type WsIncomingMessageInput = z.input<typeof wsIncomingMessageSchema>
 export type WsServerMessage = z.infer<typeof wsServerMessageSchema>
 export type JoinRoomMessage = z.infer<typeof joinRoomMessageSchema>
 export type LeaveRoomMessage = z.infer<typeof leaveRoomMessageSchema>
+export type ChatSendMessage = z.infer<typeof chatSendMessageSchema>
+export type ChatMessageDto = z.infer<typeof chatMessageSchema>
