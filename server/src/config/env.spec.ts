@@ -72,6 +72,42 @@ describe('EDGE_AUTH_TOKEN', () => {
   })
 })
 
+describe('DISCORD_BOT_TOKEN', () => {
+  const TOKEN = 'fake.bot-token_0123456789'
+
+  it('is unset by default: the Discord lookup carries no credentials', () => {
+    expect(parseEnv(REQUIRED_ENV).DISCORD_BOT_TOKEN).toBeUndefined()
+  })
+
+  it('reads an empty value as unset', () => {
+    expect(parseEnv({ ...REQUIRED_ENV, DISCORD_BOT_TOKEN: '' }).DISCORD_BOT_TOKEN).toBeUndefined()
+  })
+
+  it('reads a token as it is', () => {
+    expect(parseEnv({ ...REQUIRED_ENV, DISCORD_BOT_TOKEN: TOKEN }).DISCORD_BOT_TOKEN).toBe(TOKEN)
+  })
+
+  it.each([
+    ['holding a space', `${TOKEN} x`],
+    [
+      'holding a newline',
+      `${TOKEN}
+`,
+    ],
+    ['holding a non-ASCII character', `${TOKEN}é`],
+  ])('refuses a token %s', (_label, value) => {
+    expect(() => parseEnv({ ...REQUIRED_ENV, DISCORD_BOT_TOKEN: value })).toThrow()
+  })
+
+  it('does not repeat a refused token in the error', () => {
+    const refused = `${TOKEN} refused`
+
+    expect(() => parseEnv({ ...REQUIRED_ENV, DISCORD_BOT_TOKEN: refused })).toThrow(
+      expect.objectContaining({ message: expect.not.stringContaining(refused) })
+    )
+  })
+})
+
 describe('abuse limits', () => {
   it('default to 300 requests a minute, 20 upgrades a minute and 10 sockets per address', () => {
     const env = parseEnv(REQUIRED_ENV)

@@ -18,8 +18,10 @@ const SERVER = {
   memberCount: 2_946_792,
   onlineCount: 362_025,
 }
-// What the provider reads also carries when the invite expires, which the Lobby never shows.
-const PREVIEW = { ...SERVER, expiresAt: '2026-11-01T12:00:00.000000+00:00' }
+// What the provider reads also carries when the invite expires and the channel it points to, which the
+// Lobby never shows.
+const CHANNEL = { id: '1234567890123456', name: 'Squad call', kind: 'voice' as const }
+const PREVIEW = { ...SERVER, expiresAt: '2026-11-01T12:00:00.000000+00:00', channel: CHANNEL }
 
 let server: TestServer
 let discord: { fetch: ReturnType<typeof vi.fn<DiscordInvitePreviewProvider['fetch']>> }
@@ -65,6 +67,20 @@ describe('GET /api/rooms/:code/discord-preview', () => {
     expect(response.statusCode, response.body).toBe(200)
     expect(discordPreviewResponseSchema.parse(response.json())).toEqual({ preview: SERVER })
     expect(discord.fetch).toHaveBeenCalledWith('valorant')
+  })
+
+  it('carries no channel: the call is only read when a Squad is created or an invite is checked', async () => {
+    answers({ kind: 'found', preview: PREVIEW })
+    const { room } = await createSquad({ ready: true })
+
+    const response = await get(server, `/api/rooms/${room.code}/discord-preview`, host)
+
+    expect(response.statusCode, response.body).toBe(200)
+    const body = response.json<{ preview: Record<string, unknown> }>()
+    expect(Object.keys(body.preview).sort()).toEqual(Object.keys(SERVER).sort())
+    expect(body.preview).not.toHaveProperty('channel')
+    expect(response.body).not.toContain(CHANNEL.name)
+    expect(response.body).not.toContain(CHANNEL.id)
   })
 
   it.each<[string, DiscordInvitePreviewOutcome]>([

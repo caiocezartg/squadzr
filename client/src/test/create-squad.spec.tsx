@@ -46,6 +46,7 @@ const validInvite = {
     iconUrl: null,
     memberCount: 2_946_792,
   },
+  call: { name: 'Squad call' },
   expires: false,
 }
 

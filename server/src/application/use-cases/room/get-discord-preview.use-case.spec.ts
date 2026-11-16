@@ -23,6 +23,7 @@ const PREVIEW: DiscordServerPreview = {
   memberCount: 2_946_792,
   onlineCount: 362_025,
   expiresAt: null,
+  channel: { id: '1234', name: 'Squad call', kind: 'voice' },
 }
 
 describe('GetDiscordPreviewUseCase', () => {

@@ -76,6 +76,16 @@ const envSchema = z.object({
   // Discord OAuth
   DISCORD_CLIENT_ID: z.string().min(1, 'DISCORD_CLIENT_ID is required'),
   DISCORD_CLIENT_SECRET: z.string().min(1, 'DISCORD_CLIENT_SECRET is required'),
+  // The bot token of a Discord application, used only to authenticate the invite lookup so Discord rate-limits
+  // the application instead of this server's shared address. The bot joins no server. Unset or empty: the
+  // lookup is unauthenticated. Visible ASCII only, so the HTTP header can carry it unchanged.
+  DISCORD_BOT_TOKEN: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .string()
+      .regex(/^[!-~]+$/, 'DISCORD_BOT_TOKEN must be visible ASCII without spaces')
+      .optional()
+  ),
 
   // IGDB, for the manual Catalog Import run from the admin panel. Optional: without the credentials the
   // API boots and answers 503 `CATALOG_IMPORT_UNAVAILABLE`, while the cron keeps its own environment.

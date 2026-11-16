@@ -6,6 +6,7 @@ import type {
 import { createMockClock } from '@test/mocks'
 import { CachedDiscordInvitePreviewProvider } from './cached-discord-invite-preview-provider'
 
+const SECOND = 1_000
 const MINUTE = 60_000
 const FOUND: DiscordInvitePreviewOutcome = {
   kind: 'found',
@@ -16,6 +17,7 @@ const FOUND: DiscordInvitePreviewOutcome = {
     memberCount: 1,
     onlineCount: 1,
     expiresAt: null,
+    channel: null,
   },
 }
 
@@ -55,31 +57,50 @@ describe('CachedDiscordInvitePreviewProvider', () => {
     expect(inner.fetch).toHaveBeenCalledTimes(2)
   })
 
-  it('remembers a rate-limited answer for ten minutes too', async () => {
-    inner.fetch.mockResolvedValue({ kind: 'rate_limited' })
+  it('asks again after a minute when Discord does not know the invite', async () => {
+    inner.fetch.mockResolvedValueOnce({ kind: 'invalid' })
 
-    await cached.fetch('busy')
-    advance(5 * MINUTE)
-    await expect(cached.fetch('busy')).resolves.toEqual({ kind: 'rate_limited' })
-
+    await expect(cached.fetch('valorant')).resolves.toEqual({ kind: 'invalid' })
+    advance(59 * SECOND)
+    await cached.fetch('valorant')
     expect(inner.fetch).toHaveBeenCalledTimes(1)
+
+    advance(SECOND)
+    await expect(cached.fetch('valorant')).resolves.toEqual(FOUND)
+    expect(inner.fetch).toHaveBeenCalledTimes(2)
   })
 
-  it.each<DiscordInvitePreviewOutcome>([{ kind: 'unreachable' }, { kind: 'invalid' }])(
-    'asks again after a minute when the answer was $kind',
-    async (outcome) => {
+  it('asks again after ten seconds when Discord was unreachable', async () => {
+    inner.fetch.mockResolvedValueOnce({ kind: 'unreachable' })
+
+    await expect(cached.fetch('valorant')).resolves.toEqual({ kind: 'unreachable' })
+    advance(9 * SECOND)
+    await cached.fetch('valorant')
+    expect(inner.fetch).toHaveBeenCalledTimes(1)
+
+    advance(SECOND)
+    await expect(cached.fetch('valorant')).resolves.toEqual(FOUND)
+    expect(inner.fetch).toHaveBeenCalledTimes(2)
+  })
+
+  describe.each<[string, DiscordInvitePreviewOutcome, number]>([
+    ['the wait Discord asked for', { kind: 'rate_limited', retryAfterMs: 4_000 }, 4 * SECOND],
+    ['ten seconds at most', { kind: 'rate_limited', retryAfterMs: 60_000 }, 10 * SECOND],
+    ['ten seconds when Discord names no wait', { kind: 'rate_limited' }, 10 * SECOND],
+  ])('a rate-limited answer is kept for %s', (_, outcome, keptMs) => {
+    it('serves the answer until then and asks again at the end', async () => {
       inner.fetch.mockResolvedValueOnce(outcome)
 
-      await expect(cached.fetch('valorant')).resolves.toEqual(outcome)
-      advance(59_000)
-      await cached.fetch('valorant')
+      await expect(cached.fetch('busy')).resolves.toEqual(outcome)
+      advance(keptMs - 1)
+      await expect(cached.fetch('busy')).resolves.toEqual(outcome)
       expect(inner.fetch).toHaveBeenCalledTimes(1)
 
-      advance(1_000)
-      await expect(cached.fetch('valorant')).resolves.toEqual(FOUND)
+      advance(1)
+      await expect(cached.fetch('busy')).resolves.toEqual(FOUND)
       expect(inner.fetch).toHaveBeenCalledTimes(2)
-    }
-  )
+    })
+  })
 
   it('shares one request between callers that arrive while it is in flight', async () => {
     let resolve!: (outcome: DiscordInvitePreviewOutcome) => void
