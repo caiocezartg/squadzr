@@ -85,9 +85,9 @@ describe('squad lobby — snapshot handshake', () => {
     renderSquadsFlow('/squads/LOBBY1')
 
     expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
-    // HTTP alone does not seed the live roster: it is empty until the snapshot.
-    expect(screen.getByText('0/3 players')).toBeInTheDocument()
-    expect(screen.getAllByText('Open slot')).toHaveLength(3)
+    // HTTP alone does not seed the live roster: it shows placeholders until the snapshot.
+    expect(screen.getByText('Loading members')).toBeInTheDocument()
+    expect(screen.getAllByTestId('member-tile-skeleton')).toHaveLength(3)
     expect(screen.getByRole('button', { name: 'End squad' })).toBeInTheDocument()
 
     openLatestWebSocket()

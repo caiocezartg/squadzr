@@ -128,6 +128,23 @@ export function MemberTile(props: MemberTileProps) {
 }
 
 /**
+ * A row whose member is not known yet: the tile's shape with a pulsing photo and name, until the roster
+ * arrives. It says nothing to assistive technology; the parent announces the loading.
+ */
+export function MemberTileSkeleton() {
+  return (
+    <li
+      aria-hidden="true"
+      data-testid="member-tile-skeleton"
+      className="flex min-h-16 items-center gap-3.5 bg-[#15161a] pt-4.5 pr-3.5 pb-3.5 pl-3"
+    >
+      <span className="bg-track size-11 shrink-0 animate-pulse rounded-full" />
+      <span className="bg-track h-3.5 w-28 animate-pulse" />
+    </li>
+  )
+}
+
+/**
  * The player's photo and name. With a profile link they are one button named "View {name}'s
  * profile" whose hit area stretches over the whole tile: a fine pointer lifts the tile's ground and
  * keyboard focus outlines the tile in mint, so neither draws a box of its own inside the row.

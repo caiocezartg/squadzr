@@ -44,6 +44,7 @@
       "created": "Created {time}",
       "members": "Members",
       "playerCount": "{current}/{max} players",
+      "loadingMembers": "Loading members",
       "joinSquad": "Join squad"
     },
     "invite": {

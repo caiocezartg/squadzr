@@ -6,11 +6,12 @@ import { Check, Copy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
 import { CopySwap } from '@/components/ds/copy-swap'
-import { MemberTile } from '@/components/ds/member-tile'
+import { MemberTile, MemberTileSkeleton } from '@/components/ds/member-tile'
 import { Pagination } from '@/components/ds/pagination'
 import { usePlayerProfileLink } from '@/features/player-profile'
 import { SlotMeter } from '@/components/ds/slot-meter'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
+import { cn } from '@/lib/utils'
 import type { Player } from '@/types'
 import type { PresenceState } from '../squad-snapshot'
 import { useCopiedFlag } from '../use-copied-flag'
@@ -45,6 +46,11 @@ interface MembersPanelProps {
   presence: PresenceState | null
   viewerId: string
   isReady: boolean
+  /**
+   * The roster has not arrived yet (the first realtime snapshot): the count, the meter and the slots show
+   * placeholders instead of reading as an empty Squad.
+   */
+  pending?: boolean
 }
 
 /**
@@ -60,6 +66,7 @@ export function MembersPanel({
   presence,
   viewerId,
   isReady,
+  pending = false,
 }: MembersPanelProps) {
   const t = useTranslations('ds.lobby')
   const reducedMotion = useReducedMotion()
@@ -92,7 +99,13 @@ export function MembersPanel({
         {t('members')}
       </h2>
       <div className="flex items-end justify-between gap-3">
-        <RosterCounter current={memberCount} max={maxPlayers} live={live} ready={isReady} />
+        <RosterCounter
+          current={memberCount}
+          max={maxPlayers}
+          live={live}
+          ready={isReady}
+          pending={pending}
+        />
         <div className="flex min-w-0 flex-1 flex-col items-end gap-2.5 pb-0.5">
           <Button
             variant="secondary"
@@ -118,7 +131,9 @@ export function MembersPanel({
               }
             />
           </Button>
-          <SlotMeter filled={memberCount} total={maxPlayers} />
+          <span className={cn('flex', pending && 'animate-pulse')}>
+            <SlotMeter filled={memberCount} total={maxPlayers} />
+          </span>
         </div>
       </div>
 
@@ -152,9 +167,11 @@ export function MembersPanel({
             />
           )
         })}
-        {Array.from({ length: openSlots }, (_, index) => (
-          <MemberTile key={`open-${first + visibleMembers.length + index}`} open />
-        ))}
+        {/* Before the roster arrives every slot is a placeholder, not an open slot. */}
+        {Array.from({ length: openSlots }, (_, index) => {
+          const key = `open-${first + visibleMembers.length + index}`
+          return pending ? <MemberTileSkeleton key={key} /> : <MemberTile key={key} open />
+        })}
         {Array.from({ length: blankCells }, (_, index) => (
           <li key={`blank-${index}`} aria-hidden="true" className="hidden @xl:block" />
         ))}

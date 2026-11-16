@@ -142,6 +142,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
           presence={lobby.presence}
           viewerId={session.user.id}
           isReady={lobby.isReady}
+          pending={!lobby.hasSnapshot}
         />
         <MemberInvite squadCode={squadCode} lobby={lobby} entering={readyEntrance} />
       </LobbyColumns>
@@ -165,7 +166,13 @@ function MemberInvite({ squadCode, lobby, entering }: MemberInviteProps) {
   const discord = useDiscordPreview(squadCode, invite !== null && lobby.squad !== null)
 
   if (!lobby.isReady) {
-    return <LockedInvite filled={lobby.players.length} total={lobby.maxPlayers} />
+    return (
+      <LockedInvite
+        filled={lobby.players.length}
+        total={lobby.maxPlayers}
+        pending={!lobby.hasSnapshot}
+      />
+    )
   }
   if (!invite || !lobby.squad) return null
 
