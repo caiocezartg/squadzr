@@ -116,4 +116,44 @@ describe('ListChatMessagesUseCase', () => {
     expect(result.items).toHaveLength(CHAT.HISTORY_PAGE_SIZE)
     expect(result.hasMore).toBe(false)
   })
+
+  it('passes the cursor to the repository and keeps the page before it', async () => {
+    const before = '11111111-1111-4111-8111-111111111111'
+    chats.listByRoom.mockResolvedValue(messages(2))
+
+    const result = await useCase.execute({ code: 'ABC123', viewerId: 'viewer', before })
+
+    expect(chats.listByRoom).toHaveBeenCalledWith('room-uuid-1', {
+      beforeId: before,
+      limit: CHAT.HISTORY_PAGE_SIZE + 1,
+    })
+    expect(result.items.map((message) => message.body)).toEqual(['message 1', 'message 2'])
+    expect(result.hasMore).toBe(false)
+  })
+
+  it('reports hasMore for a cursor page that has older messages left', async () => {
+    chats.listByRoom.mockResolvedValue(messages(CHAT.HISTORY_PAGE_SIZE + 1))
+
+    const result = await useCase.execute({
+      code: 'ABC123',
+      viewerId: 'viewer',
+      before: '11111111-1111-4111-8111-111111111111',
+    })
+
+    expect(result.items).toHaveLength(CHAT.HISTORY_PAGE_SIZE)
+    expect(result.hasMore).toBe(true)
+  })
+
+  it('refuses a cursor from a viewer who is not a member before reading anything', async () => {
+    members.findByRoomAndUser.mockResolvedValue(null)
+
+    await expect(
+      useCase.execute({
+        code: 'ABC123',
+        viewerId: 'viewer',
+        before: '11111111-1111-4111-8111-111111111111',
+      })
+    ).rejects.toBeInstanceOf(NotRoomMemberError)
+    expect(chats.listByRoom).not.toHaveBeenCalled()
+  })
 })

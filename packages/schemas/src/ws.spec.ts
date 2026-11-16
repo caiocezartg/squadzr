@@ -86,6 +86,18 @@ const serverMessages = [
   { type: 'room_updated', payload: { roomId: ROOM_ID, roomCode: 'ABC123', memberCount: 2 } },
   { type: 'room_deleted', payload: { roomId: ROOM_ID, roomCode: 'ABC123' } },
   { type: 'notification', payload: { notification } },
+  {
+    type: 'chat_message',
+    payload: {
+      message: {
+        id: '0b7a6a3e-5f43-4f0b-8f4a-0d3f1c9a2b11',
+        roomCode: 'ABC123',
+        body: 'oi',
+        createdAt: '2026-09-27T12:30:00.000Z',
+        author: { id: 'user-1', name: 'Caio', image: null },
+      },
+    },
+  },
 ].map((message) => ({ ...message, timestamp: 1_769_000_000_000 }))
 
 describe('wsIncomingMessageSchema', () => {

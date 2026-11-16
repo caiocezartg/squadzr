@@ -61,8 +61,9 @@ function send(actor: TestUser | null, body: { id?: string; body: string }, roomC
   })
 }
 
-async function history(actor: TestUser): Promise<ChatHistoryResponse> {
-  const response = await get(server, `/api/rooms/${code}/messages`, actor)
+async function history(actor: TestUser, before?: string): Promise<ChatHistoryResponse> {
+  const query = before ? `?before=${before}` : ''
+  const response = await get(server, `/api/rooms/${code}/messages${query}`, actor)
   expect(response.statusCode, response.body).toBe(200)
   return chatHistoryResponseSchema.parse(response.json())
 }
@@ -293,6 +294,108 @@ describe('history', () => {
     expect(asDeparted.statusCode).toBe(422)
     expect(write.statusCode).toBe(422)
     expect(await storedCount()).toBe(1)
+  })
+})
+
+describe('history cursor', () => {
+  async function seed(total: number, targetRoomId = roomId, authorId = member.id) {
+    const rows = Array.from({ length: total }, (_, index) => ({
+      id: randomUUID(),
+      roomId: targetRoomId,
+      authorId,
+      body: `message ${index + 1}`,
+      createdAt: new Date(START.getTime() + index * 1_000),
+    }))
+    await server.app.db.insert(chatMessages).values(rows)
+    return rows
+  }
+
+  it('returns the page before the cursor, oldest first, with hasMore', async () => {
+    const total = CHAT.HISTORY_PAGE_SIZE * 2 + 5
+    const rows = await seed(total)
+    const latest = await history(member)
+    const oldestHeld = latest.items[0]!
+
+    const older = await history(member, oldestHeld.id)
+
+    expect(oldestHeld.body).toBe(`message ${total - CHAT.HISTORY_PAGE_SIZE + 1}`)
+    expect(older.hasMore).toBe(true)
+    expect(older.items).toHaveLength(CHAT.HISTORY_PAGE_SIZE)
+    expect(older.items.at(-1)?.id).toBe(rows[total - CHAT.HISTORY_PAGE_SIZE - 1]?.id)
+    expect(older.items[0]?.body).toBe(`message ${total - CHAT.HISTORY_PAGE_SIZE * 2 + 1}`)
+
+    const oldest = await history(member, older.items[0]!.id)
+    expect(oldest.hasMore).toBe(false)
+    expect(oldest.items.map((message) => message.body)).toEqual([
+      'message 1',
+      'message 2',
+      'message 3',
+      'message 4',
+      'message 5',
+    ])
+  })
+
+  it('walks the whole history without gaps or repeats', async () => {
+    const total = CHAT.HISTORY_PAGE_SIZE + 7
+    const rows = await seed(total)
+
+    const collected: string[] = []
+    let page = await history(member)
+    collected.unshift(...page.items.map((message) => message.id))
+    while (page.hasMore) {
+      page = await history(member, collected[0])
+      collected.unshift(...page.items.map((message) => message.id))
+    }
+
+    expect(collected).toEqual(rows.map((row) => row.id))
+  })
+
+  it('orders messages stored in the same millisecond by id across the cursor', async () => {
+    const createdAt = new Date(START.getTime())
+    const ids = [randomUUID(), randomUUID(), randomUUID()].sort()
+    await server.app.db
+      .insert(chatMessages)
+      .values(
+        ids.map((id, index) => ({ id, roomId, authorId: member.id, body: `m${index}`, createdAt }))
+      )
+
+    const older = await history(member, ids[2])
+
+    expect(older.items.map((message) => message.id)).toEqual([ids[0], ids[1]])
+    expect(older.hasMore).toBe(false)
+  })
+
+  it('answers an unknown cursor with an empty page', async () => {
+    await seed(3)
+
+    const page = await history(member, randomUUID())
+
+    expect(page).toEqual({ items: [], hasMore: false })
+  })
+
+  it('answers a cursor from another Squad with an empty page', async () => {
+    await seed(3)
+    const otherGame = await insertGame(server)
+    const other = await createRoom(server, outsider, { gameId: otherGame.id, maxPlayers: 5 })
+    const foreign = (await seed(2, other.id, outsider.id))[1]!
+
+    const page = await history(member, foreign.id)
+
+    expect(page).toEqual({ items: [], hasMore: false })
+  })
+
+  it('refuses a cursor that is not a UUID with 400', async () => {
+    const response = await get(server, `/api/rooms/${code}/messages?before=not-a-uuid`, member)
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('still refuses a non-member who sends a valid cursor', async () => {
+    const [first] = await seed(1)
+
+    const response = await get(server, `/api/rooms/${code}/messages?before=${first!.id}`, outsider)
+
+    expect(response.statusCode).toBe(422)
   })
 })
 

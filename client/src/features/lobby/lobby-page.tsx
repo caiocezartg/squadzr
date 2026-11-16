@@ -152,6 +152,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
       <SquadChatDock
         key={squadCode}
         squadCode={squadCode}
+        channel={channel}
         memberCount={lobby.players.length}
         enabled={lobby.isMember}
       />

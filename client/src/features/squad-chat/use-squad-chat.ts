@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import {
   chatHistoryResponseSchema,
@@ -9,8 +9,11 @@ import {
 } from '@squadzr/schemas'
 import { useSession } from '@/hooks/use-session'
 import { api, ApiClientError } from '@/lib/api'
+import type { RealtimeEventSubscribe, RealtimeStatus } from '@/lib/ws-client'
 import {
+  appendOlderPage,
   messagesOf,
+  oldestStoredId,
   removeMessage,
   squadChatQueryKey,
   upsertMessage,
@@ -34,6 +37,16 @@ export type SendChatOutcome =
       readonly code: string | null
     }
 
+/**
+ * What the chat needs of the Lobby's realtime channel: the connection status, to read the history again
+ * after a reconnect, whether the Membership was revoked, and the socket's event registration.
+ */
+export interface SquadChatChannel {
+  readonly status: RealtimeStatus
+  readonly membershipRevoked: boolean
+  readonly on: RealtimeEventSubscribe
+}
+
 export interface SquadChat {
   /** `loading` only while the cache holds nothing for this Squad: a warm cache is `ready` at once. */
   readonly status: SquadChatStatus
@@ -49,20 +62,31 @@ export interface SquadChat {
   send: (text: string) => Promise<SendChatOutcome>
   /** Reads the history again after it failed. */
   retry: () => void
+  /** Older messages exist beyond the ones held. */
+  readonly hasMore: boolean
+  /** An older page is being read. */
+  readonly isFetchingOlder: boolean
+  /** The last older page could not be read; the reader can ask for it again. */
+  readonly olderFailed: boolean
+  /** Reads the page before the oldest message held, and adds it at the top. A no-op while one is being read. */
+  fetchOlder: () => Promise<void>
   /**
-   * Reads the history again in the background, as the window opens, so it shows what others sent since.
-   * It waits for no pending send, and skips while one is pending, so the read cannot drop that message.
+   * Messages from other members that arrived live while the window was closed. It lives in memory only and
+   * goes back to zero when the window opens.
    */
-  refresh: () => void
+  readonly unreadCount: number
 }
 
 export interface UseSquadChatOptions {
   /** Only a member reads the chat: the same rule that lets a member join the Lobby's live channel. */
   readonly enabled: boolean
+  /** The chat window is open: what arrives meanwhile is read at once, not unread. */
+  readonly open: boolean
 }
 
-function messagesPath(squadCode: string): string {
-  return `/api/rooms/${encodeURIComponent(squadCode)}/messages`
+function messagesPath(squadCode: string, before?: string): string {
+  const path = `/api/rooms/${encodeURIComponent(squadCode)}/messages`
+  return before ? `${path}?before=${encodeURIComponent(before)}` : path
 }
 
 /**
@@ -106,15 +130,180 @@ function discard(queryClient: QueryClient, squadCode: string, id: string): void 
 }
 
 /**
- * The data side of a Squad's chat: the latest page of its history, and the viewer's sends. A send shows
- * at once as a pending message under an id the client generates, which the server stores as given, so the
- * server's answer replaces it instead of adding a second one. A failed send takes its message back out and
+ * Reads every page of the history again, so what was missed converges. A read already running is stopped
+ * first: one that has no history yet would otherwise be reused, and could not hold what arrived since.
+ */
+function readHistoryAgain(queryClient: QueryClient, squadCode: string): void {
+  const queryKey = squadChatQueryKey(squadCode)
+  void queryClient
+    .cancelQueries({ queryKey })
+    .then(() => queryClient.invalidateQueries({ queryKey }))
+}
+
+interface ConvergeOptions {
+  readonly code: string
+  readonly enabled: boolean
+  readonly channel: SquadChatChannel
+  readonly readAgain: () => void
+}
+
+/**
+ * Reads the history again once the socket has joined the Squad's channel, for the first time on this page
+ * and after every reconnect. The history may have been read before the socket was in the channel, or while
+ * it was down, so a message sent in between reached neither. The Squad's snapshot, not the socket opening,
+ * marks the join: the server adds the socket to the channel before it answers with the snapshot, so nothing
+ * stored after this read is missed. Later snapshots, which every Membership change sends, read nothing.
+ */
+function useConvergeOnSnapshot({ code, enabled, channel, readAgain }: ConvergeOptions): void {
+  const { on, status } = channel
+  const convergedRef = useRef(false)
+
+  useEffect(() => {
+    if (status !== 'open') convergedRef.current = false
+  }, [status])
+
+  useEffect(() => {
+    if (!enabled) return
+    return on('room_snapshot', ({ room }) => {
+      if (room.code.toUpperCase() !== code || convergedRef.current) return
+      convergedRef.current = true
+      readAgain()
+    })
+  }, [code, enabled, on, readAgain])
+}
+
+interface LiveChatOptions {
+  readonly code: string
+  readonly channel: SquadChatChannel
+  readonly enabled: boolean
+  readonly open: boolean
+  /** A send is pending: a read of the history would drop its message, so it waits for the send. */
+  readonly isSendPending: () => boolean
+}
+
+/**
+ * The live side of a Squad's chat: `chat_message` events merged into the history, the history read again
+ * after a reconnect and the unread count while the window is closed. Returns the unread count and a way
+ * to read the history once a pending send is done.
+ */
+function useLiveChat(options: LiveChatOptions) {
+  const { code, channel, enabled, open, isSendPending } = options
+  const { on } = channel
+  const queryClient = useQueryClient()
+  const viewerId = useSession()?.user.id ?? null
+  const [unreadCount, setUnreadCount] = useState(0)
+  // The handler reads these through refs, so the window opening never re-registers it.
+  const openRef = useRef(open)
+  const viewerIdRef = useRef(viewerId)
+  const readAfterSendRef = useRef(false)
+
+  useEffect(() => {
+    openRef.current = open
+    viewerIdRef.current = viewerId
+    if (open) setUnreadCount(0)
+  }, [open, viewerId])
+
+  const readAgain = useCallback(() => {
+    if (isSendPending()) readAfterSendRef.current = true
+    else readHistoryAgain(queryClient, code)
+  }, [code, isSendPending, queryClient])
+
+  /** Reads what a reconnect or a live message left behind, now that no send is pending. */
+  const flushPendingRead = useCallback(() => {
+    if (!readAfterSendRef.current) return
+    readAfterSendRef.current = false
+    readHistoryAgain(queryClient, code)
+  }, [code, queryClient])
+
+  useEffect(() => {
+    if (!enabled) return
+    const key = squadChatQueryKey(code)
+
+    const offMessage = on('chat_message', ({ message }) => {
+      if (message.roomCode.toUpperCase() !== code) return
+      const data = queryClient.getQueryData<ChatHistoryData>(key)
+      const known = data ? messagesOf(data).some((held) => held.id === message.id) : false
+      if (!data) {
+        readAgain()
+      } else {
+        queryClient.setQueryData<ChatHistoryData>(
+          key,
+          (current) => current && upsertMessage(current, message)
+        )
+        // A read that started before the message was stored cannot hold it, and would replace this merge.
+        if (queryClient.isFetching({ queryKey: key }) > 0) readAgain()
+      }
+      if (!known && message.author.id !== viewerIdRef.current && !openRef.current) {
+        setUnreadCount((count) => count + 1)
+      }
+    })
+    return offMessage
+  }, [code, enabled, on, queryClient, readAgain])
+
+  useConvergeOnSnapshot({ code, enabled, channel, readAgain })
+
+  return { unreadCount, flushPendingRead }
+}
+
+/**
+ * The older pages of the history, read on demand from the oldest stored message. The viewer's pending
+ * message is skipped as a cursor: it carries the client's clock, which may date it before every stored one.
+ */
+function useOlderPages(code: string, data: ChatHistoryData | undefined, pendingId: string | null) {
+  const queryClient = useQueryClient()
+  const [isFetchingOlder, setIsFetchingOlder] = useState(false)
+  const [olderFailed, setOlderFailed] = useState(false)
+  const fetchingOlderRef = useRef(false)
+  const hasMore = data?.pages.at(-1)?.hasMore ?? false
+  const oldestId = data ? oldestStoredId(data, pendingId) : undefined
+  // The page lands after the send may have settled, so it checks the history against the id pending then.
+  const pendingIdRef = useRef(pendingId)
+  useEffect(() => {
+    pendingIdRef.current = pendingId
+  }, [pendingId])
+
+  const fetchOlder = useCallback(async () => {
+    if (!hasMore || !oldestId || fetchingOlderRef.current) return
+    fetchingOlderRef.current = true
+    setIsFetchingOlder(true)
+    setOlderFailed(false)
+    try {
+      // Read outside the infinite query: it would rebuild the pages from the ones it held when this read
+      // started, and drop the live messages merged since.
+      const page = await api.get(messagesPath(code, oldestId), chatHistoryResponseSchema)
+      queryClient.setQueryData<ChatHistoryData>(
+        squadChatQueryKey(code),
+        (current) => current && appendOlderPage(current, page, oldestId, pendingIdRef.current)
+      )
+    } catch {
+      // The history stays as it was, with older messages still to read, and the reader is offered a retry.
+      setOlderFailed(true)
+    } finally {
+      fetchingOlderRef.current = false
+      setIsFetchingOlder(false)
+    }
+  }, [code, hasMore, oldestId, queryClient])
+
+  return { hasMore, isFetchingOlder, olderFailed, fetchOlder }
+}
+
+/**
+ * The data side of a Squad's chat: its history, newest page first with older pages on demand, the live
+ * messages of other members, and the viewer's sends. A send shows at once as a pending message under an id
+ * the client generates, which the server stores as given, so the server's echo and its answer both replace
+ * it instead of adding a second one, whichever comes first. A failed send takes its message back out and
  * hands the text back to the caller. Hold it above the chat window, so a send survives the window closing.
  */
-export function useSquadChat(squadCode: string, options: UseSquadChatOptions): SquadChat {
+export function useSquadChat(
+  squadCode: string,
+  channel: SquadChatChannel,
+  options: UseSquadChatOptions
+): SquadChat {
   const queryClient = useQueryClient()
   const viewer = useSession()?.user ?? null
   const code = squadCode.toUpperCase()
+  // A revoked Membership no longer authorizes the history: the Lobby drops the cache, and nothing reads it.
+  const active = options.enabled && !channel.membershipRevoked
   // The id of the viewer's one unconfirmed message. A failure clears it in the same update that takes the
   // message out of the history, so the message is never drawn as confirmed.
   const [pendingId, setPendingId] = useState<string | null>(null)
@@ -125,6 +314,15 @@ export function useSquadChat(squadCode: string, options: UseSquadChatOptions): S
   // and the server, idempotent on the id, stores it at most once.
   const failedRef = useRef<{ readonly body: string; readonly id: string } | null>(null)
 
+  const isSendPending = useCallback(() => sendingRef.current, [])
+  const { unreadCount, flushPendingRead } = useLiveChat({
+    code,
+    channel,
+    enabled: active,
+    open: options.open,
+    isSendPending,
+  })
+
   const history = useInfiniteQuery<
     ChatHistoryResponse,
     Error,
@@ -133,11 +331,15 @@ export function useSquadChat(squadCode: string, options: UseSquadChatOptions): S
     string | undefined
   >({
     queryKey: squadChatQueryKey(code),
-    queryFn: ({ signal }) => api.get(messagesPath(code), chatHistoryResponseSchema, signal),
-    // The history pages newest first; only the latest page is read so far.
+    queryFn: ({ signal, pageParam }) =>
+      api.get(messagesPath(code, pageParam), chatHistoryResponseSchema, signal),
+    // The history pages newest first; an older page starts before the oldest message the last page holds.
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: () => undefined,
-    enabled: options.enabled,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.items[0]?.id : undefined),
+    enabled: active,
+    // A Lobby opened again within the cache's freshness missed what was sent while it was away, and the
+    // events that carried it. The cached history shows at once while this read catches it up.
+    refetchOnMount: 'always',
   })
 
   const messages = useMemo<readonly SquadChatMessage[]>(
@@ -193,25 +395,34 @@ export function useSquadChat(squadCode: string, options: UseSquadChatOptions): S
       } finally {
         sendingRef.current = false
         setIsSending(false)
+        flushPendingRead()
       }
     },
-    [code, queryClient, viewer]
+    [code, flushPendingRead, queryClient, viewer]
   )
 
   const retry = useCallback(() => {
     void history.refetch()
   }, [history])
 
-  const refresh = useCallback(() => {
-    if (!options.enabled || sendingRef.current) return
-    // A read already running is kept rather than started over.
-    void queryClient.invalidateQueries(
-      { queryKey: squadChatQueryKey(code) },
-      { cancelRefetch: false }
-    )
-  }, [code, options.enabled, queryClient])
+  const { hasMore, isFetchingOlder, olderFailed, fetchOlder } = useOlderPages(
+    code,
+    history.data,
+    pendingId
+  )
 
   const status: SquadChatStatus = history.data ? 'ready' : history.isError ? 'error' : 'loading'
 
-  return { status, messages, isSending, send, retry, refresh }
+  return {
+    status,
+    messages,
+    isSending,
+    send,
+    retry,
+    hasMore,
+    isFetchingOlder,
+    olderFailed,
+    fetchOlder,
+    unreadCount,
+  }
 }

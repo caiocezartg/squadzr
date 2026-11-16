@@ -60,6 +60,13 @@ export const chatMessageSchema = z.object({
 
 export type ChatMessageDto = z.infer<typeof chatMessageSchema>
 
+// `before` is the id of the oldest message the reader holds; the page returned is the one before it.
+export const chatHistoryQuerySchema = z.object({
+  before: z.uuid().optional(),
+})
+
+export type ChatHistoryQuery = z.infer<typeof chatHistoryQuerySchema>
+
 // Items come oldest first; `hasMore` says an older page exists.
 export const chatHistoryResponseSchema = z.object({
   items: z.array(chatMessageSchema),

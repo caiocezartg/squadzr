@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { requireAuth } from '@interface/hooks/auth.hook'
 import { createChatController } from '@interface/factories/chat.factory'
 import {
+  chatHistoryQuerySchema,
   chatHistoryResponseSchema,
   chatMessageSchema,
   errorResponseSchema as errorResponse,
@@ -12,18 +13,20 @@ import {
 
 export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
   const app = fastify.withTypeProvider<ZodTypeProvider>()
-  const chatController = createChatController(fastify.db, fastify.clock)
+  const chatController = createChatController(fastify.db, fastify.broadcaster, fastify.clock)
 
   app.get('/api/rooms/:code/messages', {
     schema: {
       tags: ['Chat'],
       summary: 'List Squad Chat messages',
       description:
-        'Returns the latest 50 messages of a Squad Chat, oldest first, and whether older ones exist. Only members of the Squad can read it. Requires authentication.',
+        'Returns the latest 50 messages of a Squad Chat, oldest first, and whether older ones exist. With `before` (the id of the oldest message the caller holds) it returns the page before that message in the same Squad; an unknown id, or one from another Squad, returns an empty page. Only members of the Squad can read it. Requires authentication.',
       security: [{ session: [] }],
       params: roomCodeParamSchema,
+      querystring: chatHistoryQuerySchema,
       response: {
         200: chatHistoryResponseSchema,
+        400: errorResponse,
         401: errorResponse,
         404: errorResponse,
         422: errorResponse,

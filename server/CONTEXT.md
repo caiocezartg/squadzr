@@ -57,7 +57,7 @@ A persisted message for one person about a Squad, one type per action. `room_rea
 _Avoid_: Alert, message, inbox item
 
 **Squad Chat**:
-The text conversation of one Squad, readable and writable only by its members: a visitor, a non-member and a member who left have none. It is stored in Postgres and lives as long as the Squad, so deleting the Squad (host leave, Admin Closure, expiry) deletes its messages. `GET /api/rooms/:code/messages` reads the latest 50 messages, oldest first, with `hasMore`; a visitor gets 401, a non-member 422 `NOT_ROOM_MEMBER` and a missing Squad 404. Any member of an Open or Ready Squad can read it.
+The text conversation of one Squad, readable and writable only by its members: a visitor, a non-member and a member who left have none. It is stored in Postgres and lives as long as the Squad, so deleting the Squad (host leave, Admin Closure, expiry) deletes its messages. `GET /api/rooms/:code/messages` reads the latest 50 messages, oldest first, with `hasMore`, and `?before=<message id>` reads the page before that message (a UUID; an unknown id or one from another Squad gives an empty page); a visitor gets 401, a non-member 422 `NOT_ROOM_MEMBER` and a missing Squad 404. Any member of an Open or Ready Squad can read it. Each new message also reaches every member socket of the Squad live, as the realtime event `chat_message`.
 _Avoid_: Room chat, thread, channel, inbox
 
 **Chat Message**:

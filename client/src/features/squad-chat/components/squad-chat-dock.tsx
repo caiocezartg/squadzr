@@ -1,16 +1,21 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useId, useRef, useState } from 'react'
 import { MessageSquare } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useSession } from '@/hooks/use-session'
-import { useSquadChat } from '../use-squad-chat'
+import { useSquadChat, type SquadChatChannel } from '../use-squad-chat'
 import { ChatComposer } from './chat-composer'
 import { ChatMessages } from './chat-messages'
 import { ChatWindow } from './chat-window'
 
+/** The badge shows counts above this one as `99+`; the label read aloud keeps the exact count. */
+const UNREAD_CAP = 99
+
 export interface SquadChatDockProps {
   readonly squadCode: string
+  /** The Lobby's realtime channel: live messages, the reconnect and a revoked Membership. */
+  readonly channel: SquadChatChannel
   /** How many members the Squad has, for the window's header. */
   readonly memberCount: number
   /** Only a member reads and writes the chat. */
@@ -22,15 +27,16 @@ export interface SquadChatDockProps {
  * chat's data and the draft live here, above the window, so a pending send and an unsent draft survive
  * the window closing. The Lobby reserves room at its foot, so the launcher never covers its actions.
  */
-export function SquadChatDock({ squadCode, memberCount, enabled }: SquadChatDockProps) {
+export function SquadChatDock({ squadCode, channel, memberCount, enabled }: SquadChatDockProps) {
   const t = useTranslations('chat')
   const viewerId = useSession()?.user.id ?? ''
-  const chat = useSquadChat(squadCode, { enabled })
   const [open, setOpen] = useState(false)
+  const chat = useSquadChat(squadCode, channel, { enabled, open })
   const [draft, setDraft] = useState('')
   const [failed, setFailed] = useState(false)
   const launcherRef = useRef<HTMLButtonElement>(null)
-  const { send, refresh } = chat
+  const unreadId = useId()
+  const { send } = chat
 
   const handleDraftChange = useCallback((next: string) => {
     setDraft(next)
@@ -57,18 +63,29 @@ export function SquadChatDock({ squadCode, memberCount, enabled }: SquadChatDock
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => {
-          if (!open) refresh()
-          setOpen(!open)
-        }}
+        aria-describedby={chat.unreadCount > 0 ? unreadId : undefined}
+        onClick={() => setOpen(!open)}
         className="press bg-mint text-mint-ink hover-fine:bg-mint-hover focus-visible:outline-text fixed right-5 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex h-12 items-center gap-2 px-4.5 shadow-[0_12px_32px_-12px_rgba(0,255,162,0.55)] focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <MessageSquare aria-hidden="true" className="size-4.5" strokeWidth={2.6} />
         <span className="font-display text-[19px] leading-none font-black uppercase">
           {t('launcher')}
         </span>
-        {/* The unread badge (#180) sits here. */}
+        {chat.unreadCount > 0 && (
+          <span
+            aria-hidden="true"
+            data-testid="chat-unread"
+            className="bg-text text-bg font-display ml-0.5 min-w-5 px-1.5 text-center text-[13px] leading-5 font-black"
+          >
+            {chat.unreadCount > UNREAD_CAP ? `${UNREAD_CAP}+` : chat.unreadCount}
+          </span>
+        )}
       </button>
+      {chat.unreadCount > 0 && (
+        <span id={unreadId} className="sr-only">
+          {t('unread', { count: chat.unreadCount })}
+        </span>
+      )}
 
       <ChatWindow
         open={open}
@@ -89,6 +106,10 @@ export function SquadChatDock({ squadCode, memberCount, enabled }: SquadChatDock
               messages={chat.messages}
               viewerId={viewerId}
               onRetry={chat.retry}
+              hasMore={chat.hasMore}
+              isFetchingOlder={chat.isFetchingOlder}
+              olderFailed={chat.olderFailed}
+              onReachTop={() => void chat.fetchOlder()}
             />
             <ChatComposer
               draft={draft}

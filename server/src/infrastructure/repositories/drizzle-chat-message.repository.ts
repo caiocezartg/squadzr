@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, sql, type SQL } from 'drizzle-orm'
 import type { ChatMessage, ChatMessageView } from '@domain/entities/chat-message.entity'
 import type {
   CreateChatMessageOutcome,
@@ -51,13 +51,25 @@ function selectViews(db: ChatDatabase) {
     .innerJoin(user, eq(user.id, chatMessages.authorId))
 }
 
+/**
+ * Keyset cursor, resolved in SQL and scoped to the Squad: the cursor row is read by id inside
+ * the same room, so a foreign or unknown id compares against nothing and matches no row.
+ */
+function olderThan(roomId: string, beforeId: string | undefined): SQL | undefined {
+  if (!beforeId) return undefined
+  return sql`(${chatMessages.createdAt}, ${chatMessages.id}) < (
+    select pivot.created_at, pivot.id from ${chatMessages} as pivot
+    where pivot.id = ${beforeId} and pivot.room_id = ${roomId}
+  )`
+}
+
 export class DrizzleChatMessageRepository implements IChatMessageRepository {
   constructor(private readonly db: Database) {}
 
   async listByRoom(roomId: string, options: ListChatMessagesOptions): Promise<ChatMessageView[]> {
     // `nulls last` spells the order of the history index, which Drizzle declares that way.
     const rows = await selectViews(this.db)
-      .where(eq(chatMessages.roomId, roomId))
+      .where(and(eq(chatMessages.roomId, roomId), olderThan(roomId, options.beforeId)))
       .orderBy(
         sql`${chatMessages.createdAt} desc nulls last`,
         sql`${chatMessages.id} desc nulls last`

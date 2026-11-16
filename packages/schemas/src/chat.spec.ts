@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CHAT,
+  chatHistoryQuerySchema,
   chatHistoryResponseSchema,
   chatMessageBodySchema,
   chatMessageSchema,
@@ -115,5 +116,19 @@ describe('CHAT', () => {
       MESSAGE_MAX_LINE_BREAKS: 10,
       HISTORY_PAGE_SIZE: 50,
     })
+  })
+})
+
+describe('chatHistoryQuerySchema', () => {
+  it('accepts a request without a cursor', () => {
+    expect(chatHistoryQuerySchema.parse({})).toEqual({})
+  })
+
+  it('accepts a UUID cursor', () => {
+    expect(chatHistoryQuerySchema.parse({ before: ID })).toEqual({ before: ID })
+  })
+
+  it.each(['', 'not-a-uuid', '123'])('refuses the cursor %j', (before) => {
+    expect(chatHistoryQuerySchema.safeParse({ before }).success).toBe(false)
   })
 })

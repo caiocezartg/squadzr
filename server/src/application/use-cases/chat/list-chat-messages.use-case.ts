@@ -10,6 +10,8 @@ import { resolveAccessibleRoom } from '../room/helpers/resolve-accessible-room'
 export interface ListChatMessagesInput {
   readonly code: string
   readonly viewerId: string
+  /** Id of the oldest message the viewer holds: the page returned is the one before it. */
+  readonly before?: string
 }
 
 export interface ListChatMessagesOutput {
@@ -44,6 +46,7 @@ export class ListChatMessagesUseCase implements IListChatMessagesUseCase {
 
     // One row beyond the page tells whether older messages exist without a count.
     const newestFirst = await this.chatMessageRepository.listByRoom(room.id, {
+      beforeId: input.before,
       limit: CHAT.HISTORY_PAGE_SIZE + 1,
     })
     const hasMore = newestFirst.length > CHAT.HISTORY_PAGE_SIZE
