@@ -110,7 +110,7 @@ describe('the launcher', () => {
   })
 
   it('does not show to a non-member, who never reads the chat', async () => {
-    const { discordLink: _discordLink, ...publicFields } = lobbySquad
+    const { discordLink: _discordLink, discordCall: _discordCall, ...publicFields } = lobbySquad
     onHttp('GET', '/api/rooms/:code', () =>
       httpOk({ room: { ...publicFields, memberCount: 1, isMember: false } })
     )

@@ -21,6 +21,9 @@ export const rooms = pgTable(
       .references(() => games.id, { onDelete: 'restrict' }),
     maxPlayers: integer('max_players').notNull().default(5),
     discordLink: text('discord_link'),
+    // The Voice Call the invite pointed to at creation; null for a Squad that predates it.
+    discordCallId: text('discord_call_id'),
+    discordCallName: text('discord_call_name'),
     readyAt: timestamp('ready_at', { withTimezone: true }),
     lastActivityAt: timestamp('last_activity_at', { withTimezone: true }).notNull().defaultNow(),
     tags: text('tags')
@@ -51,6 +54,10 @@ export const rooms = pgTable(
       sql`${table.platform} IS NULL OR ${table.platform} IN (${sql.raw(
         PLATFORMS.map((platform) => `'${platform}'`).join(', ')
       )})`
+    ),
+    discordCallBothOrNeither: check(
+      'rooms_discord_call_both_or_neither',
+      sql`(${table.discordCallId} IS NULL) = (${table.discordCallName} IS NULL)`
     ),
     readyAfterLastActivity: check(
       'rooms_ready_after_last_activity',

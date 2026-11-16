@@ -437,7 +437,7 @@ describe('squad lobby — leave flow', () => {
 
   it('opens the public view, not the member Lobby, when the viewer goes back to a Squad they left', async () => {
     let left = false
-    const { discordLink: _discordLink, ...publicFields } = lobbySquad
+    const { discordLink: _discordLink, discordCall: _discordCall, ...publicFields } = lobbySquad
     onHttp('GET', '/api/rooms/:code', () =>
       left
         ? httpOk({ room: { ...publicFields, memberCount: 1, isMember: false } })

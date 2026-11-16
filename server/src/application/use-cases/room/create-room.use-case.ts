@@ -5,8 +5,11 @@ import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IGameRepository } from '@domain/repositories/game.repository'
 import type { IUserRepository } from '@domain/repositories/user.repository'
 import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
+import { voiceCallOf, type VoiceCall } from '@domain/services/voice-call'
 import { discordInviteCode, type Platform } from '@squadzr/schemas'
 import {
+  DiscordInviteNotVoiceCallError,
+  DiscordUnavailableError,
   GameNotAvailableError,
   InvalidDiscordInviteError,
   InvalidGameError,
@@ -22,8 +25,13 @@ export interface CreateRoomOutput {
   readonly hostMember: RoomMember
 }
 
-/** maxPlayers may be omitted: the game's capacity applies. */
-export type CreateRoomInput = Omit<NewRoom, 'maxPlayers'> & { readonly maxPlayers?: number }
+/**
+ * maxPlayers may be omitted: the game's capacity applies. The Voice Call is never an input: the server
+ * resolves it from the invite, so a call sent by a client is not read.
+ */
+export type CreateRoomInput = Omit<NewRoom, 'maxPlayers' | 'discordCall'> & {
+  readonly maxPlayers?: number
+}
 
 export interface ICreateRoomUseCase {
   execute(input: CreateRoomInput): Promise<CreateRoomOutput>
@@ -51,7 +59,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
 
     const platform = this.resolvePlatform(game, input)
 
-    await this.assertDiscordInviteExists(input.discordLink)
+    const discordCall = await this.resolveVoiceCall(input.discordLink)
 
     // A new Squad has only its host, so the host's entry is the whole preview.
     // Read before creating: a missing host fails here, before any Squad exists.
@@ -71,6 +79,7 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
       gameId: input.gameId,
       maxPlayers,
       discordLink: input.discordLink,
+      discordCall,
       tags: input.tags,
       language: input.language,
       platform,
@@ -112,15 +121,28 @@ export class CreateRoomUseCase implements ICreateRoomUseCase {
   }
 
   /**
-   * Refuses an invite Discord says it does not know. Discord being slow, down or rate limiting says nothing
-   * about the invite, so those let the Squad through: an outage must not stop anyone from creating one. An
-   * invite that expires is allowed too: the create form warns about it.
+   * Resolves the Voice Call the invite points to, which the Squad stores: a Squad always has one. An invite
+   * Discord does not know, or one whose channel is no Voice Call, is refused. Discord being slow, down or
+   * rate limiting is refused too (503, with Discord's `retry_after` when it gave one): without an answer
+   * there is no call to store. An invite that expires is allowed: the create form warns about it.
    */
-  private async assertDiscordInviteExists(discordLink: string): Promise<void> {
+  private async resolveVoiceCall(discordLink: string): Promise<VoiceCall> {
     const inviteCode = discordInviteCode(discordLink)
     if (!inviteCode) throw new InvalidDiscordInviteError()
 
     const outcome = await this.discordPreviews.fetch(inviteCode)
-    if (outcome.kind === 'invalid') throw new InvalidDiscordInviteError()
+    switch (outcome.kind) {
+      case 'invalid':
+        throw new InvalidDiscordInviteError()
+      case 'rate_limited':
+        throw new DiscordUnavailableError(outcome.retryAfterMs)
+      case 'unreachable':
+        throw new DiscordUnavailableError()
+      case 'found': {
+        const call = voiceCallOf(outcome.preview)
+        if (!call) throw new DiscordInviteNotVoiceCallError()
+        return call
+      }
+    }
   }
 }

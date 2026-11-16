@@ -144,7 +144,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       tags: ['Rooms'],
       summary: 'Create a room',
       description:
-        'Creates a new room and adds the authenticated user as host. The server asks Discord whether the invite exists and refuses one it does not know with 422 INVALID_DISCORD_INVITE; a Discord that cannot be reached lets the room through. Requires authentication.',
+        'Creates a new room and adds the authenticated user as host. The server asks Discord about the invite and stores the Voice Call (a voice or stage channel) it points to, never one sent by the client. An invite Discord does not know is refused with 422 INVALID_DISCORD_INVITE, and one whose channel is no Voice Call, or that has none, with 422 DISCORD_INVITE_NOT_VOICE_CALL. A Discord that cannot be asked (rate limiting, slow or down) is refused with 503 DISCORD_UNAVAILABLE, carrying retryAfterMs when Discord gave one: a room always has a call. Requires authentication.',
       security: [{ session: [] }],
       body: createRoomInputSchema,
       response: {
@@ -152,6 +152,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
         400: errorResponse,
         401: errorResponse,
         422: errorResponse,
+        503: errorResponse,
       },
     },
     preHandler: requireAuth,

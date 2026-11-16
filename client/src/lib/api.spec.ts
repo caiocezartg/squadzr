@@ -46,7 +46,7 @@ describe('valid responses', () => {
   })
 
   it('returns lobby details for a member and the public projection otherwise', async () => {
-    const { discordLink: _discordLink, ...publicSquad } = lobbySquad
+    const { discordLink: _discordLink, discordCall: _discordCall, ...publicSquad } = lobbySquad
     onHttp('GET', '/api/rooms/:code', (req) =>
       httpOk(
         req.params.code === 'LOBBY1'

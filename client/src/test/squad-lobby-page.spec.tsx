@@ -53,7 +53,7 @@ function deferred<T>() {
 }
 
 /** The Squad as a visitor or a non-member reads it: the public projection, with no Discord invite. */
-const { discordLink: _discordLink, ...publicLobbySquad } = lobbySquad
+const { discordLink: _discordLink, discordCall: _discordCall, ...publicLobbySquad } = lobbySquad
 
 const notFoundBody = { error: 'ROOM_NOT_FOUND', message: 'Room not found' }
 

@@ -13,6 +13,13 @@ const platformOrNullSchema = platformSchema.nullable().catch(null)
 /** A Squad without its Game and member preview: the inserted row never reads them back. */
 export type CreatedRoomEntity = Omit<Room, 'game' | 'memberPreview'>
 
+// The call columns are written together (a check keeps them so), so one set means both are.
+function mapDiscordCall(row: RoomRow): Room['discordCall'] {
+  return row.discordCallId !== null && row.discordCallName !== null
+    ? { id: row.discordCallId, name: row.discordCallName }
+    : null
+}
+
 /** Single mapping seam for room rows, shared by the room and member repositories. */
 function mapRoomColumns(row: RoomRow): CreatedRoomEntity {
   return {
@@ -23,6 +30,7 @@ function mapRoomColumns(row: RoomRow): CreatedRoomEntity {
     gameId: row.gameId,
     maxPlayers: row.maxPlayers,
     discordLink: row.discordLink,
+    discordCall: mapDiscordCall(row),
     tags: row.tags,
     language: languageSchema.parse(row.language),
     platform: platformOrNullSchema.parse(row.platform),

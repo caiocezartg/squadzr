@@ -44,6 +44,19 @@ and `schemas:unit`'s `discord.spec.ts` the new check union and a preview respons
 `discord-invite-http.test.ts` (the call, a stage, `not_voice_call`) and `discord-preview-http.test.ts` (the Lobby preview carries no
 channel); its test server's default Discord answer now points to a voice channel.
 
+Issue #190 (Store the Voice Call on the Squad and refuse creation without one) reverses the outage rule: creating a Squad no longer
+goes through when Discord cannot be asked, because a Squad always has a call. The rows above are not recounted. `create-room.use-case.spec.ts`
+replaces its "creates the Squad when Discord answers rate_limited, unreachable or found" table with the new outcomes: the call's id and name
+stored for a voice and for a stage channel, `DiscordInviteNotVoiceCallError` for a text channel or none, `DiscordUnavailableError` for
+`rate_limited` (with Discord's `retry_after`, or none) and `unreachable`, and a call sent with the input never read; each refusal creates nothing.
+`room.projection.spec.ts` pins `discordCall` as a name on the member projection (never the id, null for a Squad that predates calls) and
+absent from the public one. `schemas:unit` covers `roomSchema.discordCall` (a name of 1 to 100 characters or null), the non-member answer
+refusing a `discordCall`, and `room_snapshot` carrying the call while `room_created` never does. `server:integration` gains
+`squad-voice-call-migration.test.ts` (migration 0016 applies on a database that already has Squads, which keep their data and have no call,
+and the check refuses one call column without the other) and changes `rooms-http.test.ts` (the persisted call, a call sent by the client never
+read, 422 `DISCORD_INVITE_NOT_VOICE_CALL` and 503 `DISCORD_UNAVAILABLE` with `retryAfterMs` and `Retry-After`, each persisting nothing, and
+the call going to members only: not to a visitor, a non-member or the board).
+
 Issue #152 (Squad invite preview image) adds the `og` workspace, the `squadzr-og` image Worker, as a fourth Vitest
 project in `vitest.workspace.ts`. `og:unit` has 5 files and 46 tests: `handle-request.spec.ts` (the key that renders, a Squad over
 its game's player limit, HEAD, cached 404s for a bad path, a missing design version, too many slots, an unknown language and any query

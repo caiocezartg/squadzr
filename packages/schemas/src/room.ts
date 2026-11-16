@@ -48,10 +48,18 @@ export const publicRoomSchema = z.object({
 
 export type PublicRoomDto = z.infer<typeof publicRoomSchema>
 
-// Private room projection: the public one plus the Discord invite, delivered
-// only to authenticated members of the room.
+// The Voice Call a Squad meets in, as members see it: its name (Discord's own limit of 1 to 100
+// characters). The call's id stays on the server: the invite already lands in the call.
+export const squadCallSchema = z.object({ name: z.string().min(1).max(100) })
+
+export type SquadCallDto = z.infer<typeof squadCallSchema>
+
+// Private room projection: the public one plus the Discord invite and its Voice Call, delivered
+// only to authenticated members of the room. `discordCall` is null for a Squad created before
+// calls were stored.
 export const roomSchema = publicRoomSchema.extend({
   discordLink: z.url().nullable(),
+  discordCall: squadCallSchema.nullable(),
 })
 
 export type RoomDto = z.infer<typeof roomSchema>
@@ -146,7 +154,10 @@ export type RoomLobbyResponse = z.infer<typeof roomLobbyResponseSchema>
 // lobby details, so it is refused here instead of being stripped down to a
 // public room: it has to satisfy `roomLobbyResponseSchema` in full or fail.
 const publicRoomResponseSchema = z.object({
-  room: publicRoomSchema.extend({ discordLink: z.never().optional() }),
+  room: publicRoomSchema.extend({
+    discordLink: z.never().optional(),
+    discordCall: z.never().optional(),
+  }),
   players: z.never().optional(),
 })
 

@@ -26,7 +26,7 @@ const REDUCED_ENTRANCE_CLASS = 'motion-reduce:animate-invite-fade'
 const outsider = { id: 'user-7', name: 'Outsider', email: 'outsider@squadzr.test', image: null }
 
 /** The Squad as the server answers a viewer outside it: the public projection, with its member preview. */
-const { discordLink: _discordLink, ...publicFields } = lobbySquad
+const { discordLink: _discordLink, discordCall: _discordCall, ...publicFields } = lobbySquad
 const publicSquad = { ...publicFields, memberCount: 1, isMember: false }
 
 /** The same Squad once the outsider is a member: the member view, with the roster and the invite. */

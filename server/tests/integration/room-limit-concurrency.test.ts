@@ -314,6 +314,7 @@ describe('active room limits under a concurrent race', () => {
       gameId: game.id,
       maxPlayers: game.maxPlayers,
       discordLink: 'https://discord.gg/test',
+      discordCall: { id: '1234567890123456', name: 'Squad call' },
     })
     try {
       await waitForLockedSessions(1)

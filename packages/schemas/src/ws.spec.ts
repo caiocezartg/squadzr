@@ -62,7 +62,7 @@ const serverMessages = [
   {
     type: 'room_snapshot',
     payload: {
-      room: { ...publicRoom, discordLink: INVITE },
+      room: { ...publicRoom, discordLink: INVITE, discordCall: { name: 'Squad call' } },
       players: [player],
       readyAt: null,
       expiresAt: publicRoom.updatedAt,
@@ -160,7 +160,7 @@ describe('wsServerMessageSchema', () => {
       {
         type: 'room_snapshot',
         payload: {
-          room: { ...publicRoom, discordLink: INVITE },
+          room: { ...publicRoom, discordLink: INVITE, discordCall: null },
           players: [{ id: 'u' }],
           readyAt: null,
           expiresAt: publicRoom.updatedAt,
@@ -170,6 +170,26 @@ describe('wsServerMessageSchema', () => {
     ],
   ])('rejects %s', (_label, message) => {
     expect(wsServerMessageSchema.safeParse({ ...message, timestamp: 0 }).success).toBe(false)
+  })
+
+  it('gives members the Voice Call in room_snapshot and never in room_created', () => {
+    const snapshot = wsServerMessageSchema.parse({
+      ...serverMessages.find((message) => message.type === 'room_snapshot'),
+      timestamp: 0,
+    })
+    const created = wsServerMessageSchema.parse({
+      type: 'room_created',
+      timestamp: 0,
+      payload: {
+        room: { ...publicRoom, discordLink: INVITE, discordCall: { name: 'Squad call' } },
+      },
+    })
+
+    expect(snapshot.type === 'room_snapshot' && snapshot.payload.room.discordCall).toEqual({
+      name: 'Squad call',
+    })
+    expect(JSON.stringify(created)).not.toContain('Squad call')
+    expect(JSON.stringify(created)).not.toContain(INVITE)
   })
 
   it('discriminates the payload type by message type', () => {
@@ -187,7 +207,7 @@ describe('member presence', () => {
     type: 'room_snapshot',
     timestamp: 0,
     payload: {
-      room: { ...publicRoom, discordLink: INVITE },
+      room: { ...publicRoom, discordLink: INVITE, discordCall: null },
       players: [player],
       readyAt: null,
       expiresAt: publicRoom.updatedAt,
