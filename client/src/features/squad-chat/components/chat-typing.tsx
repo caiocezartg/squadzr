@@ -1,7 +1,6 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { TypingDots } from '@/components/ds/typing-dots'
 import type { TypingMember } from '../use-squad-typing'
 
 interface ChatTypingProps {
@@ -21,15 +20,12 @@ export function ChatTyping({ typers }: ChatTypingProps) {
   return (
     <div
       aria-live="polite"
-      className="text-muted flex h-6 shrink-0 items-center gap-2 px-4 text-[12px] font-semibold"
+      className="text-muted flex h-6 shrink-0 items-center px-4 text-[12px] font-semibold"
     >
       {first && (
-        <>
-          <TypingDots />
-          <span className="min-w-0 truncate">
-            {t('typing', { count: typers.length, name: first.name })}
-          </span>
-        </>
+        <span className="min-w-0 truncate">
+          {t('typing', { count: typers.length, name: first.name })}
+        </span>
       )}
     </div>
   )
