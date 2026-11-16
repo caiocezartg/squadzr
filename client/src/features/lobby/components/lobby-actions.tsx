@@ -4,7 +4,6 @@ import { Link as LinkIcon, Lock, LogOut } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ds/button'
 import { CopySwap } from '@/components/ds/copy-swap'
-import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { lobbyHref } from '@/lib/squad-links'
 import type { RealtimeStatus } from '@/lib/ws-client'
 import { useCopiedFlag } from '../use-copied-flag'
@@ -23,8 +22,8 @@ interface LobbyActionsProps {
 const ICON_ON_NARROW = '@max-[41rem]:size-11 @max-[41rem]:px-0'
 
 /**
- * The Lobby's header actions (reference, Lobby): the way back to the board, the connection, the squad
- * link, the bell at wide widths, and the leave action. The host ends the Squad, a member leaves it, and
+ * The Lobby's header actions (reference, Lobby): the way back to the board, a lost connection, the
+ * squad link, and the leave action. The host ends the Squad, a member leaves it, and
  * both go through the same leave flow; once the Squad is Ready nobody can leave.
  */
 export function LobbyActions({
@@ -72,7 +71,6 @@ export function LobbyActions({
               }
             />
           </Button>
-          <NotificationsBell placement="page" />
           {isReady ? (
             <Button
               variant="secondary"

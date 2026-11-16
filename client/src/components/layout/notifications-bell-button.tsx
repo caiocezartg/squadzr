@@ -42,7 +42,7 @@ export function BellButton({ unreadCount, className, ...props }: BellButtonProps
 }
 
 /**
- * The bell's footprint before the live bell is in place: the page header shows it from the server's
+ * The bell's footprint before the live bell is in place: the sidebar shows it from the server's
  * HTML, so the bell does not pop in once the browser knows the width. It is not a control; the live
  * bell takes its place in the same square.
  */

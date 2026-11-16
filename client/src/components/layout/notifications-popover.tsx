@@ -8,6 +8,8 @@ import { BellButton } from './notifications-bell-button'
 import { NotificationsPanel } from './notifications-panel'
 
 export interface NotificationsPopoverProps {
+  /** Which edge of the bell the panel lines up with. */
+  readonly align: 'start' | 'end'
   readonly notifications: readonly UserNotification[]
   readonly unreadCount: number
   readonly busy: boolean
@@ -26,6 +28,7 @@ export interface NotificationsPopoverProps {
  * JavaScript of a route does not need; the menu loads it when the page is idle.
  */
 export function NotificationsPopover({
+  align,
   notifications,
   unreadCount,
   busy,
@@ -48,7 +51,7 @@ export function NotificationsPopover({
   return (
     <Popover
       side="bottom"
-      align="end"
+      align={align}
       sideOffset={10}
       bottomSheet
       open={open}

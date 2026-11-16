@@ -7,7 +7,6 @@ import { useWebSocket } from '@/hooks/use-websocket'
 import { useNotificationEvents } from '@/hooks/use-notification-events'
 import { useAppSquadSearch, useSquadFilters } from '@/features/squad-list'
 import { useSquadJoining } from '@/features/squad-joining'
-import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { BoardErrorBoundary } from './board-error-boundary'
 import { BoardFilters } from './board-filters'
 import { BoardLoadError } from './board-load-error'
@@ -60,8 +59,6 @@ export function SquadBoardView() {
             </Suspense>
           </BoardErrorBoundary>
         </div>
-        {/* At 1024px and up the bell sits at the right of the title row; below, the top bar has it. */}
-        <NotificationsBell placement="page" />
       </div>
 
       <BoardFilters filters={filters} />
