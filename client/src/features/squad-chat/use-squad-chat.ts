@@ -41,6 +41,11 @@ export interface SquadChat {
   readonly messages: readonly SquadChatMessage[]
   /** A send is waiting for the server, so the composer holds the next one back. */
   readonly isSending: boolean
+  /**
+   * Sends one message; only one send is pending at a time. The composer should wait for `status` to be
+   * `ready`: before the history is cached there is nowhere to show the pending message, so it only appears
+   * once the history is read again.
+   */
   send: (text: string) => Promise<SendChatOutcome>
   /** Reads the history again after it failed. */
   retry: () => void
