@@ -5,11 +5,15 @@ import { useTypingSender } from './use-typing-sender'
 
 const CODE = 'abc123'
 
-function renderSender(options = { enabled: true, isReady: false }, membershipRevoked = false) {
+function renderSender(
+  options = { enabled: true, isReady: false },
+  membershipRevoked = false,
+  status: 'open' | 'reconnecting' = 'open'
+) {
   const notifyTyping = vi.fn<(squadCode: string) => void>()
   const view = renderHook(
     (props: { enabled: boolean; isReady: boolean }) =>
-      useTypingSender(CODE, { notifyTyping, membershipRevoked }, props),
+      useTypingSender(CODE, { status, notifyTyping, membershipRevoked }, props),
     { initialProps: options }
   )
   return { ...view, notifyTyping }
@@ -87,6 +91,16 @@ describe('useTypingSender', () => {
 
     expect(outsider.notifyTyping).not.toHaveBeenCalled()
     expect(revoked.notifyTyping).not.toHaveBeenCalled()
+  })
+
+  it('signals nothing while the socket is down, and the lost change does not use up the throttle', () => {
+    const down = renderSender({ enabled: true, isReady: false }, false, 'reconnecting')
+    down.result.current('oi')
+    expect(down.notifyTyping).not.toHaveBeenCalled()
+
+    const up = renderSender()
+    up.result.current('oi')
+    expect(up.notifyTyping).toHaveBeenCalledTimes(1)
   })
 
   it('starts signalling again once the Squad stops being Ready', () => {

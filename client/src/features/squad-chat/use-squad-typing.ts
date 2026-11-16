@@ -17,7 +17,10 @@ export interface UseSquadTypingOptions {
   readonly enabled: boolean
   /** A Ready Squad shows no typing: its chat is read-only. */
   readonly isReady: boolean
-  /** The Squad's members, to name who is typing. A typist outside this list has no name to show. */
+  /**
+   * The Squad's members, to name who is typing. A typist outside this list has no name to show. Pass a
+   * stable array: a new one on every render rebuilds the result.
+   */
   readonly members?: readonly TypingMember[]
 }
 
@@ -62,7 +65,9 @@ export function useSquadTyping(
     function stop(playerId: string): void {
       clearTimeout(timers.get(playerId))
       timers.delete(playerId)
-      setTyping((current) => (current.includes(playerId) ? without(current, playerId) : current))
+      setTyping((current) =>
+        current.includes(playerId) ? current.filter((id) => id !== playerId) : current
+      )
     }
 
     const offTyping = on('chat_typing', ({ roomCode, playerId }) => {
@@ -94,8 +99,4 @@ export function useSquadTyping(
       typers: ids.flatMap((id) => byId.get(id) ?? []),
     }
   }, [ids, members])
-}
-
-function without(ids: readonly string[], playerId: string): readonly string[] {
-  return ids.filter((id) => id !== playerId)
 }
