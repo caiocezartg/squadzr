@@ -27,7 +27,8 @@
         "awaySince": "Out of the room · {time}",
         "open": "Waiting for a player"
       },
-      "viewProfile": "View {name}'s profile"
+      "viewProfile": "View {name}'s profile",
+      "typing": "Typing"
     },
     "lobby": {
       "exploreSquads": "Explore squads",
@@ -455,7 +456,8 @@
     "loading": "Loading messages",
     "loadingOlder": "Loading older messages",
     "loadOlderFailed": "Could not load older messages.",
-    "newMessages": "New messages"
+    "newMessages": "New messages",
+    "typing": "{count, plural, one {{name} is typing…} other {# people are typing…}}"
   },
   "errors": {
     "GAME_NOT_FOUND": "This game could not be found.",

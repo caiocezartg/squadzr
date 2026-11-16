@@ -5,9 +5,11 @@ import { MessageSquare } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useSession } from '@/hooks/use-session'
 import { useSquadChat, type SquadChatChannel } from '../use-squad-chat'
+import type { TypingMember } from '../use-squad-typing'
 import { useTypingSender } from '../use-typing-sender'
 import { ChatComposer } from './chat-composer'
 import { ChatMessages } from './chat-messages'
+import { ChatTyping } from './chat-typing'
 import { ChatWindow } from './chat-window'
 
 /** The badge shows counts above this one as `99+`; the label read aloud keeps the exact count. */
@@ -23,6 +25,8 @@ export interface SquadChatDockProps {
   readonly enabled: boolean
   /** The Squad is complete: its chat is read-only, so the composer signals no typing. */
   readonly isReady: boolean
+  /** Who is typing, from the Lobby's `useSquadTyping`, for the window's footer. */
+  readonly typers: readonly TypingMember[]
 }
 
 /**
@@ -36,6 +40,7 @@ export function SquadChatDock({
   memberCount,
   enabled,
   isReady,
+  typers,
 }: SquadChatDockProps) {
   const t = useTranslations('chat')
   const viewerId = useSession()?.user.id ?? ''
@@ -125,6 +130,7 @@ export function SquadChatDock({
               olderFailed={chat.olderFailed}
               onReachTop={() => void chat.fetchOlder()}
             />
+            <ChatTyping typers={typers} />
             <ChatComposer
               draft={draft}
               onDraftChange={handleDraftChange}

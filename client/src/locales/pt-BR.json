@@ -27,7 +27,8 @@
         "awaySince": "Fora da sala · {time}",
         "open": "Aguardando jogador"
       },
-      "viewProfile": "Ver perfil de {name}"
+      "viewProfile": "Ver perfil de {name}",
+      "typing": "Digitando"
     },
     "lobby": {
       "exploreSquads": "Explorar squads",
@@ -455,7 +456,8 @@
     "loading": "Carregando mensagens",
     "loadingOlder": "Carregando mensagens anteriores",
     "loadOlderFailed": "Não foi possível carregar as mensagens anteriores.",
-    "newMessages": "Novas mensagens"
+    "newMessages": "Novas mensagens",
+    "typing": "{count, plural, one {{name} está digitando…} other {# pessoas estão digitando…}}"
   },
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",

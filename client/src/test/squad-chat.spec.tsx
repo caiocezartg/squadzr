@@ -733,3 +733,109 @@ describe('the typing signal', () => {
     expect(typingFrames()).toEqual([])
   })
 })
+
+describe('who is typing', () => {
+  const BIA = { ...guestPlayer, id: 'user-3', name: 'Bia' }
+
+  /** The member's tile in the members panel; the chat window draws the name too, in its messages. */
+  function memberTile(name: string): HTMLElement {
+    const tile = screen
+      .getAllByText(name)
+      .map((element) => element.closest('li'))
+      .find((item) => item !== null && item.closest('[role="dialog"]') === null)
+    if (!tile) throw new Error(`No tile for ${name}`)
+    return tile
+  }
+
+  function typing(playerId: string, roomCode = CODE): void {
+    sendFromServer({ type: 'chat_typing', payload: { roomCode, playerId } })
+  }
+
+  it('draws the dots on the member tile and names them in the footer', async () => {
+    await openMemberLobby()
+    const chat = await openChat()
+
+    typing(ANA.id)
+
+    expect(await within(chat).findByText('Ana is typing…')).toBeInTheDocument()
+    expect(within(memberTile('Ana')).getByTestId('typing-dots')).toBeInTheDocument()
+    expect(within(memberTile('Ana')).getByText('Typing')).toHaveClass('sr-only')
+    expect(within(memberTile('Caio')).queryByTestId('typing-dots')).not.toBeInTheDocument()
+  })
+
+  it('counts several members typing at once', async () => {
+    renderSquadsFlow(`/squads/${CODE}`)
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({
+      type: 'room_snapshot',
+      payload: lobbySnapshot({ players: [hostPlayer, guestPlayer, BIA] }),
+    })
+    await screen.findByText('Bia')
+    const chat = await openChat()
+
+    typing(ANA.id)
+    typing(BIA.id)
+
+    expect(await within(chat).findByText('2 people are typing…')).toBeInTheDocument()
+    expect(within(memberTile('Bia')).getByTestId('typing-dots')).toBeInTheDocument()
+  })
+
+  it('stops showing a member 4 seconds after their last signal', async () => {
+    await openMemberLobby()
+    const chat = await openChat()
+    vi.useFakeTimers()
+    try {
+      typing(ANA.id)
+      act(() => vi.advanceTimersByTime(3_900))
+      expect(within(chat).getByText('Ana is typing…')).toBeInTheDocument()
+
+      act(() => vi.advanceTimersByTime(100))
+
+      expect(within(chat).queryByText('Ana is typing…')).not.toBeInTheDocument()
+      expect(within(memberTile('Ana')).queryByTestId('typing-dots')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stops showing a member as soon as their message arrives', async () => {
+    await openMemberLobby()
+    const chat = await openChat()
+    typing(ANA.id)
+    await within(chat).findByText('Ana is typing…')
+
+    sendFromServer({ type: 'chat_message', payload: { message: message(3, ANA, 'cheguei') } })
+
+    await within(chat).findByText('cheguei')
+    expect(within(chat).queryByText('Ana is typing…')).not.toBeInTheDocument()
+    expect(within(memberTile('Ana')).queryByTestId('typing-dots')).not.toBeInTheDocument()
+  })
+
+  it('never shows the viewer own typing, nor typing of another Squad', async () => {
+    await openMemberLobby()
+    const chat = await openChat()
+
+    typing(ME.id)
+    typing(ANA.id, 'OTHER1')
+
+    await act(async () => {})
+    expect(within(chat).queryByText(/typing…/)).not.toBeInTheDocument()
+    expect(screen.queryByTestId('typing-dots')).not.toBeInTheDocument()
+  })
+
+  it('shows nobody typing while the Squad is Ready', async () => {
+    renderSquadsFlow(`/squads/${CODE}`)
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+    await screen.findByText('Ana')
+    const chat = await openChat()
+
+    typing(ANA.id)
+
+    await act(async () => {})
+    expect(within(chat).queryByText(/typing…/)).not.toBeInTheDocument()
+    expect(screen.queryByTestId('typing-dots')).not.toBeInTheDocument()
+  })
+})

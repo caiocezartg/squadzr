@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useTimeAgo } from '@/hooks/use-time-ago'
 import { cn } from '@/lib/utils'
 import { Avatar, type AvatarState } from './avatar'
+import { TypingDots } from './typing-dots'
 
 /**
  * What a parent that animates the tile hands down: the tile's `li` is the element it moves, so it takes the
@@ -44,6 +45,8 @@ interface PlayerProps extends TileHost {
   readonly offlineSince?: string | null
   /** Makes the player's photo and name a button that opens their profile. */
   readonly profile?: TileProfileLink
+  /** The player is writing in the Squad Chat: three dots beside the name, and the word for assistive technology. */
+  readonly typing?: boolean
 }
 
 export type MemberTileProps = OpenSlotProps | PlayerProps
@@ -120,9 +123,12 @@ export function MemberTile(props: MemberTileProps) {
           host={props.host}
           surface={look.groundColor}
         />
-        <Name look={look}>{props.name}</Name>
+        <Name look={look} typing={props.typing}>
+          {props.name}
+        </Name>
       </PlayerFace>
       {props.you && <span className="shrink-0 text-xs text-muted">{t('you')}</span>}
+      {props.typing && <span className="sr-only">{t('typing')}</span>}
     </Tile>
   )
 }
@@ -209,10 +215,20 @@ function Tile({
   )
 }
 
-function Name({ look, children }: { readonly look: TileLook; readonly children: ReactNode }) {
+/** The name, and the typing dots right after it; a long name truncates before the dots. */
+function Name({
+  look,
+  typing = false,
+  children,
+}: {
+  readonly look: TileLook
+  readonly typing?: boolean
+  readonly children: ReactNode
+}) {
   return (
-    <span className={cn('min-w-0 flex-1 truncate text-[15px] font-bold', look.name)}>
-      {children}
+    <span className="flex min-w-0 flex-1 items-center gap-2">
+      <span className={cn('min-w-0 truncate text-[15px] font-bold', look.name)}>{children}</span>
+      {typing && <TypingDots />}
     </span>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { parseDiscordInvite } from '@squadzr/schemas'
@@ -9,7 +9,7 @@ import { MotionProvider } from '@/components/ui/motion-provider'
 import { useSession } from '@/hooks/use-session'
 import { translateErrorCode } from '@/lib/error-messages'
 import { useJoinSquad } from '@/features/squad-joining/join'
-import { SquadChatDock } from '@/features/squad-chat'
+import { SquadChatDock, useSquadTyping } from '@/features/squad-chat'
 import { LockedInvite, ReadyInvite } from './components/discord-invite'
 import { LobbyBackLink } from './components/lobby-back-link'
 import { LobbyActions } from './components/lobby-actions'
@@ -88,6 +88,16 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
     isReady: lobby.isReady,
     isOutside: !lobby.isMember && lobby.squad !== null,
   })
+  // One record of who is typing, read by both the members panel and the chat footer.
+  const typingMembers = useMemo(
+    () => lobby.players.map(({ id, name }) => ({ id, name })),
+    [lobby.players]
+  )
+  const typing = useSquadTyping(squadCode, channel, {
+    enabled: lobby.isMember,
+    isReady: lobby.isReady,
+    members: typingMembers,
+  })
 
   if (!session?.user) {
     return <SquadSignIn code={squadCode} />
@@ -145,6 +155,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
           viewerId={session.user.id}
           isReady={lobby.isReady}
           pending={!lobby.hasSnapshot}
+          typingIds={typing.typingIds}
         />
         <MemberInvite squadCode={squadCode} lobby={lobby} entering={readyEntrance} />
       </LobbyColumns>
@@ -156,6 +167,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
         memberCount={lobby.players.length}
         enabled={lobby.isMember}
         isReady={lobby.isReady}
+        typers={typing.typers}
       />
     </div>
   )
