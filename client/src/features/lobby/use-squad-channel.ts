@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { WS_URL } from '@/env'
 import { useNotificationEvents } from '@/hooks/use-notification-events'
 import { useWebSocket } from '@/hooks/use-websocket'
-import type { RealtimeStatus } from '@/lib/ws-client'
+import type { RealtimeEventSubscribe, RealtimeStatus } from '@/lib/ws-client'
 import {
   applyPresence,
   presenceFromSnapshot,
@@ -30,6 +30,8 @@ export interface SquadChannel {
   /** The code of the latest realtime error. The page translates it; the server's text is not shown. */
   errorCode: string | null
   membershipRevoked: boolean
+  /** Registers a handler for a server event on this page's socket, for features that ride the same socket. */
+  on: RealtimeEventSubscribe
   dismissError: () => void
   /** Tells the server this tab is leaving the squad channel (Presence only). */
   notifySquadLeave: (squadCode: string) => void
@@ -151,6 +153,7 @@ export function useSquadChannel({
     presence,
     errorCode,
     membershipRevoked,
+    on,
     dismissError,
     notifySquadLeave,
   }

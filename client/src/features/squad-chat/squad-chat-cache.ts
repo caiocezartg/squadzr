@@ -57,3 +57,17 @@ export function upsertMessage(data: ChatHistoryData, message: ChatMessageDto): C
   const items = [...latest.items, message].sort(compareMessages)
   return { ...data, pages: [{ ...latest, items }, ...older] }
 }
+
+/**
+ * Adds the page before the oldest message held, as the last page. It lands on the history as it is now, so
+ * what arrived while the page was being read stays. A history that changed meanwhile, because it was read
+ * again from the newest page, no longer ends where the page was asked from, and takes nothing.
+ */
+export function appendOlderPage(
+  data: ChatHistoryData,
+  page: ChatHistoryResponse,
+  before: string
+): ChatHistoryData {
+  if (data.pages.at(-1)?.items[0]?.id !== before) return data
+  return { pages: [...data.pages, page], pageParams: [...data.pageParams, before] }
+}

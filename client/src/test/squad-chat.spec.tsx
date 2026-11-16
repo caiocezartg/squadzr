@@ -5,7 +5,7 @@
 
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChatMessageDto } from '@squadzr/schemas'
 import { NARROW_QUERY } from '@/components/ds/use-media-query'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
@@ -27,6 +27,7 @@ import {
 } from './fixtures'
 import { mockMediaQuery } from './media-query'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
+import { latestWebSocket } from './ws-mock'
 
 const CODE = 'LOBBY1'
 const ME = { id: hostPlayer.id, name: hostPlayer.name, image: null }
@@ -67,6 +68,17 @@ async function openMemberLobby(options: Parameters<typeof renderSquadsFlow>[1] =
   sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
   await screen.findByText('Ana')
   return flow
+}
+
+/** The socket drops and the client reconnects on its own, as a lost connection does. */
+function reconnectSocket(): void {
+  const dropped = latestWebSocket()
+  vi.useFakeTimers()
+  act(() => dropped.close(1006))
+  act(() => vi.advanceTimersByTime(60_000))
+  vi.useRealTimers()
+  act(() => latestWebSocket().open())
+  sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
 }
 
 function launcher(): HTMLElement {
@@ -182,19 +194,132 @@ describe('the history', () => {
     expect(within(reopened).getByText('oi time')).toBeInTheDocument()
   })
 
-  it('reads the history again when the window reopens', async () => {
+  it('shows a message another member sends, live, with no reload', async () => {
     await openMemberLobby()
     const chat = await openChat()
     await within(chat).findByText('oi time')
-    await userEvent.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    registerRoutes([...HISTORY, message(3, ANA, 'cheguei')])
+    const reads = countHttpCalls('GET', '/api/rooms/:code/messages')
 
-    const reopened = await openChat()
+    sendFromServer({ type: 'chat_message', payload: { message: message(3, ANA, 'cheguei') } })
 
-    expect(await within(reopened).findByText('cheguei')).toBeInTheDocument()
+    expect(await within(chat).findByText('cheguei')).toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/rooms/:code/messages')).toBe(reads)
   })
 
+  it('ignores a message of another Squad', async () => {
+    await openMemberLobby()
+    const chat = await openChat()
+    await within(chat).findByText('oi time')
+
+    sendFromServer({
+      type: 'chat_message',
+      payload: { message: { ...message(3, ANA, 'outro time'), roomCode: 'OTHER1' } },
+    })
+
+    await act(async () => {})
+    expect(within(chat).queryByText('outro time')).not.toBeInTheDocument()
+  })
+
+  it('reads the history again after a reconnect, so what the socket missed shows', async () => {
+    await openMemberLobby()
+    const chat = await openChat()
+    await within(chat).findByText('oi time')
+    registerRoutes([...HISTORY, message(3, ANA, 'perdi essa')])
+
+    reconnectSocket()
+
+    expect(await within(chat).findByText('perdi essa')).toBeInTheDocument()
+  })
+})
+
+describe('the unread badge', () => {
+  const badge = () => screen.queryByTestId('chat-unread')
+
+  async function openLobbyWithHistory(options: Parameters<typeof openMemberLobby>[0] = {}) {
+    const flow = await openMemberLobby(options)
+    // The history is read with the Lobby, before the window ever opens, and again once the socket joined.
+    await waitFor(() => expect(countHttpCalls('GET', '/api/rooms/:code/messages')).toBe(2))
+    return flow
+  }
+
+  it('counts the messages others send while the window is closed', async () => {
+    await openLobbyWithHistory()
+    expect(badge()).not.toBeInTheDocument()
+
+    sendFromServer({ type: 'chat_message', payload: { message: message(3, ANA, 'um') } })
+    sendFromServer({ type: 'chat_message', payload: { message: message(4, ANA, 'dois') } })
+
+    expect(await screen.findByTestId('chat-unread')).toHaveTextContent('2')
+  })
+
+  it('does not count the viewer own messages, such as the echo of another tab', async () => {
+    await openLobbyWithHistory()
+
+    sendFromServer({ type: 'chat_message', payload: { message: message(3, ME, 'da outra aba') } })
+
+    await act(async () => {})
+    expect(badge()).not.toBeInTheDocument()
+  })
+
+  it('resets when the window opens, and the messages are there to read', async () => {
+    await openLobbyWithHistory()
+    sendFromServer({ type: 'chat_message', payload: { message: message(3, ANA, 'um') } })
+    await screen.findByTestId('chat-unread')
+
+    const chat = await openChat()
+
+    expect(badge()).not.toBeInTheDocument()
+    expect(await within(chat).findByText('um')).toBeInTheDocument()
+  })
+
+  it('counts nothing while the window is open, and again once it closes', async () => {
+    await openLobbyWithHistory()
+    const chat = await openChat()
+    sendFromServer({ type: 'chat_message', payload: { message: message(3, ANA, 'aberto') } })
+    await within(chat).findByText('aberto')
+    expect(badge()).not.toBeInTheDocument()
+
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    sendFromServer({ type: 'chat_message', payload: { message: message(4, ANA, 'fechado') } })
+
+    expect(await screen.findByTestId('chat-unread')).toHaveTextContent('1')
+  })
+})
+
+describe('losing access', () => {
+  it('removes the chat cache and stops reading it when the Membership is revoked', async () => {
+    const queryClient = createTestQueryClient()
+    await openMemberLobby({ queryClient })
+    await waitFor(() => expect(queryClient.getQueryData(['squad-chat', CODE])).toBeDefined())
+    const reads = countHttpCalls('GET', '/api/rooms/:code/messages')
+
+    sendFromServer({
+      type: 'error',
+      payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
+    })
+
+    await screen.findByText('You are not a member of this squad.')
+    expect(queryClient.getQueryData(['squad-chat', CODE])).toBeUndefined()
+    expect(screen.queryByRole('button', { name: 'Chat' })).not.toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/rooms/:code/messages')).toBe(reads)
+  })
+
+  it('removes the chat cache when the Squad is deleted', async () => {
+    const queryClient = createTestQueryClient()
+    await openMemberLobby({ queryClient })
+    await waitFor(() => expect(queryClient.getQueryData(['squad-chat', CODE])).toBeDefined())
+
+    sendFromServer({
+      type: 'room_deleted',
+      payload: { roomId: lobbySquad.id, roomCode: CODE },
+    })
+
+    await waitFor(() => expect(queryClient.getQueryData(['squad-chat', CODE])).toBeUndefined())
+  })
+})
+
+describe('the chat window, continued', () => {
   it('shows the error with a retry that reads again', async () => {
     onHttp('GET', '/api/rooms/:code/messages', () =>
       httpError(500, { error: 'INTERNAL_ERROR', message: 'boom' })

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ChatMessageDto } from '@squadzr/schemas'
 import {
+  appendOlderPage,
   messagesOf,
   removeMessage,
   squadChatQueryKey,
@@ -104,5 +105,26 @@ describe('removeMessage', () => {
     )
 
     expect(messagesOf(removeMessage(data, 'a')).map((item) => item.id)).toEqual(['b'])
+  })
+})
+
+describe('appendOlderPage', () => {
+  const newest = message('c', '2026-01-01T10:02:00.000Z')
+  const older = { items: [message('a', '2026-01-01T10:00:00.000Z')], hasMore: false }
+
+  it('adds the page as the last one, keeping what the history holds now', () => {
+    const data = history([message('b', '2026-01-01T10:01:00.000Z'), newest])
+
+    const next = appendOlderPage(data, older, 'b')
+
+    expect(next.pages).toHaveLength(2)
+    expect(next.pageParams).toEqual([undefined, 'b'])
+    expect(messagesOf(next).map((held) => held.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('takes nothing once the history no longer ends at the message the page was asked from', () => {
+    const data = history([message('z', '2026-01-01T10:03:00.000Z')])
+
+    expect(appendOlderPage(data, older, 'b')).toBe(data)
   })
 })

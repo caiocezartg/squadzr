@@ -1,7 +1,8 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { isRoomLobbyResponse } from '@squadzr/schemas'
 import { useMySquadsCommands } from '@/features/my-squads'
 import { useSquadBoardCommands } from '@/features/squad-board'
+import { useSquadChatCommands } from '@/features/squad-chat'
 import { useSession } from '@/hooks/use-session'
 import { useAppNavigation } from '@/lib/navigation'
 import type { RealtimeStatus } from '@/lib/ws-client'
@@ -46,23 +47,33 @@ export function useLobbyChannel(squadCode: string): SquadChannel {
   const navigateApp = useAppNavigation()
   const board = useSquadBoardCommands()
   const { refreshMySquads } = useMySquadsCommands()
+  const { discardSquadChat } = useSquadChatCommands()
   const userId = session?.user?.id
   const access = useSquadAccess(squadCode)
 
   const handleSquadRemoved = useCallback(
     (squadId: string) => {
       board.removeSquad(squadId)
+      discardSquadChat(squadCode)
       void refreshMySquads()
       navigateApp('/squads')
     },
-    [board, refreshMySquads, navigateApp]
+    [board, discardSquadChat, squadCode, refreshMySquads, navigateApp]
   )
 
-  return useSquadChannel({
+  const channel = useSquadChannel({
     squadCode,
     enabled: !!userId && access !== 'non-member',
     onSquadRemoved: handleSquadRemoved,
   })
+
+  // A revoked Membership leaves the page with the error alone, so the chat's history goes with it.
+  const { membershipRevoked } = channel
+  useEffect(() => {
+    if (membershipRevoked) discardSquadChat(squadCode)
+  }, [membershipRevoked, discardSquadChat, squadCode])
+
+  return channel
 }
 
 /**

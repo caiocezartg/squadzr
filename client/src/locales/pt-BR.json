@@ -450,6 +450,7 @@
     "sendFailed": "Sua mensagem não foi enviada. Tente de novo.",
     "sending": "Enviando",
     "today": "Hoje",
+    "unread": "{count, plural, one {# mensagem não lida} other {# mensagens não lidas}}",
     "memberCount": "{count, plural, one {# membro} other {# membros}}",
     "loading": "Carregando mensagens"
   },
