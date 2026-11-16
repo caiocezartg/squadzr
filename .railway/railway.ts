@@ -111,6 +111,9 @@ export default defineRailway(() => {
       BETTER_AUTH_SECRET: preserve(),
       DISCORD_CLIENT_ID: preserve(),
       DISCORD_CLIENT_SECRET: preserve(),
+      // The token of a Discord application's bot that joins no server: the invite lookups are sent as it, so
+      // Discord rate-limits that application and not this API's shared address. Unset, they carry no credentials.
+      DISCORD_BOT_TOKEN: preserve(),
       // The origin lock: the same secret the Cloudflare Transform Rule writes and the Worker sends. The
       // owner sets it in Railway when the lock is turned on, and changes it together with those two.
       EDGE_AUTH_TOKEN: preserve(),

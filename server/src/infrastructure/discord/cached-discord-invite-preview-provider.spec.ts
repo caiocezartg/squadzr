@@ -83,6 +83,19 @@ describe('CachedDiscordInvitePreviewProvider', () => {
     expect(inner.fetch).toHaveBeenCalledTimes(2)
   })
 
+  it('reads a rejection as unreachable and asks again after ten seconds', async () => {
+    inner.fetch.mockRejectedValueOnce(new Error('boom'))
+
+    await expect(cached.fetch('valorant')).resolves.toEqual({ kind: 'unreachable' })
+    advance(9 * SECOND)
+    await expect(cached.fetch('valorant')).resolves.toEqual({ kind: 'unreachable' })
+    expect(inner.fetch).toHaveBeenCalledTimes(1)
+
+    advance(SECOND)
+    await expect(cached.fetch('valorant')).resolves.toEqual(FOUND)
+    expect(inner.fetch).toHaveBeenCalledTimes(2)
+  })
+
   describe.each<[string, DiscordInvitePreviewOutcome, number]>([
     ['the wait Discord asked for', { kind: 'rate_limited', retryAfterMs: 4_000 }, 4 * SECOND],
     ['ten seconds at most', { kind: 'rate_limited', retryAfterMs: 60_000 }, 10 * SECOND],

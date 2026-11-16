@@ -32,8 +32,11 @@ export type DiscordInvitePreviewOutcome =
   | { readonly kind: 'invalid' }
   /** `retryAfterMs` is how long Discord asked to wait, when it said so. */
   | { readonly kind: 'rate_limited'; readonly retryAfterMs?: number }
-  /** Discord was slow, down, or answered something this app cannot read. */
-  | { readonly kind: 'unreachable' }
+  /**
+   * Discord was slow, down, or answered something this app cannot read. `status` is the HTTP status of an
+   * answer that was not a success, so a rejected token (401, 403) can be told apart from an outage.
+   */
+  | { readonly kind: 'unreachable'; readonly status?: number }
 
 /** Source of the public data Discord holds for an invite code. */
 export interface DiscordInvitePreviewProvider {

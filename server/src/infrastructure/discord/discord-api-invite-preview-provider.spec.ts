@@ -204,6 +204,33 @@ describe('DiscordApiInvitePreviewProvider', () => {
       expect(fetchImpl).toHaveBeenCalledTimes(2)
     })
 
+    it('sends the bot token on the retried request too', async () => {
+      const { provider, fetchImpl } = providerAnsweringInOrder(
+        [json({ retry_after: 1 }, 429), json(VALORANT)],
+        { botToken: 'fake-bot-token' }
+      )
+
+      await provider.fetch('valorant')
+
+      expect(fetchImpl).toHaveBeenCalledTimes(2)
+      for (const [, init] of fetchImpl.mock.calls) {
+        expect(new Headers(init?.headers).get('authorization')).toBe('Bot fake-bot-token')
+      }
+    })
+
+    it.each(['abc', '-1', '1e3', '0x10', 'Infinity'])(
+      'ignores a Retry-After header of %j',
+      async (header) => {
+        const { provider, sleep } = providerAnsweringInOrder([
+          new Response('rate limited', { status: 429, headers: { 'Retry-After': header } }),
+        ])
+
+        await expect(provider.fetch('valorant')).resolves.toEqual({ kind: 'rate_limited' })
+
+        expect(sleep).not.toHaveBeenCalled()
+      }
+    )
+
     it('waits for a retry_after of exactly 2 seconds', async () => {
       const { provider, sleep } = providerAnsweringInOrder([
         json({ retry_after: 2 }, 429),
@@ -298,7 +325,36 @@ describe('DiscordApiInvitePreviewProvider', () => {
         await provider.fetch('valorant')
 
         expect(warn.mock.calls).toEqual([
-          [{ inviteCode: 'valorant', outcome, retryAfterMs }, expect.any(String)],
+          [
+            {
+              inviteCode: 'valorant',
+              outcome,
+              retryAfterMs,
+              status: outcome === 'unreachable' ? 503 : null,
+            },
+            expect.any(String),
+          ],
+        ])
+        expect(JSON.stringify(warn.mock.calls)).not.toContain(token)
+      }
+    )
+
+    it.each([401, 403])(
+      'logs the status of a %i, so a rejected token shows apart from an outage, never the token',
+      async (status) => {
+        const warn = vi.fn<(details: Record<string, unknown>, message: string) => void>()
+        const { provider } = providerAnswering(json({ message: 'Unauthorized' }, status), {
+          botToken: token,
+          logger: { warn },
+        })
+
+        await expect(provider.fetch('valorant')).resolves.toEqual({ kind: 'unreachable', status })
+
+        expect(warn.mock.calls).toEqual([
+          [
+            { inviteCode: 'valorant', outcome: 'unreachable', retryAfterMs: null, status },
+            expect.any(String),
+          ],
         ])
         expect(JSON.stringify(warn.mock.calls)).not.toContain(token)
       }
@@ -314,6 +370,7 @@ describe('DiscordApiInvitePreviewProvider', () => {
       await expect(provider.fetch('valorant')).resolves.toEqual({ kind: 'unreachable' })
 
       expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0]?.[0]).toMatchObject({ status: null })
       expect(JSON.stringify(warn.mock.calls)).not.toContain(token)
     })
 
@@ -345,7 +402,7 @@ describe('DiscordApiInvitePreviewProvider', () => {
   it.each([500, 503])('reads a %i as unreachable', async (status) => {
     const { provider } = providerAnswering(json({}, status))
 
-    await expect(provider.fetch('valorant')).resolves.toEqual({ kind: 'unreachable' })
+    await expect(provider.fetch('valorant')).resolves.toEqual({ kind: 'unreachable', status })
   })
 
   it.each([

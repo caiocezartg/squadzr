@@ -59,13 +59,22 @@ export class CachedDiscordInvitePreviewProvider implements DiscordInvitePreviewP
       return cached.outcome
     }
 
-    const entry: Entry = { outcome: this.inner.fetch(inviteCode), expiresAt: null }
+    const entry: Entry = { outcome: this.fetchInner(inviteCode), expiresAt: null }
     this.entries.set(inviteCode, entry)
     void entry.outcome.then((outcome) => {
       entry.expiresAt = this.clock.now().getTime() + this.ttlFor(outcome)
       this.evict()
     })
     return entry.outcome
+  }
+
+  /** A rejection becomes `unreachable`, so it is kept for the outage window and not for good. */
+  private async fetchInner(inviteCode: string): Promise<DiscordInvitePreviewOutcome> {
+    try {
+      return await this.inner.fetch(inviteCode)
+    } catch {
+      return { kind: 'unreachable' }
+    }
   }
 
   private ttlFor(outcome: DiscordInvitePreviewOutcome): number {

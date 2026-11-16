@@ -269,9 +269,14 @@ over its own internal path, and a deployment that does not answer it never takes
   `TRUST_PROXY_HOPS=1` (`cloudflared`, see "The edge"), the three abuse limits (see "Abuse limits"), `HOST=::` and `PORT=3000` (where the tunnel reaches it, see "The
   tunnel") and `DATABASE_URL` (a reference to `postgres`) are in the authoring file, and the
   IGDB credentials are references to the `games-import` ones. `BETTER_AUTH_SECRET`, `DISCORD_CLIENT_ID`,
-  `DISCORD_CLIENT_SECRET` and `EDGE_AUTH_TOKEN` are `preserve()`d: they exist only in Railway, never in the
-  repository.
+  `DISCORD_CLIENT_SECRET`, `DISCORD_BOT_TOKEN` and `EDGE_AUTH_TOKEN` are `preserve()`d: they exist only in
+  Railway, never in the repository.
   The Discord application needs `https://api.squadzr.app/api/auth/callback/discord` as a redirect URI.
+  `DISCORD_BOT_TOKEN` is optional. For it, create a second Discord application in the Developer Portal, add a
+  bot to it, and never invite that bot to any server: it only signs the invite lookups, so Discord rate-limits
+  that application and not this API's shared address. Copy the bot's token into the `api` service's
+  `DISCORD_BOT_TOKEN` in Railway. A 401 or 403 in the "Discord invite lookup was unreachable" warning (its `status`
+  field) means Discord rejected that token.
 
 ### The edge
 

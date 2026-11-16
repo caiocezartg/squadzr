@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import type {
   DiscordChannelKind,
   DiscordInviteChannel,
@@ -46,6 +47,13 @@ export interface DiscordApiInvitePreviewOptions {
   readonly sleep?: Sleep
   readonly logger?: DiscordLookupLogger
 }
+
+/** A `Retry-After` header in seconds: a plain non-negative decimal, not hex, exponent or `Infinity`. */
+const retryAfterHeaderSchema = z
+  .string()
+  .regex(/^\d+(\.\d+)?$/)
+  .transform(Number)
+  .pipe(z.number().nonnegative().finite())
 
 const sleepFor: Sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -116,6 +124,8 @@ export class DiscordApiInvitePreviewProvider implements DiscordInvitePreviewProv
         inviteCode,
         outcome: outcome.kind,
         retryAfterMs: outcome.kind === 'rate_limited' ? (outcome.retryAfterMs ?? null) : null,
+        // The status is safe to log and tells a rejected token (401, 403) from an outage.
+        status: outcome.kind === 'unreachable' ? (outcome.status ?? null) : null,
       },
       `Discord invite lookup was ${outcome.kind}`
     )
@@ -130,7 +140,7 @@ function rateLimited(retryAfterMs: number | undefined): DiscordInvitePreviewOutc
 
 async function toOutcome(response: Response): Promise<DiscordInvitePreviewOutcome> {
   if (response.status === 404) return { kind: 'invalid' }
-  if (!response.ok) return { kind: 'unreachable' }
+  if (!response.ok) return { kind: 'unreachable', status: response.status }
 
   const parsed = discordInviteResponseSchema.safeParse(await response.json())
   if (!parsed.success) return { kind: 'unreachable' }
@@ -182,7 +192,8 @@ async function bodyRetryAfter(response: Response): Promise<number | undefined> {
 
 function headerRetryAfter(response: Response): number | undefined {
   const header = response.headers.get('Retry-After')?.trim()
-  return header !== undefined && /^\d+(\.\d+)?$/.test(header) ? Number(header) : undefined
+  const parsed = retryAfterHeaderSchema.safeParse(header)
+  return parsed.success ? parsed.data : undefined
 }
 
 /** An animated icon (hash starting `a_`) is a GIF, any other a PNG. */
