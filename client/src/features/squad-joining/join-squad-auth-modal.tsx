@@ -41,16 +41,24 @@ export function JoinSquadAuthModal({
             <span className="type-code text-text text-[13px]">{squadCode}</span>
           </p>
         </div>
+        {/* Side by side, the secondary action keeps its own width and Discord takes the rest: two full-width
+            buttons that never shrink would overflow the dialog. */}
         <div className="flex flex-col gap-2 sm:flex-row-reverse">
           <Button
             variant="discord"
             full
             icon={<DiscordIcon className="size-4" />}
             onClick={onSignIn}
+            className="sm:flex-1"
           >
             {t('squads.authModal.continueWithDiscord')}
           </Button>
-          <Button variant="secondary" full onClick={() => onOpenChange(false)}>
+          <Button
+            variant="secondary"
+            full
+            onClick={() => onOpenChange(false)}
+            className="sm:w-auto"
+          >
             {t('squads.authModal.maybeLater')}
           </Button>
         </div>
