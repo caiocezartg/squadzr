@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { chatMessageSchema } from '@squadzr/schemas'
+import { CHAT, chatMessageSchema } from '@squadzr/schemas'
 import { signInMany, type TestUser } from '@test/harness/auth'
 import { createRoom, insertGame, joinAll, roomAction } from '@test/harness/rooms'
 import {
@@ -10,11 +10,13 @@ import {
   type RealtimeSession,
   type ServerMessage,
 } from '@test/harness/realtime'
+import { FakeClock } from '@test/harness/clock'
 import { buildTestServer, type TestServer } from '@test/harness/test-server'
 
 // Squad Chat delivery over the realtime channel: who receives a stored message, and who must not.
 
 let server: TestServer
+let clock: FakeClock
 let host: TestUser
 let member: TestUser
 let outsider: TestUser
@@ -42,12 +44,21 @@ function send(actor: TestUser, body: string, roomCode = code) {
   })
 }
 
+function typing(actor: RealtimeSession, roomCode = code): void {
+  actor.send({ type: 'chat_typing', payload: { roomCode } })
+}
+
+function typingEvents(received: ServerMessage[]): ServerMessage[] {
+  return received.filter((message) => message.type === 'chat_typing')
+}
+
 function chatMessages(received: ServerMessage[]): ServerMessage[] {
   return received.filter((message) => message.type === 'chat_message')
 }
 
 beforeEach(async () => {
-  server = await buildTestServer()
+  clock = new FakeClock(new Date())
+  server = await buildTestServer({}, { clock })
   ;[host, member, outsider] = (await signInMany(server, 3)) as [TestUser, TestUser, TestUser]
   const game = await insertGame(server, 4)
   const room = await createRoom(server, host, { gameId: game.id, maxPlayers: 4 })
@@ -163,5 +174,130 @@ describe('chat_message delivery', () => {
     expect(chatMessages(await firstTab.drain())).toEqual([])
     expect(chatMessages(await secondTab.drain())).toEqual([])
     expect(chatMessages(await hostTab.drain())).toHaveLength(1)
+  })
+})
+
+describe('chat_typing delivery', () => {
+  it('reaches the other members, never a socket of the typist, the other tab included', async () => {
+    const hostTab = await openInRoom(host)
+    const memberTab = await openInRoom(member)
+    const memberOtherTab = await openInRoom(member)
+
+    typing(memberTab)
+
+    const received = typingEvents(await hostTab.drain())
+    expect(received).toHaveLength(1)
+    expect(received[0]).toMatchObject({
+      type: 'chat_typing',
+      payload: { roomCode: code, playerId: member.id },
+    })
+    expect(typingEvents(await memberTab.drain())).toEqual([])
+    expect(typingEvents(await memberOtherTab.drain())).toEqual([])
+  })
+
+  it('never reaches a lobby socket, a socket of another Squad or a guest', async () => {
+    const otherGame = await insertGame(server, 4)
+    const otherRoom = await createRoom(server, outsider, { gameId: otherGame.id, maxPlayers: 4 })
+    const lobby = await open(outsider)
+    await subscribeCatalog(lobby)
+    const elsewhere = await open(outsider)
+    await joinRoomChannel(elsewhere, otherRoom.code)
+    const guest = await connect(server)
+    sessions.push(guest)
+    const hostTab = await openInRoom(host)
+    const memberTab = await openInRoom(member)
+
+    typing(memberTab)
+
+    expect(typingEvents(await hostTab.drain())).toHaveLength(1)
+    for (const bystander of [lobby, elsewhere, guest])
+      expect(typingEvents(await bystander.drain())).toEqual([])
+  })
+
+  it('drops typing from a socket that has not joined the Squad', async () => {
+    const hostTab = await openInRoom(host)
+    const notJoined = await open(member)
+
+    typing(notJoined)
+
+    expect(typingEvents(await hostTab.drain())).toEqual([])
+    expect(typingEvents(await notJoined.drain())).toEqual([])
+  })
+
+  it('drops typing that names a Squad other than the one the socket joined', async () => {
+    const otherGame = await insertGame(server, 4)
+    const otherRoom = await createRoom(server, outsider, { gameId: otherGame.id, maxPlayers: 4 })
+    const otherHostTab = await open(outsider)
+    await joinRoomChannel(otherHostTab, otherRoom.code)
+    const memberTab = await openInRoom(member)
+
+    typing(memberTab, otherRoom.code)
+
+    expect(typingEvents(await otherHostTab.drain())).toEqual([])
+  })
+
+  it('drops typing from a guest socket', async () => {
+    const hostTab = await openInRoom(host)
+    const guest = await connect(server)
+    sessions.push(guest)
+
+    typing(guest)
+
+    expect(typingEvents(await hostTab.drain())).toEqual([])
+  })
+
+  it('forwards one frame per throttle for each socket and drops the extras silently', async () => {
+    const hostTab = await openInRoom(host)
+    const memberTab = await openInRoom(member)
+
+    for (let i = 0; i < 6; i += 1) typing(memberTab)
+    expect(typingEvents(await hostTab.drain())).toHaveLength(1)
+
+    clock.advance(CHAT.TYPING_THROTTLE_MS - 1)
+    typing(memberTab)
+    expect(typingEvents(await hostTab.drain())).toEqual([])
+
+    clock.advance(1)
+    typing(memberTab)
+    expect(typingEvents(await hostTab.drain())).toHaveLength(1)
+  })
+
+  it('does not count dropped frames as invalid, so the socket is never warned or closed', async () => {
+    const hostTab = await openInRoom(host)
+    const memberTab = await openInRoom(member)
+
+    // Far more than the invalid-message limit, in batches under the socket's pending-operation limit
+    // and inside its message rate.
+    const frames: ServerMessage[] = []
+    for (let batch = 0; batch < 5; batch += 1) {
+      for (let i = 0; i < 6; i += 1) typing(memberTab)
+      frames.push(...(await memberTab.drain()))
+    }
+
+    expect(frames.filter((frame) => frame.type === 'error')).toEqual([])
+    expect(memberTab.server.readyState).toBe(memberTab.server.OPEN)
+    expect(typingEvents(await hostTab.drain())).toHaveLength(1)
+  })
+
+  it('throttles each socket on its own', async () => {
+    const hostTab = await openInRoom(host)
+    const memberTab = await openInRoom(member)
+    const memberOtherTab = await openInRoom(member)
+
+    typing(memberTab)
+    typing(memberOtherTab)
+
+    expect(typingEvents(await hostTab.drain())).toHaveLength(2)
+  })
+
+  it('stops reaching a member who left over HTTP', async () => {
+    const hostTab = await openInRoom(host)
+    const leaverTab = await openInRoom(member)
+    await roomAction(server, member, code, 'leave')
+    await leaverTab.drain()
+
+    typing(hostTab)
+
+    expect(typingEvents(await leaverTab.drain())).toEqual([])
   })
 })

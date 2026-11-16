@@ -90,7 +90,12 @@ function renderChat(queryClient: QueryClient, enabled = true, initial: Partial<C
     (props: ChannelProps) =>
       useSquadChat(
         CODE,
-        { status: props.status, membershipRevoked: props.membershipRevoked, on: live.on },
+        {
+          status: props.status,
+          membershipRevoked: props.membershipRevoked,
+          on: live.on,
+          notifyTyping: vi.fn(),
+        },
         { enabled, open: props.open }
       ),
     { wrapper: Providers(queryClient), initialProps: current }
@@ -162,7 +167,7 @@ describe('reading the history', () => {
       () => {
         const chat = useSquadChat(
           CODE,
-          { status: 'open', membershipRevoked: false, on: live.on },
+          { status: 'open', membershipRevoked: false, on: live.on, notifyTyping: vi.fn() },
           { enabled: true, open: false }
         )
         statuses.push(chat.status)

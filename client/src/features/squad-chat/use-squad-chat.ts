@@ -45,6 +45,8 @@ export interface SquadChatChannel {
   readonly status: RealtimeStatus
   readonly membershipRevoked: boolean
   readonly on: RealtimeEventSubscribe
+  /** Signals that the viewer is typing in this Squad; a signal sent while the socket is down is lost. */
+  readonly notifyTyping: (squadCode: string) => void
 }
 
 export interface SquadChat {

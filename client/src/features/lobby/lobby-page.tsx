@@ -155,6 +155,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
         channel={channel}
         memberCount={lobby.players.length}
         enabled={lobby.isMember}
+        isReady={lobby.isReady}
       />
     </div>
   )

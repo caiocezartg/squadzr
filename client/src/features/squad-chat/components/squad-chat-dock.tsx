@@ -5,6 +5,7 @@ import { MessageSquare } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useSession } from '@/hooks/use-session'
 import { useSquadChat, type SquadChatChannel } from '../use-squad-chat'
+import { useTypingSender } from '../use-typing-sender'
 import { ChatComposer } from './chat-composer'
 import { ChatMessages } from './chat-messages'
 import { ChatWindow } from './chat-window'
@@ -20,6 +21,8 @@ export interface SquadChatDockProps {
   readonly memberCount: number
   /** Only a member reads and writes the chat. */
   readonly enabled: boolean
+  /** The Squad is complete: its chat is read-only, so the composer signals no typing. */
+  readonly isReady: boolean
 }
 
 /**
@@ -27,7 +30,13 @@ export interface SquadChatDockProps {
  * chat's data and the draft live here, above the window, so a pending send and an unsent draft survive
  * the window closing. The Lobby reserves room at its foot, so the launcher never covers its actions.
  */
-export function SquadChatDock({ squadCode, channel, memberCount, enabled }: SquadChatDockProps) {
+export function SquadChatDock({
+  squadCode,
+  channel,
+  memberCount,
+  enabled,
+  isReady,
+}: SquadChatDockProps) {
   const t = useTranslations('chat')
   const viewerId = useSession()?.user.id ?? ''
   const [open, setOpen] = useState(false)
@@ -37,11 +46,16 @@ export function SquadChatDock({ squadCode, channel, memberCount, enabled }: Squa
   const launcherRef = useRef<HTMLButtonElement>(null)
   const unreadId = useId()
   const { send } = chat
+  const signalTyping = useTypingSender(squadCode, channel, { enabled, isReady })
 
-  const handleDraftChange = useCallback((next: string) => {
-    setDraft(next)
-    setFailed(false)
-  }, [])
+  const handleDraftChange = useCallback(
+    (next: string) => {
+      setDraft(next)
+      setFailed(false)
+      signalTyping(next)
+    },
+    [signalTyping]
+  )
 
   const handleSend = useCallback(async () => {
     const text = draft

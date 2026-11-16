@@ -98,6 +98,7 @@ const serverMessages = [
       },
     },
   },
+  { type: 'chat_typing', payload: { roomCode: 'ABC123', playerId: 'user-1' } },
 ].map((message) => ({ ...message, timestamp: 1_769_000_000_000 }))
 
 describe('wsIncomingMessageSchema', () => {
@@ -107,6 +108,7 @@ describe('wsIncomingMessageSchema', () => {
     [{ type: 'subscribe_lobby' }],
     [{ type: 'unsubscribe_lobby' }],
     [{ type: 'ping' }],
+    [{ type: 'chat_typing', payload: { roomCode: 'ABC123' } }],
   ])('accepts %j and stamps it with a timestamp', (message) => {
     const parsed = wsIncomingMessageSchema.parse(message)
 
@@ -119,9 +121,25 @@ describe('wsIncomingMessageSchema', () => {
     ['an unknown type', { type: 'game_start' }],
     ['a missing payload', { type: 'join_room' }],
     ['a room code with the wrong length', { type: 'join_room', payload: { roomCode: 'ABC' } }],
+    ['a typing frame without a room code', { type: 'chat_typing', payload: {} }],
+    [
+      'a typing frame with a short room code',
+      { type: 'chat_typing', payload: { roomCode: 'ABC' } },
+    ],
     ['a value that is not an object', 42],
   ])('rejects %s', (_label, message) => {
     expect(wsIncomingMessageSchema.safeParse(message).success).toBe(false)
+  })
+})
+
+describe('chat_typing frame', () => {
+  it('uppercases the room code, like join_room', () => {
+    const parsed = wsIncomingMessageSchema.parse({
+      type: 'chat_typing',
+      payload: { roomCode: 'abc123' },
+    })
+
+    expect(parsed).toMatchObject({ payload: { roomCode: 'ABC123' } })
   })
 })
 

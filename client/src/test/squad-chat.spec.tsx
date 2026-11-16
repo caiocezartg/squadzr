@@ -23,12 +23,13 @@ import {
   guestPlayer,
   hostPlayer,
   lobbySnapshot,
+  readyLobbySnapshot,
   lobbySquad,
   lobbySquadResponse,
 } from './fixtures'
 import { mockMediaQuery } from './media-query'
 import { settleNavigation } from './navigation'
-import { openLatestWebSocket, sendFromServer } from './ws-flows'
+import { openLatestWebSocket, sendFromServer, serverSentFrames } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
 
 const CODE = 'LOBBY1'
@@ -693,5 +694,42 @@ describe('older history', () => {
 
     await within(chat).findByText('antiga 1')
     expect(log.scrollTop).toBe(300)
+  })
+})
+
+describe('the typing signal', () => {
+  function typingFrames() {
+    return serverSentFrames().filter((frame) => frame.type === 'chat_typing')
+  }
+
+  it('sends one signal while the viewer types, however many keys that takes', async () => {
+    await openMemberLobby()
+    const chat = await openChat()
+
+    await userEvent.type(within(chat).getByRole('textbox', { name: 'Message' }), 'bora jogar')
+
+    expect(typingFrames()).toEqual([{ type: 'chat_typing', payload: { roomCode: CODE } }])
+  })
+
+  it('sends nothing for a composer that holds only whitespace', async () => {
+    await openMemberLobby()
+    const chat = await openChat()
+
+    await userEvent.type(within(chat).getByRole('textbox', { name: 'Message' }), '   ')
+
+    expect(typingFrames()).toEqual([])
+  })
+
+  it('sends nothing while the Squad is Ready', async () => {
+    renderSquadsFlow(`/squads/${CODE}`)
+    await screen.findByText('Squad ready check')
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+    await screen.findByText('Ana')
+    const chat = await openChat()
+
+    await userEvent.type(within(chat).getByRole('textbox', { name: 'Message' }), 'gg')
+
+    expect(typingFrames()).toEqual([])
   })
 })

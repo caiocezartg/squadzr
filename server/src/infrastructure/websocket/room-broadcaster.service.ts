@@ -253,6 +253,23 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
       })
   }
 
+  /** Typing is signalled to the other members only: every socket of the typist's user is skipped. */
+  broadcastChatTyping(roomCode: string, typistId: string): void {
+    if (this.stopped) return
+    for (const socket of this.connectionManager.getRoomSockets(roomCode) ?? []) {
+      if (this.connectionManager.getClientData(socket)?.userId === typistId) continue
+      this.publish(socket, () => {
+        // A socket revoked or departed earlier in its ordered queue no longer belongs here.
+        if (this.connectionManager.getClientData(socket)?.roomCode !== roomCode) return
+        this.connectionManager.sendToSocket(socket, {
+          type: 'chat_typing',
+          timestamp: this.clock.now().getTime(),
+          payload: { roomCode, playerId: typistId },
+        })
+      })
+    }
+  }
+
   stop(): void {
     this.stopped = true
   }
