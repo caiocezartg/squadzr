@@ -58,7 +58,7 @@ const notification = {
 }
 
 const serverMessages = [
-  { type: 'protocol', payload: { version: 5 } },
+  { type: 'protocol', payload: { version: 6 } },
   {
     type: 'room_snapshot',
     payload: {
@@ -248,14 +248,14 @@ describe('member presence', () => {
 })
 
 describe('REALTIME_PROTOCOL_VERSION', () => {
-  it('is 5 and is the only version the protocol message accepts', () => {
-    expect(REALTIME_PROTOCOL_VERSION).toBe(5)
+  it('is 6 and is the only version the protocol message accepts', () => {
+    expect(REALTIME_PROTOCOL_VERSION).toBe(6)
     expect(
-      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 5 } })
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 6 } })
         .success
     ).toBe(true)
     expect(
-      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 4 } })
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 5 } })
         .success
     ).toBe(false)
   })

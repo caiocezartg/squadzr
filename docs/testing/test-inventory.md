@@ -51,7 +51,7 @@ stored for a voice and for a stage channel, `DiscordInviteNotVoiceCallError` for
 `rate_limited` (with Discord's `retry_after`, or none) and `unreachable`, and a call sent with the input never read; each refusal creates nothing.
 `room.projection.spec.ts` pins `discordCall` as a name on the member projection (never the id, null for a Squad that predates calls) and
 absent from the public one. `schemas:unit` covers `roomSchema.discordCall` (a name of 1 to 100 characters or null), the non-member answer
-refusing a `discordCall`, and `room_snapshot` carrying the call while `room_created` never does. `server:integration` gains
+refusing a `discordCall`, `room_snapshot` carrying the call while `room_created` never does, and protocol version 6 (the snapshot's new required field is a breaking change for a client and an API deployed apart). `server:integration` gains
 `squad-voice-call-migration.test.ts` (migration 0016 applies on a database that already has Squads, which keep their data and have no call,
 and the check refuses one call column without the other) and changes `rooms-http.test.ts` (the persisted call, a call sent by the client never
 read, 422 `DISCORD_INVITE_NOT_VOICE_CALL` and 503 `DISCORD_UNAVAILABLE` with `retryAfterMs` and `Retry-After`, each persisting nothing, and

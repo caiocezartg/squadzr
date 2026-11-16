@@ -178,7 +178,8 @@ function channelKind(type: number): DiscordChannelKind {
 /** How long Discord asked to wait, from the 429 body or else the `Retry-After` header, in milliseconds. */
 async function retryAfterOf(response: Response): Promise<number | undefined> {
   const seconds = (await bodyRetryAfter(response)) ?? headerRetryAfter(response)
-  return seconds === undefined ? undefined : Math.ceil(seconds * 1000)
+  // At least 1 ms: the 503 contract (`retryAfterMs`) is a positive integer, and Discord may answer 0.
+  return seconds === undefined ? undefined : Math.max(1, Math.ceil(seconds * 1000))
 }
 
 async function bodyRetryAfter(response: Response): Promise<number | undefined> {
