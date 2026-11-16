@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { playerSchema, publicRoomSchema, roomSchema } from './room'
 import { isoDateTimeSchema } from './date'
 import { userNotificationSchema } from './notification'
+import { chatMessageSchema } from './chat'
 
 const wsMessageTypeSchema = z.enum([
   'join_room',
@@ -22,6 +23,8 @@ const wsMessageTypeSchema = z.enum([
   'room_snapshot',
   'presence_updated',
   'room_removed',
+  // Squad Chat
+  'chat_message',
 ])
 
 export const REALTIME_PROTOCOL_VERSION = 5
@@ -120,6 +123,12 @@ const notificationMessageSchema = baseWsMessageSchema.extend({
   }),
 })
 
+// Sent to every socket that joined the Squad's channel, the author's other tabs included.
+const chatMessageMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('chat_message'),
+  payload: z.object({ message: chatMessageSchema }),
+})
+
 export const protocolMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('protocol'),
   payload: z.object({ version: z.literal(REALTIME_PROTOCOL_VERSION) }),
@@ -183,6 +192,7 @@ export const wsServerMessageSchema = z.discriminatedUnion('type', [
   roomSnapshotMessageSchema,
   presenceUpdatedMessageSchema,
   roomRemovedMessageSchema,
+  chatMessageMessageSchema,
 ])
 
 // Frame envelope every server message shares, before its payload is checked per event
@@ -211,6 +221,7 @@ export const wsServerEventPayloadSchemas = {
   room_snapshot: roomSnapshotMessageSchema.shape.payload,
   presence_updated: presenceUpdatedMessageSchema.shape.payload,
   room_removed: roomRemovedMessageSchema.shape.payload,
+  chat_message: chatMessageMessageSchema.shape.payload,
 } as const
 
 export type WsServerEventType = keyof typeof wsServerEventPayloadSchemas

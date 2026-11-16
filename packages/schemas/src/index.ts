@@ -282,10 +282,12 @@ export {
 export { RAIL_LIMIT, avatarRail, type AvatarRail, type RailSlot } from './avatar-rail'
 export {
   CHAT,
+  chatHistoryQuerySchema,
   chatHistoryResponseSchema,
   chatMessageBodySchema,
   chatMessageSchema,
   sendChatMessageRequestSchema,
+  type ChatHistoryQuery,
   type ChatHistoryResponse,
   type ChatMessageDto,
   type SendChatMessageRequest,

@@ -1,6 +1,11 @@
 import type { ChatMessage, ChatMessageView } from '@domain/entities/chat-message.entity'
 
 export interface ListChatMessagesOptions {
+  /**
+   * Keyset cursor: only messages older than this one, resolved inside the same Squad.
+   * An id that is unknown or belongs to another Squad yields no rows.
+   */
+  readonly beforeId?: string
   /** Rows to return. The use case asks for one more than a page to learn whether older ones exist. */
   readonly limit: number
 }
@@ -15,7 +20,7 @@ export type CreateChatMessageOutcome =
   | { readonly kind: 'id_conflict' }
 
 export interface IChatMessageRepository {
-  /** The latest messages of the Squad, newest first. */
+  /** The latest messages of the Squad, or the ones before the cursor, newest first. */
   listByRoom(roomId: string, options: ListChatMessagesOptions): Promise<ChatMessageView[]>
   /**
    * Atomic send: locks the room row, re-checks the author's Membership under the lock
