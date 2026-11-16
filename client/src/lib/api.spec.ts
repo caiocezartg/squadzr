@@ -197,6 +197,30 @@ describe('error responses and commands', () => {
     expect(console.error).not.toHaveBeenCalled()
   })
 
+  it('carries the wait a 429 asks for, from the body first and the Retry-After header otherwise', async () => {
+    onHttp('POST', '/api/rooms/:code/messages', () =>
+      httpError(
+        429,
+        { error: 'CHAT_RATE_LIMITED', message: 'slow', retryAfterMs: 6_200 },
+        { 'Retry-After': '7' }
+      )
+    )
+    onHttp('POST', '/api/rooms', () =>
+      httpError(429, { error: 'RATE_LIMITED', message: 'slow' }, { 'Retry-After': '3' })
+    )
+    onHttp('POST', '/api/rooms/:code/join', () =>
+      httpError(429, { error: 'RATE_LIMITED', message: 'slow' })
+    )
+
+    const chat = await api.post('/api/rooms/ABC123/messages', {}).catch((e: unknown) => e)
+    const header = await api.post('/api/rooms', {}).catch((e: unknown) => e)
+    const none = await api.post('/api/rooms/ABC123/join', {}).catch((e: unknown) => e)
+
+    expect(chat).toMatchObject({ status: 429, retryAfterMs: 6_200 })
+    expect(header).toMatchObject({ status: 429, retryAfterMs: 3_000 })
+    expect((none as ApiClientError).retryAfterMs).toBeUndefined()
+  })
+
   it('accepts the validation details of an error response without exposing them', async () => {
     onHttp('POST', '/api/rooms', () =>
       httpError(400, {

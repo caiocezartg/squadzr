@@ -164,7 +164,6 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
         key={squadCode}
         squadCode={squadCode}
         channel={channel}
-        memberCount={lobby.players.length}
         enabled={lobby.isMember}
         isReady={lobby.isReady}
         typers={typing.typers}

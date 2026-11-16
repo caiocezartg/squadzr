@@ -5,6 +5,9 @@ import { isoDateTimeSchema } from './date'
 export const CHAT = {
   MESSAGE_MAX_LENGTH: 500,
   MESSAGE_MAX_LINE_BREAKS: 10,
+  // Anti-spam: a member sends at most RATE_LIMIT messages in any RATE_WINDOW_MS of one Squad.
+  RATE_LIMIT: 5,
+  RATE_WINDOW_MS: 10_000,
   HISTORY_PAGE_SIZE: 50,
   // Typing: a client signals at most once per throttle, and a signal lives one TTL.
   TYPING_THROTTLE_MS: 2_000,

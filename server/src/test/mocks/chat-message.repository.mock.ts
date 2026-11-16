@@ -1,6 +1,7 @@
 import { vi, type Mock } from 'vitest'
 import type { ChatMessage, ChatMessageView } from '@domain/entities/chat-message.entity'
 import type {
+  ChatRateRule,
   CreateChatMessageOutcome,
   IChatMessageRepository,
   ListChatMessagesOptions,
@@ -28,7 +29,7 @@ export function createMockChatMessageRepository(): MockChatMessageRepository {
       .fn<(roomId: string, options: ListChatMessagesOptions) => Promise<ChatMessageView[]>>()
       .mockResolvedValue([]),
     createWithinRate: vi
-      .fn<(input: ChatMessage) => Promise<CreateChatMessageOutcome>>()
+      .fn<(input: ChatMessage, rule: ChatRateRule) => Promise<CreateChatMessageOutcome>>()
       .mockImplementation((input) =>
         Promise.resolve({ kind: 'created', message: createMockChatMessageView({ ...input }) })
       ),

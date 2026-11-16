@@ -534,3 +534,22 @@
     }
   }
 }
+
+/*
+  The Squad Chat's cooldown bar: it drains once from full to empty over the cooldown
+  (src/features/squad-chat/components/chat-composer.tsx). The element sets --cooldown-duration and the
+  negative --cooldown-delay of the time already gone; a theme token would resolve them on :root, where
+  they do not exist. Under reduced motion the composer hides the bar.
+*/
+@utility animate-cooldown-drain {
+  animation: cooldown-drain var(--cooldown-duration) linear var(--cooldown-delay) both;
+}
+
+@keyframes cooldown-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

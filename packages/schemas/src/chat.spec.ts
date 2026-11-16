@@ -115,6 +115,8 @@ describe('CHAT', () => {
       MESSAGE_MAX_LENGTH: 500,
       MESSAGE_MAX_LINE_BREAKS: 10,
       HISTORY_PAGE_SIZE: 50,
+      RATE_LIMIT: 5,
+      RATE_WINDOW_MS: 10_000,
     })
   })
 })

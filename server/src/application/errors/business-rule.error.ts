@@ -13,11 +13,13 @@ export class RoomReadyError extends AppError {
   readonly statusCode = 422
   readonly code = 'ROOM_READY'
 
-  constructor(roomId: string, action: 'join' | 'leave' = 'leave') {
+  constructor(roomId: string, action: 'join' | 'leave' | 'chat' = 'leave') {
     super(
-      action === 'join'
-        ? `Room "${roomId}" is ready — it no longer accepts members`
-        : `Room "${roomId}" is ready — players cannot leave`
+      {
+        join: `Room "${roomId}" is ready — it no longer accepts members`,
+        leave: `Room "${roomId}" is ready — players cannot leave`,
+        chat: `Room "${roomId}" is ready — its chat is read-only`,
+      }[action]
     )
   }
 }

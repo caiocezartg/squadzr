@@ -105,7 +105,7 @@ describe('the launcher', () => {
     const chat = await openChat()
 
     expect(launcher()).toHaveAttribute('aria-expanded', 'true')
-    expect(within(chat).getByText('2 members')).toBeInTheDocument()
+    expect(within(chat).queryByText('2 members')).not.toBeInTheDocument()
     expect(within(chat).getByRole('textbox', { name: 'Message' })).toHaveFocus()
   })
 
@@ -720,7 +720,7 @@ describe('the typing signal', () => {
     expect(typingFrames()).toEqual([])
   })
 
-  it('sends nothing while the Squad is Ready', async () => {
+  it('sends nothing while the Squad is Ready, which leaves no composer to type in', async () => {
     renderSquadsFlow(`/squads/${CODE}`)
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
@@ -728,8 +728,7 @@ describe('the typing signal', () => {
     await screen.findByText('Ana')
     const chat = await openChat()
 
-    await userEvent.type(within(chat).getByRole('textbox', { name: 'Message' }), 'gg')
-
+    expect(within(chat).queryByRole('textbox', { name: 'Message' })).not.toBeInTheDocument()
     expect(typingFrames()).toEqual([])
   })
 })
@@ -837,5 +836,268 @@ describe('who is typing', () => {
     await act(async () => {})
     expect(within(chat).queryByText(/typing…/)).not.toBeInTheDocument()
     expect(screen.queryByTestId('typing-dots')).not.toBeInTheDocument()
+  })
+})
+
+describe('the cooldown', () => {
+  const COOLDOWN = /Easy there — send again in (\d+)s/
+
+  function echoSends(): void {
+    onHttp('POST', '/api/rooms/:code/messages', ({ body }) =>
+      httpCreated({
+        ...(body as { id: string; body: string }),
+        roomCode: CODE,
+        createdAt: new Date().toISOString(),
+        author: ME,
+      })
+    )
+  }
+
+  function refuseSends(status: number, body: unknown, headers?: Record<string, string>): void {
+    onHttp('POST', '/api/rooms/:code/messages', () => httpError(status, body, headers))
+  }
+
+  async function openChatWindow(): Promise<HTMLElement> {
+    await openMemberLobby()
+    const chat = await openChat()
+    await within(chat).findByText('oi time')
+    return chat
+  }
+
+  function field(chat: HTMLElement): HTMLElement {
+    return within(chat).getByRole('textbox', { name: 'Message' })
+  }
+
+  /** Four confirmed sends, then the fifth typed and ready to go. */
+  async function typeUpToTheFifth(chat: HTMLElement): Promise<void> {
+    for (let n = 1; n <= 4; n++) {
+      await userEvent.type(field(chat), `msg ${n}{Enter}`)
+      await waitFor(() =>
+        expect(within(chat).getByText(`msg ${n}`).closest('li')).not.toHaveAttribute('aria-busy')
+      )
+    }
+    expect(within(chat).queryByText(COOLDOWN)).not.toBeInTheDocument()
+    await userEvent.type(field(chat), 'msg 5')
+  }
+
+  /** Presses Send under fake timers, so the cooldown it may start is driven by the test's clock. */
+  async function sendUnderFakeTimers(chat: HTMLElement): Promise<void> {
+    vi.useFakeTimers()
+    fireEvent.click(within(chat).getByRole('button', { name: 'Send' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+  }
+
+  it('starts on the fifth message in a window, before the server has to refuse', async () => {
+    echoSends()
+    const chat = await openChatWindow()
+    await typeUpToTheFifth(chat)
+    try {
+      await sendUnderFakeTimers(chat)
+
+      expect(within(chat).getByText(COOLDOWN)).toBeInTheDocument()
+      fireEvent.change(field(chat), { target: { value: 'msg 6' } })
+      expect(within(chat).getByRole('button', { name: 'Send' })).toBeDisabled()
+      fireEvent.keyDown(field(chat), { key: 'Enter' })
+      expect(countHttpCalls('POST', '/api/rooms/:code/messages')).toBe(5)
+      expect(field(chat)).toHaveValue('msg 6')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('unlocks by itself once the oldest message of the window has left it', async () => {
+    echoSends()
+    const chat = await openChatWindow()
+    await typeUpToTheFifth(chat)
+    try {
+      await sendUnderFakeTimers(chat)
+      fireEvent.change(field(chat), { target: { value: 'next' } })
+      expect(within(chat).getByText(COOLDOWN)).toBeInTheDocument()
+
+      act(() => vi.advanceTimersByTime(10_000))
+
+      expect(within(chat).queryByText(COOLDOWN)).not.toBeInTheDocument()
+      expect(within(chat).getByRole('button', { name: 'Send' })).toBeEnabled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('starts from retryAfterMs when the server refuses with CHAT_RATE_LIMITED', async () => {
+    refuseSends(
+      429,
+      { error: 'CHAT_RATE_LIMITED', message: 'slow down', retryAfterMs: 6_000 },
+      { 'Retry-After': '6' }
+    )
+    const chat = await openChatWindow()
+    await userEvent.type(field(chat), 'rápido')
+    try {
+      await sendUnderFakeTimers(chat)
+
+      expect(within(chat).getByText('Easy there — send again in 6s')).toBeInTheDocument()
+      expect(field(chat)).toHaveValue('rápido')
+      expect(within(chat).queryByText('rápido', { selector: 'li span' })).not.toBeInTheDocument()
+      expect(within(chat).queryByText('Your message was not sent. Try again.')).toBeNull()
+      expect(within(chat).getByRole('button', { name: 'Send' })).toBeDisabled()
+
+      act(() => vi.advanceTimersByTime(4_000))
+      expect(within(chat).getByText('Easy there — send again in 2s')).toBeInTheDocument()
+
+      act(() => vi.advanceTimersByTime(2_000))
+      expect(within(chat).queryByText(COOLDOWN)).not.toBeInTheDocument()
+      expect(within(chat).getByRole('button', { name: 'Send' })).toBeEnabled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('drains the bar with CSS over the cooldown and announces the wait once', async () => {
+    refuseSends(429, { error: 'CHAT_RATE_LIMITED', message: 'slow down', retryAfterMs: 6_000 })
+    const chat = await openChatWindow()
+    await userEvent.type(field(chat), 'rápido')
+    try {
+      await sendUnderFakeTimers(chat)
+
+      const bar = within(chat).getByTestId('chat-cooldown-bar')
+      expect(bar.style.getPropertyValue('--cooldown-duration')).toBe('6000ms')
+      expect(bar.style.getPropertyValue('--cooldown-delay')).toBe('0ms')
+      const announcement = 'Too many messages in a row. You can send again in 6 seconds.'
+      expect(within(chat).getByRole('status')).toHaveTextContent(announcement)
+
+      act(() => vi.advanceTimersByTime(3_000))
+
+      expect(within(chat).getByText('Easy there — send again in 3s')).toBeInTheDocument()
+      expect(within(chat).getByTestId('chat-cooldown-bar')).toBe(bar)
+      expect(within(chat).getByRole('status')).toHaveTextContent(announcement)
+
+      act(() => vi.advanceTimersByTime(3_000))
+
+      expect(within(chat).queryByTestId('chat-cooldown-bar')).not.toBeInTheDocument()
+      expect(within(chat).getByRole('status')).toBeEmptyDOMElement()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('starts from Retry-After when the global rate limit refuses', async () => {
+    refuseSends(
+      429,
+      { error: 'RATE_LIMITED', message: 'Too many requests' },
+      { 'Retry-After': '3' }
+    )
+    const chat = await openChatWindow()
+    await userEvent.type(field(chat), 'oi')
+    try {
+      await sendUnderFakeTimers(chat)
+
+      expect(within(chat).getByText('Easy there — send again in 3s')).toBeInTheDocument()
+      expect(field(chat)).toHaveValue('oi')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('waits 10 seconds when the global rate limit sends no Retry-After', async () => {
+    refuseSends(429, { error: 'RATE_LIMITED', message: 'Too many requests' })
+    const chat = await openChatWindow()
+    await userEvent.type(field(chat), 'oi')
+    try {
+      await sendUnderFakeTimers(chat)
+
+      expect(within(chat).getByText('Easy there — send again in 10s')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('a Ready Squad chat', () => {
+  const READ_ONLY = 'Squad complete'
+
+  async function openChatWindow(): Promise<HTMLElement> {
+    await openMemberLobby()
+    const chat = await openChat()
+    await within(chat).findByText('oi time')
+    return chat
+  }
+
+  it('replaces the composer with the banner, history still readable, when the Squad turns Ready', async () => {
+    const chat = await openChatWindow()
+    expect(within(chat).getByRole('textbox', { name: 'Message' })).toBeInTheDocument()
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    expect(await within(chat).findByText(READ_ONLY)).toBeInTheDocument()
+    expect(within(chat).queryByRole('textbox', { name: 'Message' })).not.toBeInTheDocument()
+    expect(within(chat).queryByRole('button', { name: 'Send' })).not.toBeInTheDocument()
+    expect(within(chat).getByText('oi time')).toBeInTheDocument()
+  })
+
+  it('moves focus to the banner when the Squad turns Ready while the member is typing', async () => {
+    const chat = await openChatWindow()
+    const field = within(chat).getByRole('textbox', { name: 'Message' })
+    act(() => field.focus())
+    expect(field).toHaveFocus()
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    expect(await within(chat).findByText(READ_ONLY)).toHaveFocus()
+  })
+
+  it('leaves focus alone when the Squad turns Ready while the member is elsewhere', async () => {
+    const chat = await openChatWindow()
+    const field = within(chat).getByRole('textbox', { name: 'Message' })
+    act(() => field.focus())
+    act(() => field.blur())
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    expect(await within(chat).findByText(READ_ONLY)).not.toHaveFocus()
+  })
+
+  it('shows the banner when the Squad turned Ready while the window was closed', async () => {
+    await openMemberLobby()
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+    const chat = await openChat()
+
+    expect(await within(chat).findByText(READ_ONLY)).toBeInTheDocument()
+    expect(within(chat).queryByRole('textbox', { name: 'Message' })).not.toBeInTheDocument()
+    expect(await within(chat).findByText('oi time')).toBeInTheDocument()
+  })
+
+  it('drops a running cooldown when the Squad turns Ready', async () => {
+    onHttp('POST', '/api/rooms/:code/messages', () =>
+      httpError(429, { error: 'CHAT_RATE_LIMITED', message: 'slow', retryAfterMs: 8_000 })
+    )
+    const chat = await openChatWindow()
+    await userEvent.type(within(chat).getByRole('textbox', { name: 'Message' }), 'oi{Enter}')
+    expect(await within(chat).findByText(/Easy there — send again in/)).toBeInTheDocument()
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    expect(await within(chat).findByText(READ_ONLY)).toBeInTheDocument()
+    expect(within(chat).queryByText(/Easy there/)).not.toBeInTheDocument()
+  })
+
+  it('removes the pending bubble and shows the banner when a send loses the race to Ready', async () => {
+    const reply = deferred<MockHttpResponse>()
+    onHttp('POST', '/api/rooms/:code/messages', () => reply.promise)
+    const chat = await openChatWindow()
+    await userEvent.type(within(chat).getByRole('textbox', { name: 'Message' }), 'tarde{Enter}')
+    const bubble = await within(chat).findByText('tarde')
+    expect(bubble.closest('li')).toHaveAttribute('aria-busy', 'true')
+
+    await act(async () => {
+      reply.resolve(httpError(422, { error: 'ROOM_READY', message: 'chat is read-only' }))
+      await reply.promise
+    })
+
+    expect(await within(chat).findByText(READ_ONLY)).toBeInTheDocument()
+    expect(within(chat).queryByText('tarde')).not.toBeInTheDocument()
+    expect(within(chat).queryByRole('textbox', { name: 'Message' })).not.toBeInTheDocument()
+    expect(within(chat).queryByText('Your message was not sent. Try again.')).toBeNull()
   })
 })

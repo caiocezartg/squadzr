@@ -9,3 +9,13 @@ export class ChatMessageIdConflictError extends AppError {
     super(`Chat message id "${messageId}" belongs to another message`)
   }
 }
+
+/** The member sent the most the Squad Chat allows in the window; they may send again after `retryAfterMs`. */
+export class ChatRateLimitedError extends AppError {
+  readonly statusCode = 429
+  readonly code = 'CHAT_RATE_LIMITED'
+
+  constructor(readonly retryAfterMs: number) {
+    super('You are sending messages too fast. Try again shortly.')
+  }
+}

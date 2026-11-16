@@ -18,15 +18,31 @@ export type CreateChatMessageOutcome =
   | { readonly kind: 'not_member' }
   /** The id is taken by another author or Squad. */
   | { readonly kind: 'id_conflict' }
+  /** The Squad is Ready: its chat is read-only. */
+  | { readonly kind: 'ready' }
+  /**
+   * The author already sent `limit` messages in the window.
+   * `oldestInWindow` is the message whose leaving the window frees a slot.
+   */
+  | { readonly kind: 'rate_limited'; readonly oldestInWindow: Date }
+
+/** The anti-spam rule of a send, decided by the use case and enforced by the repository. */
+export interface ChatRateRule {
+  /** Most messages an author may have in the window. */
+  readonly limit: number
+  /** Only messages created after this instant count. */
+  readonly windowStart: Date
+}
 
 export interface IChatMessageRepository {
   /** The latest messages of the Squad, or the ones before the cursor, newest first. */
   listByRoom(roomId: string, options: ListChatMessagesOptions): Promise<ChatMessageView[]>
   /**
-   * Atomic send: locks the room row, re-checks the author's Membership under the lock
-   * and inserts the message, so a send cannot race a leave. The id is the idempotency
-   * key: a retry answers `duplicate` with the stored message. The creation instant is
-   * the caller's, never a database default.
+   * Atomic send: locks the room row, then re-checks the author's Membership, the Squad's
+   * Ready state and the rate rule under the lock before inserting, so a send cannot race a
+   * leave, the join that makes the Squad Ready, or another send of the same author. The id
+   * is the idempotency key: a retry answers `duplicate` with the stored message, before the
+   * Ready and rate checks. The creation instant is the caller's, never a database default.
    */
-  createWithinRate(input: ChatMessage): Promise<CreateChatMessageOutcome>
+  createWithinRate(input: ChatMessage, rule: ChatRateRule): Promise<CreateChatMessageOutcome>
 }

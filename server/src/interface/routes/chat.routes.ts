@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { requireAuth } from '@interface/hooks/auth.hook'
 import { createChatController } from '@interface/factories/chat.factory'
 import {
+  CHAT,
   chatHistoryQuerySchema,
   chatHistoryResponseSchema,
   chatMessageSchema,
@@ -40,8 +41,7 @@ export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
     schema: {
       tags: ['Chat'],
       summary: 'Send a Squad Chat message',
-      description:
-        'Stores a message of a member in the Squad Chat. The client generates the message id, so a retry of the same id returns the stored message with 200 instead of 201. An id that belongs to another author or Squad answers 409. The body is trimmed and holds 1 to 500 characters and at most 10 line breaks. Requires authentication.',
+      description: `Stores a message of a member in the Squad Chat. The client generates the message id, so a retry of the same id returns the stored message with 200 instead of 201. An id that belongs to another author or Squad answers 409. A Ready Squad answers 422 \`ROOM_READY\`: its chat is read-only. A member can send at most ${CHAT.RATE_LIMIT} messages in any ${CHAT.RATE_WINDOW_MS / 1000} seconds of one Squad; the next answers 429 \`CHAT_RATE_LIMITED\` with \`retryAfterMs\` and a \`Retry-After\` header in seconds. The body is trimmed and holds 1 to 500 characters and at most 10 line breaks. Requires authentication.`,
       security: [{ session: [] }],
       params: roomCodeParamSchema,
       body: sendChatMessageRequestSchema,
@@ -53,6 +53,7 @@ export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
         404: errorResponse,
         409: errorResponse,
         422: errorResponse,
+        429: errorResponse,
       },
     },
     preHandler: requireAuth,
