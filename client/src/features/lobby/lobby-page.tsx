@@ -9,6 +9,7 @@ import { MotionProvider } from '@/components/ui/motion-provider'
 import { useSession } from '@/hooks/use-session'
 import { translateErrorCode } from '@/lib/error-messages'
 import { useJoinSquad } from '@/features/squad-joining/join'
+import { SquadChatDock } from '@/features/squad-chat'
 import { LockedInvite, ReadyInvite } from './components/discord-invite'
 import { LobbyBackLink } from './components/lobby-back-link'
 import { LobbyActions } from './components/lobby-actions'
@@ -120,7 +121,8 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-304 flex-col gap-5 px-4 pt-6.5 pb-12 sm:px-6 lg:px-10">
+    // The bottom padding keeps the chat launcher, fixed in the corner, clear of the invite's actions.
+    <div className="mx-auto flex w-full max-w-304 flex-col gap-5 px-4 pt-6.5 pb-28 sm:px-6 lg:px-10">
       <LobbyActions
         squadCode={squadCode}
         connectionStatus={lobby.connectionStatus}
@@ -146,6 +148,13 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
         />
         <MemberInvite squadCode={squadCode} lobby={lobby} entering={readyEntrance} />
       </LobbyColumns>
+
+      <SquadChatDock
+        key={squadCode}
+        squadCode={squadCode}
+        memberCount={lobby.players.length}
+        enabled={lobby.isMember}
+      />
     </div>
   )
 }

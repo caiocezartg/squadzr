@@ -450,7 +450,10 @@
     "retry": "Tentar de novo",
     "sendFailed": "Sua mensagem não foi enviada. Tente de novo.",
     "sending": "Enviando",
-    "today": "Hoje"
+    "today": "Hoje",
+    "memberCount": "{count, plural, one {# membro} other {# membros}}",
+    "you": "Você",
+    "loading": "Carregando mensagens"
   },
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",
