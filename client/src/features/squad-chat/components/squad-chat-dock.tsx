@@ -19,8 +19,6 @@ export interface SquadChatDockProps {
   readonly squadCode: string
   /** The Lobby's realtime channel: live messages, the reconnect and a revoked Membership. */
   readonly channel: SquadChatChannel
-  /** How many members the Squad has, for the window's header. */
-  readonly memberCount: number
   /** Only a member reads and writes the chat. */
   readonly enabled: boolean
   /** The Squad is complete: its chat is read-only, so the composer signals no typing. */
@@ -37,7 +35,6 @@ export interface SquadChatDockProps {
 export function SquadChatDock({
   squadCode,
   channel,
-  memberCount,
   enabled,
   isReady,
   typers,
@@ -114,18 +111,7 @@ export function SquadChatDock({
         </span>
       )}
 
-      <ChatWindow
-        open={open}
-        onOpenChange={setOpen}
-        launcherRef={launcherRef}
-        meta={
-          memberCount > 0 ? (
-            <span className="type-label text-[10px]">
-              {t('memberCount', { count: memberCount })}
-            </span>
-          ) : null
-        }
-      >
+      <ChatWindow open={open} onOpenChange={setOpen} launcherRef={launcherRef}>
         {(textareaRef) => (
           <>
             <ChatMessages

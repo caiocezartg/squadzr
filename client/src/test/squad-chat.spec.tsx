@@ -105,7 +105,7 @@ describe('the launcher', () => {
     const chat = await openChat()
 
     expect(launcher()).toHaveAttribute('aria-expanded', 'true')
-    expect(within(chat).getByText('2 members')).toBeInTheDocument()
+    expect(within(chat).queryByText('2 members')).not.toBeInTheDocument()
     expect(within(chat).getByRole('textbox', { name: 'Message' })).toHaveFocus()
   })
 
@@ -1014,7 +1014,7 @@ describe('the cooldown', () => {
 })
 
 describe('a Ready Squad chat', () => {
-  const READ_ONLY = 'Squad complete — the chat is now read-only'
+  const READ_ONLY = 'Squad complete'
 
   async function openChatWindow(): Promise<HTMLElement> {
     await openMemberLobby()

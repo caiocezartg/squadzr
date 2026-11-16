@@ -15,8 +15,6 @@ interface ChatWindowProps {
   readonly onOpenChange: (open: boolean) => void
   /** Where focus returns when the window closes. */
   readonly launcherRef: RefObject<HTMLButtonElement | null>
-  /** Shown beside the title, such as how many members the Squad has. */
-  readonly meta: ReactNode
   /** Renders the window's body, given the field that takes focus on open. */
   readonly children: (textareaRef: RefObject<HTMLTextAreaElement | null>) => ReactNode
 }
@@ -26,7 +24,7 @@ interface ChatWindowProps {
  * sheet below it. The open state lives in the parent, so crossing 640px swaps the surface without
  * closing it.
  */
-export function ChatWindow({ open, onOpenChange, launcherRef, meta, children }: ChatWindowProps) {
+export function ChatWindow({ open, onOpenChange, launcherRef, children }: ChatWindowProps) {
   const t = useTranslations('chat')
   const narrow = useMediaQuery(NARROW_QUERY)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -37,9 +35,8 @@ export function ChatWindow({ open, onOpenChange, launcherRef, meta, children }: 
         title={t('title')}
         open={open}
         onOpenChange={onOpenChange}
-        className="bg-panel h-[85dvh] gap-0 overflow-hidden px-0 pt-5 pb-[env(safe-area-inset-bottom)] [&>h2]:mb-1.5 [&>h2]:pl-5"
+        className="bg-panel h-[85dvh] gap-0 overflow-hidden px-0 pt-5 pb-[env(safe-area-inset-bottom)] [&>h2]:mb-4 [&>h2]:pl-5"
       >
-        <div className="text-muted px-5 pb-3">{meta}</div>
         <div className="border-line flex min-h-0 flex-1 flex-col border-t">
           {children(textareaRef)}
         </div>
@@ -53,7 +50,6 @@ export function ChatWindow({ open, onOpenChange, launcherRef, meta, children }: 
       onOpenChange={onOpenChange}
       launcherRef={launcherRef}
       textareaRef={textareaRef}
-      meta={meta}
     >
       {children(textareaRef)}
     </DesktopPanel>
@@ -65,7 +61,6 @@ interface DesktopPanelProps {
   readonly onOpenChange: (open: boolean) => void
   readonly launcherRef: RefObject<HTMLButtonElement | null>
   readonly textareaRef: RefObject<HTMLTextAreaElement | null>
-  readonly meta: ReactNode
   readonly children: ReactNode
 }
 
@@ -79,7 +74,6 @@ function DesktopPanel({
   onOpenChange,
   launcherRef,
   textareaRef,
-  meta,
   children,
 }: DesktopPanelProps) {
   const t = useTranslations('chat')
@@ -110,12 +104,9 @@ function DesktopPanel({
           )}
         >
           <header className="border-line flex items-center gap-3 border-b py-2.5 pr-2.5 pl-4">
-            <div className="flex min-w-0 flex-1 items-baseline gap-2.5">
-              <Dialog.Title className="font-display truncate text-[24px] leading-none font-black uppercase">
-                {t('title')}
-              </Dialog.Title>
-              <span className="text-muted shrink-0">{meta}</span>
-            </div>
+            <Dialog.Title className="font-display min-w-0 flex-1 truncate text-[24px] leading-none font-black uppercase">
+              {t('title')}
+            </Dialog.Title>
             <Dialog.Close
               aria-label={t('close')}
               className="press bg-raised-2 text-text-3 hover-fine:text-text focus-visible:outline-text flex size-9 shrink-0 items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-2"

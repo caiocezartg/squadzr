@@ -88,7 +88,7 @@ export function ChatComposer({
         ref={bannerRef}
         role="status"
         tabIndex={-1}
-        className="outline-none border-line bg-card text-text-2 flex min-h-17.25 items-center gap-2.5 border-t px-4 py-3 text-[13px] leading-snug font-semibold"
+        className="outline-none border-line bg-card text-text-2 flex min-h-17.25 items-center justify-center gap-2.5 border-t px-4 py-3 text-[13px] leading-snug font-bold tracking-[0.08em] uppercase"
       >
         <Lock aria-hidden="true" className="text-mint size-4 shrink-0" strokeWidth={2.4} />
         {t('readOnly')}
