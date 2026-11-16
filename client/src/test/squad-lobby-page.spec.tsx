@@ -123,7 +123,11 @@ describe('the Lobby on the App Router', () => {
     await renderLobbyRoute(lobbySquad.code)
 
     expect(await screen.findByText(lobbySquad.name)).toBeInTheDocument()
-    expect(screen.getAllByText('Open slot')).toHaveLength(3)
+    // Until the snapshot, the count and the slots are placeholders, never an empty Squad.
+    expect(screen.getByText('Loading members')).toBeInTheDocument()
+    expect(screen.getByTestId('roster-counter-skeleton')).toBeInTheDocument()
+    expect(screen.getAllByTestId('member-tile-skeleton')).toHaveLength(3)
+    expect(screen.queryByText('Open slot')).not.toBeInTheDocument()
     // The HTTP response carries the roster too, but the Lobby shows only the snapshot's.
     expect(screen.queryByText('Caio')).not.toBeInTheDocument()
 
@@ -133,6 +137,8 @@ describe('the Lobby on the App Router', () => {
     expect(await screen.findByText('Ana')).toBeInTheDocument()
     expect(screen.getByText('2/3 players')).toBeInTheDocument()
     expect(screen.getAllByText('Open slot')).toHaveLength(1)
+    expect(screen.queryByTestId('member-tile-skeleton')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('roster-counter-skeleton')).not.toBeInTheDocument()
   })
 
   it('renders its game from the Squad before and after a snapshot replaces it', async () => {

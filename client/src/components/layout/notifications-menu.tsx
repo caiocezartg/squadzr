@@ -23,7 +23,12 @@ interface LoadedPopover {
  * The bell and its count are in the initial JavaScript; the panel's code loads when the page is idle,
  * and a press before it arrives opens the panel as it lands.
  */
-export function NotificationsMenu() {
+interface NotificationsMenuProps {
+  /** Which edge of the bell the panel lines up with. */
+  readonly align: 'start' | 'end'
+}
+
+export function NotificationsMenu({ align }: NotificationsMenuProps) {
   const navigate = useAppNavigation()
   const bellRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
@@ -71,6 +76,7 @@ export function NotificationsMenu() {
 
   return (
     <loaded.Popover
+      align={align}
       notifications={notifications}
       unreadCount={unreadCount}
       busy={busy}

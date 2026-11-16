@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl'
 
 /**
  * The bar below 1024px: the logo, the bell and the button that opens the sidebar as a drawer. It is
- * the only place of the bell at these widths, so the page header has none.
+ * the only place of the bell at these widths, so the drawer has none.
  */
 export function TopBar() {
   const t = useTranslations('ds.shell')

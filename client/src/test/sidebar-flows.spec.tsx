@@ -402,7 +402,7 @@ describe('the bell', () => {
     ).toBeInTheDocument()
   })
 
-  it('is in the title row of the board at 1024px and up, and not in the top bar', async () => {
+  it('is beside the logo in the sidebar at 1024px and up, and not in the top bar', async () => {
     mockMediaQuery(WIDE_QUERY, true)
     renderShell('/squads')
 
@@ -410,13 +410,11 @@ describe('the bell', () => {
 
     expect(bells()).toHaveLength(1)
     expect(screen.getByRole('banner')).not.toContainElement(bell)
-    expect(bell.closest('main')).not.toBeNull()
-    expect(
-      within(bell.closest('main') as HTMLElement).getByRole('heading', { level: 1 })
-    ).toBeVisible()
+    expect(screen.getByRole('complementary', { name: 'Menu' })).toContainElement(bell)
+    expect(bell.closest('main')).toBeNull()
   })
 
-  it('is in the Lobby header at 1024px and up, once', async () => {
+  it('is in the sidebar on the Lobby at 1024px and up, once', async () => {
     mockMediaQuery(WIDE_QUERY, true)
     const { navigation } = renderShell('/')
     expect(navigation).toBeDefined()
@@ -427,14 +425,14 @@ describe('the bell', () => {
     expect(bells()).toHaveLength(1)
   })
 
-  it("holds the bell's place in the page header before the width is known", async () => {
+  it("holds the bell's place in the sidebar before the width is known", async () => {
     // The server render and the first client render take the width as narrow; at 1024px and up the
-    // header still shows the bell's square, so the live bell does not pop in.
+    // sidebar still shows the bell's square, so the live bell does not pop in.
     mockMediaQuery(WIDE_QUERY, false)
     renderShell('/squads')
 
-    const main = await screen.findByRole('main')
-    const placeholder = main.querySelector('[aria-hidden="true"].lg\\:flex')
+    const sidebar = await screen.findByRole('complementary', { name: 'Menu' })
+    const placeholder = sidebar.querySelector('[aria-hidden="true"].lg\\:flex')
 
     expect(placeholder).not.toBeNull()
     expect(placeholder?.tagName).toBe('SPAN')
@@ -449,7 +447,7 @@ describe('the bell', () => {
     expect(bells()).toHaveLength(0)
   })
 
-  it('moves from the top bar to the page when the viewport grows', async () => {
+  it('moves from the top bar to the sidebar when the viewport grows', async () => {
     const wide = mockMediaQuery(WIDE_QUERY, false)
     renderShell('/squads')
     await screen.findByRole('button', { name: 'Notifications, 1 unread' })

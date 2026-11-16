@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { AppLink } from './app-link'
 import { useCreateSquadLauncher } from './create-squad-launcher'
 import { LanguageToggle } from './language-toggle'
+import { NotificationsBell } from './notifications-bell'
 import { SidebarCodeForm } from './sidebar-code-form'
 import { SidebarLegal } from './sidebar-legal'
 import { SidebarMySquads } from './sidebar-my-squads'
@@ -17,14 +18,17 @@ import { UserMenu } from './user-menu'
 interface SidebarContentProps {
   /** Called when the viewer picks something that leaves the sidebar's place, so a drawer can close. */
   readonly onNavigate?: () => void
+  /** The fixed column holds the bell beside the logo; the drawer leaves it to the top bar. */
+  readonly withBell?: boolean
 }
 
 /**
- * What the sidebar holds, top to bottom (reference, Components, Sidebar): the logo, "Create squad",
+ * What the sidebar holds, top to bottom (reference, Components, Sidebar): the logo (with the bell in the
+ * fixed column), "Create squad",
  * the join-by-code form, "All squads" with its count, the viewer's squads, the language switch, the
  * account button, and the legal links with the notice that Squadzr is not Discord. The fixed column and the drawer both render it.
  */
-export function SidebarContent({ onNavigate }: SidebarContentProps) {
+export function SidebarContent({ onNavigate, withBell = false }: SidebarContentProps) {
   const t = useTranslations('ds.shell')
   const pathname = usePathname()
   const { requestCreate } = useCreateSquadLauncher()
@@ -32,14 +36,12 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
   return (
     <div className="flex h-full flex-col gap-6.5 px-4 pt-6 pb-5">
-      <AppLink
-        href="/"
-        aria-label={t('home')}
-        onClick={onNavigate}
-        className="block self-start px-2"
-      >
-        <img src="/squadzr-logo.svg" alt="" className="block w-26" />
-      </AppLink>
+      <div className={cn('flex items-center justify-between gap-2', withBell && 'min-h-11')}>
+        <AppLink href="/" aria-label={t('home')} onClick={onNavigate} className="block px-2">
+          <img src="/squadzr-logo.svg" alt="" className="block w-26" />
+        </AppLink>
+        {withBell && <NotificationsBell placement="sidebar" />}
+      </div>
 
       <div className="flex flex-col gap-2">
         <Button
@@ -76,7 +78,8 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
       <SidebarMySquads onNavigate={onNavigate} />
 
-      <div className="flex flex-col gap-2.5">
+      {/* Without the viewer's squads, which take the room left, the controls still sit at the foot. */}
+      <div className="mt-auto flex flex-col gap-2.5">
         <LanguageToggle />
         <UserMenu />
       </div>
@@ -95,7 +98,7 @@ export function Sidebar() {
       aria-label={t('menu')}
       className="bg-menu fixed inset-y-0 left-0 z-30 hidden w-65 overflow-y-auto shadow-[inset_-1px_0_0_#16171b] lg:block"
     >
-      <SidebarContent />
+      <SidebarContent withBell />
     </aside>
   )
 }

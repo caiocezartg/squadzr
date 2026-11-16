@@ -127,7 +127,6 @@ describe('the Lobby for a signed-in non-member', () => {
     if (!host) throw new Error('The host has no tile')
     expect(within(host).queryByText('In the room now')).not.toBeInTheDocument()
     expect(within(host).queryByText(/^Out of the room/)).not.toBeInTheDocument()
-    expect(screen.queryByText('LIVE')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Leave squad' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Copy squad link' })).not.toBeInTheDocument()
 
@@ -189,7 +188,7 @@ describe('the Lobby for a signed-in non-member', () => {
       }),
     })
     expect(await screen.findByText('Outsider')).toBeInTheDocument()
-    expect(screen.getByText('LIVE')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Leave squad' })).toBeInTheDocument()
   })
 
   it('stays on the public view and says why when the join fails', async () => {

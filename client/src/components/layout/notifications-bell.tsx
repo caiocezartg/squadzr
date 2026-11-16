@@ -8,11 +8,11 @@ import { WIDE_QUERY } from './wide-query'
 
 interface NotificationsBellProps {
   /**
-   * Where the bell sits. At wide widths the page's header holds it; below them the top bar does. Only
-   * the matching placement renders the menu, so there is never more than one, and the notifications
-   * are read, polled and announced once.
+   * Where the bell sits, beside the logo either way. At wide widths the sidebar holds it; below them the
+   * top bar does. Only the matching placement renders the menu, so there is never more than one, and
+   * the notifications are read, polled and announced once.
    */
-  readonly placement: 'page' | 'top-bar'
+  readonly placement: 'sidebar' | 'top-bar'
 }
 
 /** The viewer's notifications menu in one of its two places. A visitor has none. */
@@ -21,9 +21,12 @@ export function NotificationsBell({ placement }: NotificationsBellProps) {
   const wide = useMediaQuery(WIDE_QUERY)
 
   if (!session?.user) return null
-  if (wide === (placement === 'page')) return <NotificationsMenu />
+  // The sidebar's bell opens its panel toward the page, the top bar's toward the screen's middle.
+  if (wide === (placement === 'sidebar')) {
+    return <NotificationsMenu align={placement === 'sidebar' ? 'start' : 'end'} />
+  }
 
   // The server and the first client render do not know the width, so they take it as narrow. The
-  // page header still shows the bell's footprint at wide widths until the menu takes its place.
-  return placement === 'page' ? <BellPlaceholder /> : null
+  // sidebar still shows the bell's footprint at wide widths until the menu takes its place.
+  return placement === 'sidebar' ? <BellPlaceholder /> : null
 }

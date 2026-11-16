@@ -39,6 +39,8 @@ interface LockedInviteProps {
   /** Members the Squad has. */
   readonly filled: number
   readonly total: number
+  /** The roster has not arrived yet: the meter and the slots left pulse as placeholders. */
+  readonly pending?: boolean
 }
 
 /**
@@ -47,7 +49,7 @@ interface LockedInviteProps {
  * about its height, so the column does not jump when the Squad completes. The mask is not the invite, so it
  * never carries a character of it.
  */
-export function LockedInvite({ filled, total }: LockedInviteProps) {
+export function LockedInvite({ filled, total, pending = false }: LockedInviteProps) {
   const t = useTranslations('ds.invite')
 
   return (
@@ -65,12 +67,16 @@ export function LockedInvite({ filled, total }: LockedInviteProps) {
             <p className="text-text-3 text-[14px] leading-snug font-semibold">{t('lockedBody')}</p>
           </div>
           <div className="border-line flex min-h-12 items-center justify-between gap-4 border-t px-3.5">
-            <div className="min-w-0">
+            <div className={cn('min-w-0', pending && 'animate-pulse')}>
               <SlotMeter filled={filled} total={total} tone="discord" />
             </div>
-            <span className="type-label text-text-3 shrink-0 text-right">
-              {t('slotsLeft', { count: Math.max(0, total - filled) })}
-            </span>
+            {pending ? (
+              <span aria-hidden="true" className="bg-track h-3 w-20 shrink-0 animate-pulse" />
+            ) : (
+              <span className="type-label text-text-3 shrink-0 text-right">
+                {t('slotsLeft', { count: Math.max(0, total - filled) })}
+              </span>
+            )}
           </div>
           <LinkRow
             tone="border-line text-[#4a4c54]"

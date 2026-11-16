@@ -30,7 +30,6 @@
       "viewProfile": "Ver perfil de {name}"
     },
     "lobby": {
-      "live": "AO VIVO",
       "exploreSquads": "Explorar squads",
       "copyLink": "Copiar link do squad",
       "linkCopied": "Link copiado",
@@ -44,6 +43,7 @@
       "created": "Criado {time}",
       "members": "Membros",
       "playerCount": "{current}/{max} jogadores",
+      "loadingMembers": "Carregando membros",
       "joinSquad": "Entrar no squad"
     },
     "invite": {
@@ -171,8 +171,6 @@
       "squads": "Squads",
       "allSquads": "Todos os squads",
       "mySquads": "Meus squads",
-      "mySquadsSignIn": "Entre para ver os squads que você criou ou entrou.",
-      "mySquadsSignInAction": "Entrar",
       "signIn": "Entrar com Discord",
       "account": "Menu da conta",
       "createSignIn": "Você pode explorar os squads como visitante, mas criar um squad exige entrar com o Discord.",
@@ -420,8 +418,6 @@
     "updating": "Uma nova versão está disponível. Recarregando…",
     "updateRequired": "Uma nova versão está disponível. Recarregue a página para atualizar.",
     "reload": "Recarregar",
-    "connected": "Conectado",
-    "connecting": "Conectando…",
     "reconnecting": "Reconectando…",
     "disconnected": "Desconectado"
   },
