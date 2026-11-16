@@ -827,6 +827,18 @@ describe('losing access', () => {
     expect(countHttpCalls('GET', '/api/rooms/:code/messages')).toBe(reads)
   })
 
+  it('stops listening at once, so a late message neither counts nor reads', async () => {
+    const { result, setChannel, live } = await readyChat()
+    act(() => setChannel({ membershipRevoked: true }))
+    const reads = countHttpCalls('GET', '/api/rooms/:code/messages')
+
+    await live.emit('chat_message', { message: stored('late', '2026-01-01T11:00:00.000Z') })
+    await live.emit('room_snapshot', snapshotOf(CODE))
+
+    expect(result.current.unreadCount).toBe(0)
+    expect(countHttpCalls('GET', '/api/rooms/:code/messages')).toBe(reads)
+  })
+
   it('reads the history again when a later snapshot restores the Membership', async () => {
     const { result, setChannel, queryClient } = await readyChat()
     act(() => setChannel({ membershipRevoked: true }))

@@ -9,6 +9,9 @@ import { ChatComposer } from './chat-composer'
 import { ChatMessages } from './chat-messages'
 import { ChatWindow } from './chat-window'
 
+/** The badge shows counts above this one as `99+`; the label read aloud keeps the exact count. */
+const UNREAD_CAP = 99
+
 export interface SquadChatDockProps {
   readonly squadCode: string
   /** The Lobby's realtime channel: live messages, the reconnect and a revoked Membership. */
@@ -74,7 +77,7 @@ export function SquadChatDock({ squadCode, channel, memberCount, enabled }: Squa
             data-testid="chat-unread"
             className="bg-text text-bg font-display ml-0.5 min-w-5 px-1.5 text-center text-[13px] leading-5 font-black"
           >
-            {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+            {chat.unreadCount > UNREAD_CAP ? `${UNREAD_CAP}+` : chat.unreadCount}
           </span>
         )}
       </button>

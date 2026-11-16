@@ -5,7 +5,7 @@
 
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChatMessageDto } from '@squadzr/schemas'
 import { NARROW_QUERY } from '@/components/ds/use-media-query'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
@@ -460,10 +460,21 @@ describe('the echo of the viewer own message', () => {
   })
 })
 
+afterEach(() => {
+  delete (HTMLLIElement.prototype as Partial<HTMLLIElement>).getBoundingClientRect
+})
+
 /** jsdom lays nothing out: each message row is 100px tall and the list shows 300px of them. */
 function layOut(log: HTMLElement) {
   let top = 0
-  const height = () => log.querySelectorAll('li').length * 100
+  const rows = () => [...log.querySelectorAll('li')]
+  const height = () => rows().length * 100
+  Object.defineProperty(HTMLLIElement.prototype, 'getBoundingClientRect', {
+    configurable: true,
+    value(this: HTMLLIElement) {
+      return DOMRect.fromRect({ y: Math.max(0, rows().indexOf(this)) * 100 - top, height: 100 })
+    },
+  })
   Object.defineProperties(log, {
     clientHeight: { configurable: true, get: () => 300 },
     scrollHeight: { configurable: true, get: height },
@@ -537,6 +548,26 @@ describe('scrolling', () => {
     )
   })
 
+  it('treats a message dated before the last one, by a clock behind, as a new one', async () => {
+    const { chat, log, layout } = await openLaidOutChat()
+    const between = (n: number, body: string) => ({
+      ...message(n, ANA, body),
+      createdAt: new Date(Date.parse(SIX[5]!.createdAt) - 1_000).toISOString(),
+    })
+    layout.scrollTo(layout.bottom())
+
+    sendFromServer({ type: 'chat_message', payload: { message: between(7, 'atrasada') } })
+
+    await within(chat).findByText('atrasada')
+    expect(log.scrollTop).toBe(layout.bottom())
+
+    layout.scrollTo(100)
+    sendFromServer({ type: 'chat_message', payload: { message: between(8, 'outra atrasada') } })
+
+    expect(await within(chat).findByRole('button', { name: 'New messages' })).toBeInTheDocument()
+    expect(log.scrollTop).toBe(100)
+  })
+
   it('jumps to the bottom when the viewer sends, even scrolled up', async () => {
     onHttp('POST', '/api/rooms/:code/messages', ({ body }) =>
       httpCreated({
@@ -587,5 +618,29 @@ describe('older history', () => {
 
     layout.scrollTo(0)
     expect(getHttpLog().filter((request) => request.query.has('before'))).toHaveLength(1)
+  })
+
+  it('keeps the position when a new message also lands below while the page loads', async () => {
+    const older = deferred<MockHttpResponse>()
+    onHttp('GET', '/api/rooms/:code/messages', ({ query }) =>
+      query.get('before') === NEWER[0]!.id ? older.promise : httpOk({ items: NEWER, hasMore: true })
+    )
+    await openMemberLobby()
+    const chat = await openChat()
+    await within(chat).findByText('linha 9')
+    const log = within(chat).getByRole('log')
+    const layout = layOut(log)
+    layout.scrollTo(0)
+    await within(chat).findByRole('status', { name: 'Loading older messages' })
+
+    sendFromServer({ type: 'chat_message', payload: { message: message(10, ANA, 'embaixo') } })
+    await within(chat).findByText('embaixo')
+    await act(async () => {
+      older.resolve(httpOk({ items: OLDER, hasMore: false }))
+      await older.promise
+    })
+
+    await within(chat).findByText('antiga 1')
+    expect(log.scrollTop).toBe(300)
   })
 })

@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { z } from 'zod'
 import type {
-  chatHistoryQuerySchema,
+  ChatHistoryQuery,
   roomCodeParamSchema,
   sendChatMessageRequestSchema,
 } from '@squadzr/schemas'
@@ -11,7 +11,6 @@ import type { ISendChatMessageUseCase } from '@application/use-cases/chat/send-c
 import { toChatMessageDto } from '@application/projections'
 
 type RoomCodeParams = z.infer<typeof roomCodeParamSchema>
-type ChatHistoryQuery = z.infer<typeof chatHistoryQuerySchema>
 type SendChatMessageBody = z.infer<typeof sendChatMessageRequestSchema>
 
 export interface ChatControllerDeps {

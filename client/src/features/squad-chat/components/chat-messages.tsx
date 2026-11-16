@@ -147,46 +147,55 @@ function useChatScroll(
   // Starts true, so the list opens at the bottom.
   const atBottomRef = useRef(true)
   const [showPill, setShowPill] = useState(false)
-  // The ends of the list and its height as last drawn, to tell where new messages landed.
+  // What the list showed when last drawn: its ends, how many messages, and where its first row sat.
   const drawnRef = useRef<{
     firstId?: string
+    firstTop: number
     lastId?: string
-    lastAt?: string
-    height: number
+    count: number
   } | null>(null)
   const firstId = messages[0]?.id
+  const count = messages.length
   const last = messages.at(-1)
   const lastId = last?.id
-  const lastAt = last?.createdAt
   const lastAuthorId = last?.author.id
 
   useLayoutEffect(() => {
     const list = listRef.current
     if (!list) return
     const drawn = drawnRef.current
-    if (drawn && firstId !== drawn.firstId) list.scrollTop += list.scrollHeight - drawn.height
-    if (!drawn || lastId !== drawn.lastId) {
+    if (drawn?.firstId && firstId !== drawn.firstId) {
+      // Older rows landed above: move by how far the row that was first went down, so the reader sees
+      // the same rows whatever else changed in the list since.
+      const row = list.querySelector<HTMLElement>(`[data-message-id="${drawn.firstId}"]`)
+      if (row) list.scrollTop += topInList(list, row) - drawn.firstTop
+    }
+    // A message also lands above the last one when its sender's clock is behind the viewer's.
+    const arrived =
+      !drawn || lastId !== drawn.lastId || (firstId === drawn.firstId && count > drawn.count)
+    if (arrived) {
       if (atBottomRef.current || lastAuthorId === viewerId) {
         list.scrollTop = list.scrollHeight
         atBottomRef.current = true
         setShowPill(false)
-      } else if (lastAt && (!drawn?.lastAt || lastAt > drawn.lastAt)) {
-        // Only a newer message: a failed send taken back out leaves an older one last.
+      } else if (drawn && count >= drawn.count) {
+        // Not when a message went away: a failed send taken back out leaves an older one last.
         setShowPill(true)
       }
     }
     drawnRef.current = {
       firstId,
+      firstTop: topOfFirstRow(list),
       lastId,
-      lastAt,
-      height: list.scrollHeight,
+      count,
     }
-  }, [firstId, lastId, lastAt, lastAuthorId, listRef, viewerId])
+  }, [firstId, count, lastId, lastAuthorId, listRef, viewerId])
 
   const handleScroll = () => {
     const list = listRef.current
     if (!list) return
-    if (drawnRef.current) drawnRef.current.height = list.scrollHeight
+    // Measured again here, where the window is settled: drawn while it opened, the row sat under its scale.
+    if (drawnRef.current) drawnRef.current.firstTop = topOfFirstRow(list)
     atBottomRef.current = list.scrollHeight - list.scrollTop - list.clientHeight <= STICK_THRESHOLD
     if (atBottomRef.current) setShowPill(false)
     if (list.scrollTop <= OLDER_THRESHOLD && hasMore && !isFetchingOlder) onReachTop()
@@ -203,6 +212,16 @@ function useChatScroll(
   }
 
   return { showPill, jumpToBottom, handleScroll }
+}
+
+/** A row's distance from the top of the list's content, unrounded and whatever the scroll position. */
+function topInList(list: HTMLElement, row: HTMLElement): number {
+  return row.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop
+}
+
+function topOfFirstRow(list: HTMLElement): number {
+  const row = list.querySelector<HTMLElement>('[data-message-id]')
+  return row ? topInList(list, row) : 0
 }
 
 function DayLine({ divider }: { readonly divider: DayDivider }) {
@@ -277,6 +296,7 @@ function Bubble({ message, own }: { readonly message: SquadChatMessage; readonly
 
   return (
     <li
+      data-message-id={message.id}
       aria-busy={message.pending || undefined}
       className={cn(
         'text-text-2 px-3 py-2 text-[14px] leading-snug font-medium [overflow-wrap:anywhere] whitespace-pre-wrap',

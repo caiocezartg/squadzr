@@ -244,6 +244,45 @@ function useLiveChat(options: LiveChatOptions) {
 }
 
 /**
+ * The older pages of the history, read on demand from the oldest stored message. The viewer's pending
+ * message is skipped as a cursor: it carries the client's clock, which may date it before every stored one.
+ */
+function useOlderPages(code: string, data: ChatHistoryData | undefined, pendingId: string | null) {
+  const queryClient = useQueryClient()
+  const [isFetchingOlder, setIsFetchingOlder] = useState(false)
+  const fetchingOlderRef = useRef(false)
+  const hasMore = data?.pages.at(-1)?.hasMore ?? false
+  const oldestId = data ? oldestStoredId(data, pendingId) : undefined
+  // The page lands after the send may have settled, so it checks the history against the id pending then.
+  const pendingIdRef = useRef(pendingId)
+  useEffect(() => {
+    pendingIdRef.current = pendingId
+  }, [pendingId])
+
+  const fetchOlder = useCallback(async () => {
+    if (!hasMore || !oldestId || fetchingOlderRef.current) return
+    fetchingOlderRef.current = true
+    setIsFetchingOlder(true)
+    try {
+      // Read outside the infinite query: it would rebuild the pages from the ones it held when this read
+      // started, and drop the live messages merged since.
+      const page = await api.get(messagesPath(code, oldestId), chatHistoryResponseSchema)
+      queryClient.setQueryData<ChatHistoryData>(
+        squadChatQueryKey(code),
+        (current) => current && appendOlderPage(current, page, oldestId, pendingIdRef.current)
+      )
+    } catch {
+      // The history stays as it was, with older messages still to read, so the reader can try again.
+    } finally {
+      fetchingOlderRef.current = false
+      setIsFetchingOlder(false)
+    }
+  }, [code, hasMore, oldestId, queryClient])
+
+  return { hasMore, isFetchingOlder, fetchOlder }
+}
+
+/**
  * The data side of a Squad's chat: its history, newest page first with older pages on demand, the live
  * messages of other members, and the viewer's sends. A send shows at once as a pending message under an id
  * the client generates, which the server stores as given, so the server's echo and its answer both replace
@@ -274,7 +313,7 @@ export function useSquadChat(
   const { unreadCount, flushPendingRead } = useLiveChat({
     code,
     channel,
-    enabled: options.enabled,
+    enabled: active,
     open: options.open,
     isSendPending,
   })
@@ -361,32 +400,7 @@ export function useSquadChat(
     void history.refetch()
   }, [history])
 
-  const [isFetchingOlder, setIsFetchingOlder] = useState(false)
-  const fetchingOlderRef = useRef(false)
-  const hasMore = history.data?.pages.at(-1)?.hasMore ?? false
-  const oldestId = history.data ? oldestStoredId(history.data, pendingId) : undefined
-  // The page lands after the send may have settled, so it checks the history against the id pending then.
-  const pendingIdRef = useRef(pendingId)
-  pendingIdRef.current = pendingId
-  const fetchOlder = useCallback(async () => {
-    if (!hasMore || !oldestId || fetchingOlderRef.current) return
-    fetchingOlderRef.current = true
-    setIsFetchingOlder(true)
-    try {
-      // Read outside the infinite query: it would rebuild the pages from the ones it held when this read
-      // started, and drop the live messages merged since.
-      const page = await api.get(messagesPath(code, oldestId), chatHistoryResponseSchema)
-      queryClient.setQueryData<ChatHistoryData>(
-        squadChatQueryKey(code),
-        (data) => data && appendOlderPage(data, page, oldestId, pendingIdRef.current)
-      )
-    } catch {
-      // The history stays as it was, with older messages still to read, so the reader can try again.
-    } finally {
-      fetchingOlderRef.current = false
-      setIsFetchingOlder(false)
-    }
-  }, [code, hasMore, oldestId, queryClient])
+  const { hasMore, isFetchingOlder, fetchOlder } = useOlderPages(code, history.data, pendingId)
 
   const status: SquadChatStatus = history.data ? 'ready' : history.isError ? 'error' : 'loading'
 
