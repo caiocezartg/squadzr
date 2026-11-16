@@ -4,6 +4,8 @@ import { z } from 'zod'
 export const errorResponseSchema = z.object({
   error: z.string(),
   message: z.string(),
+  // Milliseconds until the caller may try again, on a 429 that knows its own wait. `details` stays validation fields.
+  retryAfterMs: z.number().int().positive().optional(),
   details: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
 })
 

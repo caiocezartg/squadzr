@@ -23,6 +23,7 @@ function parseError(error: FastifyError | Error): ParsedError {
       response: {
         error: error.code,
         message: error.message,
+        ...(error.retryAfterMs && { retryAfterMs: error.retryAfterMs }),
       },
     }
   }
@@ -110,6 +111,7 @@ async function errorHandlerPlugin(
   fastify.setErrorHandler((error: FastifyError | Error, request, reply) => {
     const { statusCode, response } = parseError(error)
     logError(fastify, error, request, statusCode, isProduction)
+    if (response.retryAfterMs) reply.header('Retry-After', Math.ceil(response.retryAfterMs / 1000))
     return reply.status(statusCode).send(response)
   })
 }

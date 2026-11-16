@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { MessageSquare } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useSession } from '@/hooks/use-session'
@@ -45,13 +45,18 @@ export function SquadChatDock({
   const t = useTranslations('chat')
   const viewerId = useSession()?.user.id ?? ''
   const [open, setOpen] = useState(false)
-  const chat = useSquadChat(squadCode, channel, { enabled, open })
+  const chat = useSquadChat(squadCode, channel, { enabled, open, isReady })
   const [draft, setDraft] = useState('')
   const [failed, setFailed] = useState(false)
   const launcherRef = useRef<HTMLButtonElement>(null)
   const unreadId = useId()
-  const { send } = chat
-  const signalTyping = useTypingSender(squadCode, channel, { enabled, isReady })
+  const { send, readOnly } = chat
+  const signalTyping = useTypingSender(squadCode, channel, { enabled, isReady: readOnly })
+
+  // A complete Squad has nowhere to send an unsent draft: it is dropped, not kept for later.
+  useEffect(() => {
+    if (readOnly) setDraft('')
+  }, [readOnly])
 
   const handleDraftChange = useCallback(
     (next: string) => {
@@ -68,8 +73,11 @@ export function SquadChatDock({
     setFailed(false)
     const outcome = await send(text)
     if (outcome.ok) return
-    // Whatever was typed while the send was pending stays after the text put back.
-    setDraft((current) => (current === '' ? outcome.text : `${outcome.text}\n${current}`))
+    // A complete Squad drops the text; otherwise whatever was typed while the send was pending stays
+    // after the text put back.
+    if (outcome.reason !== 'read_only') {
+      setDraft((current) => (current === '' ? outcome.text : `${outcome.text}\n${current}`))
+    }
     setFailed(outcome.reason === 'failed')
   }, [draft, send])
 
@@ -137,6 +145,8 @@ export function SquadChatDock({
               onSend={() => void handleSend()}
               ready={chat.status === 'ready'}
               isSending={chat.isSending}
+              cooldown={chat.cooldown}
+              readOnly={readOnly}
               failed={failed}
               textareaRef={textareaRef}
             />

@@ -1,9 +1,15 @@
+import { CHAT } from '@squadzr/schemas'
 import type { ChatMessageView } from '@domain/entities/chat-message.entity'
 import type { IChatMessageRepository } from '@domain/repositories/chat-message.repository'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { Clock } from '@domain/services/clock.interface'
-import { ChatMessageIdConflictError, NotRoomMemberError } from '@application/errors'
+import {
+  ChatMessageIdConflictError,
+  ChatRateLimitedError,
+  NotRoomMemberError,
+  RoomReadyError,
+} from '@application/errors'
 import { resolveAccessibleRoom } from '../room/helpers/resolve-accessible-room'
 
 export interface SendChatMessageInput {
@@ -25,6 +31,11 @@ export interface ISendChatMessageUseCase {
   execute(input: SendChatMessageInput): Promise<SendChatMessageOutput>
 }
 
+/** The wait until the message at the window's edge leaves it, at least 1ms so the caller never retries at once. */
+function retryAfterMs(oldestInWindow: Date, now: Date): number {
+  return Math.max(1, oldestInWindow.getTime() + CHAT.RATE_WINDOW_MS - now.getTime())
+}
+
 export class SendChatMessageUseCase implements ISendChatMessageUseCase {
   constructor(
     private readonly chatMessageRepository: IChatMessageRepository,
@@ -41,13 +52,17 @@ export class SendChatMessageUseCase implements ISendChatMessageUseCase {
       { code: input.code, viewerId: input.authorId }
     )
 
-    const outcome = await this.chatMessageRepository.createWithinRate({
-      id: input.id,
-      roomId: room.id,
-      authorId: input.authorId,
-      body: input.body,
-      createdAt: this.clock.now(),
-    })
+    const now = this.clock.now()
+    const outcome = await this.chatMessageRepository.createWithinRate(
+      {
+        id: input.id,
+        roomId: room.id,
+        authorId: input.authorId,
+        body: input.body,
+        createdAt: now,
+      },
+      { limit: CHAT.RATE_LIMIT, windowStart: new Date(now.getTime() - CHAT.RATE_WINDOW_MS) }
+    )
 
     switch (outcome.kind) {
       case 'created':
@@ -58,6 +73,10 @@ export class SendChatMessageUseCase implements ISendChatMessageUseCase {
         throw new NotRoomMemberError(input.authorId, room.id)
       case 'id_conflict':
         throw new ChatMessageIdConflictError(input.id)
+      case 'ready':
+        throw new RoomReadyError(room.id, 'chat')
+      case 'rate_limited':
+        throw new ChatRateLimitedError(retryAfterMs(outcome.oldestInWindow, now))
     }
   }
 }

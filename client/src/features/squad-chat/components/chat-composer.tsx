@@ -5,6 +5,7 @@ import { SendHorizontal } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { CHAT, chatMessageBodySchema } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
+import type { ChatCooldown } from '../use-chat-cooldown'
 
 /** The counter shows from this many characters on. */
 const COUNTER_FROM = CHAT.MESSAGE_MAX_LENGTH - 100
@@ -16,6 +17,10 @@ interface ChatComposerProps {
   /** The history is cached, so a pending message has somewhere to show. */
   readonly ready: boolean
   readonly isSending: boolean
+  /** The anti-spam cooldown: nothing can be sent until it ends, and it ends by itself. */
+  readonly cooldown: ChatCooldown | null
+  /** The Squad is complete: the composer gives way to a banner. */
+  readonly readOnly: boolean
   readonly failed: boolean
   readonly textareaRef?: RefObject<HTMLTextAreaElement | null>
 }
@@ -30,12 +35,14 @@ export function ChatComposer({
   onSend,
   ready,
   isSending,
+  cooldown,
+  readOnly,
   failed,
   textareaRef,
 }: ChatComposerProps) {
   const t = useTranslations('chat')
   const errorId = useId()
-  const canSend = ready && !isSending && chatMessageBodySchema.safeParse(draft).success
+  const canSend = ready && !isSending && !cooldown && chatMessageBodySchema.safeParse(draft).success
   const length = draft.length
   const over = length > CHAT.MESSAGE_MAX_LENGTH
 
@@ -43,6 +50,14 @@ export function ChatComposer({
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return
     event.preventDefault()
     if (canSend) onSend()
+  }
+
+  if (readOnly) {
+    return (
+      <p role="status" className="border-line text-muted border-t p-3 text-[13px] font-semibold">
+        {t('readOnly')}
+      </p>
+    )
   }
 
   return (
@@ -78,6 +93,11 @@ export function ChatComposer({
           <SendHorizontal aria-hidden="true" className="size-4.5" strokeWidth={2.4} />
         </button>
       </div>
+      {cooldown && (
+        <p className="text-amber text-[12px] font-semibold">
+          {t('cooldown', { seconds: cooldown.remainingSeconds })}
+        </p>
+      )}
       {(failed || length >= COUNTER_FROM) && (
         <div className="flex items-start justify-between gap-3">
           <p id={errorId} role="alert" className="text-danger text-[12px] font-semibold">

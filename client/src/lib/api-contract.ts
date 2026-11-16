@@ -5,12 +5,15 @@ import { describeContractIssues, type ContractIssue } from '@squadzr/schemas'
 export class ApiClientError extends Error {
   public readonly status: number
   public readonly code?: string
+  /** How long the server asked the caller to wait, in milliseconds, when it said so. */
+  public readonly retryAfterMs?: number
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, retryAfterMs?: number) {
     super(message)
     this.name = 'ApiClientError'
     this.status = status
     this.code = code
+    this.retryAfterMs = retryAfterMs
   }
 }
 

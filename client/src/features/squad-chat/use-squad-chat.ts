@@ -20,6 +20,7 @@ import {
   type ChatHistoryData,
 } from './squad-chat-cache'
 import { toSquadChatMessage, type SquadChatMessage } from './squad-chat-message'
+import { FALLBACK_COOLDOWN_MS, useChatCooldown, type ChatCooldown } from './use-chat-cooldown'
 
 export type SquadChatStatus = 'loading' | 'error' | 'ready'
 
@@ -31,8 +32,13 @@ export type SendChatOutcome =
   | { readonly ok: true }
   | {
       readonly ok: false
-      /** `invalid`: the body breaks the shared rules. `busy`: another send is still pending. */
-      readonly reason: 'invalid' | 'busy' | 'failed'
+      /**
+       * `invalid`: the body breaks the shared rules. `busy`: another send is still pending. `cooldown`:
+       * the composer is locked and nothing was sent. `rate_limited`: the server refused for speed and a
+       * cooldown now runs; the text is worth keeping. `read_only`: the Squad is complete, so the text has
+       * nowhere to go. `failed`: anything else.
+       */
+      readonly reason: 'invalid' | 'busy' | 'cooldown' | 'rate_limited' | 'read_only' | 'failed'
       readonly text: string
       readonly code: string | null
     }
@@ -63,6 +69,17 @@ export interface SquadChat {
   /** A send is waiting for the server, so the composer holds the next one back. */
   readonly isSending: boolean
   /**
+   * The Squad is complete, so the chat is read-only: the composer gives way to a banner, the draft is
+   * dropped, and no send goes out. It turns true when the Squad is Ready or a send is refused as such.
+   */
+  readonly readOnly: boolean
+  /**
+   * The anti-spam cooldown, or null when the composer may send. It starts on the fifth message of a window,
+   * and on a refusal of the server (`CHAT_RATE_LIMITED`, or the API's global `RATE_LIMITED`), and it ends by
+   * itself. Never set while the chat is read-only.
+   */
+  readonly cooldown: ChatCooldown | null
+  /**
    * Sends one message; only one send is pending at a time. The composer should wait for `status` to be
    * `ready`: before the history is cached there is nowhere to show the pending message, so it only appears
    * once the history is read again.
@@ -90,6 +107,15 @@ export interface UseSquadChatOptions {
   readonly enabled: boolean
   /** The chat window is open: what arrives meanwhile is read at once, not unread. */
   readonly open: boolean
+  /** The Squad is Ready: its chat is read-only. */
+  readonly isReady: boolean
+}
+
+/** The refusals that start a cooldown: the chat's own rule and the API's per-address limit. */
+function isRateLimitRefusal(error: ApiClientError): boolean {
+  return (
+    error.status === 429 && (error.code === 'CHAT_RATE_LIMITED' || error.code === 'RATE_LIMITED')
+  )
 }
 
 function messagesPath(squadCode: string, before?: string): string {
@@ -316,11 +342,20 @@ export function useSquadChat(
   // message out of the history, so the message is never drawn as confirmed.
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
+  // The Squad the server refused a send for as Ready, before the snapshot that says so reached the page.
+  const [refusedAsReady, setRefusedAsReady] = useState<string | null>(null)
+  const readOnly = options.isReady || refusedAsReady === code
+  const { cooldown, isActive: isCoolingDown, recordSend, startFor, clear } = useChatCooldown()
   // The state above trails a render behind; a second send in the same tick must still see the first.
   const sendingRef = useRef(false)
   // The last failed send. Its answer may only have been lost, so sending the same text again reuses its id,
   // and the server, idempotent on the id, stores it at most once.
   const failedRef = useRef<{ readonly body: string; readonly id: string } | null>(null)
+
+  // A complete Squad has nothing left to wait for: the cooldown goes with the draft the dock drops.
+  useEffect(() => {
+    if (readOnly) clear()
+  }, [clear, readOnly])
 
   const isSendPending = useCallback(() => sendingRef.current, [])
   const { unreadCount, flushPendingRead } = useLiveChat({
@@ -365,6 +400,8 @@ export function useSquadChat(
     async (text: string): Promise<SendChatOutcome> => {
       const body = chatMessageBodySchema.safeParse(text)
       if (!body.success || !viewer) return { ok: false, reason: 'invalid', text, code: null }
+      if (readOnly) return { ok: false, reason: 'read_only', text, code: null }
+      if (isCoolingDown()) return { ok: false, reason: 'cooldown', text, code: null }
       if (sendingRef.current) return { ok: false, reason: 'busy', text, code: null }
 
       sendingRef.current = true
@@ -391,10 +428,24 @@ export function useSquadChat(
         await confirm(queryClient, code, stored)
         failedRef.current = null
         setPendingId(null)
+        recordSend()
         return { ok: true }
       } catch (error) {
         discard(queryClient, code, id)
         setPendingId(null)
+        if (error instanceof ApiClientError) {
+          // The send lost the race against the Squad turning Ready: the banner takes the composer's place.
+          if (error.code === 'ROOM_READY') {
+            failedRef.current = null
+            setRefusedAsReady(code)
+            return { ok: false, reason: 'read_only', text, code: error.code }
+          }
+          if (isRateLimitRefusal(error)) {
+            failedRef.current = null
+            startFor(error.retryAfterMs ?? FALLBACK_COOLDOWN_MS)
+            return { ok: false, reason: 'rate_limited', text, code: error.code ?? null }
+          }
+        }
         // Only an answer that may have been lost keeps the id: the server refused anything below 500.
         const refused = error instanceof ApiClientError && error.status < 500
         failedRef.current = refused ? null : { body: body.data, id }
@@ -406,7 +457,7 @@ export function useSquadChat(
         flushPendingRead()
       }
     },
-    [code, flushPendingRead, queryClient, viewer]
+    [code, flushPendingRead, isCoolingDown, queryClient, readOnly, recordSend, startFor, viewer]
   )
 
   const retry = useCallback(() => {
@@ -425,6 +476,8 @@ export function useSquadChat(
     status,
     messages,
     isSending,
+    readOnly,
+    cooldown: readOnly ? null : cooldown,
     send,
     retry,
     hasMore,

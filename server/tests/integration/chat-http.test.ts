@@ -423,3 +423,160 @@ describe('Squad lifecycle', () => {
     expect(read.statusCode).toBe(404)
   })
 })
+
+describe('rate limit', () => {
+  /** Sends `total` messages from `actor`, one millisecond apart, and expects each to be stored. */
+  async function sendBurst(actor: TestUser, total: number): Promise<void> {
+    for (let i = 0; i < total; i++) {
+      const response = await send(actor, { body: `burst ${i}` })
+      expect(response.statusCode, response.body).toBe(201)
+      clock.advance(1)
+    }
+  }
+
+  it('answers the sixth message in a window 429 with the wait in body and header', async () => {
+    await sendBurst(member, CHAT.RATE_LIMIT)
+
+    const refused = await send(member, { body: 'one too many' })
+
+    expect(refused.statusCode, refused.body).toBe(429)
+    // The oldest message is 5ms old: it leaves the window in 9995ms, which rounds up to 10s.
+    expect(refused.json()).toEqual({
+      error: 'CHAT_RATE_LIMITED',
+      message: 'You are sending messages too fast. Try again shortly.',
+      retryAfterMs: CHAT.RATE_WINDOW_MS - CHAT.RATE_LIMIT,
+    })
+    expect(refused.headers['retry-after']).toBe('10')
+    expect(await storedCount()).toBe(CHAT.RATE_LIMIT)
+  })
+
+  it('lets the browser app read Retry-After across origins', async () => {
+    await sendBurst(member, CHAT.RATE_LIMIT)
+
+    const refused = await server.app.inject({
+      method: 'POST',
+      url: `/api/rooms/${code}/messages`,
+      headers: { ...member.headers, origin: 'http://localhost:5173' },
+      payload: { id: randomUUID(), body: 'one too many' },
+    })
+
+    expect(refused.statusCode).toBe(429)
+    expect(refused.headers['access-control-expose-headers']).toMatch(/retry-after/i)
+  })
+
+  it('rounds a sub-second wait up in the header', async () => {
+    await sendBurst(member, CHAT.RATE_LIMIT)
+    clock.advance(CHAT.RATE_WINDOW_MS - 1_500)
+
+    const refused = await send(member, { body: 'soon' })
+
+    expect(refused.statusCode).toBe(429)
+    expect(refused.json()).toMatchObject({ retryAfterMs: 1_495 })
+    expect(refused.headers['retry-after']).toBe('2')
+  })
+
+  it('counts a message as out of the window exactly when it is window old', async () => {
+    const firstAt = clock.now()
+    await sendBurst(member, CHAT.RATE_LIMIT)
+    // The oldest message is now one millisecond short of a full window: it still counts.
+    clock.set(new Date(firstAt.getTime() + CHAT.RATE_WINDOW_MS - 1))
+
+    const stillInside = await send(member, { body: 'edge - 1' })
+    expect(stillInside.statusCode).toBe(429)
+    expect(stillInside.json()).toMatchObject({ retryAfterMs: 1 })
+
+    // Exactly a window old: it no longer counts, so a slot is free.
+    clock.set(new Date(firstAt.getTime() + CHAT.RATE_WINDOW_MS))
+    const onTheEdge = await send(member, { body: 'edge' })
+    expect(onTheEdge.statusCode, onTheEdge.body).toBe(201)
+  })
+
+  it('does not let one member spend the limit of another', async () => {
+    await sendBurst(member, CHAT.RATE_LIMIT)
+
+    const other = await send(host, { body: 'my turn' })
+
+    expect(other.statusCode, other.body).toBe(201)
+  })
+
+  it('keeps the limit per Squad', async () => {
+    await sendBurst(member, CHAT.RATE_LIMIT)
+    const game = await insertGame(server)
+    const elsewhere = await createRoom(server, outsider, { gameId: game.id, maxPlayers: 5 })
+    await joinAll(server, elsewhere.code, [member])
+
+    const response = await send(member, { body: 'other squad' }, elsewhere.code)
+
+    expect(response.statusCode, response.body).toBe(201)
+  })
+
+  it('answers a retry of a stored message with 200 even at the limit', async () => {
+    const id = randomUUID()
+    await send(member, { id, body: 'first' })
+    await sendBurst(member, CHAT.RATE_LIMIT - 1)
+
+    const retry = await send(member, { id, body: 'first' })
+
+    expect(retry.statusCode, retry.body).toBe(200)
+    expect(await storedCount()).toBe(CHAT.RATE_LIMIT)
+  })
+
+  it('lets the member send again once the window has passed', async () => {
+    await sendBurst(member, CHAT.RATE_LIMIT)
+    clock.advance(CHAT.RATE_WINDOW_MS + 1)
+
+    const response = await send(member, { body: 'back' })
+
+    expect(response.statusCode, response.body).toBe(201)
+  })
+})
+
+describe('Ready Squad', () => {
+  let readyCode: string
+  let readyHost: TestUser
+  let readyMember: TestUser
+
+  beforeEach(async () => {
+    readyHost = await signIn(server, 'Ready Host')
+    readyMember = await signIn(server, 'Ready Member')
+    const game = await insertGame(server, 2)
+    const ready = await createRoom(server, readyHost, { gameId: game.id, maxPlayers: 2 })
+    readyCode = ready.code
+    await send(readyHost, { body: 'before ready' }, readyCode)
+    await joinAll(server, readyCode, [readyMember])
+  })
+
+  it('refuses a send with 422 ROOM_READY and a chat-specific message, storing nothing', async () => {
+    const response = await send(readyHost, { body: 'too late' }, readyCode)
+
+    expect(response.statusCode, response.body).toBe(422)
+    expect(response.json()).toMatchObject({ error: 'ROOM_READY' })
+    expect(response.json<{ message: string }>().message).toMatch(/chat/i)
+    const read = await get(server, `/api/rooms/${readyCode}/messages`, readyHost)
+    expect(read.json<ChatHistoryResponse>().items.map((item) => item.body)).toEqual([
+      'before ready',
+    ])
+  })
+
+  it('keeps the history readable for every member', async () => {
+    const read = await get(server, `/api/rooms/${readyCode}/messages`, readyMember)
+
+    expect(read.statusCode, read.body).toBe(200)
+    expect(chatHistoryResponseSchema.parse(read.json()).items).toHaveLength(1)
+  })
+
+  it('refuses a send from a non-member before telling them anything about the Squad', async () => {
+    const response = await send(outsider, { body: 'hi' }, readyCode)
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('answers a retry of a message stored before Ready with 200, not a refusal', async () => {
+    const first = await get(server, `/api/rooms/${readyCode}/messages`, readyHost)
+    const [stored] = first.json<ChatHistoryResponse>().items
+
+    const retry = await send(readyHost, { id: stored!.id, body: 'before ready' }, readyCode)
+
+    expect(retry.statusCode, retry.body).toBe(200)
+  })
+})
