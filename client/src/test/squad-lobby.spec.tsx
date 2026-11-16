@@ -149,11 +149,9 @@ describe('squad lobby — snapshot handshake', () => {
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     expect(await screen.findByText('Ana')).toBeInTheDocument()
 
-    // Presence never relies on color alone: each tile says it in words, and the overall connection
-    // state has its own text.
+    // Presence never relies on color alone: each tile says it in words.
     expect(screen.getAllByText('In the room now')).toHaveLength(1)
     expect(screen.getAllByText('Out of the room')).toHaveLength(1)
-    expect(screen.getAllByText('Connected')).toHaveLength(1)
     expect(tileOf('Caio')).toHaveAttribute('title', 'In the room now')
     expect(tileOf('Ana')).toHaveAttribute('title', 'Out of the room')
 
@@ -233,14 +231,20 @@ describe('squad lobby — snapshot handshake', () => {
     expect(screen.queryByText(/Out of the room ·/)).not.toBeInTheDocument()
   })
 
-  it('shows the overall connection state with accessible text', async () => {
+  it('marks only a lost connection, never a live or pending one', async () => {
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
 
-    expect(screen.getByText('Connecting…')).toBeInTheDocument()
+    // Not connected yet: nothing reads as lost.
+    expect(screen.queryByText('Disconnected')).not.toBeInTheDocument()
+    expect(screen.queryByText('Connecting…')).not.toBeInTheDocument()
 
     openLatestWebSocket()
-    expect(screen.getByText('Connected')).toBeInTheDocument()
+    expect(screen.queryByText('LIVE')).not.toBeInTheDocument()
+    expect(screen.queryByText('Connected')).not.toBeInTheDocument()
+
+    act(() => latestWebSocket().close(1006))
+    expect(await screen.findByText('Reconnecting…')).toBeInTheDocument()
   })
 })
 
@@ -767,7 +771,7 @@ describe('squad lobby — the member Lobby', () => {
     expect(screen.getByText('#squad')).toBeInTheDocument()
     expect(screen.getByText(/^Created /)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
-    expect(screen.getByText('LIVE')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy squad link' })).toBeInTheDocument()
   })
 
   it('shows the platform chip right after the language', async () => {

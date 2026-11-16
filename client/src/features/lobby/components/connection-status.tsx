@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import type { RealtimeStatus } from '@/lib/ws-client'
@@ -6,58 +7,35 @@ interface ConnectionStatusProps {
   status: RealtimeStatus
 }
 
-const LABEL_KEYS = {
-  connecting: 'realtime.connecting',
-  open: 'realtime.connected',
-  reconnecting: 'realtime.reconnecting',
-  closed: 'realtime.disconnected',
-} as const satisfies Record<RealtimeStatus, string>
-
-const TONE_CLASSES: Record<RealtimeStatus, string> = {
-  connecting: 'bg-amber/10 text-amber',
-  open: 'bg-mint/8 text-mint',
-  reconnecting: 'bg-amber/10 text-amber',
-  closed: 'bg-danger-ground text-danger',
-}
-
 /**
- * The overall realtime connection (reference, Lobby): "LIVE" with a pulsing dot while connected, and the
- * state's own words otherwise. In a narrow row the pill is the dot alone, a square like the icon buttons
- * beside it; its text then stays for assistive technology (and as the tooltip), so the colour never
- * stands alone.
+ * The realtime connection, shown only when something is wrong. A live connection is implicit: the
+ * roster and readiness update on their own, so nothing marks it. A lost connection reads "Reconnecting…"
+ * while it retries, and "Disconnected" once it gives up. "Disconnected" waits for a connection that was
+ * open, so a page that has not connected yet never flashes it. In a narrow row the pill is the dot
+ * alone, a square like the icon buttons beside it; its text then stays for assistive technology (and as
+ * the tooltip), so the colour never stands alone.
  */
 export function ConnectionStatus({ status }: ConnectionStatusProps) {
-  const t = useTranslations()
-  const label = t(LABEL_KEYS[status])
-  const live = status === 'open'
+  const t = useTranslations('realtime')
+  const [wasOpen, setWasOpen] = useState(false)
+  if (status === 'open' && !wasOpen) setWasOpen(true)
+
+  const lost = status === 'closed' && wasOpen
+  if (status !== 'reconnecting' && !lost) return null
+
+  const label = lost ? t('disconnected') : t('reconnecting')
 
   return (
     <span
       role="status"
       title={label}
       className={cn(
-        'font-mono inline-flex min-h-11 min-w-11 items-center justify-center gap-2 text-[11.5px] font-bold tracking-[0.08em] whitespace-nowrap uppercase',
-        live ? '@min-[41rem]:px-3' : '@min-[45rem]:px-3',
-        TONE_CLASSES[status]
+        'font-mono inline-flex min-h-11 min-w-11 items-center justify-center gap-2 text-[11.5px] font-bold tracking-[0.08em] whitespace-nowrap uppercase @min-[45rem]:px-3',
+        lost ? 'bg-danger-ground text-danger' : 'bg-amber/10 text-amber'
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cn(
-          'size-1.75 rounded-full bg-current',
-          live && 'motion-safe:animate-[pulse_1.6s_ease-in-out_infinite]'
-        )}
-      />
-      {live ? (
-        <>
-          <span aria-hidden="true" className="hidden @min-[41rem]:inline">
-            {t('ds.lobby.live')}
-          </span>
-          <span className="sr-only">{label}</span>
-        </>
-      ) : (
-        <span className="sr-only @min-[45rem]:not-sr-only">{label}</span>
-      )}
+      <span aria-hidden="true" className="size-1.75 rounded-full bg-current" />
+      <span className="sr-only @min-[45rem]:not-sr-only">{label}</span>
     </span>
   )
 }
