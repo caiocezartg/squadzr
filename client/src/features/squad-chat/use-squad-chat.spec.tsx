@@ -124,6 +124,42 @@ describe('reading the history', () => {
   })
 })
 
+describe('refreshing', () => {
+  it('reads the history again, showing what others sent since', async () => {
+    const { result } = renderChat(createTestQueryClient())
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    onHttp('GET', '/api/rooms/:code/messages', () =>
+      httpOk(
+        history(stored('a', '2026-01-01T10:00:00.000Z'), stored('c', '2026-01-01T10:02:00.000Z'))
+      )
+    )
+
+    act(() => result.current.refresh())
+
+    await waitFor(() =>
+      expect(result.current.messages.map((message) => message.id)).toEqual([uid('a'), uid('c')])
+    )
+    expect(result.current.status).toBe('ready')
+  })
+
+  it('does not read while a send is pending', async () => {
+    const reply = deferred<MockHttpResponse>()
+    onHttp('POST', '/api/rooms/:code/messages', () => reply.promise)
+    const { result } = renderChat(createTestQueryClient())
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    act(() => {
+      void result.current.send('pending')
+    })
+    await waitFor(() => expect(result.current.isSending).toBe(true))
+    const reads = countHttpCalls('GET', '/api/rooms/:code/messages')
+
+    act(() => result.current.refresh())
+    await act(async () => {})
+
+    expect(countHttpCalls('GET', '/api/rooms/:code/messages')).toBe(reads)
+  })
+})
+
 describe('sending', () => {
   async function readyChat(queryClient = createTestQueryClient()) {
     const view = renderChat(queryClient)

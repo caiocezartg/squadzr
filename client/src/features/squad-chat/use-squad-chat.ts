@@ -49,6 +49,11 @@ export interface SquadChat {
   send: (text: string) => Promise<SendChatOutcome>
   /** Reads the history again after it failed. */
   retry: () => void
+  /**
+   * Reads the history again in the background, as the window opens, so it shows what others sent since.
+   * It waits for no pending send, and skips while one is pending, so the read cannot drop that message.
+   */
+  refresh: () => void
 }
 
 export interface UseSquadChatOptions {
@@ -195,7 +200,16 @@ export function useSquadChat(squadCode: string, options: UseSquadChatOptions): S
     void history.refetch()
   }, [history])
 
+  const refresh = useCallback(() => {
+    if (!options.enabled || sendingRef.current) return
+    // A read already running is kept rather than started over.
+    void queryClient.invalidateQueries(
+      { queryKey: squadChatQueryKey(code) },
+      { cancelRefetch: false }
+    )
+  }, [code, options.enabled, queryClient])
+
   const status: SquadChatStatus = history.data ? 'ready' : history.isError ? 'error' : 'loading'
 
-  return { status, messages, isSending, send, retry }
+  return { status, messages, isSending, send, retry, refresh }
 }

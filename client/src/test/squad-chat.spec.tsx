@@ -182,6 +182,19 @@ describe('the history', () => {
     expect(within(reopened).getByText('oi time')).toBeInTheDocument()
   })
 
+  it('reads the history again when the window reopens', async () => {
+    await openMemberLobby()
+    const chat = await openChat()
+    await within(chat).findByText('oi time')
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    registerRoutes([...HISTORY, message(3, ANA, 'cheguei')])
+
+    const reopened = await openChat()
+
+    expect(await within(reopened).findByText('cheguei')).toBeInTheDocument()
+  })
+
   it('shows the error with a retry that reads again', async () => {
     onHttp('GET', '/api/rooms/:code/messages', () =>
       httpError(500, { error: 'INTERNAL_ERROR', message: 'boom' })

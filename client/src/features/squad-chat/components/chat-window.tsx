@@ -36,10 +36,9 @@ export function ChatWindow({ open, onOpenChange, launcherRef, meta, children }: 
         title={t('title')}
         open={open}
         onOpenChange={onOpenChange}
-        className="h-[85dvh] gap-0 overflow-hidden p-0 pb-[env(safe-area-inset-bottom)]"
-        closeClassName="top-2.5 right-2.5"
+        className="bg-panel h-[85dvh] gap-0 overflow-hidden px-0 pt-5 pb-[env(safe-area-inset-bottom)] [&>h2]:mb-1.5 [&>h2]:pl-5"
       >
-        <div className="text-muted -mt-2 px-5 pb-3">{meta}</div>
+        <div className="text-muted px-5 pb-3">{meta}</div>
         <div className="border-line flex min-h-0 flex-1 flex-col border-t">
           {children(textareaRef)}
         </div>

@@ -30,7 +30,7 @@ export function SquadChatDock({ squadCode, memberCount, enabled }: SquadChatDock
   const [draft, setDraft] = useState('')
   const [failed, setFailed] = useState(false)
   const launcherRef = useRef<HTMLButtonElement>(null)
-  const { send } = chat
+  const { send, refresh } = chat
 
   const handleDraftChange = useCallback((next: string) => {
     setDraft(next)
@@ -57,7 +57,10 @@ export function SquadChatDock({ squadCode, memberCount, enabled }: SquadChatDock
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (!open) refresh()
+          setOpen(!open)
+        }}
         className="press bg-mint text-mint-ink hover-fine:bg-mint-hover focus-visible:outline-text fixed right-5 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex h-12 items-center gap-2 px-4.5 shadow-[0_12px_32px_-12px_rgba(0,255,162,0.55)] focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <MessageSquare aria-hidden="true" className="size-4.5" strokeWidth={2.6} />
