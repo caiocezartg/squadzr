@@ -104,14 +104,14 @@ describe('(app) layout server render', () => {
     expect(html).toContain(memberSquad.name)
   })
 
-  it('makes no read of My squads for a visitor, and shows the sign-in call to action', async () => {
+  it('makes no read of My squads for a visitor, and leaves the section out', async () => {
     signOutFakeUser()
     createHarnessNavigation('/squads')
 
     const html = await layoutHtml(<p>The page</p>, null)
 
     expect(countHttpCalls('GET', '/api/rooms/my')).toBe(0)
-    expect(html).toContain('Sign in to see the squads you host or joined.')
+    expect(html).not.toContain('My squads')
   })
 
   it('leaves the list to the browser when the server read fails', async () => {

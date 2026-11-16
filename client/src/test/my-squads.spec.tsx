@@ -97,7 +97,9 @@ describe('sidebar my squads — list', () => {
     expect(links[0]).toHaveTextContent('One slot left')
     expect(links[1]).toHaveTextContent('Newer squad')
     expect(links[2]).toHaveTextContent('Older squad')
-    expect(section).toHaveTextContent('My squads3')
+    // The heading carries no count: the list itself shows how many squads there are.
+    expect(section).toHaveTextContent(/^My squads/)
+    expect(section).not.toHaveTextContent(/^My squads\d/)
   })
 
   it('links each item to its Lobby and marks only the squad being viewed as current', async () => {
@@ -155,17 +157,13 @@ describe('sidebar my squads — list', () => {
     expect(openItem.querySelector('span[aria-hidden="true"].text-mint')).not.toBeNull()
   })
 
-  it('shows a sign-in call to action to a visitor, with no read of the list', async () => {
+  it('leaves the section out for a visitor, with no read of the list', async () => {
     registerMySquads(() => ({ hosted: [older], joined: [] }))
-    const { user } = renderSquadsFlow('/squads', { shell: true, user: null })
+    renderSquadsFlow('/squads', { shell: true, user: null })
     const menu = await sidebar()
 
-    const section = menu.getByRole('region', { name: 'My squads' })
-    expect(within(section).getByText('Sign in to see the squads you host or joined.')).toBeVisible()
-    expect(within(section).queryByRole('link')).not.toBeInTheDocument()
-
-    await user.click(within(section).getByRole('button', { name: 'Sign in' }))
-    expect(authStore.signInSocialCalls[0]).toMatchObject({ provider: 'discord' })
+    // The account button already offers the sign-in, so the section adds nothing for a visitor.
+    expect(menu.queryByRole('region', { name: 'My squads' })).not.toBeInTheDocument()
     expect(countHttpCalls('GET', '/api/rooms/my')).toBe(0)
   })
 })

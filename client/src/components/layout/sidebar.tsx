@@ -76,7 +76,8 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
       <SidebarMySquads onNavigate={onNavigate} />
 
-      <div className="flex flex-col gap-2.5">
+      {/* Without the viewer's squads, which take the room left, the controls still sit at the foot. */}
+      <div className="mt-auto flex flex-col gap-2.5">
         <LanguageToggle />
         <UserMenu />
       </div>
