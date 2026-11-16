@@ -5,8 +5,11 @@ import { MessageSquare } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useSession } from '@/hooks/use-session'
 import { useSquadChat, type SquadChatChannel } from '../use-squad-chat'
+import type { TypingMember } from '../use-squad-typing'
+import { useTypingSender } from '../use-typing-sender'
 import { ChatComposer } from './chat-composer'
 import { ChatMessages } from './chat-messages'
+import { ChatTyping } from './chat-typing'
 import { ChatWindow } from './chat-window'
 
 /** The badge shows counts above this one as `99+`; the label read aloud keeps the exact count. */
@@ -20,6 +23,10 @@ export interface SquadChatDockProps {
   readonly memberCount: number
   /** Only a member reads and writes the chat. */
   readonly enabled: boolean
+  /** The Squad is complete: its chat is read-only, so the composer signals no typing. */
+  readonly isReady: boolean
+  /** Who is typing, from the Lobby's `useSquadTyping`, for the window's footer. */
+  readonly typers: readonly TypingMember[]
 }
 
 /**
@@ -27,7 +34,14 @@ export interface SquadChatDockProps {
  * chat's data and the draft live here, above the window, so a pending send and an unsent draft survive
  * the window closing. The Lobby reserves room at its foot, so the launcher never covers its actions.
  */
-export function SquadChatDock({ squadCode, channel, memberCount, enabled }: SquadChatDockProps) {
+export function SquadChatDock({
+  squadCode,
+  channel,
+  memberCount,
+  enabled,
+  isReady,
+  typers,
+}: SquadChatDockProps) {
   const t = useTranslations('chat')
   const viewerId = useSession()?.user.id ?? ''
   const [open, setOpen] = useState(false)
@@ -37,11 +51,16 @@ export function SquadChatDock({ squadCode, channel, memberCount, enabled }: Squa
   const launcherRef = useRef<HTMLButtonElement>(null)
   const unreadId = useId()
   const { send } = chat
+  const signalTyping = useTypingSender(squadCode, channel, { enabled, isReady })
 
-  const handleDraftChange = useCallback((next: string) => {
-    setDraft(next)
-    setFailed(false)
-  }, [])
+  const handleDraftChange = useCallback(
+    (next: string) => {
+      setDraft(next)
+      setFailed(false)
+      signalTyping(next)
+    },
+    [signalTyping]
+  )
 
   const handleSend = useCallback(async () => {
     const text = draft
@@ -111,6 +130,7 @@ export function SquadChatDock({ squadCode, channel, memberCount, enabled }: Squa
               olderFailed={chat.olderFailed}
               onReachTop={() => void chat.fetchOlder()}
             />
+            <ChatTyping typers={typers} />
             <ChatComposer
               draft={draft}
               onDraftChange={handleDraftChange}

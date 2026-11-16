@@ -7,7 +7,9 @@ import { AddressConnections } from './address-connections'
 import { parseIncomingMessage } from './incoming-message'
 import { InvalidMessages, INVALID_MESSAGE_LIMIT } from './invalid-messages'
 import { MessageRate, PING_RATE_LIMIT } from './message-rate'
+import { TypingThrottle } from './typing-throttle'
 import type { Realtime, WsClient } from './types'
+import { handleChatTyping } from './handlers/chat.handler'
 import {
   handleJoinRoom,
   handleLeaveRoom,
@@ -116,6 +118,7 @@ async function wsPlugin(
     // A socket that keeps sending past its rate is looping, not lagging: it is closed like one that keeps
     // sending invalid frames.
     const refused = new InvalidMessages(fastify.clock)
+    const typingThrottle = new TypingThrottle(fastify.clock)
     let inFlight = 0
 
     function dispatch(message: WsIncomingMessage): void | Promise<void> {
@@ -132,6 +135,8 @@ async function wsPlugin(
           return handleSubscribeLobby(socket, manager, fastify.clock)
         case 'unsubscribe_lobby':
           return handleUnsubscribeLobby(socket, manager)
+        case 'chat_typing':
+          return handleChatTyping(socket, message, manager, broadcaster, typingThrottle)
         case 'ping':
           client.send({ type: 'pong', timestamp: fastify.clock.now().getTime() })
       }

@@ -96,4 +96,25 @@ describe('MemberTile', () => {
 
     expect(within(row).getByText('MI')).toBeInTheDocument()
   })
+
+  it('draws typing dots, still under reduced motion, beside the name and says "Typing" in words', () => {
+    const row = renderTile({ playerId: 'p2', name: 'mia', online: true, typing: true })
+
+    const dots = within(row).getByTestId('typing-dots')
+    expect(dots).toHaveAttribute('aria-hidden', 'true')
+    for (const dot of dots.children) expect(dot).toHaveClass('motion-safe:animate-typing-dot')
+    expect([...dots.children].map((dot) => (dot as HTMLElement).style.animationDelay)).toEqual([
+      '0ms',
+      '150ms',
+      '300ms',
+    ])
+    expect(within(row).getByText('Typing')).toHaveClass('sr-only')
+  })
+
+  it('draws no typing dots for a player who is not typing', () => {
+    const row = renderTile({ playerId: 'p2', name: 'mia', online: true })
+
+    expect(within(row).queryByTestId('typing-dots')).not.toBeInTheDocument()
+    expect(within(row).queryByText('Typing')).not.toBeInTheDocument()
+  })
 })

@@ -6,6 +6,9 @@ export const CHAT = {
   MESSAGE_MAX_LENGTH: 500,
   MESSAGE_MAX_LINE_BREAKS: 10,
   HISTORY_PAGE_SIZE: 50,
+  // Typing: a client signals at most once per throttle, and a signal lives one TTL.
+  TYPING_THROTTLE_MS: 2_000,
+  TYPING_TTL_MS: 4_000,
 } as const
 
 // U+200B to U+200D and U+FEFF render as nothing, so a body made only of them is empty. They are ignored

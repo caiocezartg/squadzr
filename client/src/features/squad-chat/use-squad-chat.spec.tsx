@@ -90,7 +90,11 @@ function renderChat(queryClient: QueryClient, enabled = true, initial: Partial<C
     (props: ChannelProps) =>
       useSquadChat(
         CODE,
-        { status: props.status, membershipRevoked: props.membershipRevoked, on: live.on },
+        {
+          status: props.status,
+          membershipRevoked: props.membershipRevoked,
+          on: live.on,
+        },
         { enabled, open: props.open }
       ),
     { wrapper: Providers(queryClient), initialProps: current }

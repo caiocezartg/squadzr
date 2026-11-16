@@ -35,6 +35,8 @@ export interface SquadChannel {
   dismissError: () => void
   /** Tells the server this tab is leaving the squad channel (Presence only). */
   notifySquadLeave: (squadCode: string) => void
+  /** Tells the server this member is typing in the Squad's chat; it forwards it to the other members. */
+  notifyTyping: (squadCode: string) => void
 }
 
 /**
@@ -150,6 +152,11 @@ export function useSquadChannel({
     [send]
   )
 
+  const notifyTyping = useCallback(
+    (code: string) => send({ type: 'chat_typing', payload: { roomCode: code } }),
+    [send]
+  )
+
   return {
     status,
     snapshot,
@@ -159,5 +166,6 @@ export function useSquadChannel({
     on,
     dismissError,
     notifySquadLeave,
+    notifyTyping,
   }
 }

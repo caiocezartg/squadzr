@@ -94,6 +94,13 @@
   */
   --animate-line-draw: line-draw 800ms var(--ease-out) both;
 
+  /*
+    The Squad Chat's typing dots: each dot bobs 3px over 1.2s, the three staggered by 0.15s
+    (src/components/ds/typing-dots.tsx). Used behind `motion-safe:` only, so under reduced motion the
+    dots stay still at full opacity.
+  */
+  --animate-typing-dot: typing-dot 1.2s ease-in-out infinite;
+
   @keyframes halo {
     0% {
       opacity: 0.45;
@@ -204,6 +211,16 @@
     from {
       opacity: 0;
       transform: translateY(40%);
+    }
+  }
+  @keyframes typing-dot {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+    }
+    30% {
+      transform: translateY(-3px);
     }
   }
   @keyframes line-draw {

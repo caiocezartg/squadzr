@@ -38,14 +38,22 @@ export type SendChatOutcome =
     }
 
 /**
- * What the chat needs of the Lobby's realtime channel: the connection status, to read the history again
- * after a reconnect, whether the Membership was revoked, and the socket's event registration.
+ * What the chat window needs of the Lobby's realtime channel: what the history reads (see
+ * `ChatHistoryChannel`) and the typing signal its composer sends.
  */
 export interface SquadChatChannel {
   readonly status: RealtimeStatus
   readonly membershipRevoked: boolean
   readonly on: RealtimeEventSubscribe
+  /** Signals that the viewer is typing in this Squad; a signal sent while the socket is down is lost. */
+  readonly notifyTyping: (squadCode: string) => void
 }
+
+/**
+ * What the history and its live messages need of the channel: the connection status, to read the history
+ * again after a reconnect, whether the Membership was revoked, and the socket's event registration.
+ */
+export type ChatHistoryChannel = Pick<SquadChatChannel, 'status' | 'membershipRevoked' | 'on'>
 
 export interface SquadChat {
   /** `loading` only while the cache holds nothing for this Squad: a warm cache is `ready` at once. */
@@ -143,7 +151,7 @@ function readHistoryAgain(queryClient: QueryClient, squadCode: string): void {
 interface ConvergeOptions {
   readonly code: string
   readonly enabled: boolean
-  readonly channel: SquadChatChannel
+  readonly channel: ChatHistoryChannel
   readonly readAgain: () => void
 }
 
@@ -174,7 +182,7 @@ function useConvergeOnSnapshot({ code, enabled, channel, readAgain }: ConvergeOp
 
 interface LiveChatOptions {
   readonly code: string
-  readonly channel: SquadChatChannel
+  readonly channel: ChatHistoryChannel
   readonly enabled: boolean
   readonly open: boolean
   /** A send is pending: a read of the history would drop its message, so it waits for the send. */
@@ -296,7 +304,7 @@ function useOlderPages(code: string, data: ChatHistoryData | undefined, pendingI
  */
 export function useSquadChat(
   squadCode: string,
-  channel: SquadChatChannel,
+  channel: ChatHistoryChannel,
   options: UseSquadChatOptions
 ): SquadChat {
   const queryClient = useQueryClient()

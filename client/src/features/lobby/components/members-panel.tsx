@@ -51,6 +51,8 @@ interface MembersPanelProps {
    * placeholders instead of reading as an empty Squad.
    */
   pending?: boolean
+  /** The members typing in the Squad Chat; their tiles draw the typing dots. */
+  typingIds?: ReadonlySet<string>
 }
 
 /**
@@ -67,6 +69,7 @@ export function MembersPanel({
   viewerId,
   isReady,
   pending = false,
+  typingIds,
 }: MembersPanelProps) {
   const t = useTranslations('ds.lobby')
   const reducedMotion = useReducedMotion()
@@ -148,6 +151,7 @@ export function MembersPanel({
             you: player.id === viewerId,
             online: presence ? (memberPresence?.online ?? false) : undefined,
             offlineSince: memberPresence?.offlineSince ?? null,
+            typing: typingIds?.has(player.id) ?? false,
             profile: {
               onOpen: () => profileLink.open(player.id),
               onPreview: () => profileLink.prefetch(player.id),
