@@ -450,6 +450,7 @@
     "retry": "Try again",
     "sendFailed": "Your message was not sent. Try again.",
     "cooldown": "Easy there — send again in {seconds}s",
+    "cooldownAnnouncement": "Too many messages in a row. You can send again in {seconds, plural, one {# second} other {# seconds}}.",
     "readOnly": "Squad complete — the chat is now read-only",
     "sending": "Sending",
     "today": "Today",

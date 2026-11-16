@@ -23,7 +23,7 @@ function parseError(error: FastifyError | Error): ParsedError {
       response: {
         error: error.code,
         message: error.message,
-        ...(error.retryAfterMs && { retryAfterMs: error.retryAfterMs }),
+        ...(error.retryAfterMs !== undefined && { retryAfterMs: error.retryAfterMs }),
       },
     }
   }

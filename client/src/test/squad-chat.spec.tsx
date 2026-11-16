@@ -953,6 +953,34 @@ describe('the cooldown', () => {
     }
   })
 
+  it('drains the bar with CSS over the cooldown and announces the wait once', async () => {
+    refuseSends(429, { error: 'CHAT_RATE_LIMITED', message: 'slow down', retryAfterMs: 6_000 })
+    const chat = await openChatWindow()
+    await userEvent.type(field(chat), 'rápido')
+    try {
+      await sendUnderFakeTimers(chat)
+
+      const bar = within(chat).getByTestId('chat-cooldown-bar')
+      expect(bar.style.getPropertyValue('--cooldown-duration')).toBe('6000ms')
+      expect(bar.style.getPropertyValue('--cooldown-delay')).toBe('0ms')
+      const announcement = 'Too many messages in a row. You can send again in 6 seconds.'
+      expect(within(chat).getByRole('status')).toHaveTextContent(announcement)
+
+      act(() => vi.advanceTimersByTime(3_000))
+
+      expect(within(chat).getByText('Easy there — send again in 3s')).toBeInTheDocument()
+      expect(within(chat).getByTestId('chat-cooldown-bar')).toBe(bar)
+      expect(within(chat).getByRole('status')).toHaveTextContent(announcement)
+
+      act(() => vi.advanceTimersByTime(3_000))
+
+      expect(within(chat).queryByTestId('chat-cooldown-bar')).not.toBeInTheDocument()
+      expect(within(chat).getByRole('status')).toBeEmptyDOMElement()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('starts from Retry-After when the global rate limit refuses', async () => {
     refuseSends(
       429,
@@ -1005,6 +1033,17 @@ describe('a Ready Squad chat', () => {
     expect(within(chat).queryByRole('textbox', { name: 'Message' })).not.toBeInTheDocument()
     expect(within(chat).queryByRole('button', { name: 'Send' })).not.toBeInTheDocument()
     expect(within(chat).getByText('oi time')).toBeInTheDocument()
+  })
+
+  it('shows the banner when the Squad turned Ready while the window was closed', async () => {
+    await openMemberLobby()
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+    const chat = await openChat()
+
+    expect(await within(chat).findByText(READ_ONLY)).toBeInTheDocument()
+    expect(within(chat).queryByRole('textbox', { name: 'Message' })).not.toBeInTheDocument()
+    expect(await within(chat).findByText('oi time')).toBeInTheDocument()
   })
 
   it('drops a running cooldown when the Squad turns Ready', async () => {

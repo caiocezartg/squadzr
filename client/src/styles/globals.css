@@ -534,3 +534,26 @@
     }
   }
 }
+
+/*
+  The Squad Chat's cooldown bar: it drains once from full to empty over the cooldown
+  (src/features/squad-chat/components/chat-composer.tsx). The element sets --cooldown-duration, the
+  negative --cooldown-delay of the time already gone, and --cooldown-steps; a theme token would resolve
+  them on :root, where they do not exist. Under reduced motion it drains one step a second instead of
+  gliding.
+*/
+@utility animate-cooldown-drain {
+  animation: cooldown-drain var(--cooldown-duration) linear var(--cooldown-delay) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation-timing-function: steps(var(--cooldown-steps), end);
+  }
+}
+
+@keyframes cooldown-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

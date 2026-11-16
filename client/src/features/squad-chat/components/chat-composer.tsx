@@ -1,7 +1,7 @@
 'use client'
 
-import { useId, type KeyboardEvent, type RefObject } from 'react'
-import { SendHorizontal } from 'lucide-react'
+import { useId, useState, type CSSProperties, type KeyboardEvent, type RefObject } from 'react'
+import { Lock, SendHorizontal } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { CHAT, chatMessageBodySchema } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
@@ -54,7 +54,11 @@ export function ChatComposer({
 
   if (readOnly) {
     return (
-      <p role="status" className="border-line text-muted border-t p-3 text-[13px] font-semibold">
+      <p
+        role="status"
+        className="border-line bg-card text-text-2 flex min-h-17.25 items-center gap-2.5 border-t px-4 py-3 text-[13px] leading-snug font-semibold"
+      >
+        <Lock aria-hidden="true" className="text-mint size-4 shrink-0" strokeWidth={2.4} />
         {t('readOnly')}
       </p>
     )
@@ -62,7 +66,7 @@ export function ChatComposer({
 
   return (
     <form
-      className="border-line flex flex-col gap-1.5 border-t p-3"
+      className="border-line relative flex flex-col gap-1.5 border-t p-3"
       onSubmit={(event) => {
         event.preventDefault()
         if (canSend) onSend()
@@ -93,11 +97,18 @@ export function ChatComposer({
           <SendHorizontal aria-hidden="true" className="size-4.5" strokeWidth={2.4} />
         </button>
       </div>
+      {cooldown && <CooldownBar key={cooldown.endsAt} cooldown={cooldown} />}
       {cooldown && (
-        <p className="text-amber text-[12px] font-semibold">
+        <p aria-hidden="true" className="text-amber text-[12px] font-semibold tabular-nums">
           {t('cooldown', { seconds: cooldown.remainingSeconds })}
         </p>
       )}
+      {/* Said once when a cooldown starts: the seconds shown above change every second and stay silent. */}
+      <p role="status" className="sr-only">
+        {cooldown
+          ? t('cooldownAnnouncement', { seconds: Math.ceil(cooldown.durationMs / 1000) })
+          : null}
+      </p>
       {(failed || length >= COUNTER_FROM) && (
         <div className="flex items-start justify-between gap-3">
           <p id={errorId} role="alert" className="text-danger text-[12px] font-semibold">
@@ -113,5 +124,28 @@ export function ChatComposer({
         </div>
       )}
     </form>
+  )
+}
+
+/**
+ * The bar along the composer's top edge that drains from full to empty over the cooldown. CSS runs it
+ * from the cooldown's length, offset by the time already gone when it mounts, so the redraws of the
+ * seconds left never touch it. A new cooldown is a new bar: the parent keys it by `endsAt`.
+ */
+function CooldownBar({ cooldown }: { readonly cooldown: ChatCooldown }) {
+  const [elapsedMs] = useState(() => cooldown.durationMs - cooldown.remainingMs)
+  const style = {
+    '--cooldown-duration': `${cooldown.durationMs}ms`,
+    '--cooldown-delay': `${-elapsedMs}ms`,
+    '--cooldown-steps': Math.max(1, Math.ceil(cooldown.durationMs / 1000)),
+  } as CSSProperties
+  return (
+    <div aria-hidden="true" className="bg-amber/15 absolute inset-x-0 -top-px h-0.5">
+      <div
+        data-testid="chat-cooldown-bar"
+        style={style}
+        className="bg-amber animate-cooldown-drain h-full origin-left"
+      />
+    </div>
   )
 }

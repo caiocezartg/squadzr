@@ -450,6 +450,7 @@
     "retry": "Tentar de novo",
     "sendFailed": "Sua mensagem não foi enviada. Tente de novo.",
     "cooldown": "Calma aí — envie de novo em {seconds}s",
+    "cooldownAnnouncement": "Muitas mensagens seguidas. Você pode enviar de novo em {seconds, plural, one {# segundo} other {# segundos}}.",
     "readOnly": "Squad completo — o chat ficou só leitura",
     "sending": "Enviando",
     "today": "Hoje",
