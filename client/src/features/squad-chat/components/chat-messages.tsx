@@ -8,7 +8,6 @@ import { Button } from '@/components/ds/button'
 import { VIEWER_TIME_ZONE } from '@/hooks/use-time-ago'
 import { cn } from '@/lib/utils'
 import { groupMessages, type DayDivider, type MessageGroup } from '../group-messages'
-import { linkifyText } from '../linkify-text'
 import type { SquadChatMessage } from '../squad-chat-message'
 import type { SquadChatStatus } from '../use-squad-chat'
 
@@ -322,30 +321,9 @@ function Bubble({ message, own }: { readonly message: SquadChatMessage; readonly
         message.pending && 'opacity-55'
       )}
     >
-      <MessageBody body={message.body} />
+      <span>{message.body}</span>
       {message.pending && <span className="sr-only"> ({t('sending')})</span>}
     </li>
-  )
-}
-
-/** The body as plain text, its links as anchors that open in a new tab. Never rendered as HTML. */
-function MessageBody({ body }: { readonly body: string }) {
-  const segments = useMemo(() => linkifyText(body), [body])
-
-  return segments.map((segment, index) =>
-    segment.type === 'link' ? (
-      <a
-        key={index}
-        href={segment.href}
-        target="_blank"
-        rel="noopener noreferrer nofollow ugc"
-        className="text-mint hover-fine:text-mint-hover underline decoration-1 underline-offset-2"
-      >
-        {segment.text}
-      </a>
-    ) : (
-      <span key={index}>{segment.text}</span>
-    )
   )
 }
 

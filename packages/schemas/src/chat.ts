@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { containsLink } from './chat-link'
 import { isoDateTimeSchema } from './date'
 
 // Squad Chat limits shared by the API and the client, so the composer refuses what the server would.
@@ -30,7 +31,8 @@ function countLineBreaks(body: string): number {
   return body.split('\n').length - 1
 }
 
-// The length limit applies to the stored body, so it always fits the column's check.
+// The length limit applies to the stored body, so it always fits the column's check. Links are refused, so
+// the Discord invite is shared only by the complete Squad.
 export const chatMessageBodySchema = z
   .string()
   .transform(normalizeBody)
@@ -41,6 +43,10 @@ export const chatMessageBodySchema = z
       .max(CHAT.MESSAGE_MAX_LENGTH, `Message must be at most ${CHAT.MESSAGE_MAX_LENGTH} characters`)
       .refine((body) => countLineBreaks(body) <= CHAT.MESSAGE_MAX_LINE_BREAKS, {
         message: `Message can have at most ${CHAT.MESSAGE_MAX_LINE_BREAKS} line breaks`,
+      })
+      // A body over the limit is already refused, so the link check never scans an oversized one.
+      .refine((body) => body.length > CHAT.MESSAGE_MAX_LENGTH || !containsLink(body), {
+        message: 'Links are not allowed in the chat',
       })
   )
 

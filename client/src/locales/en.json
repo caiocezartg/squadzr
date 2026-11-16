@@ -449,6 +449,7 @@
     "loadFailed": "We could not load the chat.",
     "retry": "Try again",
     "sendFailed": "Your message was not sent. Try again.",
+    "linksNotAllowed": "Links are not allowed in the chat.",
     "cooldown": "Easy there — send again in {seconds}s",
     "cooldownAnnouncement": "Too many messages in a row. You can send again in {seconds, plural, one {# second} other {# seconds}}.",
     "readOnly": "Squad complete",

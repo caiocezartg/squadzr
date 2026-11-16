@@ -213,6 +213,7 @@ describe('body validation', () => {
         .fill('a')
         .join('\n'),
     ],
+    ['a link', 'entra aí discord.gg/abc123'],
   ])('refuses a body that is %s', async (_label, body) => {
     const response = await send(member, { body })
 

@@ -12,7 +12,7 @@ import {
 } from 'react'
 import { Lock, SendHorizontal } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { CHAT, chatMessageBodySchema } from '@squadzr/schemas'
+import { CHAT, chatMessageBodySchema, containsLink } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
 import type { ChatCooldown } from '../use-chat-cooldown'
 
@@ -36,7 +36,8 @@ interface ChatComposerProps {
 
 /**
  * The message field: Enter sends, Shift+Enter adds a line. Send is enabled only for a body the shared
- * rules accept, while no other send is pending. The counter appears near the limit.
+ * rules accept, while no other send is pending. The counter appears near the limit, and a draft holding a
+ * link says links are not allowed.
  */
 export function ChatComposer({
   draft,
@@ -75,6 +76,8 @@ export function ChatComposer({
   const canSend = ready && !isSending && !cooldown && chatMessageBodySchema.safeParse(draft).success
   const length = draft.length
   const over = length > CHAT.MESSAGE_MAX_LENGTH
+  const hasLink = containsLink(draft)
+  const showError = failed || hasLink
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return
@@ -110,8 +113,8 @@ export function ChatComposer({
           value={draft}
           rows={1}
           aria-label={t('composerLabel')}
-          aria-describedby={failed ? errorId : undefined}
-          aria-invalid={over || undefined}
+          aria-describedby={showError ? errorId : undefined}
+          aria-invalid={over || hasLink || undefined}
           placeholder={t('placeholder')}
           onChange={(event) => onDraftChange(event.target.value)}
           onKeyDown={handleKeyDown}
@@ -141,10 +144,10 @@ export function ChatComposer({
           ? t('cooldownAnnouncement', { seconds: Math.ceil(cooldown.durationMs / 1000) })
           : null}
       </p>
-      {(failed || length >= COUNTER_FROM) && (
+      {(showError || length >= COUNTER_FROM) && (
         <div className="flex items-start justify-between gap-3">
           <p id={errorId} role="alert" className="text-danger text-[12px] font-semibold">
-            {failed ? t('sendFailed') : null}
+            {hasLink ? t('linksNotAllowed') : failed ? t('sendFailed') : null}
           </p>
           {length >= COUNTER_FROM && (
             <span

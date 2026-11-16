@@ -13,7 +13,6 @@
  *   (it ends by itself) and the Ready Squad's read-only chat.
  * - `useSquadChatCommands` drops a Squad's chat cache when the viewer loses access to it.
  * - `groupMessages` lays the messages out as the window draws them: day dividers and author groups.
- * - `linkifyText` splits a message body into text and safe links.
  */
 export {
   useSquadChat,
@@ -40,5 +39,4 @@ export {
   type GroupMessagesOptions,
   type MessageGroup,
 } from './group-messages'
-export { linkifyText, type LinkifySegment } from './linkify-text'
 export { SquadChatDock, type SquadChatDockProps } from './components/squad-chat-dock'
