@@ -63,7 +63,27 @@ const WITH_PATH = String.raw`${NOT_AFTER}${DOMAIN}\p{L}{2,}\/`
 
 const LINK = new RegExp([SCHEME, WWW, KNOWN_TLD, WITH_PATH].join('|'), 'iu')
 
-/** True when the text holds a link the Squad Chat refuses. */
+// A link spelled out to slip past the check: `discord . gg / abc`, `discord(.)gg`, `discord. gg/abc`.
+// A dot in brackets, or a fullwidth one, is a dot. Spaces before a dot and around a slash are dropped, as
+// no sentence puts them there. A space after a dot is dropped only when a path follows, since a sentence
+// ends with ". " ("Foi bom. Com certeza" must stay a sentence).
+const BRACKETED_DOT = /\s*[([{]\s*[.．。]\s*[)\]}]\s*/gu
+const WIDE_DOT = /[．。]/gu
+const SPACED_SLASH = /\s*\/\s*/g
+const SPACE_BEFORE_DOT = /\s+\.\s*/g
+const SPACE_AFTER_DOT_BEFORE_PATH = /\.\s+(?=[\p{L}\p{N}-]+\/)/gu
+
+/** The text with the spelled-out separators of a link joined back, for a second look. */
+function joinSpacedSeparators(text: string): string {
+  return text
+    .replace(BRACKETED_DOT, '.')
+    .replace(WIDE_DOT, '.')
+    .replace(SPACED_SLASH, '/')
+    .replace(SPACE_BEFORE_DOT, '.')
+    .replace(SPACE_AFTER_DOT_BEFORE_PATH, '.')
+}
+
+/** True when the text holds a link the Squad Chat refuses, typed plainly or spelled out with spaces. */
 export function containsLink(text: string): boolean {
-  return LINK.test(text)
+  return LINK.test(text) || LINK.test(joinSpacedSeparators(text))
 }

@@ -24,6 +24,15 @@ describe('containsLink', () => {
     'link: steamcommunity.com',
     'loja.xyz/oferta',
     'olá.com',
+    'discord . com / server / alguma-coisa',
+    'discord .gg/abc',
+    'discord. gg/abc',
+    'discord. gg / abc',
+    'discord(.)gg/abc',
+    'discord[.]com',
+    'discord ( . ) gg',
+    'discord．gg/abc',
+    'discord . gg',
   ])('finds the link in %j', (text) => {
     expect(containsLink(text)).toBe(true)
   })
@@ -43,6 +52,14 @@ describe('containsLink', () => {
     'reticências...com calma',
     'km/h',
     '3/5 vagas',
+    '3 / 5 vagas',
+    'Foi bom. Com certeza',
+    'Ganhamos. Me chama amanhã',
+    'GG. Bora de novo',
+    'espera . . . com calma',
+    'top 1. eu sou o melhor',
+    'ok (.) beleza',
+    'mid/top / bot',
   ])('finds no link in %j', (text) => {
     expect(containsLink(text)).toBe(false)
   })
