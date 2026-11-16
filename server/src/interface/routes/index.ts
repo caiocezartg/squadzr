@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { adminRoutes } from './admin.routes'
+import { chatRoutes } from './chat.routes'
 import { discordRoutes, type DiscordRoutesOptions } from './discord.routes'
 import { healthRoutes } from './health.routes'
 import { roomRoutes } from './room.routes'
@@ -16,6 +17,7 @@ export async function registerRoutes(
   await fastify.register(healthRoutes)
   await fastify.register(discordRoutes, options.discord ?? {})
   await fastify.register(roomRoutes)
+  await fastify.register(chatRoutes)
   await fastify.register(userRoutes)
   await fastify.register(adminRoutes)
 }

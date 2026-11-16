@@ -280,3 +280,13 @@ export {
   type SquadPreviewKey,
 } from './squad-preview'
 export { RAIL_LIMIT, avatarRail, type AvatarRail, type RailSlot } from './avatar-rail'
+export {
+  CHAT,
+  chatHistoryResponseSchema,
+  chatMessageBodySchema,
+  chatMessageSchema,
+  sendChatMessageRequestSchema,
+  type ChatHistoryResponse,
+  type ChatMessageDto,
+  type SendChatMessageRequest,
+} from './chat'
