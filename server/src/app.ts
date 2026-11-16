@@ -133,7 +133,14 @@ export async function buildApp({
   })
 
   fastify.decorate('clock', clock ?? new SystemClock())
-  fastify.decorate('discordPreviews', discordPreviews ?? createDiscordInvitePreviews(fastify.clock))
+  fastify.decorate(
+    'discordPreviews',
+    discordPreviews ??
+      createDiscordInvitePreviews(fastify.clock, {
+        ...(env.DISCORD_BOT_TOKEN === undefined ? {} : { botToken: env.DISCORD_BOT_TOKEN }),
+        logger: fastify.log,
+      })
+  )
 
   // Route schemas validate and serialize all HTTP input and output: set them before any route.
   fastify.setValidatorCompiler(validatorCompiler)

@@ -125,7 +125,7 @@ export async function roomRoutes(fastify: FastifyInstance): Promise<void> {
       tags: ['Rooms'],
       summary: 'Get the Discord server behind a Ready Room',
       description:
-        'Returns the name, icon, backdrop and member counts of the Discord server the Ready Room invites to, read from Discord by the server and cached for ten minutes. The preview is null whenever Discord has nothing to show (invalid or expired invite, Discord down or rate limiting), so the caller falls back to the data of the Room itself. Only members of a Ready Room may ask. Requires authentication.',
+        'Returns the name, icon, backdrop and member counts of the Discord server the Ready Room invites to, read from Discord by the server and cached per invite: ten minutes for an invite found, one minute for an invalid or expired one, ten seconds when Discord is unreachable and up to ten seconds when it is rate limiting. The preview is null whenever Discord has nothing to show (invalid or expired invite, Discord down or rate limiting), so the caller falls back to the data of the Room itself. Only members of a Ready Room may ask. Requires authentication.',
       security: [{ session: [] }],
       params: roomCodeParamSchema,
       response: {

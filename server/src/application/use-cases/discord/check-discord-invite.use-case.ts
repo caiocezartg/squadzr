@@ -1,5 +1,6 @@
 import type { DiscordInviteCheckResponse } from '@squadzr/schemas'
 import type { DiscordInvitePreviewProvider } from '@domain/services/discord-invite-preview-provider.interface'
+import { voiceCallOf } from '@domain/services/voice-call'
 
 export interface CheckDiscordInviteInput {
   readonly code: string
@@ -10,8 +11,9 @@ export interface ICheckDiscordInviteUseCase {
 }
 
 /**
- * What Discord says about an invite a Squad creator typed. Discord being slow, down or rate limiting is
- * no verdict on the invite, so it comes back as `unknown` rather than `invalid`.
+ * What Discord says about an invite a Squad creator typed. An invite that exists is `valid` only when it
+ * points to a Voice Call, and `not_voice_call` otherwise. Discord being slow, down or rate limiting is no
+ * verdict on the invite, so it comes back as `unknown` rather than `invalid`.
  */
 export class CheckDiscordInviteUseCase implements ICheckDiscordInviteUseCase {
   constructor(private readonly previews: DiscordInvitePreviewProvider) {}
@@ -20,7 +22,10 @@ export class CheckDiscordInviteUseCase implements ICheckDiscordInviteUseCase {
     const outcome = await this.previews.fetch(input.code)
 
     switch (outcome.kind) {
-      case 'found':
+      case 'found': {
+        const call = voiceCallOf(outcome.preview)
+        if (!call) return { status: 'not_voice_call' }
+
         return {
           status: 'valid',
           server: {
@@ -28,8 +33,10 @@ export class CheckDiscordInviteUseCase implements ICheckDiscordInviteUseCase {
             iconUrl: outcome.preview.iconUrl,
             memberCount: outcome.preview.memberCount,
           },
+          call: { name: call.name },
           expires: outcome.preview.expiresAt !== null,
         }
+      }
       case 'invalid':
         return { status: 'invalid' }
       case 'rate_limited':

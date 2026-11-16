@@ -1,4 +1,4 @@
-import { discordInviteCode } from '@squadzr/schemas'
+import { discordInviteCode, type DiscordServerPreviewDto } from '@squadzr/schemas'
 import type { IRoomRepository } from '@domain/repositories/room.repository'
 import type { IRoomMemberRepository } from '@domain/repositories/room-member.repository'
 import type { Clock } from '@domain/services/clock.interface'
@@ -16,7 +16,7 @@ export interface GetDiscordPreviewInput {
 
 export interface GetDiscordPreviewOutput {
   /** `null` whenever Discord has nothing to show for the invite: the caller falls back to the Squad's own data. */
-  readonly preview: DiscordServerPreview | null
+  readonly preview: DiscordServerPreviewDto | null
 }
 
 export interface IGetDiscordPreviewUseCase {
@@ -51,6 +51,17 @@ export class GetDiscordPreviewUseCase implements IGetDiscordPreviewUseCase {
     if (!inviteCode) return { preview: null }
 
     const outcome = await this.previews.fetch(inviteCode)
-    return { preview: outcome.kind === 'found' ? outcome.preview : null }
+    return { preview: outcome.kind === 'found' ? toLobbyPreview(outcome.preview) : null }
+  }
+}
+
+/** What the Lobby shows of a server: the target channel and the expiry stay with the Voice Call. */
+function toLobbyPreview(preview: DiscordServerPreview): DiscordServerPreviewDto {
+  return {
+    name: preview.name,
+    iconUrl: preview.iconUrl,
+    backdropUrl: preview.backdropUrl,
+    memberCount: preview.memberCount,
+    onlineCount: preview.onlineCount,
   }
 }

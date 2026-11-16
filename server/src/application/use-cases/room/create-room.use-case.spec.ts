@@ -50,6 +50,7 @@ describe('CreateRoomUseCase', () => {
           memberCount: 10,
           onlineCount: 5,
           expiresAt: null,
+          channel: { id: '1234', name: 'Squad call', kind: 'voice' },
         },
       }),
     }
@@ -380,6 +381,7 @@ describe('CreateRoomUseCase', () => {
             memberCount: null,
             onlineCount: null,
             expiresAt: '2026-11-01T12:00:00+00:00',
+            channel: null,
           },
         },
       ])('creates the Squad when Discord answers $kind', async (outcome) => {

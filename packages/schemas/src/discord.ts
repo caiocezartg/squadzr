@@ -69,9 +69,11 @@ export const discordPreviewResponseSchema = z.object({
 
 export type DiscordPreviewResponse = z.infer<typeof discordPreviewResponseSchema>
 
-// Discord's own answer about an invite a Squad creator typed: `valid` carries the server behind it and
-// whether the invite ever expires, `invalid` means Discord does not know it, and `unknown` means Discord
-// could not be asked (slow, down or rate limiting), which is no verdict on the invite.
+// Discord's own answer about an invite a Squad creator typed: `valid` means an existing invite that points
+// to a Voice Call (a voice or stage channel), and carries the server behind it, the call's name (Discord's
+// own limit of 1 to 100 characters) and whether the invite ever expires. `not_voice_call` means the invite
+// exists but its channel is no Voice Call, or it has none. `invalid` means Discord does not know it, and
+// `unknown` means Discord could not be asked (slow, down or rate limiting), which is no verdict on the invite.
 export const discordInviteCheckResponseSchema = z.discriminatedUnion('status', [
   z.object({
     status: z.literal('valid'),
@@ -80,8 +82,10 @@ export const discordInviteCheckResponseSchema = z.discriminatedUnion('status', [
       iconUrl: z.url().nullable(),
       memberCount: z.number().int().nonnegative().nullable(),
     }),
+    call: z.object({ name: z.string().min(1).max(100) }),
     expires: z.boolean(),
   }),
+  z.object({ status: z.literal('not_voice_call') }),
   z.object({ status: z.literal('invalid') }),
   z.object({ status: z.literal('unknown') }),
 ])

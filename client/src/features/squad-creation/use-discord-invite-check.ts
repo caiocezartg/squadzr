@@ -28,8 +28,12 @@ export type DiscordInviteState =
   | {
       readonly status: 'valid'
       readonly server: ValidInviteCheck['server']
+      /** The Voice Call the invite points to. */
+      readonly call: ValidInviteCheck['call']
       readonly expires: boolean
     }
+  /** The invite exists, but its channel is not a voice or stage channel. */
+  | { readonly status: 'not_voice_call' }
   | { readonly status: 'invalid' }
   /** Discord could not be asked: the invite may be fine, and the server checks it again on submit. */
   | { readonly status: 'unknown' }
@@ -66,7 +70,7 @@ export function useDiscordInviteCheck(link: string): DiscordInviteState {
   if (isError) return { status: 'unknown' }
   if (!data) return { status: 'checking' }
   if (data.status === 'valid') {
-    return { status: 'valid', server: data.server, expires: data.expires }
+    return { status: 'valid', server: data.server, call: data.call, expires: data.expires }
   }
   return { status: data.status }
 }

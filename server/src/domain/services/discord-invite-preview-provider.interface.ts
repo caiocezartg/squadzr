@@ -1,3 +1,13 @@
+/** What kind of channel an invite points to; Discord's own type numbers stay in infrastructure. */
+export type DiscordChannelKind = 'voice' | 'stage' | 'other'
+
+/** The channel an invite takes the person to. */
+export interface DiscordInviteChannel {
+  readonly id: string
+  readonly name: string
+  readonly kind: DiscordChannelKind
+}
+
 /** The Discord server behind an invite, as far as the Lobby and the create form show it. */
 export interface DiscordServerPreview {
   readonly name: string
@@ -6,6 +16,8 @@ export interface DiscordServerPreview {
   readonly backdropUrl: string | null
   readonly memberCount: number | null
   readonly onlineCount: number | null
+  /** The invite's target channel, or `null` when Discord named none or named one this app cannot read. */
+  readonly channel: DiscordInviteChannel | null
   /** When the invite stops working, as Discord states it, or `null` for an invite that never expires. */
   readonly expiresAt: string | null
 }
@@ -18,9 +30,13 @@ export type DiscordInvitePreviewOutcome =
   | { readonly kind: 'found'; readonly preview: DiscordServerPreview }
   /** The invite is unknown or expired. */
   | { readonly kind: 'invalid' }
-  | { readonly kind: 'rate_limited' }
-  /** Discord was slow, down, or answered something this app cannot read. */
-  | { readonly kind: 'unreachable' }
+  /** `retryAfterMs` is how long Discord asked to wait, when it said so. */
+  | { readonly kind: 'rate_limited'; readonly retryAfterMs?: number }
+  /**
+   * Discord was slow, down, or answered something this app cannot read. `status` is the HTTP status of an
+   * answer that was not a success, so a rejected token (401, 403) can be told apart from an outage.
+   */
+  | { readonly kind: 'unreachable'; readonly status?: number }
 
 /** Source of the public data Discord holds for an invite code. */
 export interface DiscordInvitePreviewProvider {

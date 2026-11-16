@@ -77,6 +77,14 @@ describe('discordPreviewResponseSchema', () => {
     expect(discordPreviewResponseSchema.parse({ preview: null })).toEqual({ preview: null })
   })
 
+  it('carries no channel: one the server holds is dropped from the response', () => {
+    const channel = { id: '1', name: 'Squad call', kind: 'voice' }
+
+    expect(discordPreviewResponseSchema.parse({ preview: { ...preview, channel } })).toEqual({
+      preview,
+    })
+  })
+
   it('refuses a response without the preview key', () => {
     expect(discordPreviewResponseSchema.safeParse({}).success).toBe(false)
   })
@@ -112,9 +120,17 @@ describe('discordInviteCheckResponseSchema', () => {
     memberCount: 2_946_792,
   }
 
+  const call = { name: 'Squad call' }
+
   it.each([
-    { status: 'valid', server, expires: false },
-    { status: 'valid', server: { ...server, iconUrl: null, memberCount: null }, expires: true },
+    { status: 'valid', server, call, expires: false },
+    {
+      status: 'valid',
+      server: { ...server, iconUrl: null, memberCount: null },
+      call: { name: 'x'.repeat(100) },
+      expires: true,
+    },
+    { status: 'not_voice_call' },
     { status: 'invalid' },
     { status: 'unknown' },
   ])('accepts %j', (response) => {
@@ -124,11 +140,15 @@ describe('discordInviteCheckResponseSchema', () => {
   it.each([
     {},
     { status: 'expired' },
-    { status: 'valid', server },
-    { status: 'valid', expires: false },
-    { status: 'valid', server: { ...server, name: 1 }, expires: false },
-    { status: 'valid', server: { ...server, iconUrl: 'not a url' }, expires: false },
-    { status: 'valid', server: { ...server, memberCount: -1 }, expires: false },
+    { status: 'valid', server, call },
+    { status: 'valid', call, expires: false },
+    { status: 'valid', server, expires: false },
+    { status: 'valid', server, call: { name: '' }, expires: false },
+    { status: 'valid', server, call: { name: 'x'.repeat(101) }, expires: false },
+    { status: 'valid', server, call: null, expires: false },
+    { status: 'valid', server: { ...server, name: 1 }, call, expires: false },
+    { status: 'valid', server: { ...server, iconUrl: 'not a url' }, call, expires: false },
+    { status: 'valid', server: { ...server, memberCount: -1 }, call, expires: false },
   ])('refuses %j', (response) => {
     expect(discordInviteCheckResponseSchema.safeParse(response).success).toBe(false)
   })

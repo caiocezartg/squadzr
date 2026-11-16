@@ -30,6 +30,20 @@ inventory (see the equivalence proof below).
 | `og`                         | `og:unit`            | `node`      | `src/**/*.spec.{ts,tsx}`         | 5      | 46    |
 | `@squadzr/typescript-config` | —                    | —           | —                                | —      | —     |
 
+Issue #189 (Read the invite's Voice Call and check it from the form) adds `voice-call.spec.ts` to `server:unit` (the helper counts a voice or a
+stage channel as a Voice Call, and refuses any other channel and none) and extends the Discord suites; the rows above are not recounted.
+`discord-api-invite-preview-provider.spec.ts` covers the channel mapping (type 2 voice, 13 stage, any other other, and a missing, null,
+mistyped or out-of-range channel as none, never as unreachable), the bot token sent as `Authorization: Bot <token>` and no credentials when
+it is unset or empty, the 429 rules with a fake sleeper (a `retry_after` of at most 2 seconds waited out once, a longer one or none answered
+at once, a second 429 not retried, the `Retry-After` header as a fallback) and the warning log of every `rate_limited` and `unreachable`
+answer without the token. `cached-discord-invite-preview-provider.spec.ts` now pins the cache TTLs: `found` 10 minutes, `invalid` 1 minute,
+`unreachable` 10 seconds, and `rate_limited` for Discord's `retry_after` capped at 10 seconds (10 seconds when Discord names none).
+`env.spec.ts` covers `DISCORD_BOT_TOKEN` (unset, empty, a token, the characters refused, never echoed in the error),
+`check-discord-invite.use-case.spec.ts` the `valid` answer with its call, a stage, `not_voice_call` for a text channel or none and `unknown`,
+and `schemas:unit`'s `discord.spec.ts` the new check union and a preview response that drops a channel. `server:integration` extends
+`discord-invite-http.test.ts` (the call, a stage, `not_voice_call`) and `discord-preview-http.test.ts` (the Lobby preview carries no
+channel); its test server's default Discord answer now points to a voice channel.
+
 Issue #152 (Squad invite preview image) adds the `og` workspace, the `squadzr-og` image Worker, as a fourth Vitest
 project in `vitest.workspace.ts`. `og:unit` has 5 files and 46 tests: `handle-request.spec.ts` (the key that renders, a Squad over
 its game's player limit, HEAD, cached 404s for a bad path, a missing design version, too many slots, an unknown language and any query

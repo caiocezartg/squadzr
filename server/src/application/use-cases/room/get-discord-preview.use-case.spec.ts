@@ -23,6 +23,7 @@ const PREVIEW: DiscordServerPreview = {
   memberCount: 2_946_792,
   onlineCount: 362_025,
   expiresAt: null,
+  channel: { id: '1234', name: 'Squad call', kind: 'voice' },
 }
 
 describe('GetDiscordPreviewUseCase', () => {
@@ -58,9 +59,31 @@ describe('GetDiscordPreviewUseCase', () => {
     answers({ kind: 'found', preview: PREVIEW })
 
     await expect(useCase.execute({ code: 'ABC123', viewerId: 'member-1' })).resolves.toEqual({
-      preview: PREVIEW,
+      preview: {
+        name: 'VALORANT',
+        iconUrl: 'https://cdn.discordapp.com/icons/1/abc.png?size=128',
+        backdropUrl: null,
+        memberCount: 2_946_792,
+        onlineCount: 362_025,
+      },
     })
     expect(provider.fetch).toHaveBeenCalledWith('valorant')
+  })
+
+  it('leaves the Voice Call channel and the expiry out of the Lobby preview', async () => {
+    answers({ kind: 'found', preview: PREVIEW })
+
+    const { preview } = await useCase.execute({ code: 'ABC123', viewerId: 'member-1' })
+
+    expect(preview).not.toHaveProperty('channel')
+    expect(preview).not.toHaveProperty('expiresAt')
+    expect(Object.keys(preview ?? {}).sort()).toEqual([
+      'backdropUrl',
+      'iconUrl',
+      'memberCount',
+      'name',
+      'onlineCount',
+    ])
   })
 
   it('asks Discord about the code only, not the query string or trailing path of the link', async () => {
