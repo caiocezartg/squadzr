@@ -66,16 +66,19 @@ const LINK = new RegExp([SCHEME, WWW, KNOWN_TLD, WITH_PATH].join('|'), 'iu')
 // A link spelled out to slip past the check: `discord . gg / abc`, `discord(.)gg`, `discord. gg/abc`.
 // A dot in brackets, or a fullwidth one, is a dot. Spaces before a dot and around a slash are dropped, as
 // no sentence puts them there. A space after a dot is dropped only when a path follows, since a sentence
-// ends with ". " ("Foi bom. Com certeza" must stay a sentence).
-const BRACKETED_DOT = /\s*[([{]\s*[.．。]\s*[)\]}]\s*/gu
+// ends with ". " ("Foi bom. Com certeza" must stay a sentence). Whitespace runs collapse to one space
+// first, so every pattern below matches at most one space on each side and runs in linear time.
+const WHITESPACE_RUN = /\s+/g
+const BRACKETED_DOT = / ?[([{] ?[.．。] ?[)\]}] ?/gu
 const WIDE_DOT = /[．。]/gu
-const SPACED_SLASH = /\s*\/\s*/g
-const SPACE_BEFORE_DOT = /\s+\.\s*/g
-const SPACE_AFTER_DOT_BEFORE_PATH = /\.\s+(?=[\p{L}\p{N}-]+\/)/gu
+const SPACED_SLASH = / ?\/ ?/g
+const SPACE_BEFORE_DOT = / \. ?/g
+const SPACE_AFTER_DOT_BEFORE_PATH = /\. (?=[\p{L}\p{N}-]+\/)/gu
 
 /** The text with the spelled-out separators of a link joined back, for a second look. */
 function joinSpacedSeparators(text: string): string {
   return text
+    .replace(WHITESPACE_RUN, ' ')
     .replace(BRACKETED_DOT, '.')
     .replace(WIDE_DOT, '.')
     .replace(SPACED_SLASH, '/')

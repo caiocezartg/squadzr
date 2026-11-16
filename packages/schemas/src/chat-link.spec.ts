@@ -76,3 +76,19 @@ describe('chatMessageBodySchema and links', () => {
     expect(chatMessageBodySchema.parse('bora jogar')).toBe('bora jogar')
   })
 })
+
+describe('containsLink on long input', () => {
+  it('scans a long run of spaces in linear time', () => {
+    const started = performance.now()
+    expect(containsLink(`a${' '.repeat(200_000)}b`)).toBe(false)
+    expect(performance.now() - started).toBeLessThan(500)
+  })
+
+  it('leaves an oversized body to the length rule, without scanning it for links', () => {
+    const result = chatMessageBodySchema.safeParse(`discord.gg/abc ${'a'.repeat(1_000)}`)
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.map((issue) => issue.message)).not.toContain(
+      'Links are not allowed in the chat'
+    )
+  })
+})

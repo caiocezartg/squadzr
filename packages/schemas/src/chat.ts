@@ -44,7 +44,10 @@ export const chatMessageBodySchema = z
       .refine((body) => countLineBreaks(body) <= CHAT.MESSAGE_MAX_LINE_BREAKS, {
         message: `Message can have at most ${CHAT.MESSAGE_MAX_LINE_BREAKS} line breaks`,
       })
-      .refine((body) => !containsLink(body), { message: 'Links are not allowed in the chat' })
+      // A body over the limit is already refused, so the link check never scans an oversized one.
+      .refine((body) => body.length > CHAT.MESSAGE_MAX_LENGTH || !containsLink(body), {
+        message: 'Links are not allowed in the chat',
+      })
   )
 
 // The client generates the id, so a retry of one send is idempotent on the server.
