@@ -45,6 +45,7 @@ export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
       response: {
         200: chatMessageSchema,
         201: chatMessageSchema,
+        400: errorResponse,
         401: errorResponse,
         404: errorResponse,
         409: errorResponse,

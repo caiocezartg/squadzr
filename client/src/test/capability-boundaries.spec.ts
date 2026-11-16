@@ -186,6 +186,7 @@ describe('capability boundaries', () => {
         'squad-creation',
         'squad-joining',
         'squad-list',
+        'squad-chat',
       ])
     )
     // CCC-94 removed the games capability: every Squad carries its own game summary.

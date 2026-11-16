@@ -58,7 +58,6 @@ export function ChatComposer({
           ref={textareaRef}
           value={draft}
           rows={1}
-          disabled={!ready}
           aria-label={t('composerLabel')}
           aria-describedby={failed ? errorId : undefined}
           aria-invalid={over || undefined}

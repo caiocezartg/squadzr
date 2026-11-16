@@ -42,7 +42,7 @@ export function SquadChatDock({ squadCode, memberCount, enabled }: SquadChatDock
     setDraft('')
     setFailed(false)
     const outcome = await send(text)
-    if (outcome.ok || outcome.reason === 'busy') return
+    if (outcome.ok) return
     // Whatever was typed while the send was pending stays after the text put back.
     setDraft((current) => (current === '' ? outcome.text : `${outcome.text}\n${current}`))
     setFailed(outcome.reason === 'failed')
