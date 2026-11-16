@@ -1,6 +1,7 @@
 'use client'
 
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { ArrowDown, Loader2 } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { Avatar } from '@/components/ds/avatar'
 import { Button } from '@/components/ds/button'
@@ -13,8 +14,19 @@ import type { SquadChatStatus } from '../use-squad-chat'
 
 /** How close to the end the reader must be, in px, for a new message to keep the list at the bottom. */
 const STICK_THRESHOLD = 32
+/** How close to the start the reader must be, in px, for the older page to be read. */
+const OLDER_THRESHOLD = 64
 
-interface ChatMessagesProps {
+interface OlderHistory {
+  /** Older messages exist beyond the ones held. */
+  readonly hasMore: boolean
+  /** An older page is being read. */
+  readonly isFetchingOlder: boolean
+  /** Reads the page before the oldest message held. */
+  readonly onReachTop: () => void
+}
+
+interface ChatMessagesProps extends OlderHistory {
   readonly status: SquadChatStatus
   readonly messages: readonly SquadChatMessage[]
   readonly viewerId: string
@@ -24,9 +36,10 @@ interface ChatMessagesProps {
 /**
  * The chat's history: the skeleton while nothing is cached, the error with a retry, the empty state, or
  * the messages in day and author groups. It opens at the bottom and stays there when a message arrives
- * while the reader is at the bottom, or when the viewer sends.
+ * while the reader is at the bottom, or when the viewer sends; otherwise a pill offers the way down.
+ * Reaching the top reads the older page, which lands above without moving what the reader sees.
  */
-export function ChatMessages({ status, messages, viewerId, onRetry }: ChatMessagesProps) {
+export function ChatMessages({ status, messages, viewerId, onRetry, ...older }: ChatMessagesProps) {
   const t = useTranslations('chat')
 
   if (status === 'loading') return <ChatSkeleton label={t('loading')} />
@@ -52,61 +65,144 @@ export function ChatMessages({ status, messages, viewerId, onRetry }: ChatMessag
     )
   }
 
-  return <MessageList messages={messages} viewerId={viewerId} label={t('messages')} />
+  return <MessageList messages={messages} viewerId={viewerId} {...older} />
 }
 
-function MessageList({
-  messages,
-  viewerId,
-  label,
-}: {
+interface MessageListProps extends OlderHistory {
   readonly messages: readonly SquadChatMessage[]
   readonly viewerId: string
-  readonly label: string
-}) {
+}
+
+function MessageList({ messages, viewerId, ...older }: MessageListProps) {
+  const t = useTranslations('chat')
   const entries = useMemo(
     () => groupMessages(messages, { viewerId, timeZone: VIEWER_TIME_ZONE }),
     [messages, viewerId]
   )
   const listRef = useRef<HTMLDivElement>(null)
+  const { showPill, jumpToBottom, handleScroll } = useChatScroll(listRef, messages, viewerId, older)
+
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      {/* The browser's own scroll anchoring would add to the position kept when older messages land. */}
+      <div
+        ref={listRef}
+        role="log"
+        aria-label={t('messages')}
+        tabIndex={0}
+        onScroll={handleScroll}
+        className="scrollbar-thin focus-visible:outline-mint flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto px-4 py-4 [overflow-anchor:none] focus-visible:outline-2 focus-visible:-outline-offset-2"
+      >
+        {entries.map((entry) =>
+          entry.kind === 'day' ? (
+            <DayLine key={entry.key} divider={entry} />
+          ) : (
+            <Group key={entry.key} group={entry} />
+          )
+        )}
+      </div>
+      {/* Both float over the list, so neither changes its height and moves what the reader sees. */}
+      {older.isFetchingOlder && (
+        <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center">
+          <span
+            role="status"
+            aria-label={t('loadingOlder')}
+            className="bg-raised-2 text-text-3 flex items-center gap-1.5 px-2.5 py-1 shadow-[0_8px_20px_-10px_rgba(0,0,0,0.9)]"
+          >
+            <Loader2 aria-hidden="true" className="size-3 animate-spin" strokeWidth={2.6} />
+            <span aria-hidden="true" className="type-label text-[10px]">
+              {t('loadingOlder')}
+            </span>
+          </span>
+        </div>
+      )}
+      {showPill && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+          <button
+            type="button"
+            onClick={jumpToBottom}
+            className="press animate-menu-in bg-mint text-mint-ink hover-fine:bg-mint-hover focus-visible:outline-text pointer-events-auto flex h-9 items-center gap-1.5 px-3.5 shadow-[0_12px_32px_-12px_rgba(0,255,162,0.55)] focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            <ArrowDown aria-hidden="true" className="size-3.5" strokeWidth={2.8} />
+            <span className="type-label text-[11px]">{t('newMessages')}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The list's scroll position. It opens at the bottom and follows a new message while the reader is at the
+ * bottom, or when it is the viewer's own; otherwise it stays put and asks for the pill. Older messages that
+ * land above move the position by their height, so the reader sees the same rows. Every move is a jump
+ * without a scroll animation: a send is keyboard driven and happens many times in a row.
+ */
+function useChatScroll(
+  listRef: RefObject<HTMLDivElement | null>,
+  messages: readonly SquadChatMessage[],
+  viewerId: string,
+  { hasMore, isFetchingOlder, onReachTop }: OlderHistory
+) {
   // Starts true, so the list opens at the bottom.
   const atBottomRef = useRef(true)
+  const [showPill, setShowPill] = useState(false)
+  // The ends of the list and its height as last drawn, to tell where new messages landed.
+  const drawnRef = useRef<{
+    firstId?: string
+    lastId?: string
+    lastAt?: string
+    height: number
+  } | null>(null)
+  const firstId = messages[0]?.id
   const last = messages.at(-1)
+  const lastId = last?.id
+  const lastAt = last?.createdAt
+  const lastAuthorId = last?.author.id
 
-  // Jumps without a scroll animation: a send is keyboard driven and happens many times in a row.
   useLayoutEffect(() => {
     const list = listRef.current
     if (!list) return
-    if (atBottomRef.current || last?.author.id === viewerId) {
-      list.scrollTop = list.scrollHeight
-      atBottomRef.current = true
+    const drawn = drawnRef.current
+    if (drawn && firstId !== drawn.firstId) list.scrollTop += list.scrollHeight - drawn.height
+    if (!drawn || lastId !== drawn.lastId) {
+      if (atBottomRef.current || lastAuthorId === viewerId) {
+        list.scrollTop = list.scrollHeight
+        atBottomRef.current = true
+        setShowPill(false)
+      } else if (lastAt && (!drawn?.lastAt || lastAt > drawn.lastAt)) {
+        // Only a newer message: a failed send taken back out leaves an older one last.
+        setShowPill(true)
+      }
     }
-  }, [last?.id, last?.author.id, viewerId])
+    drawnRef.current = {
+      firstId,
+      lastId,
+      lastAt,
+      height: list.scrollHeight,
+    }
+  }, [firstId, lastId, lastAt, lastAuthorId, listRef, viewerId])
 
   const handleScroll = () => {
     const list = listRef.current
     if (!list) return
+    if (drawnRef.current) drawnRef.current.height = list.scrollHeight
     atBottomRef.current = list.scrollHeight - list.scrollTop - list.clientHeight <= STICK_THRESHOLD
+    if (atBottomRef.current) setShowPill(false)
+    if (list.scrollTop <= OLDER_THRESHOLD && hasMore && !isFetchingOlder) onReachTop()
   }
 
-  return (
-    <div
-      ref={listRef}
-      role="log"
-      aria-label={label}
-      tabIndex={0}
-      onScroll={handleScroll}
-      className="scrollbar-thin focus-visible:outline-mint flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto px-4 py-4 focus-visible:outline-2 focus-visible:-outline-offset-2"
-    >
-      {entries.map((entry) =>
-        entry.kind === 'day' ? (
-          <DayLine key={entry.key} divider={entry} />
-        ) : (
-          <Group key={entry.key} group={entry} />
-        )
-      )}
-    </div>
-  )
+  const jumpToBottom = () => {
+    const list = listRef.current
+    if (!list) return
+    list.scrollTop = list.scrollHeight
+    atBottomRef.current = true
+    setShowPill(false)
+    // The pill goes away under the pointer; focus stays in the chat instead of falling to the page.
+    list.focus({ preventScroll: true })
+  }
+
+  return { showPill, jumpToBottom, handleScroll }
 }
 
 function DayLine({ divider }: { readonly divider: DayDivider }) {

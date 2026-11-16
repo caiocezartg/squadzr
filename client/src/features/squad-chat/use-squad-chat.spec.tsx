@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChatHistoryResponse, ChatMessageDto } from '@squadzr/schemas'
 import type { RealtimeEventSubscribe, RealtimeStatus } from '@/lib/ws-client'
 import { createTestQueryClient } from '@/test/harness'
@@ -938,6 +938,31 @@ describe('older history', () => {
 
     page.resolve(httpOk(fakePage(1, 5, false)))
     await waitFor(() => expect(result.current.isFetchingOlder).toBe(false))
+  })
+
+  it('reads from the oldest stored message, never from a pending one dated earlier', async () => {
+    const reply = deferred<MockHttpResponse>()
+    onHttp('POST', '/api/rooms/:code/messages', () => reply.promise)
+    const { result } = await readyChat()
+    // A client clock behind the server's dates the pending message before every stored one.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
+    act(() => {
+      void result.current.send('early clock')
+    })
+    vi.useRealTimers()
+    await waitFor(() => expect(result.current.messages[0]?.pending).toBe(true))
+
+    await act(async () => {
+      await result.current.fetchOlder()
+    })
+
+    const fetched = getHttpLog().filter((request) => request.query.has('before'))
+    expect(fetched.map((request) => request.query.get('before'))).toEqual([uid('m6')])
+    await waitFor(() =>
+      expect(result.current.messages.map((message) => message.body)).toContain('m1')
+    )
+    expect(result.current.hasMore).toBe(false)
   })
 
   it('does nothing when there is no older history', async () => {

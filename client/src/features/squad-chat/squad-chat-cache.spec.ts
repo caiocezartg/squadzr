@@ -3,6 +3,7 @@ import type { ChatMessageDto } from '@squadzr/schemas'
 import {
   appendOlderPage,
   messagesOf,
+  oldestStoredId,
   removeMessage,
   squadChatQueryKey,
   upsertMessage,
@@ -115,7 +116,7 @@ describe('appendOlderPage', () => {
   it('adds the page as the last one, keeping what the history holds now', () => {
     const data = history([message('b', '2026-01-01T10:01:00.000Z'), newest])
 
-    const next = appendOlderPage(data, older, 'b')
+    const next = appendOlderPage(data, older, 'b', null)
 
     expect(next.pages).toHaveLength(2)
     expect(next.pageParams).toEqual([undefined, 'b'])
@@ -125,6 +126,14 @@ describe('appendOlderPage', () => {
   it('takes nothing once the history no longer ends at the message the page was asked from', () => {
     const data = history([message('z', '2026-01-01T10:03:00.000Z')])
 
-    expect(appendOlderPage(data, older, 'b')).toBe(data)
+    expect(appendOlderPage(data, older, 'b', null)).toBe(data)
+  })
+
+  it('looks past a pending message dated before the oldest stored one', () => {
+    const pending = message('p', '2025-01-01T00:00:00.000Z')
+    const data = history([pending, message('b', '2026-01-01T10:01:00.000Z'), newest])
+
+    expect(oldestStoredId(data, 'p')).toBe('b')
+    expect(appendOlderPage(data, older, 'b', 'p').pages).toHaveLength(2)
   })
 })

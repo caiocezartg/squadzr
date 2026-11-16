@@ -13,6 +13,7 @@ import type { RealtimeEventSubscribe, RealtimeStatus } from '@/lib/ws-client'
 import {
   appendOlderPage,
   messagesOf,
+  oldestStoredId,
   removeMessage,
   squadChatQueryKey,
   upsertMessage,
@@ -362,9 +363,11 @@ export function useSquadChat(
 
   const [isFetchingOlder, setIsFetchingOlder] = useState(false)
   const fetchingOlderRef = useRef(false)
-  const lastPage = history.data?.pages.at(-1)
-  const hasMore = lastPage?.hasMore ?? false
-  const oldestId = lastPage?.items[0]?.id
+  const hasMore = history.data?.pages.at(-1)?.hasMore ?? false
+  const oldestId = history.data ? oldestStoredId(history.data, pendingId) : undefined
+  // The page lands after the send may have settled, so it checks the history against the id pending then.
+  const pendingIdRef = useRef(pendingId)
+  pendingIdRef.current = pendingId
   const fetchOlder = useCallback(async () => {
     if (!hasMore || !oldestId || fetchingOlderRef.current) return
     fetchingOlderRef.current = true
@@ -375,7 +378,7 @@ export function useSquadChat(
       const page = await api.get(messagesPath(code, oldestId), chatHistoryResponseSchema)
       queryClient.setQueryData<ChatHistoryData>(
         squadChatQueryKey(code),
-        (data) => data && appendOlderPage(data, page, oldestId)
+        (data) => data && appendOlderPage(data, page, oldestId, pendingIdRef.current)
       )
     } catch {
       // The history stays as it was, with older messages still to read, so the reader can try again.

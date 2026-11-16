@@ -59,15 +59,27 @@ export function upsertMessage(data: ChatHistoryData, message: ChatMessageDto): C
 }
 
 /**
- * Adds the page before the oldest message held, as the last page. It lands on the history as it is now, so
- * what arrived while the page was being read stays. A history that changed meanwhile, because it was read
- * again from the newest page, no longer ends where the page was asked from, and takes nothing.
+ * The oldest message the server stored, where an older page starts. The viewer's unconfirmed message is
+ * skipped: it carries the client's clock, which may date it before every stored one.
+ */
+export function oldestStoredId(
+  data: ChatHistoryData,
+  pendingId: string | null
+): string | undefined {
+  return data.pages.at(-1)?.items.find((message) => message.id !== pendingId)?.id
+}
+
+/**
+ * Adds the page before the oldest stored message, as the last page. It lands on the history as it is now,
+ * so what arrived while the page was being read stays. A history that changed meanwhile, because it was
+ * read again from the newest page, no longer ends where the page was asked from, and takes nothing.
  */
 export function appendOlderPage(
   data: ChatHistoryData,
   page: ChatHistoryResponse,
-  before: string
+  before: string,
+  pendingId: string | null
 ): ChatHistoryData {
-  if (data.pages.at(-1)?.items[0]?.id !== before) return data
+  if (oldestStoredId(data, pendingId) !== before) return data
   return { pages: [...data.pages, page], pageParams: [...data.pageParams, before] }
 }

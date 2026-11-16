@@ -103,6 +103,9 @@ export function SquadChatDock({ squadCode, channel, memberCount, enabled }: Squa
               messages={chat.messages}
               viewerId={viewerId}
               onRetry={chat.retry}
+              hasMore={chat.hasMore}
+              isFetchingOlder={chat.isFetchingOlder}
+              onReachTop={() => void chat.fetchOlder()}
             />
             <ChatComposer
               draft={draft}

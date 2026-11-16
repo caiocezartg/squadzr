@@ -11,6 +11,7 @@ import { NARROW_QUERY } from '@/components/ds/use-media-query'
 import { createTestQueryClient, renderSquadsFlow } from './harness'
 import {
   countHttpCalls,
+  getHttpLog,
   httpCreated,
   httpError,
   httpOk,
@@ -425,5 +426,166 @@ describe('sending', () => {
     ).toBeInTheDocument()
     expect(field).toHaveValue('perdida')
     expect(within(chat).queryByText('perdida', { selector: 'li span' })).not.toBeInTheDocument()
+  })
+})
+
+describe('the echo of the viewer own message', () => {
+  it('shows one message whether the echo or the answer comes first', async () => {
+    const reply = deferred<MockHttpResponse>()
+    let sent: { id: string; body: string } | undefined
+    onHttp('POST', '/api/rooms/:code/messages', ({ body }) => {
+      sent = body as { id: string; body: string }
+      return reply.promise
+    })
+    await openMemberLobby()
+    const chat = await openChat()
+    await within(chat).findByText('oi time')
+    await userEvent.type(within(chat).getByRole('textbox', { name: 'Message' }), 'eco{Enter}')
+    await within(chat).findByText('eco')
+    const stored = { ...sent!, roomCode: CODE, createdAt: new Date().toISOString(), author: ME }
+
+    sendFromServer({ type: 'chat_message', payload: { message: stored } })
+    await act(async () => {})
+    expect(within(chat).getAllByText('eco')).toHaveLength(1)
+
+    await act(async () => {
+      reply.resolve(httpCreated(stored))
+      await reply.promise
+    })
+
+    await waitFor(() =>
+      expect(within(chat).getByText('eco').closest('li')).not.toHaveAttribute('aria-busy')
+    )
+    expect(within(chat).getAllByText('eco')).toHaveLength(1)
+  })
+})
+
+/** jsdom lays nothing out: each message row is 100px tall and the list shows 300px of them. */
+function layOut(log: HTMLElement) {
+  let top = 0
+  const height = () => log.querySelectorAll('li').length * 100
+  Object.defineProperties(log, {
+    clientHeight: { configurable: true, get: () => 300 },
+    scrollHeight: { configurable: true, get: height },
+    scrollTop: {
+      configurable: true,
+      get: () => top,
+      set: (value: number) => {
+        top = Math.max(0, Math.min(value, height() - 300))
+      },
+    },
+  })
+  return {
+    bottom: () => height() - 300,
+    scrollTo(value: number) {
+      log.scrollTop = value
+      fireEvent.scroll(log)
+    },
+  }
+}
+
+const SIX = [1, 2, 3, 4, 5, 6].map((n) => message(n, ANA, `linha ${n}`))
+
+async function openLaidOutChat() {
+  registerRoutes(SIX)
+  await openMemberLobby()
+  const chat = await openChat()
+  await within(chat).findByText('linha 6')
+  const log = within(chat).getByRole('log')
+  return { chat, log, layout: layOut(log) }
+}
+
+describe('scrolling', () => {
+  it('follows a new message while the reader is at the bottom', async () => {
+    const { chat, log, layout } = await openLaidOutChat()
+    layout.scrollTo(layout.bottom())
+
+    sendFromServer({ type: 'chat_message', payload: { message: message(7, ANA, 'nova') } })
+
+    await within(chat).findByText('nova')
+    expect(log.scrollTop).toBe(layout.bottom())
+    expect(within(chat).queryByRole('button', { name: 'New messages' })).not.toBeInTheDocument()
+  })
+
+  it('stays put and shows the pill when the reader scrolled up, and the pill jumps down', async () => {
+    const { chat, log, layout } = await openLaidOutChat()
+    layout.scrollTo(100)
+
+    sendFromServer({ type: 'chat_message', payload: { message: message(7, ANA, 'nova') } })
+
+    const pill = await within(chat).findByRole('button', { name: 'New messages' })
+    expect(log.scrollTop).toBe(100)
+
+    await userEvent.click(pill)
+
+    expect(log.scrollTop).toBe(layout.bottom())
+    await waitFor(() =>
+      expect(within(chat).queryByRole('button', { name: 'New messages' })).not.toBeInTheDocument()
+    )
+  })
+
+  it('hides the pill once the reader scrolls to the bottom', async () => {
+    const { chat, layout } = await openLaidOutChat()
+    layout.scrollTo(100)
+    sendFromServer({ type: 'chat_message', payload: { message: message(7, ANA, 'nova') } })
+    await within(chat).findByRole('button', { name: 'New messages' })
+
+    layout.scrollTo(layout.bottom())
+
+    await waitFor(() =>
+      expect(within(chat).queryByRole('button', { name: 'New messages' })).not.toBeInTheDocument()
+    )
+  })
+
+  it('jumps to the bottom when the viewer sends, even scrolled up', async () => {
+    onHttp('POST', '/api/rooms/:code/messages', ({ body }) =>
+      httpCreated({
+        ...(body as object),
+        roomCode: CODE,
+        createdAt: new Date().toISOString(),
+        author: ME,
+      })
+    )
+    const { chat, log, layout } = await openLaidOutChat()
+    layout.scrollTo(100)
+
+    await userEvent.type(within(chat).getByRole('textbox', { name: 'Message' }), 'minha{Enter}')
+
+    await within(chat).findByText('minha')
+    expect(log.scrollTop).toBe(layout.bottom())
+    expect(within(chat).queryByRole('button', { name: 'New messages' })).not.toBeInTheDocument()
+  })
+})
+
+describe('older history', () => {
+  const OLDER = [1, 2, 3].map((n) => message(n, ANA, `antiga ${n}`))
+  const NEWER = [4, 5, 6, 7, 8, 9].map((n) => message(n, ANA, `linha ${n}`))
+
+  it('loads at the top and keeps the reader where they were', async () => {
+    const older = deferred<MockHttpResponse>()
+    onHttp('GET', '/api/rooms/:code/messages', ({ query }) =>
+      query.get('before') === NEWER[0]!.id ? older.promise : httpOk({ items: NEWER, hasMore: true })
+    )
+    await openMemberLobby()
+    const chat = await openChat()
+    await within(chat).findByText('linha 9')
+    const log = within(chat).getByRole('log')
+    const layout = layOut(log)
+
+    layout.scrollTo(0)
+
+    expect(await within(chat).findByRole('status', { name: 'Loading older messages' })).toBeTruthy()
+    await act(async () => {
+      older.resolve(httpOk({ items: OLDER, hasMore: false }))
+      await older.promise
+    })
+
+    await within(chat).findByText('antiga 1')
+    // Three rows came in above, so the row the reader saw at the top is now 300px down.
+    expect(log.scrollTop).toBe(300)
+    expect(within(chat).queryByRole('status', { name: 'Loading older messages' })).toBeNull()
+
+    layout.scrollTo(0)
+    expect(getHttpLog().filter((request) => request.query.has('before'))).toHaveLength(1)
   })
 })
