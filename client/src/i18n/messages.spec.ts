@@ -56,6 +56,13 @@ describe('ICU messages', () => {
     expect(tPtBR('ds.board.openCount', { count: 2 })).toBe('2 squads abertos')
   })
 
+  it('names one typist or counts several in the chat footer, in both languages', () => {
+    expect(t('chat.typing', { count: 1, name: 'Ana' })).toBe('Ana is typing…')
+    expect(t('chat.typing', { count: 2, name: 'Ana' })).toBe('2 people are typing…')
+    expect(tPtBR('chat.typing', { count: 1, name: 'Ana' })).toBe('Ana está digitando…')
+    expect(tPtBR('chat.typing', { count: 2, name: 'Ana' })).toBe('2 pessoas estão digitando…')
+  })
+
   it('prints a large count without grouping separators, as the raw value did', () => {
     expect(t('ds.board.openCount', { count: 1000 })).toBe('1000 open squads')
   })

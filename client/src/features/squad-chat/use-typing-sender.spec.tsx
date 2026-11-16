@@ -5,14 +5,15 @@ import { useTypingSender } from './use-typing-sender'
 
 const CODE = 'abc123'
 
+type SenderProps = { enabled: boolean; isReady: boolean; status?: 'open' | 'reconnecting' }
+
 function renderSender(
-  options = { enabled: true, isReady: false },
-  membershipRevoked = false,
-  status: 'open' | 'reconnecting' = 'open'
+  options: SenderProps = { enabled: true, isReady: false },
+  membershipRevoked = false
 ) {
   const notifyTyping = vi.fn<(squadCode: string) => void>()
   const view = renderHook(
-    (props: { enabled: boolean; isReady: boolean }) =>
+    ({ status = 'open', ...props }: SenderProps) =>
       useTypingSender(CODE, { status, notifyTyping, membershipRevoked }, props),
     { initialProps: options }
   )
@@ -94,13 +95,18 @@ describe('useTypingSender', () => {
   })
 
   it('signals nothing while the socket is down, and the lost change does not use up the throttle', () => {
-    const down = renderSender({ enabled: true, isReady: false }, false, 'reconnecting')
-    down.result.current('oi')
-    expect(down.notifyTyping).not.toHaveBeenCalled()
+    const { result, rerender, notifyTyping } = renderSender({
+      enabled: true,
+      isReady: false,
+      status: 'reconnecting',
+    })
+    result.current('oi')
+    expect(notifyTyping).not.toHaveBeenCalled()
 
-    const up = renderSender()
-    up.result.current('oi')
-    expect(up.notifyTyping).toHaveBeenCalledTimes(1)
+    // Back up within the same throttle window: the change lost while down did not spend it.
+    rerender({ enabled: true, isReady: false, status: 'open' })
+    result.current('oi')
+    expect(notifyTyping).toHaveBeenCalledTimes(1)
   })
 
   it('starts signalling again once the Squad stops being Ready', () => {

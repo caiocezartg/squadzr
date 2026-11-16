@@ -290,6 +290,31 @@ describe('chat_typing delivery', () => {
     expect(typingEvents(await hostTab.drain())).toHaveLength(2)
   })
 
+  it('re-checks the Squad on every send, so a typing frame queued behind a revocation never reaches the leaver', async () => {
+    await openInRoom(host)
+    const leaverTab = await openInRoom(member)
+    const gate = Promise.withResolvers<void>()
+    const getSnapshot = server.app.realtime.getSnapshot
+    const read = getSnapshot.execute.bind(getSnapshot)
+    vi.spyOn(getSnapshot, 'execute').mockImplementation(async (input) => {
+      await gate.promise
+      return read(input)
+    })
+    const left = await roomAction(server, member, code, 'leave')
+    expect(left.statusCode, left.body).toBe(200)
+
+    // The revocation waits for its snapshot, so the typing frame is queued behind it on the leaver's
+    // socket: the socket is still in the room channel when the typing is broadcast. A typing frame sent
+    // over the socket would wait behind the revocation in the operation queue, so the broadcast is
+    // called directly, as the handler does once its checks pass.
+    server.app.realtime.broadcaster.broadcastChatTyping(code, host.id)
+    gate.resolve()
+
+    const leaverFrames = await leaverTab.drain()
+    expect(typingEvents(leaverFrames)).toEqual([])
+    expect(leaverFrames.map((frame) => frame.type)).toContain('error')
+  })
+
   it('stops reaching a member who left over HTTP', async () => {
     const hostTab = await openInRoom(host)
     const leaverTab = await openInRoom(member)
