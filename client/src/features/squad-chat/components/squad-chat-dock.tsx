@@ -108,6 +108,7 @@ export function SquadChatDock({ squadCode, channel, memberCount, enabled }: Squa
               onRetry={chat.retry}
               hasMore={chat.hasMore}
               isFetchingOlder={chat.isFetchingOlder}
+              olderFailed={chat.olderFailed}
               onReachTop={() => void chat.fetchOlder()}
             />
             <ChatComposer

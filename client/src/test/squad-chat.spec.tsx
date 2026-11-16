@@ -27,6 +27,7 @@ import {
   lobbySquadResponse,
 } from './fixtures'
 import { mockMediaQuery } from './media-query'
+import { settleNavigation } from './navigation'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
 
@@ -304,6 +305,30 @@ describe('losing access', () => {
     expect(queryClient.getQueryData(['squad-chat', CODE])).toBeUndefined()
     expect(screen.queryByRole('button', { name: 'Chat' })).not.toBeInTheDocument()
     expect(countHttpCalls('GET', '/api/rooms/:code/messages')).toBe(reads)
+  })
+
+  it('keeps the next Squad chat cache when the page moves on from a revoked Squad', async () => {
+    const queryClient = createTestQueryClient()
+    const { navigation } = await openMemberLobby({ queryClient })
+    queryClient.setQueryData(['squad-chat', 'NEXT01'], {
+      pages: [{ items: [message(9, ANA, 'outra squad')], hasMore: false }],
+      pageParams: [undefined],
+    })
+    const removed: string[] = []
+    queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === 'removed') removed.push(String(event.query.queryKey[1]))
+    })
+
+    sendFromServer({
+      type: 'error',
+      payload: { code: 'NOT_ROOM_MEMBER', message: 'You are not a member of this squad' },
+    })
+    await screen.findByText('You are not a member of this squad.')
+
+    navigation.router.push('/squads/NEXT01')
+    await settleNavigation()
+
+    expect(removed).not.toContain('NEXT01')
   })
 
   it('removes the chat cache when the Squad is deleted', async () => {
@@ -591,6 +616,32 @@ describe('scrolling', () => {
 describe('older history', () => {
   const OLDER = [1, 2, 3].map((n) => message(n, ANA, `antiga ${n}`))
   const NEWER = [4, 5, 6, 7, 8, 9].map((n) => message(n, ANA, `linha ${n}`))
+
+  it('offers a retry when an older page fails, and reads it again on click', async () => {
+    let olderReads = 0
+    onHttp('GET', '/api/rooms/:code/messages', ({ query }) => {
+      if (query.get('before') !== NEWER[0]!.id) return httpOk({ items: NEWER, hasMore: true })
+      olderReads += 1
+      return olderReads === 1
+        ? httpError(500, { error: 'INTERNAL_ERROR', message: 'boom' })
+        : httpOk({ items: OLDER, hasMore: false })
+    })
+    await openMemberLobby()
+    const chat = await openChat()
+    await within(chat).findByText('linha 9')
+    const layout = layOut(within(chat).getByRole('log'))
+
+    layout.scrollTo(0)
+    expect(await within(chat).findByText('Could not load older messages.')).toBeInTheDocument()
+    layout.scrollTo(0)
+    expect(olderReads).toBe(1)
+
+    await userEvent.click(within(chat).getByRole('button', { name: 'Try again' }))
+
+    expect(await within(chat).findByText('antiga 1')).toBeInTheDocument()
+    expect(within(chat).queryByText('Could not load older messages.')).not.toBeInTheDocument()
+    expect(olderReads).toBe(2)
+  })
 
   it('loads at the top and keeps the reader where they were', async () => {
     const older = deferred<MockHttpResponse>()

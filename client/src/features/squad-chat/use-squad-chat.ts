@@ -66,6 +66,8 @@ export interface SquadChat {
   readonly hasMore: boolean
   /** An older page is being read. */
   readonly isFetchingOlder: boolean
+  /** The last older page could not be read; the reader can ask for it again. */
+  readonly olderFailed: boolean
   /** Reads the page before the oldest message held, and adds it at the top. A no-op while one is being read. */
   fetchOlder: () => Promise<void>
   /**
@@ -250,6 +252,7 @@ function useLiveChat(options: LiveChatOptions) {
 function useOlderPages(code: string, data: ChatHistoryData | undefined, pendingId: string | null) {
   const queryClient = useQueryClient()
   const [isFetchingOlder, setIsFetchingOlder] = useState(false)
+  const [olderFailed, setOlderFailed] = useState(false)
   const fetchingOlderRef = useRef(false)
   const hasMore = data?.pages.at(-1)?.hasMore ?? false
   const oldestId = data ? oldestStoredId(data, pendingId) : undefined
@@ -263,6 +266,7 @@ function useOlderPages(code: string, data: ChatHistoryData | undefined, pendingI
     if (!hasMore || !oldestId || fetchingOlderRef.current) return
     fetchingOlderRef.current = true
     setIsFetchingOlder(true)
+    setOlderFailed(false)
     try {
       // Read outside the infinite query: it would rebuild the pages from the ones it held when this read
       // started, and drop the live messages merged since.
@@ -272,14 +276,15 @@ function useOlderPages(code: string, data: ChatHistoryData | undefined, pendingI
         (current) => current && appendOlderPage(current, page, oldestId, pendingIdRef.current)
       )
     } catch {
-      // The history stays as it was, with older messages still to read, so the reader can try again.
+      // The history stays as it was, with older messages still to read, and the reader is offered a retry.
+      setOlderFailed(true)
     } finally {
       fetchingOlderRef.current = false
       setIsFetchingOlder(false)
     }
   }, [code, hasMore, oldestId, queryClient])
 
-  return { hasMore, isFetchingOlder, fetchOlder }
+  return { hasMore, isFetchingOlder, olderFailed, fetchOlder }
 }
 
 /**
@@ -400,7 +405,11 @@ export function useSquadChat(
     void history.refetch()
   }, [history])
 
-  const { hasMore, isFetchingOlder, fetchOlder } = useOlderPages(code, history.data, pendingId)
+  const { hasMore, isFetchingOlder, olderFailed, fetchOlder } = useOlderPages(
+    code,
+    history.data,
+    pendingId
+  )
 
   const status: SquadChatStatus = history.data ? 'ready' : history.isError ? 'error' : 'loading'
 
@@ -412,6 +421,7 @@ export function useSquadChat(
     retry,
     hasMore,
     isFetchingOlder,
+    olderFailed,
     fetchOlder,
     unreadCount,
   }

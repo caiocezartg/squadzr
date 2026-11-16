@@ -52,7 +52,10 @@ export function useSquadChannel({
   const [snapshot, setSnapshot] = useState<SquadSnapshot | null>(null)
   const [presence, setPresence] = useState<PresenceState>({})
   const [errorCode, setErrorCode] = useState<string | null>(null)
-  const [membershipRevoked, setMembershipRevoked] = useState(false)
+  // The Squad whose Membership was revoked, so a stale flag never reaches the next Squad this page renders:
+  // the reset below only lands a commit after the code changes.
+  const [revokedCode, setRevokedCode] = useState<string | null>(null)
+  const membershipRevoked = revokedCode !== null && matchesSquadCode(revokedCode, squadCode)
 
   const { status, send, on, subscribe } = useWebSocket(WS_URL)
 
@@ -81,7 +84,7 @@ export function useSquadChannel({
     setSnapshot(null)
     setPresence({})
     setErrorCode(null)
-    setMembershipRevoked(false)
+    setRevokedCode(null)
 
     const previousCode = joinedCodeRef.current
     joinedCodeRef.current = enabled ? squadCode : null
@@ -108,7 +111,7 @@ export function useSquadChannel({
           // The authoritative snapshot of this Squad supersedes any error a previous join left behind
           // (e.g. a late NOT_ROOM_MEMBER).
           setErrorCode(null)
-          setMembershipRevoked(false)
+          setRevokedCode(null)
         },
         presence_updated: (payload) => {
           if (!matchesSquadCode(payload.roomCode, squadCode)) return
@@ -133,7 +136,7 @@ export function useSquadChannel({
             // the error alone.
             setSnapshot(null)
             setPresence({})
-            setMembershipRevoked(true)
+            setRevokedCode(squadCode)
           }
         },
       }

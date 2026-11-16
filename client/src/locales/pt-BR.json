@@ -454,6 +454,7 @@
     "memberCount": "{count, plural, one {# membro} other {# membros}}",
     "loading": "Carregando mensagens",
     "loadingOlder": "Carregando mensagens anteriores",
+    "loadOlderFailed": "Não foi possível carregar as mensagens anteriores.",
     "newMessages": "Novas mensagens"
   },
   "errors": {

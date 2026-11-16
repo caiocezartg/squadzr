@@ -671,7 +671,7 @@ describe('live messages', () => {
     expect(reads).toBe(2)
   })
 
-  it('stops listening once the viewer is no longer a member', async () => {
+  it('reads and hears nothing while the chat is disabled', async () => {
     const { result, live, rerender } = renderChat(createTestQueryClient(), false)
 
     await live.emit('chat_message', { message: FROM_ANA })

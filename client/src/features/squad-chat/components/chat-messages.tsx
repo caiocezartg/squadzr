@@ -22,6 +22,8 @@ interface OlderHistory {
   readonly hasMore: boolean
   /** An older page is being read. */
   readonly isFetchingOlder: boolean
+  /** The last older page could not be read. Reaching the top no longer reads it; the retry button does. */
+  readonly olderFailed: boolean
   /** Reads the page before the oldest message held. */
   readonly onReachTop: () => void
 }
@@ -116,6 +118,19 @@ function MessageList({ messages, viewerId, ...older }: MessageListProps) {
           </span>
         </div>
       )}
+      {older.olderFailed && !older.isFetchingOlder && (
+        <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center">
+          <span
+            role="alert"
+            className="bg-raised-2 text-text-3 pointer-events-auto flex items-center gap-2 py-1 pr-1 pl-2.5 shadow-[0_8px_20px_-10px_rgba(0,0,0,0.9)]"
+          >
+            <span className="type-label text-[10px]">{t('loadOlderFailed')}</span>
+            <Button variant="secondary" size="sm" onClick={older.onReachTop}>
+              {t('retry')}
+            </Button>
+          </span>
+        </div>
+      )}
       {showPill && (
         <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
           <button
@@ -142,7 +157,7 @@ function useChatScroll(
   listRef: RefObject<HTMLDivElement | null>,
   messages: readonly SquadChatMessage[],
   viewerId: string,
-  { hasMore, isFetchingOlder, onReachTop }: OlderHistory
+  { hasMore, isFetchingOlder, olderFailed, onReachTop }: OlderHistory
 ) {
   // Starts true, so the list opens at the bottom.
   const atBottomRef = useRef(true)
@@ -198,7 +213,9 @@ function useChatScroll(
     if (drawnRef.current) drawnRef.current.firstTop = topOfFirstRow(list)
     atBottomRef.current = list.scrollHeight - list.scrollTop - list.clientHeight <= STICK_THRESHOLD
     if (atBottomRef.current) setShowPill(false)
-    if (list.scrollTop <= OLDER_THRESHOLD && hasMore && !isFetchingOlder) onReachTop()
+    if (list.scrollTop <= OLDER_THRESHOLD && hasMore && !isFetchingOlder && !olderFailed) {
+      onReachTop()
+    }
   }
 
   const jumpToBottom = () => {
