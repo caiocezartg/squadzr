@@ -521,6 +521,19 @@ describe('rate limit', () => {
     expect(await storedCount()).toBe(CHAT.RATE_LIMIT)
   })
 
+  it('does not count a retry of a stored message against the limit', async () => {
+    const id = randomUUID()
+    await send(member, { id, body: 'first' })
+    await sendBurst(member, CHAT.RATE_LIMIT - 2)
+    const retry = await send(member, { id, body: 'first' })
+
+    const last = await send(member, { body: 'still within the limit' })
+
+    expect(retry.statusCode, retry.body).toBe(200)
+    expect(last.statusCode, last.body).toBe(201)
+    expect(await storedCount()).toBe(CHAT.RATE_LIMIT)
+  })
+
   it('lets the member send again once the window has passed', async () => {
     await sendBurst(member, CHAT.RATE_LIMIT)
     clock.advance(CHAT.RATE_WINDOW_MS + 1)

@@ -1035,6 +1035,28 @@ describe('a Ready Squad chat', () => {
     expect(within(chat).getByText('oi time')).toBeInTheDocument()
   })
 
+  it('moves focus to the banner when the Squad turns Ready while the member is typing', async () => {
+    const chat = await openChatWindow()
+    const field = within(chat).getByRole('textbox', { name: 'Message' })
+    act(() => field.focus())
+    expect(field).toHaveFocus()
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    expect(await within(chat).findByText(READ_ONLY)).toHaveFocus()
+  })
+
+  it('leaves focus alone when the Squad turns Ready while the member is elsewhere', async () => {
+    const chat = await openChatWindow()
+    const field = within(chat).getByRole('textbox', { name: 'Message' })
+    act(() => field.focus())
+    act(() => field.blur())
+
+    sendFromServer({ type: 'room_snapshot', payload: readyLobbySnapshot() })
+
+    expect(await within(chat).findByText(READ_ONLY)).not.toHaveFocus()
+  })
+
   it('shows the banner when the Squad turned Ready while the window was closed', async () => {
     await openMemberLobby()
 

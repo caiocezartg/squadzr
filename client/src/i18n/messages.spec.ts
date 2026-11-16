@@ -63,6 +63,21 @@ describe('ICU messages', () => {
     expect(tPtBR('chat.typing', { count: 2, name: 'Ana' })).toBe('2 pessoas estão digitando…')
   })
 
+  it('says the chat cooldown in seconds, singular or plural, in both languages', () => {
+    expect(t('chat.cooldownAnnouncement', { seconds: 1 })).toBe(
+      'Too many messages in a row. You can send again in 1 second.'
+    )
+    expect(t('chat.cooldownAnnouncement', { seconds: 2 })).toBe(
+      'Too many messages in a row. You can send again in 2 seconds.'
+    )
+    expect(tPtBR('chat.cooldownAnnouncement', { seconds: 1 })).toBe(
+      'Muitas mensagens seguidas. Você pode enviar de novo em 1 segundo.'
+    )
+    expect(tPtBR('chat.cooldownAnnouncement', { seconds: 2 })).toBe(
+      'Muitas mensagens seguidas. Você pode enviar de novo em 2 segundos.'
+    )
+  })
+
   it('prints a large count without grouping separators, as the raw value did', () => {
     expect(t('ds.board.openCount', { count: 1000 })).toBe('1000 open squads')
   })

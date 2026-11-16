@@ -1,6 +1,15 @@
 'use client'
 
-import { useId, useState, type CSSProperties, type KeyboardEvent, type RefObject } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type RefObject,
+} from 'react'
 import { Lock, SendHorizontal } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { CHAT, chatMessageBodySchema } from '@squadzr/schemas'
@@ -42,6 +51,27 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const t = useTranslations('chat')
   const errorId = useId()
+  const bannerRef = useRef<HTMLParagraphElement>(null)
+  // The field is still in the page when its ref is detached, so this tells whether the member was typing
+  // when the Squad turned Ready: focus then moves to the banner instead of falling to the page body.
+  const typingWhenRemoved = useRef(false)
+  const fieldRef = useCallback(
+    (node: HTMLTextAreaElement | null) => {
+      if (textareaRef) textareaRef.current = node
+      if (!node) return
+      return () => {
+        typingWhenRemoved.current = node === document.activeElement
+        if (textareaRef) textareaRef.current = null
+      }
+    },
+    [textareaRef]
+  )
+
+  useEffect(() => {
+    if (!readOnly || !typingWhenRemoved.current) return
+    typingWhenRemoved.current = false
+    bannerRef.current?.focus()
+  }, [readOnly])
   const canSend = ready && !isSending && !cooldown && chatMessageBodySchema.safeParse(draft).success
   const length = draft.length
   const over = length > CHAT.MESSAGE_MAX_LENGTH
@@ -55,8 +85,10 @@ export function ChatComposer({
   if (readOnly) {
     return (
       <p
+        ref={bannerRef}
         role="status"
-        className="border-line bg-card text-text-2 flex min-h-17.25 items-center gap-2.5 border-t px-4 py-3 text-[13px] leading-snug font-semibold"
+        tabIndex={-1}
+        className="outline-none border-line bg-card text-text-2 flex min-h-17.25 items-center gap-2.5 border-t px-4 py-3 text-[13px] leading-snug font-semibold"
       >
         <Lock aria-hidden="true" className="text-mint size-4 shrink-0" strokeWidth={2.4} />
         {t('readOnly')}
@@ -74,7 +106,7 @@ export function ChatComposer({
     >
       <div className="flex items-end gap-2">
         <textarea
-          ref={textareaRef}
+          ref={fieldRef}
           value={draft}
           rows={1}
           aria-label={t('composerLabel')}
@@ -99,11 +131,11 @@ export function ChatComposer({
       </div>
       {cooldown && <CooldownBar key={cooldown.endsAt} cooldown={cooldown} />}
       {cooldown && (
-        <p aria-hidden="true" className="text-amber text-[12px] font-semibold tabular-nums">
+        <p className="text-amber text-[12px] font-semibold tabular-nums">
           {t('cooldown', { seconds: cooldown.remainingSeconds })}
         </p>
       )}
-      {/* Said once when a cooldown starts: the seconds shown above change every second and stay silent. */}
+      {/* Said once when a cooldown starts. The seconds shown above are readable but not a live region. */}
       <p role="status" className="sr-only">
         {cooldown
           ? t('cooldownAnnouncement', { seconds: Math.ceil(cooldown.durationMs / 1000) })
@@ -130,17 +162,20 @@ export function ChatComposer({
 /**
  * The bar along the composer's top edge that drains from full to empty over the cooldown. CSS runs it
  * from the cooldown's length, offset by the time already gone when it mounts, so the redraws of the
- * seconds left never touch it. A new cooldown is a new bar: the parent keys it by `endsAt`.
+ * seconds left never touch it. A new cooldown is a new bar: the parent keys it by `endsAt`. Under reduced
+ * motion the bar is hidden and the seconds left say it all.
  */
 function CooldownBar({ cooldown }: { readonly cooldown: ChatCooldown }) {
   const [elapsedMs] = useState(() => cooldown.durationMs - cooldown.remainingMs)
   const style = {
     '--cooldown-duration': `${cooldown.durationMs}ms`,
     '--cooldown-delay': `${-elapsedMs}ms`,
-    '--cooldown-steps': Math.max(1, Math.ceil(cooldown.durationMs / 1000)),
   } as CSSProperties
   return (
-    <div aria-hidden="true" className="bg-amber/15 absolute inset-x-0 -top-px h-0.5">
+    <div
+      aria-hidden="true"
+      className="bg-amber/15 absolute motion-reduce:hidden inset-x-0 -top-px h-0.5"
+    >
       <div
         data-testid="chat-cooldown-bar"
         style={style}

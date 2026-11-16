@@ -30,7 +30,6 @@ export {
   type TypingMember,
   type UseSquadTypingOptions,
 } from './use-squad-typing'
-export { type ChatCooldown } from './use-chat-cooldown'
 export { useSquadChatCommands, type SquadChatCommands } from './squad-chat-commands'
 export { type SquadChatMessage } from './squad-chat-message'
 export {
