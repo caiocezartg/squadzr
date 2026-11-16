@@ -99,7 +99,7 @@ export function SquadChatDock({
           <span
             aria-hidden="true"
             data-testid="chat-unread"
-            className="bg-text text-bg font-display ml-0.5 min-w-5 px-1.5 text-center text-[13px] leading-5 font-black"
+            className="bg-mint-ink text-mint font-display ml-0.5 min-w-5 px-1.5 text-center text-[13px] leading-5 font-black"
           >
             {chat.unreadCount > UNREAD_CAP ? `${UNREAD_CAP}+` : chat.unreadCount}
           </span>
