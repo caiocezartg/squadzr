@@ -31,10 +31,16 @@ describe('chatMessageBodySchema', () => {
     expect(chatMessageBodySchema.safeParse(' ​ ﻿ ').success).toBe(false)
   })
 
-  it('strips zero-width characters before the length check', () => {
-    expect(chatMessageBodySchema.parse('o​i')).toBe('oi')
-    const padded = `${'a'.repeat(CHAT.MESSAGE_MAX_LENGTH)}​​`
-    expect(chatMessageBodySchema.parse(padded)).toBe('a'.repeat(CHAT.MESSAGE_MAX_LENGTH))
+  it('keeps zero-width characters in the stored body, so compound emoji stay whole', () => {
+    const family = '\u{1F468}‍\u{1F469}‍\u{1F467}'
+    expect(chatMessageBodySchema.parse(` ${family} `)).toBe(family)
+    expect(chatMessageBodySchema.parse('o​i')).toBe('o​i')
+  })
+
+  it('counts zero-width characters toward the stored length', () => {
+    const padded = `${'a'.repeat(CHAT.MESSAGE_MAX_LENGTH - 1)}​`
+    expect(chatMessageBodySchema.safeParse(padded).success).toBe(true)
+    expect(chatMessageBodySchema.safeParse(`${padded}​`).success).toBe(false)
   })
 
   it('accepts exactly the maximum length and refuses one more', () => {

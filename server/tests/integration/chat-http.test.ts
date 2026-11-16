@@ -219,6 +219,15 @@ describe('body validation', () => {
     expect(await storedCount()).toBe(0)
   })
 
+  it('stores a compound emoji whole, zero-width joiners included', async () => {
+    const family = '\u{1F468}‍\u{1F469}‍\u{1F467}'
+
+    const response = await send(member, { body: ` ${family} ` })
+
+    expect(response.statusCode, response.body).toBe(201)
+    expect(response.json<ChatMessageDto>().body).toBe(family)
+  })
+
   it('refuses an id that is not a UUID', async () => {
     const response = await send(member, { id: 'not-a-uuid', body: 'oi' })
 
