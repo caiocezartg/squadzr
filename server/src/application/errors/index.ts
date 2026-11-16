@@ -31,3 +31,4 @@ export {
   CatalogImportRunningError,
   CatalogImportUnavailableError,
 } from './catalog-import.error'
+export { ChatMessageIdConflictError } from './chat.error'

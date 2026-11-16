@@ -16,6 +16,14 @@ _Avoid_: Squad Board, room page, waiting room
 The view of the Squads a player hosts or holds a Membership in, including Ready Squads during their retention.
 _Avoid_: My Rooms, dashboard, my lobbies
 
+**Squad Chat**:
+The chat window of a Squad's Lobby, shown only to its members behind a floating "Chat" button at the bottom-right: a non-modal panel above the button from 640px, a bottom sheet below. It lists the latest Chat Messages, other members' on the left and the viewer's on the right, grouped by author within 2 minutes under one header, with a day divider when the day changes. The viewer's message shows at once as pending under its client-generated id and the server's message replaces it; a failed send removes it and puts the text back in the composer. Links in a message (`http://`, `https://`, `www.`) are clickable and open in a new tab. The skeleton shows only the first time the window opens, never on a warm cache.
+_Avoid_: Chatbox, messenger, DM
+
+**Chat Message**:
+One entry of a Squad Chat as the member sees it: the author's name, avatar, the `HH:mm` send time and the body, which is always rendered as text, never as HTML.
+_Avoid_: Post, comment
+
 **Notification**:
 One row of the bell's panel, one per action that happened to the viewer's Squads, drawn by its type with its own media, badge and message: a Squad that filled (the game cover with a Discord badge, and the Squads the viewer left for it), a Squad the viewer inherited (the cover with a crown), a member who left (their avatar), and a Squad that was closed (a grey cover). All but the last open the Squad's Lobby; a closed Squad has no Lobby, so its row opens the Squad Board. Any notification pushed to the viewer also reads My Squads again, because a Squad Release changes the viewer's list.
 _Avoid_: Alert, toast, message

@@ -435,6 +435,24 @@
     "ptBr": "PT-BR",
     "enUs": "EN-US"
   },
+  "chat": {
+    "launcher": "Chat",
+    "title": "Chat do squad",
+    "close": "Fechar chat",
+    "messages": "Mensagens do chat",
+    "composerLabel": "Mensagem",
+    "placeholder": "Escreva para o seu squad",
+    "send": "Enviar",
+    "counter": "{count, number}/{max, number}",
+    "empty": "Nenhuma mensagem ainda. Diga oi para o seu squad.",
+    "loadFailed": "Não foi possível carregar o chat.",
+    "retry": "Tentar de novo",
+    "sendFailed": "Sua mensagem não foi enviada. Tente de novo.",
+    "sending": "Enviando",
+    "today": "Hoje",
+    "memberCount": "{count, plural, one {# membro} other {# membros}}",
+    "loading": "Carregando mensagens"
+  },
   "errors": {
     "GAME_NOT_FOUND": "Este jogo não foi encontrado.",
     "INVALID_GAME": "Este jogo não está mais disponível. Por favor, escolha outro jogo.",
