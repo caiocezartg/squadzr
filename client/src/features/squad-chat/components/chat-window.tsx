@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { BottomSheet } from '@/components/ds/bottom-sheet'
 import { NARROW_QUERY, useMediaQuery } from '@/components/ds/use-media-query'
+import { useInstantDismiss } from '@/components/ds/use-instant-dismiss'
 import { useMounted } from '@/components/ds/use-mounted'
 import { cn } from '@/lib/utils'
 
@@ -84,11 +85,13 @@ function DesktopPanel({
   const t = useTranslations('chat')
   // A panel that mounts already open (crossing 640px while open) still plays its enter.
   const mounted = useMounted()
+  // Escape closes at once, with no exit transition (docs/design/reference.md, Motion, Rules).
+  const { instant, handleOpenChange } = useInstantDismiss(onOpenChange)
 
   return (
     <Dialog.Root
       open={open && mounted}
-      onOpenChange={onOpenChange}
+      onOpenChange={handleOpenChange}
       modal={false}
       disablePointerDismissal
     >
@@ -96,13 +99,14 @@ function DesktopPanel({
         <Dialog.Popup
           initialFocus={textareaRef}
           finalFocus={launcherRef}
+          data-instant={instant ? '' : undefined}
           className={cn(
             'bg-panel text-text fixed right-5 bottom-[calc(max(1.25rem,env(safe-area-inset-bottom))+3.75rem)] z-40 flex h-[min(500px,calc(100dvh-7rem))] w-92.5 flex-col outline-none',
             'shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_60px_-20px_rgba(0,0,0,0.9)]',
             'origin-bottom-right transition-[opacity,scale] duration-200 ease-out',
             'data-starting-style:opacity-0 data-ending-style:opacity-0',
             'motion-safe:data-starting-style:scale-[0.96] motion-safe:data-ending-style:scale-[0.96]',
-            'data-ending-style:duration-150'
+            'data-ending-style:duration-150 data-instant:data-ending-style:duration-0'
           )}
         >
           <header className="border-line flex items-center gap-3 border-b py-2.5 pr-2.5 pl-4">

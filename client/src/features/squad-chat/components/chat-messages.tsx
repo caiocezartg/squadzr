@@ -144,7 +144,6 @@ function useMessageTime() {
 }
 
 function Group({ group }: { readonly group: MessageGroup }) {
-  const t = useTranslations('chat')
   const time = useMessageTime()
   const first = group.messages[0]
   if (!first) return null
@@ -162,9 +161,7 @@ function Group({ group }: { readonly group: MessageGroup }) {
       />
       <div className={cn('flex min-w-0 flex-1 flex-col gap-1', group.own && 'items-end')}>
         <p className={cn('flex items-baseline gap-2', group.own && 'flex-row-reverse')}>
-          <span className="text-text truncate text-[13px] font-bold">
-            {group.own ? t('you') : group.author.name}
-          </span>
+          <span className="text-text truncate text-[13px] font-bold">{group.author.name}</span>
           <time dateTime={first.createdAt} className="type-code text-faint shrink-0 text-[10px]">
             {time(first.createdAt)}
           </time>

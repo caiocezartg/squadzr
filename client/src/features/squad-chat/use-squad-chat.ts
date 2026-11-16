@@ -115,9 +115,8 @@ export function useSquadChat(squadCode: string, options: UseSquadChatOptions): S
   const queryClient = useQueryClient()
   const viewer = useSession()?.user ?? null
   const code = squadCode.toUpperCase()
-  // The id of the viewer's one unconfirmed message. After a failure it stays, harmless, until the next
-  // send: the message is already out of the history, and clearing it earlier than the history's own
-  // update would draw the failed message as confirmed for a frame.
+  // The id of the viewer's one unconfirmed message. A failure clears it in the same update that takes the
+  // message out of the history, so the message is never drawn as confirmed.
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
   // The state above trails a render behind; a second send in the same tick must still see the first.
@@ -185,7 +184,10 @@ export function useSquadChat(squadCode: string, options: UseSquadChatOptions): S
         return { ok: true }
       } catch (error) {
         discard(queryClient, code, id)
-        failedRef.current = { body: body.data, id }
+        setPendingId(null)
+        // Only an answer that may have been lost keeps the id: the server refused anything below 500.
+        const refused = error instanceof ApiClientError && error.status < 500
+        failedRef.current = refused ? null : { body: body.data, id }
         const errorCode = error instanceof ApiClientError ? (error.code ?? null) : null
         return { ok: false, reason: 'failed', text, code: errorCode }
       } finally {

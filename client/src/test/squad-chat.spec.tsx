@@ -164,7 +164,7 @@ describe('the history', () => {
       within(theirs.closest('li')!.parentElement!.parentElement!).getByText('Ana')
     ).toBeTruthy()
     expect(mine.closest('[data-own]')).not.toBeNull()
-    expect(within(mine.closest('[data-own]') as HTMLElement).getByText('You')).toBeInTheDocument()
+    expect(within(mine.closest('[data-own]') as HTMLElement).getByText('Caio')).toBeInTheDocument()
   })
 
   it('shows no skeleton when the window opens again on a warm cache', async () => {

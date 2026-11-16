@@ -307,6 +307,47 @@ describe('sending', () => {
     expect(other).not.toBe(first)
   })
 
+  it('uses a new id after the server refused the send', async () => {
+    onHttp('POST', '/api/rooms/:code/messages', () =>
+      httpError(409, { error: 'CHAT_MESSAGE_ID_CONFLICT', message: 'taken' })
+    )
+    const { result } = await readyChat()
+
+    for (let i = 0; i < 2; i += 1) {
+      await act(async () => {
+        await result.current.send('same')
+      })
+    }
+
+    const ids = getHttpLog()
+      .filter((request) => request.method === 'POST')
+      .map((request) => (request.body as { id: string }).id)
+    expect(ids[1]).not.toBe(ids[0])
+  })
+
+  it('draws no message as pending once a send failed', async () => {
+    onHttp('POST', '/api/rooms/:code/messages', () => {
+      throw new TypeError('response lost')
+    })
+    const { result } = await readyChat()
+    await act(async () => {
+      await result.current.send('lost')
+    })
+    const failedId = getHttpLog()
+      .filter((request) => request.method === 'POST')
+      .map((request) => (request.body as { id: string }).id)[0]
+    onHttp('GET', '/api/rooms/:code/messages', () =>
+      httpOk(history({ ...stored('lost', '2026-01-01T10:05:00.000Z'), id: failedId ?? '' }))
+    )
+
+    act(() => result.current.refresh())
+
+    await waitFor(() =>
+      expect(result.current.messages.map((message) => message.id)).toEqual([failedId])
+    )
+    expect(result.current.messages[0]?.pending).toBe(false)
+  })
+
   it('uses a new id after a send succeeds', async () => {
     let calls = 0
     onHttp('POST', '/api/rooms/:code/messages', ({ body }) => {

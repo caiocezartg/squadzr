@@ -437,7 +437,6 @@
   },
   "chat": {
     "launcher": "Chat",
-    "windowLabel": "Squad chat",
     "title": "Squad chat",
     "close": "Close chat",
     "messages": "Chat messages",
@@ -452,7 +451,6 @@
     "sending": "Sending",
     "today": "Today",
     "memberCount": "{count, plural, one {# member} other {# members}}",
-    "you": "You",
     "loading": "Loading messages"
   },
   "errors": {
