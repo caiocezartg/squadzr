@@ -117,6 +117,9 @@ export function useSquadChat(squadCode: string, options: UseSquadChatOptions): S
   const [isSending, setIsSending] = useState(false)
   // The state above trails a render behind; a second send in the same tick must still see the first.
   const sendingRef = useRef(false)
+  // The last failed send. Its answer may only have been lost, so sending the same text again reuses its id,
+  // and the server, idempotent on the id, stores it at most once.
+  const failedRef = useRef<{ readonly body: string; readonly id: string } | null>(null)
 
   const history = useInfiniteQuery<
     ChatHistoryResponse,
@@ -151,7 +154,8 @@ export function useSquadChat(squadCode: string, options: UseSquadChatOptions): S
       if (sendingRef.current) return { ok: false, reason: 'busy', text, code: null }
 
       sendingRef.current = true
-      const id = crypto.randomUUID()
+      const failed = failedRef.current
+      const id = failed?.body === body.data ? failed.id : crypto.randomUUID()
       const author = { id: viewer.id, name: viewer.name, image: viewer.image ?? null }
       const draft: ChatMessageDto = {
         id,
@@ -171,10 +175,12 @@ export function useSquadChat(squadCode: string, options: UseSquadChatOptions): S
           chatMessageSchema
         )
         await confirm(queryClient, code, stored)
+        failedRef.current = null
         setPendingId(null)
         return { ok: true }
       } catch (error) {
         discard(queryClient, code, id)
+        failedRef.current = { body: body.data, id }
         const errorCode = error instanceof ApiClientError ? (error.code ?? null) : null
         return { ok: false, reason: 'failed', text, code: errorCode }
       } finally {

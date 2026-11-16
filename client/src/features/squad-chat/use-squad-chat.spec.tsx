@@ -246,6 +246,58 @@ describe('sending', () => {
     expect(result.current.isSending).toBe(false)
   })
 
+  it('reuses the failed message id when the same text is sent again, so it is stored once', async () => {
+    onHttp('POST', '/api/rooms/:code/messages', () => {
+      throw new TypeError('response lost')
+    })
+    const { result } = await readyChat()
+    const postedIds = () =>
+      getHttpLog()
+        .filter((request) => request.method === 'POST')
+        .map((request) => (request.body as { id: string }).id)
+
+    await act(async () => {
+      await result.current.send('  again  ')
+    })
+    await act(async () => {
+      await result.current.send('again')
+    })
+    await act(async () => {
+      await result.current.send('something else')
+    })
+
+    const [first, retried, other] = postedIds()
+    expect(retried).toBe(first)
+    expect(other).not.toBe(first)
+  })
+
+  it('uses a new id after a send succeeds', async () => {
+    let calls = 0
+    onHttp('POST', '/api/rooms/:code/messages', ({ body }) => {
+      calls += 1
+      if (calls === 1) throw new TypeError('response lost')
+      return httpCreated({
+        ...(body as { id: string; body: string }),
+        roomCode: CODE,
+        createdAt: '2026-01-01T10:05:00.000Z',
+        author: { id: 'me', name: 'Caio', image: null },
+      })
+    })
+    const { result } = await readyChat()
+
+    for (let i = 0; i < 3; i += 1) {
+      await act(async () => {
+        await result.current.send('same')
+      })
+    }
+
+    const ids = getHttpLog()
+      .filter((request) => request.method === 'POST')
+      .map((request) => (request.body as { id: string }).id)
+    expect(ids[1]).toBe(ids[0])
+    expect(ids[2]).not.toBe(ids[1])
+  })
+
   it('reports no error code when the request itself failed', async () => {
     onHttp('POST', '/api/rooms/:code/messages', () => {
       throw new TypeError('network down')
