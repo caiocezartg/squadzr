@@ -292,3 +292,4 @@ export {
   type ChatMessageDto,
   type SendChatMessageRequest,
 } from './chat'
+export { containsLink } from './chat-link'

@@ -1,6 +1,6 @@
 /**
  * Flow tests of the Squad Chat in the Lobby: the launcher only for members, the non-modal window and its
- * focus, the history laid out left and right, the optimistic send, a failed send, and links.
+ * focus, the history laid out left and right, the optimistic send, a failed send, and refused links.
  */
 
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
@@ -361,7 +361,7 @@ describe('the chat window, continued', () => {
     expect(await within(chat).findByText('oi time')).toBeInTheDocument()
   })
 
-  it('renders links safely and never renders the body as HTML', async () => {
+  it('renders the body as plain text: no links, never HTML', async () => {
     registerRoutes([
       message(1, ANA, 'veja https://example.com/a. e <b>negrito</b>'),
       message(2, ANA, 'javascript:alert(1)'),
@@ -369,11 +369,8 @@ describe('the chat window, continued', () => {
     await openMemberLobby()
     const chat = await openChat()
 
-    const link = await within(chat).findByRole('link', { name: 'https://example.com/a' })
-    expect(link).toHaveAttribute('href', 'https://example.com/a')
-    expect(link).toHaveAttribute('target', '_blank')
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow ugc')
-    expect(within(chat).getAllByRole('link')).toHaveLength(1)
+    expect(await within(chat).findByText(/https:\/\/example\.com\/a/)).toBeInTheDocument()
+    expect(within(chat).queryAllByRole('link')).toHaveLength(0)
     expect(chat.querySelector('b')).toBeNull()
     expect(within(chat).getByText(/<b>negrito<\/b>/)).toBeInTheDocument()
   })
@@ -434,6 +431,27 @@ describe('sending', () => {
     })
 
     expect(within(chat).getByRole('button', { name: 'Send' })).toBeDisabled()
+  })
+
+  it('refuses a draft with a link and says links are not allowed', async () => {
+    await openMemberLobby()
+    const chat = await openChat()
+    await within(chat).findByText('oi time')
+    const field = within(chat).getByRole('textbox', { name: 'Message' })
+
+    await userEvent.type(field, 'entra aí discord.gg/abc{Enter}')
+
+    expect(within(chat).getByRole('alert')).toHaveTextContent('Links are not allowed in the chat.')
+    expect(field).toHaveAttribute('aria-invalid', 'true')
+    expect(within(chat).getByRole('button', { name: 'Send' })).toBeDisabled()
+    expect(field).toHaveValue('entra aí discord.gg/abc')
+    expect(countHttpCalls('POST', '/api/rooms/:code/messages')).toBe(0)
+
+    await userEvent.clear(field)
+    await userEvent.type(field, 'entra aí')
+
+    expect(within(chat).queryByText('Links are not allowed in the chat.')).not.toBeInTheDocument()
+    expect(within(chat).getByRole('button', { name: 'Send' })).toBeEnabled()
   })
 
   it('takes the message out and puts the text back when the send fails', async () => {
