@@ -57,6 +57,16 @@ and the check refuses one call column without the other) and changes `rooms-http
 read, 422 `DISCORD_INVITE_NOT_VOICE_CALL` and 503 `DISCORD_UNAVAILABLE` with `retryAfterMs` and `Retry-After`, each persisting nothing, and
 the call going to members only: not to a visitor, a non-member or the board).
 
+Issue #192 (Create form: voice-call rule, blocked outage and help dialog) moves the form to the new rule. `create-squad.spec.tsx` replaces
+its two "lets the squad be created" cases (Discord unknown, Discord still being asked) and its muted-line wording: the call shown under the
+server row and announced, `not_voice_call` with the inline help link, `unknown` (also a failed or rate-limited check) as a blocked outage with
+its retry, the retry asking past the answer held (and showing CHECKING while it runs), submit before the 400 ms pause and with a request in
+flight (creating, or refusing with focus on the field for `invalid`, `not_voice_call` and `unknown`), each of the three server codes on the
+field with its own message, and a new attempt after a 503. It also covers the help dialog: the always-visible button, the GIF with its size
+and no lazy loading, the numbered steps, the dialog opening after the create dialog, Escape and the close button closing only it with the
+form kept and focus back on the button, and reduced motion showing the poster with a "Play animation" button. `discord-invite-issue.spec.ts`
+pins the pure mapping from a check state or server code to the field's message code.
+
 Issue #152 (Squad invite preview image) adds the `og` workspace, the `squadzr-og` image Worker, as a fourth Vitest
 project in `vitest.workspace.ts`. `og:unit` has 5 files and 46 tests: `handle-request.spec.ts` (the key that renders, a Squad over
 its game's player limit, HEAD, cached 404s for a bad path, a missing design version, too many slots, an unknown language and any query

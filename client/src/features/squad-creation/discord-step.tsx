@@ -1,36 +1,45 @@
 'use client'
 
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
-import { Check, Lock } from 'lucide-react'
+import { Check, CircleHelp, Lock } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { DiscordIcon } from '@/components/ui/icons'
 import { cn } from '@/lib/utils'
 import type { Game } from '@/types'
 import type { FormInput, FormValues } from './create-squad-form'
+import { DiscordCallRow } from './discord-call-row'
+import { discordInviteIssue, isDiscordServerErrorCode } from './discord-invite-issue'
+import { DiscordIssueAction } from './discord-issue-action'
 import { checkDiscordLink } from './discord-link'
 import { DiscordServerRow } from './discord-server-row'
 import { FormField } from './form-field'
 import { SquadPreview } from './squad-preview'
 import type { DiscordInviteState } from './use-discord-invite-check'
+import { VoiceCallHelpDialog } from './voice-call-help-dialog'
 
 export interface DiscordStepProps {
   game: Game
   /** What Discord says about the invite in the field. */
   invite: DiscordInviteState
+  /** Asks Discord again about the invite, past the answer the browser holds. */
+  onRetryInvite: () => void
 }
 
 /**
  * Step 3: the Discord invite with live validation by the contract's own rule and then by Discord, a
  * hint about who sees it, and a preview of the Squad's card. The mark and the message follow what the
  * player has typed; an empty field says nothing until the form is submitted. A link the contract accepts
- * is checked with Discord: it shows the server behind it, warns when it expires, and is refused when
- * Discord does not know it. When Discord cannot be asked the link stays valid and the server checks it.
+ * is checked with Discord: it shows the server and the voice call behind it, warns when it expires, and
+ * is refused when Discord does not know it or it points to no voice call. When Discord cannot be asked
+ * the field says so and offers a retry, because a Squad is never created without a call. A help dialog
+ * shows how to copy an invite from a voice call.
  */
-export function DiscordStep({ game, invite }: DiscordStepProps) {
+export function DiscordStep({ game, invite, onRetryInvite }: DiscordStepProps) {
   const t = useTranslations()
   const inputId = useId()
   const errorId = useId()
+  const [helpOpen, setHelpOpen] = useState(false)
   const {
     register,
     control,
@@ -40,26 +49,32 @@ export function DiscordStep({ game, invite }: DiscordStepProps) {
 
   const check = checkDiscordLink(link)
   const showsError = !check.valid && (link !== '' || errors.discordLink !== undefined)
-  // Discord does not know the invite: it told so while the player typed, or the server did on submit.
-  const refused =
-    check.valid && (invite.status === 'invalid' || errors.discordLink?.type === 'server')
+  // What the server answered on submit wins over what Discord said while the player typed.
+  const serverMessage = errors.discordLink?.message
+  const serverCode =
+    errors.discordLink?.type === 'server' && isDiscordServerErrorCode(serverMessage)
+      ? serverMessage
+      : null
+  const issue = check.valid ? discordInviteIssue(invite, serverCode) : null
   const checking = link !== '' && check.valid && invite.status === 'checking'
-  const valid = link !== '' && check.valid && !refused && !checking
+  const valid = link !== '' && check.valid && issue === null && !checking
   const errorMessage = !check.valid
     ? showsError
       ? t(`squads.createModal.${check.errorKey}`)
       : undefined
-    : refused
-      ? t('errors.INVALID_DISCORD_INVITE')
+    : issue
+      ? t(`errors.${issue.code}`)
       : undefined
   const server = valid && invite.status === 'valid' ? invite.server : null
-  const announcement = server
-    ? t('ds.createSquad.discordServerAnnouncement', { name: server.name })
-    : valid
-      ? t('ds.createSquad.discordValidAnnouncement')
-      : checking
-        ? t('ds.createSquad.discordCheckingAnnouncement')
-        : ''
+  const call = valid && invite.status === 'valid' ? invite.call : null
+  const announcement =
+    server && call
+      ? t('ds.createSquad.discordServerAnnouncement', { name: server.name, call: call.name })
+      : valid
+        ? t('ds.createSquad.discordValidAnnouncement')
+        : checking
+          ? t('ds.createSquad.discordCheckingAnnouncement')
+          : ''
 
   return (
     <>
@@ -69,6 +84,13 @@ export function DiscordStep({ game, invite }: DiscordStepProps) {
           label={t('ds.createSquad.discordLabel')}
           errorId={errorId}
           error={errorMessage}
+          errorAction={
+            <DiscordIssueAction
+              issue={issue}
+              onRetry={onRetryInvite}
+              onHelp={() => setHelpOpen(true)}
+            />
+          }
         >
           <span
             className={cn(
@@ -109,22 +131,29 @@ export function DiscordStep({ game, invite }: DiscordStepProps) {
           </span>
         </FormField>
         {server && (
-          <DiscordServerRow
-            name={server.name}
-            iconUrl={server.iconUrl}
-            memberCount={server.memberCount}
-          />
+          <div className="flex flex-col">
+            <DiscordServerRow
+              name={server.name}
+              iconUrl={server.iconUrl}
+              memberCount={server.memberCount}
+            />
+            {call && <DiscordCallRow name={call.name} />}
+          </div>
         )}
         {valid && invite.status === 'valid' && invite.expires && (
           <p className="text-amber text-[12.5px] leading-normal">
             {t('ds.createSquad.discordExpires')}
           </p>
         )}
-        {valid && invite.status === 'unknown' && (
-          <p className="text-muted text-[12.5px] leading-normal">
-            {t('ds.createSquad.discordUnknown')}
-          </p>
-        )}
+        <button
+          type="button"
+          onClick={() => setHelpOpen(true)}
+          className="text-text-3 hover-fine:text-text focus-visible:outline-mint inline-flex min-h-9 items-center gap-2 self-start text-[12.5px] leading-normal font-bold focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <CircleHelp aria-hidden className="text-mint size-3.5 shrink-0" strokeWidth={2.4} />
+          {t('ds.createSquad.voiceCallHelp.trigger')}
+        </button>
+        <VoiceCallHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
         <p role="status" className="sr-only">
           {announcement}
         </p>

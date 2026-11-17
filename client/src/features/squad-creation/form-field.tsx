@@ -20,6 +20,11 @@ export interface FormFieldProps {
   errorId?: string
   /** The validation message under the control. */
   error?: string
+  /**
+   * Follows the error on its line, such as a retry or a help link. It sits outside the element
+   * `errorId` names, so the control's description stays the message alone.
+   */
+  errorAction?: ReactNode
   className?: string
   children: ReactNode
 }
@@ -36,6 +41,7 @@ export function FormField({
   aside,
   errorId,
   error,
+  errorAction,
   className,
   children,
 }: FormFieldProps) {
@@ -57,9 +63,12 @@ export function FormField({
         {children}
         <div aria-live="polite">
           {error && (
-            <p id={errorId} className="text-danger mt-2 text-[12.5px] leading-normal">
-              {error}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <p id={errorId} className="text-danger text-[12.5px] leading-normal">
+                {error}
+              </p>
+              {errorAction}
+            </div>
           )}
         </div>
       </div>

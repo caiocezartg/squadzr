@@ -23,6 +23,7 @@ import {
   type FormValues,
 } from './create-squad-form'
 import { DetailsStep } from './details-step'
+import { isDiscordServerErrorCode } from './discord-invite-issue'
 import { DiscordStep } from './discord-step'
 import { CreateSquadFooter } from './footer'
 import { GameStep } from './game-step'
@@ -75,7 +76,7 @@ export function CreateSquadDialog({
     },
   })
   const createSquad = useCreateSquad({ onClose, onCreated })
-  const invite = useDiscordInviteCheck(
+  const inviteCheck = useDiscordInviteCheck(
     useWatch({ control: form.control, name: 'discordLink' }) ?? ''
   )
 
@@ -106,8 +107,10 @@ export function CreateSquadDialog({
   }
 
   const create = form.handleSubmit(async (data) => {
-    // Discord already said it does not know the invite: the field shows it, and nothing is sent.
-    if (invite.status === 'invalid') {
+    // The answer for this very link, waiting for the debounce or a request in flight. Anything but a
+    // voice call refuses here: the field already shows why, and nothing is sent.
+    const invite = await inviteCheck.settle(data.discordLink)
+    if (invite.status !== 'valid') {
       form.setFocus('discordLink')
       return
     }
@@ -116,9 +119,10 @@ export function CreateSquadDialog({
       await createSquad.mutateAsync(data)
     } catch (err) {
       notifyError(getUserFriendlyError(err, tAll))
-      // The server asked Discord itself and refused the invite: the dialog stays open on the field.
-      if (err instanceof ApiClientError && err.code === 'INVALID_DISCORD_INVITE') {
-        form.setError('discordLink', { type: 'server' })
+      // The server asked Discord itself and refused the invite: the dialog stays open on the field,
+      // which keeps the code to show that code's own message.
+      if (err instanceof ApiClientError && isDiscordServerErrorCode(err.code)) {
+        form.setError('discordLink', { type: 'server', message: err.code })
         form.setFocus('discordLink')
       }
     }
@@ -183,14 +187,18 @@ export function CreateSquadDialog({
               <DetailsStep selectedGame={selectedGame} onChangeGame={() => goTo(0)} />
             )}
             {step === 'discord' && selectedGame && (
-              <DiscordStep game={selectedGame} invite={invite} />
+              <DiscordStep
+                game={selectedGame}
+                invite={inviteCheck.state}
+                onRetryInvite={inviteCheck.retry}
+              />
             )}
           </StepPanel>
           <CreateSquadFooter
             first={first}
             last={last}
             canContinue={step !== 'game' || selectedGame !== null}
-            creating={createSquad.isPending}
+            creating={createSquad.isPending || form.formState.isSubmitting}
             onCancel={onClose}
             onBack={() => goTo(stepIndex - 1)}
           />
