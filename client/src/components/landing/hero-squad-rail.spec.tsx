@@ -1,8 +1,8 @@
 /**
- * Where the hero's squadmates float before they fly in. Each has a spot from the headline's top centre,
- * x as a share of its half width and y in its ems; the hero turns it into an offset from the player's
- * own seat, which the fly-in starts from, picks the spot for the width, measures again when the
- * headline resizes, and shows a player only once it is placed.
+ * Where the hero's squadmates float before they fly in. Each has a spot in headline ems from the
+ * headline's top centre; the hero turns it into an offset from the player's own seat, which the fly-in
+ * starts from, picks the spot for the width, measures again when the headline resizes, and shows a
+ * player only once it is placed.
  */
 
 import { act, render, screen } from '@testing-library/react'
@@ -96,17 +96,17 @@ describe('the hero squadmates', () => {
   it('float at their phone spot, as an offset from their own seat', () => {
     renderHero()
 
-    // mia.f's phone spot is (0.83, 2.19em) from the headline's top centre (200, 100): 400px wide, 50px
-    // ems. Seat centre: (172, 422). So (200 + 0.83 × 200 - 172, 100 + 2.19 × 50 - 422).
-    expect(offsetOf('mia.f')).toEqual(['194.0px', '-212.5px'])
+    // mia.f's phone spot is (2.2em, 1.6em) from the headline's top centre (200, 100), at 50px.
+    // Seat centre: (172, 422). So (200 + 110 - 172, 100 + 80 - 422).
+    expect(offsetOf('mia.f')).toEqual(['138.0px', '-242.0px'])
   })
 
   it('take their wide spot from 1280px', () => {
     mockMediaQuery('(min-width: 80rem)', true)
     renderHero()
 
-    // mia.f's wide spot is (0.93, 0.04em): (200 + 186 - 172, 100 + 2 - 422).
-    expect(offsetOf('mia.f')).toEqual(['214.0px', '-320.0px'])
+    // mia.f's wide spot is (5em, 0.45em): (200 + 250 - 172, 100 + 22.5 - 422).
+    expect(offsetOf('mia.f')).toEqual(['278.0px', '-299.5px'])
   })
 
   it('are placed again when the headline resizes', () => {
@@ -117,7 +117,7 @@ describe('the hero squadmates', () => {
       for (const callback of resizeCallbacks) callback([], {} as ResizeObserver)
     })
 
-    expect(offsetOf('mia.f')).toEqual(['294.0px', '-212.5px'])
+    expect(offsetOf('mia.f')).toEqual(['238.0px', '-242.0px'])
   })
 
   it('are all placed, so every one of them can show', () => {

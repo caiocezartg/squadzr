@@ -38,10 +38,11 @@ interface SquadmateSeatProps {
 }
 
 /**
- * A seat a squadmate lands in. The player floats at its spot (placed by `useSquadmateSpots`), bobbing,
- * a little smaller and see-through, then flies in and lands solid, and the seat flashes its ring. At
- * rest the player is in the seat, which is how reduced motion shows it; with motion the player only
- * shows once placed, so it never appears in the seat before it flies.
+ * A seat a squadmate lands in. The player floats at its spot close to the headline (placed by
+ * `useSquadmateSpots`), a little larger than the seat and named, bobbing; then it flies in, settles to
+ * the seat's size, and the seat flashes its ring. At rest the player is in the seat, which is how
+ * reduced motion shows it; with motion the player only shows once placed, so it never appears in the
+ * seat before it flies.
  */
 function SquadmateSeat({ squadmate, index, flyerRef }: SquadmateSeatProps) {
   return (
@@ -56,7 +57,7 @@ function SquadmateSeat({ squadmate, index, flyerRef }: SquadmateSeatProps) {
             <span className="block origin-top-left scale-[0.6111] sm:scale-[0.8333]">
               <Avatar size={72} playerId={squadmate.id} name={squadmate.name} />
             </span>
-            <span className={cn(NAME, 'text-text-2')}>{squadmate.name}</span>
+            <span className={cn(NAME, 'text-text')}>{squadmate.name}</span>
           </span>
         </span>
       </span>

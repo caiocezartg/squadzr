@@ -14,11 +14,11 @@ function currentTier(): HeroTier {
 }
 
 /**
- * Places each squadmate where the hero has them float before they fly in. A spot is given from the
- * headline's top centre, x as a share of its half width and y in its ems (see `Squadmate`); this turns
- * it into the offset from the player's own seat (`--fly-x`, `--fly-y`) that the fly-in starts from,
- * and marks the player placed, which is when it shows. It measures again whenever the headline resizes
- * and once the fonts load, since both move the headline and the seats. `squadmates` holds each
+ * Places each squadmate where the hero has them float before they fly in. A spot is given in headline
+ * ems from the headline's top centre, so it keeps its place beside the lettering at any size; this
+ * turns it into the offset from the player's own seat (`--fly-x`, `--fly-y`) that the fly-in starts
+ * from, and marks the player placed, which is when it shows. It measures again whenever the headline
+ * resizes and once the fonts load, since both move the headline and the seats. `squadmates` holds each
  * player's flyer, which sits in its seat.
  */
 export function useSquadmateSpots(
@@ -40,8 +40,7 @@ export function useSquadmateSpots(
         if (!flyer || !seat || !spot) return
         const [x, y] = spot
         const seatBox = seat.getBoundingClientRect()
-        const centre = box.left + box.width / 2
-        const dx = centre + (x * box.width) / 2 - (seatBox.left + seatBox.width / 2)
+        const dx = box.left + box.width / 2 + x * em - (seatBox.left + seatBox.width / 2)
         const dy = box.top + y * em - (seatBox.top + seatBox.height / 2)
         flyer.style.setProperty('--fly-x', `${dx.toFixed(1)}px`)
         flyer.style.setProperty('--fly-y', `${dy.toFixed(1)}px`)

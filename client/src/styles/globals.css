@@ -261,23 +261,12 @@
   }
   @keyframes hero-fly {
     from {
-      transform: translate(var(--fly-x, 0px), var(--fly-y, 0px)) scale(0.82);
+      transform: translate(var(--fly-x, 0px), var(--fly-y, 0px)) scale(1.1);
     }
   }
   @keyframes hero-appear {
     from {
       opacity: 0;
-    }
-    to {
-      opacity: 0.85;
-    }
-  }
-  @keyframes hero-solidify {
-    from {
-      opacity: 0.85;
-    }
-    to {
-      opacity: 1;
     }
   }
   @keyframes hero-label-out {
@@ -363,8 +352,9 @@
     them runs (all are behind `motion-safe:`), the hero simply shows the squad complete:
     - the letters of SOLO drift apart, then settle dim as the strike draws through them;
     - the solo life's chips rise in one by one, bob, and blur away once the second line rises;
-    - the four squadmates float where the hero places them (--fly-x, --fly-y) and fly into their seats
-      one after another, each seat flashing its ring as its player lands;
+    - the four squadmates float close around the headline, a little larger than their seats, where the
+      hero places them (--fly-x, --fly-y), and fly into their seats one after another, settling to the
+      seat's size as each seat flashes its ring;
     - the counter rolls from 1 to 5 as they land, and turns mint with the last one.
   */
   --animate-hero-solo:
@@ -377,9 +367,7 @@
     hero-chip-out 420ms var(--ease-out) var(--chip-out-at) forwards;
   --animate-hero-bob: hero-bob var(--bob-for) ease-in-out both;
   --animate-hero-fly: hero-fly 1000ms var(--ease-in-out) var(--fly-at) both;
-  --animate-hero-appear:
-    hero-appear 500ms ease-out var(--appear-at) both,
-    hero-solidify 400ms ease-out var(--fly-at) forwards;
+  --animate-hero-appear: hero-appear 500ms ease-out var(--appear-at) both;
   --animate-hero-label-out: hero-label-out 260ms ease-out var(--label-out-at) both;
   --animate-hero-ping: seat-ping 700ms var(--ease-out) var(--land-at) forwards;
   --animate-hero-count: hero-count var(--hero-count-for) var(--ease-out) var(--hero-count-at) both;

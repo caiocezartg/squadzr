@@ -56,11 +56,7 @@ export const SOLO_CHIPS: readonly SoloChip[] = [
   },
 ]
 
-/**
- * A player who joins the visitor's squad: drawn like any member, floating at its spot until it flies in.
- * A squadmate floats out at the hero's sides, so its spot's x is a share of the half width from the
- * centre (1 is the edge of the content), and its y is in headline ems from the headline's top.
- */
+/** A player who joins the visitor's squad: drawn like any member, floating at its spot until it flies in. */
 export interface Squadmate {
   /** Picks the member's initials colours, the same pair the board draws. */
   readonly id: string
@@ -68,27 +64,31 @@ export interface Squadmate {
   readonly spots: Readonly<Record<HeroTier, HeroSpot>>
 }
 
-/** The four who complete the visitor's squad, in the order they land. Out at the hero's sides, clear of the copy. */
+/**
+ * The four who complete the visitor's squad, in the order they land, close around the lettering: from
+ * 768px two flank the first line and two the squad's rail; on phones two flank "solo" and two the line
+ * where "build your squad" rises, between the chips. All stay inside the hero at any width of their tier.
+ */
 export const SQUADMATES: readonly Squadmate[] = [
   {
     id: 'mf-7',
     name: 'mia.f',
-    spots: { phone: [0.83, 2.19], tablet: [0.9, 1.3], wide: [0.93, 0.04] },
+    spots: { phone: [2.2, 1.6], tablet: [5, 0.45], wide: [5, 0.45] },
   },
   {
     id: 'br-0',
     name: 'brunão',
-    spots: { phone: [-0.87, 4.42], tablet: [-0.9, 3.6], wide: [-0.88, 4.2] },
+    spots: { phone: [-2.2, 1.6], tablet: [-5, 0.45], wide: [-5, 0.45] },
   },
   {
     id: 'kz-4',
     name: 'kz_dex',
-    spots: { phone: [0.92, 4.73], tablet: [0.85, 3], wide: [0.88, 3.43] },
+    spots: { phone: [2.3, 2.75], tablet: [3.6, 2.9], wide: [3.2, 2.75] },
   },
   {
     id: 'lu-4',
     name: 'luiza',
-    spots: { phone: [-0.88, 3.55], tablet: [0.6, 6.2], wide: [0.56, 5.9] },
+    spots: { phone: [-2.3, 3.6], tablet: [-3.6, 2.9], wide: [-2.6, 2.75] },
   },
 ]
 
