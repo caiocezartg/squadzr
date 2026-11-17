@@ -235,24 +235,43 @@
       "signIn": "Entrar com Discord"
     },
     "hero": {
-      "titleLine1": "Monte seu squad",
-      "titleLine2": "Jogue hoje",
-      "subtitle": "Chega de jogar com random. Ache quem falta pro seu time e caia na partida agora.",
+      "titleLead": "Chega de jogar",
+      "titleStruck": "solo",
+      "titleLine2Lead": "Monte seu",
+      "titleLine2Word": "squad",
+      "subtitle": "Ache gente que joga o mesmo que você e caia na partida com o <strong>time completo</strong>.",
       "exploreSquads": "Explorar squads",
       "createSquad": "Criar squad",
       "trustDiscord": "Login com Discord",
       "trustPlayers": "2 a 40 jogadores",
-      "trustFree": "Grátis"
-    },
-    "showcase": {
-      "label": "Squads se formando agora",
-      "roleDescription": "carrossel",
-      "slide": "squad",
-      "squadLabel": "{name}, squad de {game}: {count} de {total} jogadores",
-      "goTo": "Ver {name} ({game})",
-      "pause": "Pausar o carrossel",
-      "play": "Retomar o carrossel",
-      "full": "Fechou"
+      "trustFree": "Grátis",
+      "you": "VC",
+      "solo": {
+        "queue": {
+          "label": "fila solo",
+          "value": "18:42"
+        },
+        "friends": {
+          "label": "amigos online",
+          "value": "0"
+        },
+        "lobby": {
+          "label": "lobby",
+          "value": "1/5"
+        },
+        "invite": {
+          "label": "convite pro duo",
+          "value": "expirou"
+        },
+        "searching": {
+          "label": "procurando partida",
+          "value": "14 min"
+        },
+        "duo": {
+          "label": "duo",
+          "value": "offline"
+        }
+      }
     },
     "games": {
       "label": "Jogos disponíveis",

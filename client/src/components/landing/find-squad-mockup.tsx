@@ -3,7 +3,7 @@
 import { ArrowRight, Check } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { pickAvatarColors } from '@/components/ds/avatar-colors'
-import { coverUrl } from './hero-showcase-data'
+import { coverUrl } from './hero-cover-data'
 import { JoinFlash, Pointer, type MockupProps, type Point } from './how-it-works-mockup-parts'
 import { useMockupTimeline } from './use-mockup-timeline'
 

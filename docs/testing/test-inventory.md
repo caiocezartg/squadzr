@@ -69,6 +69,15 @@ and no lazy loading, the numbered steps, the dialog opening after the create dia
 form kept and focus back on the button, and reduced motion showing the poster with a "Play animation" button. `discord-invite-issue.spec.ts`
 pins the pure mapping from a check state or server code to the field's message code.
 
+The landing hero rebuild ("Chega de jogar solo") replaces the squad carousel with a story timed in CSS; the rows above are not
+recounted. `hero-squad-showcase.spec.tsx` (10 tests) leaves with the carousel. `hero-squad-rail.spec.tsx` (4 tests) covers where the
+four players float before they fly in: the phone spot turned into an offset from the player's own seat, the wide spot from 1280px, a
+new placement when the headline resizes, and every player placed (they only show once placed). `hero-timeline.spec.ts` (3 tests) pins
+the clock: the players take off after the second line starts to rise and land one step apart, the counter's roll ends as the last one
+lands, and each player bobs only until it takes off. `landing.spec.tsx` keeps its count: the headline case reads the new accessible name
+and the sentence with its emphasised words, and the carousel case becomes the hero's decoration case (the struck word read once; the
+chips, the visitor's seat and the players inside `aria-hidden`; no code field). `client:unit` measures 124 files / 1574 tests on this tree.
+
 Issue #152 (Squad invite preview image) adds the `og` workspace, the `squadzr-og` image Worker, as a fourth Vitest
 project in `vitest.workspace.ts`. `og:unit` has 5 files and 46 tests: `handle-request.spec.ts` (the key that renders, a Squad over
 its game's player limit, HEAD, cached 404s for a bad path, a missing design version, too many slots, an unknown language and any query

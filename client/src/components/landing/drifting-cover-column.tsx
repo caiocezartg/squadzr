@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
-import { coverUrl, WALL_COVER_IDS } from './hero-showcase-data'
+import { coverUrl, WALL_COVER_IDS } from './hero-cover-data'
 
 /** A wall's shape: how many columns it has and how many covers each one carries before it repeats. */
 export interface CoverWallShape {
