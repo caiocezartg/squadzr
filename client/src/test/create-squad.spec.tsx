@@ -27,6 +27,7 @@ import {
   onHttp,
 } from './http-router'
 import { boardGames, boardSquads, createdSquad, gameCs2, gameLol, hostPlayer } from './fixtures'
+import { mockMediaQuery } from './media-query'
 import { toastStore } from './stubs'
 import type { CreateRoomResponse, MyRoomsResponse } from '@/types'
 
@@ -36,7 +37,10 @@ const INVALID_INVITE_MESSAGE =
   "That Discord invite doesn't exist anymore. Check the link or create a new invite."
 const EXPIRES_WARNING =
   'This invite expires. Create one that never expires so your squad keeps the link.'
-const UNKNOWN_MESSAGE = "We couldn't reach Discord to check this invite right now."
+const UNAVAILABLE_MESSAGE = "We couldn't reach Discord. Try again in a few seconds."
+const NOT_VOICE_CALL_MESSAGE = "This invite doesn't point to a voice call."
+const HELP_TRIGGER = 'How do I invite to a voice call?'
+const HELP_TITLE = 'How to invite to a voice call'
 
 /** What the API says about an invite Discord knows and that never expires. */
 const validInvite = {
@@ -120,6 +124,7 @@ let stopEscapeMirror: (() => void) | undefined
 afterEach(() => {
   stopEscapeMirror?.()
   stopEscapeMirror = undefined
+  vi.restoreAllMocks()
 })
 
 /**
@@ -172,6 +177,12 @@ async function continueStep(
 }
 
 type FlowUser = Awaited<ReturnType<typeof renderSquadsFlow>['user']>
+
+/** Opens the voice-call help from the label button under the invite field. */
+async function openHelp(user: FlowUser): Promise<HTMLElement> {
+  await user.click(screen.getByRole('button', { name: HELP_TRIGGER }))
+  return screen.findByRole('dialog', { name: HELP_TITLE })
+}
 
 /** Picks League of Legends and continues to the details step. */
 async function toDetailsStep(user: FlowUser): Promise<void> {
@@ -1171,7 +1182,9 @@ describe('create squad — discord step', () => {
     await user.clear(input)
     await user.type(input, 'https://discord.gg/abc123')
     expect(await screen.findByText('VALID')).toBeInTheDocument()
-    expect(screen.getByText('Valid Discord invite: Valorant Hub')).toHaveAttribute('role', 'status')
+    expect(
+      screen.getByText('Valid Discord invite: Valorant Hub, voice call Squad call')
+    ).toHaveAttribute('role', 'status')
     expect(screen.queryByText('Please enter a valid URL')).not.toBeInTheDocument()
     expect(screen.queryByText(notInvite)).not.toBeInTheDocument()
     expect(input).toBeValid()
@@ -1225,7 +1238,9 @@ describe('create squad — discord step', () => {
     expect(screen.queryByText('CHECKING')).not.toBeInTheDocument()
     expect(screen.getByText('Valorant Hub')).toBeInTheDocument()
     expect(screen.getByText('2,946,792 members')).toBeInTheDocument()
-    expect(screen.getByText('Valid Discord invite: Valorant Hub')).toHaveAttribute('role', 'status')
+    expect(
+      screen.getByText('Valid Discord invite: Valorant Hub, voice call Squad call')
+    ).toHaveAttribute('role', 'status')
     expect(screen.queryByText(EXPIRES_WARNING)).not.toBeInTheDocument()
     expect(getHttpLog().find((request) => request.path.startsWith('/api/discord'))?.path).toBe(
       '/api/discord/invites/valorant'
@@ -1295,22 +1310,116 @@ describe('create squad — discord step', () => {
     expect(screen.queryByText(INVALID_INVITE_MESSAGE)).not.toBeInTheDocument()
   })
 
-  it('keeps the valid mark with a muted line when Discord cannot be asked, and lets the squad be created', async () => {
-    onHttp('GET', '/api/discord/invites/:code', () => httpOk({ status: 'unknown' }))
+  it('shows the voice call behind a valid invite under the server row, and announces it', async () => {
+    onHttp('GET', '/api/discord/invites/:code', () =>
+      httpOk({ ...validInvite, call: { name: '》🐂┃NELORE' } })
+    )
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
     await fillWizard(user)
 
     expect(await screen.findByText('VALID')).toBeInTheDocument()
-    expect(screen.getByText(UNKNOWN_MESSAGE)).toBeInTheDocument()
-    expect(screen.queryByText('Valorant Hub')).not.toBeInTheDocument()
-    expect(screen.getByText('Valid Discord invite')).toHaveAttribute('role', 'status')
-
-    await user.click(screen.getByRole('button', { name: 'Create squad' }))
-    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(1))
+    const call = screen.getByText('》🐂┃NELORE')
+    expect(call).toHaveClass('truncate')
+    expect(call.parentElement).toHaveTextContent('🔊')
+    expect(call.parentElement).toHaveTextContent('Voice call: 》🐂┃NELORE')
+    expect(
+      screen.getByText('Valid Discord invite: Valorant Hub, voice call 》🐂┃NELORE')
+    ).toHaveAttribute('role', 'status')
   })
 
-  it('reads a failed check as unknown instead of an error', async () => {
+  it('refuses an invite to a channel that is no voice call, with the help link, and sends nothing on submit', async () => {
+    onHttp('GET', '/api/discord/invites/:code', () => httpOk({ status: 'not_voice_call' }))
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    const input = screen.getByLabelText('Discord invite link')
+
+    expect(await screen.findByText(NOT_VOICE_CALL_MESSAGE)).toBeInTheDocument()
+    expect(input).toBeInvalid()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+    expect(screen.queryByText('Valorant Hub')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'See how' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
+    expect(input).toHaveFocus()
+  })
+
+  it('opens the help from the inline link of the refusal', async () => {
+    onHttp('GET', '/api/discord/invites/:code', () => httpOk({ status: 'not_voice_call' }))
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    await user.click(await screen.findByRole('button', { name: 'See how' }))
+
+    expect(await screen.findByRole('dialog', { name: HELP_TITLE })).toBeInTheDocument()
+  })
+
+  it('blocks creation while Discord cannot be asked: no valid mark, the outage line and a retry', async () => {
+    onHttp('GET', '/api/discord/invites/:code', () => httpOk({ status: 'unknown' }))
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    const input = screen.getByLabelText('Discord invite link')
+
+    expect(await screen.findByText(UNAVAILABLE_MESSAGE)).toBeInTheDocument()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+    expect(screen.queryByText('Valorant Hub')).not.toBeInTheDocument()
+    expect(input).toBeInvalid()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'See how' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    // The submit asks Discord again, since an outage is not kept: still unknown, so it refuses.
+    await waitFor(() => expect(input).toHaveFocus())
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(2)
+    expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
+  })
+
+  it('asks Discord again on submit when the answer it holds is unknown, and creates once Discord answers', async () => {
+    let answers = 0
+    onHttp('GET', '/api/discord/invites/:code', () => {
+      answers += 1
+      return httpOk(answers === 1 ? { status: 'unknown' } : validInvite)
+    })
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    expect(await screen.findByText(UNAVAILABLE_MESSAGE)).toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(1)
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(1))
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(2)
+  })
+
+  it('keeps the keyboard focus on the field when the retry takes the button away', async () => {
+    const { response, respond } = deferredResponse()
+    let answers = 0
+    onHttp('GET', '/api/discord/invites/:code', () => {
+      answers += 1
+      return answers === 1 ? httpOk({ status: 'unknown' }) : response
+    })
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByText('CHECKING')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toHaveFocus()
+    respond(httpOk(validInvite))
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+  })
+
+  it('reads a failed check as the same outage instead of an error', async () => {
     onHttp('GET', '/api/discord/invites/:code', () =>
       httpError(500, { message: 'boom', error: 'INTERNAL_ERROR' })
     )
@@ -1318,11 +1427,11 @@ describe('create squad — discord step', () => {
     await openCreateModal(user)
     await fillWizard(user)
 
-    expect(await screen.findByText('VALID')).toBeInTheDocument()
-    expect(screen.getByText(UNKNOWN_MESSAGE)).toBeInTheDocument()
+    expect(await screen.findByText(UNAVAILABLE_MESSAGE)).toBeInTheDocument()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
   })
 
-  it('reads a rate-limited check as unknown, with no new message, and lets the squad be created', async () => {
+  it('reads a rate-limited check as the same outage, with no new message', async () => {
     onHttp('GET', '/api/discord/invites/:code', () =>
       httpError(429, { message: 'Too many requests. Try again shortly.', error: 'RATE_LIMITED' })
     )
@@ -1330,25 +1439,307 @@ describe('create squad — discord step', () => {
     await openCreateModal(user)
     await fillWizard(user)
 
-    expect(await screen.findByText('VALID')).toBeInTheDocument()
-    expect(screen.getByText(UNKNOWN_MESSAGE)).toBeInTheDocument()
+    expect(await screen.findByText(UNAVAILABLE_MESSAGE)).toBeInTheDocument()
     expect(screen.queryByText(/too many requests/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+  })
+
+  it('asks Discord again past the answer it holds when the player retries, and then lets the squad be created', async () => {
+    let answers = 0
+    onHttp('GET', '/api/discord/invites/:code', () => {
+      answers += 1
+      return httpOk(answers === 1 ? { status: 'unknown' } : validInvite)
+    })
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+    expect(screen.getByText('Valorant Hub')).toBeInTheDocument()
+    expect(screen.queryByText(UNAVAILABLE_MESSAGE)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(2)
 
     await user.click(screen.getByRole('button', { name: 'Create squad' }))
     await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(1))
   })
 
-  it('lets the squad be created while Discord is still being asked', async () => {
-    const { response } = deferredResponse()
-    onHttp('GET', '/api/discord/invites/:code', () => response)
+  it('shows the check running while a retry of a failed request is on its way', async () => {
+    const { response, respond } = deferredResponse()
+    let answers = 0
+    onHttp('GET', '/api/discord/invites/:code', () => {
+      answers += 1
+      return answers === 1 ? httpError(500, { message: 'boom', error: 'INTERNAL_ERROR' }) : response
+    })
     const { user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
     await fillWizard(user)
 
-    expect(screen.getByText('CHECKING')).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByText('CHECKING')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    respond(httpOk(validInvite))
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+  })
+
+  it('shows the check running while a retry is on its way', async () => {
+    const { response, respond } = deferredResponse()
+    let answers = 0
+    onHttp('GET', '/api/discord/invites/:code', () => {
+      answers += 1
+      return answers === 1 ? httpOk({ status: 'unknown' }) : response
+    })
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByText('CHECKING')).toBeInTheDocument()
+    expect(screen.queryByText(UNAVAILABLE_MESSAGE)).not.toBeInTheDocument()
+    respond(httpOk({ status: 'not_voice_call' }))
+    expect(await screen.findByText(NOT_VOICE_CALL_MESSAGE)).toBeInTheDocument()
+  })
+
+  it('waits for the check when the player submits before the pause that precedes it', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(0)
     await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
     await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(1))
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(1)
+  })
+
+  it.each([
+    ['not_voice_call', NOT_VOICE_CALL_MESSAGE],
+    ['invalid', INVALID_INVITE_MESSAGE],
+    ['unknown', UNAVAILABLE_MESSAGE],
+  ])(
+    'refuses the %s answer when the player submits before the pause, with focus on the field',
+    async (status, message) => {
+      onHttp('GET', '/api/discord/invites/:code', () => httpOk({ status }))
+      const { user } = renderSquadsFlow('/squads', { shell: true })
+      await openCreateModal(user)
+      await fillWizard(user)
+
+      expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(0)
+      await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+      expect(await screen.findByText(message)).toBeInTheDocument()
+      expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
+      expect(screen.getByLabelText('Discord invite link')).toHaveFocus()
+    }
+  )
+
+  it('waits for a check in flight when the player submits, and creates once it answers with a call', async () => {
+    const { response, respond } = deferredResponse()
+    onHttp('GET', '/api/discord/invites/:code', () => response)
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    await waitFor(() => expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(1))
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+    expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
+
+    respond(httpOk(validInvite))
+
+    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(1))
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(1)
+  })
+
+  it('refuses when the check in flight answers that the invite is no voice call', async () => {
+    const { response, respond } = deferredResponse()
+    onHttp('GET', '/api/discord/invites/:code', () => response)
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    await waitFor(() => expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(1))
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+    respond(httpOk({ status: 'not_voice_call' }))
+
+    expect(await screen.findByText(NOT_VOICE_CALL_MESSAGE)).toBeInTheDocument()
+    expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
+    expect(screen.getByLabelText('Discord invite link')).toHaveFocus()
+  })
+
+  it.each([
+    ['DISCORD_INVITE_NOT_VOICE_CALL', 422, NOT_VOICE_CALL_MESSAGE],
+    ['DISCORD_UNAVAILABLE', 503, UNAVAILABLE_MESSAGE],
+    ['INVALID_DISCORD_INVITE', 422, INVALID_INVITE_MESSAGE],
+  ])('puts the server code %s on the field with its own message', async (code, status, message) => {
+    onHttp('POST', '/api/rooms', () => httpError(status, { message: 'refused', error: code }))
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    await screen.findByText('VALID')
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    await waitFor(() => expect(toastStore.errorCalls[0]).toBe(message))
+    expect(screen.getByRole('heading', { name: 'Discord invite' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toBeInvalid()
+    expect(screen.getByLabelText('Discord invite link')).toHaveFocus()
+    expect(screen.getByText(message, { selector: 'p' })).toBeInTheDocument()
+    expect(screen.queryByText('VALID')).not.toBeInTheDocument()
+    for (const other of [NOT_VOICE_CALL_MESSAGE, UNAVAILABLE_MESSAGE, INVALID_INVITE_MESSAGE]) {
+      if (other !== message) expect(screen.queryByText(other)).not.toBeInTheDocument()
+    }
+  })
+
+  it('lets the player try again after the server refused for Discord being unreachable', async () => {
+    let posts = 0
+    onHttp('POST', '/api/rooms', () => {
+      posts += 1
+      return posts === 1
+        ? httpError(503, { message: 'down', error: 'DISCORD_UNAVAILABLE' })
+        : httpCreated(createSquadResponse)
+    })
+    const { navigation, user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    await screen.findByText('VALID')
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+    expect(await screen.findByText(UNAVAILABLE_MESSAGE, { selector: 'p' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(2))
+    await waitFor(() =>
+      expect(navigation.history.location.pathname).toBe(`/squads/${createdSquad.code}`)
+    )
+    expect(screen.queryByText(UNAVAILABLE_MESSAGE, { selector: 'p' })).not.toBeInTheDocument()
+  })
+
+  it('offers a retry after the server refused for Discord being unreachable, which clears the refusal and asks Discord again', async () => {
+    onHttp('POST', '/api/rooms', () =>
+      httpError(503, { message: 'down', error: 'DISCORD_UNAVAILABLE' })
+    )
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    await screen.findByText('VALID')
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+    expect(await screen.findByText(UNAVAILABLE_MESSAGE, { selector: 'p' })).toBeInTheDocument()
+    const asked = countHttpCalls('GET', '/api/discord/invites/:code')
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+
+    await waitFor(() =>
+      expect(screen.queryByText(UNAVAILABLE_MESSAGE, { selector: 'p' })).not.toBeInTheDocument()
+    )
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(asked + 1)
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toHaveFocus()
+  })
+
+  it('always shows the help button under the input, whatever the invite says', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDiscordStep(user)
+
+    expect(screen.getByRole('button', { name: HELP_TRIGGER })).toHaveAttribute('type', 'button')
+
+    await user.type(screen.getByLabelText('Discord invite link'), 'https://discord.gg/abc')
+    await screen.findByText('VALID')
+
+    expect(screen.getByRole('button', { name: HELP_TRIGGER })).toBeInTheDocument()
+  })
+
+  it('shows the recording, the numbered steps, the mobile hint and the vanity-link note', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDiscordStep(user)
+
+    const help = await openHelp(user)
+
+    const media = within(help).getByRole('img')
+    expect(media).toHaveAttribute('src', '/help/voice-call-invite.gif')
+    expect(media).toHaveAttribute('width', '480')
+    expect(media).toHaveAttribute('height', '414')
+    expect(media).not.toHaveAttribute('loading')
+    expect(media).toHaveAccessibleName(/right-click the voice call/i)
+    const steps = within(within(help).getByRole('list', { name: 'Steps' })).getAllByRole('listitem')
+    expect(steps.map((step) => step.textContent)).toEqual([
+      '01Right-click the voice call and choose "Invite to voice".',
+      '02Click "Edit invite link", set "Expire after" to "Never" and click "Generate a new link".',
+      '03Click "Copy", then paste the link here.',
+    ])
+    expect(within(help).getByText('On mobile, press and hold the call.')).toBeInTheDocument()
+    expect(
+      within(help).getByText(/discord\.gg\/name\) usually point to a text channel/)
+    ).toBeInTheDocument()
+    expect(within(help).queryByRole('button', { name: 'Play animation' })).not.toBeInTheDocument()
+  })
+
+  it('opens over the create dialog, closes alone on Escape, keeps the form and returns focus to the button', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDiscordStep(user)
+    const input = screen.getByLabelText('Discord invite link')
+    await user.type(input, 'https://discord.gg/abc')
+    await screen.findByText('VALID')
+
+    const help = await openHelp(user)
+    const createDialog = screen
+      .getAllByRole('dialog', { hidden: true })
+      .find((dialog) => dialog !== help) as HTMLElement
+    // Both panels sit at the same layer; the one opened later is drawn on top, so it must follow.
+    expect(
+      createDialog.compareDocumentPosition(help) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+
+    await user.click(within(help).getByText('On mobile, press and hold the call.'))
+    expect(screen.getByRole('dialog', { name: HELP_TITLE })).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: HELP_TITLE })).not.toBeInTheDocument()
+    )
+    expect(screen.getByRole('heading', { name: 'Discord invite' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toHaveValue('https://discord.gg/abc')
+    expect(screen.getByText('VALID')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: HELP_TRIGGER })).toHaveFocus())
+  })
+
+  it('closes alone from its close button and leaves the create dialog as it was', async () => {
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDiscordStep(user)
+    await user.type(screen.getByLabelText('Discord invite link'), 'https://discord.gg/abc')
+
+    const help = await openHelp(user)
+    await user.click(within(help).getByRole('button', { name: 'Close' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: HELP_TITLE })).not.toBeInTheDocument()
+    )
+    expect(screen.getByLabelText('Discord invite link')).toHaveValue('https://discord.gg/abc')
+    expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
+  })
+
+  it('shows the final frame with a play button under reduced motion, and swaps in the animation on request', async () => {
+    mockMediaQuery('(prefers-reduced-motion: reduce)', true)
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await toDiscordStep(user)
+
+    const help = await openHelp(user)
+
+    expect(within(help).getByRole('img')).toHaveAttribute('src', '/help/voice-call-invite.png')
+    await user.click(within(help).getByRole('button', { name: 'Play animation' }))
+
+    expect(within(help).getByRole('img')).toHaveAttribute('src', '/help/voice-call-invite.gif')
+    expect(within(help).queryByRole('button', { name: 'Play animation' })).not.toBeInTheDocument()
   })
 
   it('previews the card from the form, with the viewer as the only member and a masked code', async () => {
