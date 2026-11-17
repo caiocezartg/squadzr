@@ -84,7 +84,7 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
   const { join, joining } = useJoinSquad()
   const readyEntrance = useReadyEntrance({
     squadCode,
-    hasSnapshot: lobby.hasSnapshot,
+    hasLiveSnapshot: lobby.hasLiveSnapshot,
     isReady: lobby.isReady,
     isOutside: !lobby.isMember && lobby.squad !== null,
   })

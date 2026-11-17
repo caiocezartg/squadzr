@@ -30,6 +30,8 @@ export interface LobbyView {
   discordCall: RoomDto['discordCall']
   /** A snapshot has arrived, so the roster, Presence and readiness are the server's and not placeholders. */
   hasSnapshot: boolean
+  /** The snapshot came from the socket, so what it says about readiness is what the viewer watched happen. */
+  hasLiveSnapshot: boolean
   isReady: boolean
   connectionStatus: RealtimeStatus
   /** The code of the latest realtime error, translated by the page; null when none shows. */
@@ -122,6 +124,7 @@ export function useLobbyView(squadCode: string, channel: SquadChannel): LobbyVie
     discordLink,
     discordCall,
     hasSnapshot: channel.snapshot !== null,
+    hasLiveSnapshot: channel.snapshotIsLive,
     isReady: channel.snapshot?.readyAt != null,
     connectionStatus: channel.status,
     errorCode: channel.errorCode,
