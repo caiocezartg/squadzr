@@ -56,10 +56,7 @@
       "copyLink": "Copy link",
       "copied": "Copied",
       "slotsLeft": "{count, plural, one {# slot left} other {# slots left}}",
-      "statOnline": "online",
-      "statMembers": "{count, plural, one {member} other {members}}",
-      "statInRoom": "in the room now",
-      "statPlayers": "{count, plural, one {player} other {players}}"
+      "joinCall": "Join the call"
     },
     "close": "Close",
     "pagination": {

@@ -79,13 +79,6 @@ function registerLobbyRoutes(): void {
   onHttp('POST', '/api/rooms/:code/leave', () => httpOk({ ok: true }))
 }
 
-/** The number of a count in the Ready panel's server card, by what it counts. */
-function statValue(panel: HTMLElement, label: string): HTMLElement {
-  const value = within(panel).getByText(label).closest('dt')?.nextElementSibling
-  if (!(value instanceof HTMLElement)) throw new Error(`${label} has no value`)
-  return value
-}
-
 /** The tile of a member, by the name it shows. */
 function tileOf(name: string): HTMLElement {
   const tile = screen.getByText(name).closest('li')
@@ -317,7 +310,7 @@ describe('squad lobby — readiness from the snapshot', () => {
     expectLockedInvite()
   })
 
-  it('builds the server card of the Ready panel from the Squad when Discord has no preview: name, cover, who is in the room, players', async () => {
+  it('builds the server card of the Ready panel from the Squad when Discord has no preview: name, cover and the call to join', async () => {
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
@@ -340,9 +333,11 @@ describe('squad lobby — readiness from the snapshot', () => {
     expect(inPanel.getByText('SERVER INVITE')).toBeInTheDocument()
     // The card holds a skeleton until the preview read settles, and then falls back to the Squad.
     expect(await inPanel.findByText('Squad ready check')).toBeInTheDocument()
-    expect(inPanel.getByText('in the room now')).toBeInTheDocument()
-    expect(statValue(panel, 'in the room now')).toHaveTextContent('1')
-    expect(statValue(panel, 'players')).toHaveTextContent('2')
+    expect(inPanel.getByText('Join the call')).toBeInTheDocument()
+    expect(inPanel.getByText('Squad call')).toBeInTheDocument()
+    for (const label of ['online', 'members', 'in the room now', 'players']) {
+      expect(inPanel.queryByText(label)).not.toBeInTheDocument()
+    }
     expect(panel.querySelector('img')).toHaveAttribute('src', lobbySquad.game.coverUrl)
     expect(inPanel.getByText('discord.gg/')).toBeInTheDocument()
   })
