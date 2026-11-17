@@ -176,9 +176,9 @@ function CardGlow({ coverUrl }: { readonly coverUrl: string }) {
 }
 
 /**
- * The card's surface: the game's colour as its ground (the cover, blurred and overflowing, under a
- * shade that keeps the text readable), clipped to the card. The cover is the poster's own URL, so it
- * costs no extra request. A full card's ground goes grey with its poster.
+ * The card's surface: the game's colour as its ground (the cover, blurred and overflowing, shaded so
+ * the text stays readable), clipped to the card. The cover is the poster's own URL, so it costs no
+ * extra request. A full card's ground goes grey with its poster.
  */
 function SquadCardSurface({
   coverUrl,
@@ -192,9 +192,9 @@ function SquadCardSurface({
   readonly isFull: boolean
   readonly children: ReactNode
 }) {
-  // The blurred cover overflows the card by 30% on each side and clips itself to the card's edge
-  // (30% of a 160% box is 18.75%). The card's own clip is not enough once the card scales on hover:
-  // Chrome draws the composited blur a fraction of a pixel past the shade there, as a bright line.
+  // The blurred cover overflows the card by 30% on each side, clips itself to the card's edge (30% of
+  // a 160% box is 18.75%) and carries its own shade as a mask (`squad-card-ground-shade`), so a card
+  // scaled on hover has no second layer whose edge could fall short of the cover's.
   return (
     <span
       className={cn(
@@ -207,15 +207,11 @@ function SquadCardSurface({
         aria-hidden="true"
         data-card-ground=""
         className={cn(
-          'pointer-events-none absolute -inset-[30%] -z-2 bg-cover bg-center blur-[34px] saturate-[1.6] [clip-path:inset(18.75%)]',
+          'pointer-events-none absolute -inset-[30%] -z-1 squad-card-ground-shade bg-cover bg-center blur-[34px] saturate-[1.6] [clip-path:inset(18.75%)]',
           isFull ? 'opacity-35 grayscale' : 'opacity-68',
           lit && 'transition-opacity duration-350 card-lit:opacity-88'
         )}
         style={coverBackground(coverUrl)}
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-1 squad-card-shade"
       />
       {children}
     </span>

@@ -572,16 +572,27 @@
   }
 }
 
-/* The shade over the Squad card's blurred cover: clear behind the poster, dark under the text. */
-@utility squad-card-shade {
-  background:
+/*
+  The shade of the Squad card's blurred cover: clear behind the poster, dark under the text
+  (reference: rgba(10,11,14,.05) 0%, .55 36%, .82 100% across, and transparent 45% to .5 100% down).
+  It is a mask on the cover itself, not a layer over it: the shade's colour is the card's ground, so
+  shading by s is the cover drawn at 1 - s over the ground. A separate layer got clipped a fraction of
+  a pixel differently from the composited blur once the card scaled on hover, and the unshaded cover
+  showed along the card's edge. The cover overflows the card by 30% on each side, so the card spans
+  18.75% to 81.25% of it, and the stops are mapped onto that span.
+*/
+@utility squad-card-ground-shade {
+  mask-image:
     linear-gradient(
       90deg,
-      rgba(10, 11, 14, 0.05) 0%,
-      rgba(10, 11, 14, 0.55) 36%,
-      rgba(10, 11, 14, 0.82) 100%
+      rgba(0, 0, 0, 0.95) 18.75%,
+      rgba(0, 0, 0, 0.45) 41.25%,
+      rgba(0, 0, 0, 0.18) 81.25%
     ),
-    linear-gradient(180deg, rgba(10, 11, 14, 0) 45%, rgba(10, 11, 14, 0.5) 100%);
+    linear-gradient(180deg, #000 46.875%, rgba(0, 0, 0, 0.5) 81.25%);
+  mask-composite: intersect;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
 }
 
 @utility scrollbar-thin {
