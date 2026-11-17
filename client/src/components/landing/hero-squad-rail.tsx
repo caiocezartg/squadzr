@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Avatar } from '@/components/ds/avatar'
 import { cn } from '@/lib/utils'
 import { SQUAD_SIZE, SQUADMATES, type Squadmate } from './hero-solo-data'
-import { squadmateTiming, visitorTiming } from './hero-timeline'
+import { squadmateTiming } from './hero-timeline'
 import { useSquadmateSpots } from './use-squadmate-spots'
 
 /** A seat of the rail: the board's vacant circle, cut out of the one before it by a ring of the page ground. */
@@ -16,16 +16,15 @@ const SEAT =
 const NAME =
   'absolute top-full left-1/2 mt-2.5 -translate-x-1/2 font-mono text-[11px] font-bold tracking-[0.08em] whitespace-nowrap opacity-0 motion-safe:animate-hero-label-out max-sm:hidden'
 
-/** The visitor's seat, taken from the start: a mint "you", named until the second line rises. */
+/** The visitor's seat, taken from the start: a mint "you". */
 function VisitorSeat() {
   const t = useTranslations('landing.hero')
 
   return (
-    <span className={SEAT} style={visitorTiming()}>
+    <span className={SEAT}>
       <span className="bg-mint text-mint-ink absolute inset-0 z-3 flex items-center justify-center rounded-full text-[length:calc(var(--seat)*0.32)] font-extrabold shadow-[0_0_0_4px_var(--color-bg)]">
         {t('you')}
       </span>
-      <span className={cn(NAME, 'text-mint')}>{t('youLabel')}</span>
     </span>
   )
 }

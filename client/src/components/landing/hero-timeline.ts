@@ -92,9 +92,3 @@ export function squadmateTiming(index: number): CSSProperties {
   }
   return properties as CSSProperties
 }
-
-/** The visitor's own seat: its "you" label leaves as the second line rises. */
-export function visitorTiming(): CSSProperties {
-  const properties: CustomProperties = { '--label-out-at': ms(formedAt) }
-  return properties as CSSProperties
-}
