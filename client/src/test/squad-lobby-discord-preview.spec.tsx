@@ -1,7 +1,8 @@
 /**
  * The Discord server behind a Ready Squad's invite (CCC-112). The API reads it from Discord; the Ready panel
- * shows its icon, name and counts, and falls back to the Squad's own cover, name and counts whenever the
- * API has nothing: no preview, a failed request, a server that answers an invalid one.
+ * shows its icon and name from the preview and the call from the Lobby, and falls back to the Squad's own
+ * cover and name whenever the API has nothing: no preview, a failed request, a server that answers an
+ * invalid one.
  */
 
 import { screen, waitFor, within } from '@testing-library/react'
@@ -156,6 +157,7 @@ describe('squad lobby — Discord server preview', () => {
     )
 
     expect(within(panel).getByText(callName)).toHaveClass('truncate')
+    expect(within(panel).getByText(callName)).toHaveAttribute('title', callName)
   })
 
   it('shows the server card without a call line when the Squad has no Voice Call', async () => {

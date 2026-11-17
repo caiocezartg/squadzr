@@ -1,6 +1,6 @@
 # Client Context
 
-The web app where players find Squads, join them and follow them live. It presents the Server context's Squads through views and reuses its language (Squad, Membership, Presence, Open Squad, Ready Squad).
+The web app where players find Squads, join them and follow them live. It presents the Server context's Squads through views and reuses its language (Squad, Membership, Presence, Open Squad, Ready Squad, Voice Call).
 
 ## Language
 

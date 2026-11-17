@@ -23,7 +23,7 @@ const FOOTER_CLASSES =
 const ACTIONS_CLASSES = 'grid grid-cols-1 gap-2 min-[425px]:grid-cols-2 @2xl:flex @2xl:shrink-0'
 const ACTION_CLASSES = 'max-sm:px-2.5 @2xl:px-4'
 
-/** The server card's call line: 48px tall, like the locked panel's slots row it takes the place of. */
+/** The call line stands where the stats row was and matches the locked panel's slots row. */
 const CALL_CLASSES = 'flex min-h-12 items-center gap-3 border-t px-3.5 py-2.5'
 
 /** The two actions of the locked panel, dimmed until the Squad completes. */
@@ -114,7 +114,8 @@ interface ReadyInviteProps {
  * The invite once the last slot closes (reference, DiscordInvite): the "Bora pro Discord" panel. Its card
  * shows the Discord server (icon and name, over its banner) when the API could read the invite, and the
  * Squad's own cover and name otherwise, then the voice call to join (a Squad without one has no call line).
- * Either way the card has the same structure, so nothing moves when the server arrives. The sheen sweeps once on entry and never loops.
+ * Either way the card has the same structure, so nothing moves when the server arrives. The sheen
+ * sweeps once on entry and never loops.
  */
 export function ReadyInvite({
   invite,
@@ -275,7 +276,9 @@ function CallLine({ name, label }: CallLineProps) {
       <span className="type-label shrink-0 text-white/75">{label}</span>
       <span className="flex min-w-0 flex-1 items-center gap-2">
         <Volume2 aria-hidden="true" className="size-4 shrink-0 stroke-[2.4] opacity-70" />
-        <span className="min-w-0 truncate text-[15px]/5 font-extrabold">{name}</span>
+        <span className="min-w-0 truncate text-[15px]/5 font-extrabold" title={name}>
+          {name}
+        </span>
       </span>
     </p>
   )
