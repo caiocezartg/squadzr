@@ -26,8 +26,9 @@ interface SquadCardRailProps {
  * The card's rail: the viewer's seat first (a member's, or the open card's folded one), then the
  * others' circles that fit whole, then `+N` for every seat the rail does not draw. On an open card's
  * hover the viewer's seat opens while the last circle folds, so the rail keeps its width and the `+N`
- * keeps its number: it counts seats, not people. The rail's padding, taken back by its margins, leaves
- * the rings, the glow and the arrival's outline room inside its clip.
+ * keeps its number: it counts seats, not people. The rail's 20px padding, taken back by its margins,
+ * leaves the rings, the glow and the mint rings room inside its clip: the viewer seat's ring and the
+ * arrival's outline both grow to about 18px past their circle before they fade.
  */
 export function SquadCardRail({
   rail,
@@ -44,7 +45,7 @@ export function SquadCardRail({
   return (
     <span
       ref={railRef}
-      className="-my-3 -ml-3.5 flex min-w-0 flex-1 items-center overflow-hidden py-3 pr-0.5 pl-3.5"
+      className="-my-5 -ml-5 flex min-w-0 flex-1 items-center overflow-hidden py-5 pr-0.5 pl-5"
     >
       {viewer && <ViewerSeatCircle viewer={viewer} folded={seat === 'on-hover'} />}
       {rail.slots.slice(0, shown).map((slot, index) => {
