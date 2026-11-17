@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Squad card hover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" />
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0}
+
+/* ---------- Page chrome (outside the product) ---------- */
+.page{display:flex;flex-direction:column;gap:30px;font-family:var(--font-sans,system-ui,sans-serif);color:var(--foreground,#f2f3f5)}
+.intro{margin:0;font-size:13.5px;line-height:1.5;color:var(--muted-foreground,#9b9ea6)}
+.dir h2{margin:0;font-size:16px;font-weight:700;line-height:1.3}
+.dir p{margin:4px 0 0;font-size:13.5px;line-height:1.5;color:var(--muted-foreground,#9b9ea6);max-width:74ch}
+.fit{margin-top:12px;padding:16px 16px 22px;border-radius:var(--radius,10px);background:#07080a;overflow:hidden}
+
+/* ---------- Stage: the board at its real size, zoomed to fit ---------- */
+.stage{
+  --raised2:#1a1b20;--text:#f2f3f5;--text2:#c9cbd1;--text3:#a9abb3;--muted:#80838c;--faint:#5f626b;
+  --mint:#00ffa2;--mint-ink:#03140d;--eo:cubic-bezier(.23,1,.32,1);--spring:cubic-bezier(.34,1.56,.64,1);
+  width:896px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--text)
+}
+.row{display:grid;grid-template-columns:repeat(2,440px);gap:16px;align-items:start}
+.cell{display:flex;flex-direction:column;gap:8px}
+.cap{font-size:12px;font-weight:600;color:var(--muted)}
+
+/* ---------- The card: A + B ---------- */
+.wrap{--poster:160px;--ring:#101114;position:relative;cursor:pointer;transition:transform .28s var(--eo)}
+/* The game's colour, spilling under the card on hover: no border. */
+.glow{
+  position:absolute;z-index:0;inset:24px 28px -4px;background-size:cover;background-position:center;pointer-events:none;
+  filter:blur(28px) saturate(1.8);opacity:0;transform:scale(.92);transition:opacity .3s,transform .35s var(--eo)
+}
+.card{
+  position:relative;z-index:1;isolation:isolate;display:grid;grid-template-columns:var(--poster) minmax(0,1fr);
+  min-height:214px;background:#0d0e11;overflow:hidden;transition:box-shadow .3s
+}
+.ambient{
+  position:absolute;inset:-30%;z-index:-2;background-size:cover;background-position:center;
+  filter:blur(34px) saturate(1.6);opacity:.68;transition:opacity .35s
+}
+.shade{
+  position:absolute;inset:0;z-index:-1;
+  background:
+    linear-gradient(90deg,rgba(10,11,14,.05) 0%,rgba(10,11,14,.55) 36%,rgba(10,11,14,.82) 100%),
+    linear-gradient(180deg,rgba(10,11,14,0) 45%,rgba(10,11,14,.5) 100%)
+}
+.poster{position:relative;z-index:1;overflow:hidden;background:var(--raised2)}
+.poster img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;transition:transform .45s var(--eo)}
+.info{position:relative;z-index:2;display:flex;flex-direction:column;gap:10px;min-width:0;padding:18px 22px 16px}
+.meta{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:rgba(255,255,255,.1);font-size:12px;font-weight:700;line-height:1.35}
+.chip svg{width:11px;height:11px;flex:none}
+.code{font:700 11px/1 'JetBrains Mono',monospace;letter-spacing:.08em;color:var(--faint)}
+.name{
+  font-family:'Anton',Impact,'Arial Narrow',sans-serif;text-transform:uppercase;font-size:28px;line-height:1.04;letter-spacing:.006em;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere
+}
+.tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.tag{padding:4px 9px;background:rgba(255,255,255,.07);color:var(--text2);font-size:12px;font-weight:600;line-height:1.2}
+.more{padding:0 2px;font-size:12px;font-weight:600;color:var(--muted)}
+.grow{flex:1}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:8px}
+
+/* ---------- The rail ---------- */
+.rail{display:flex;align-items:center;min-width:0;padding:3px}
+.seat{
+  --s:38px;position:relative;flex:none;width:var(--s);height:var(--s);border-radius:50%;
+  display:grid;place-items:center;font-size:13.5px;font-weight:800;box-shadow:0 0 0 3px var(--ring)
+}
+.seat:not(:first-child){margin-left:-8px}
+.seat.vacant{background:#2a2b31;box-shadow:inset 0 0 0 1px #3a3b42,0 0 0 3px var(--ring)}
+/* Your seat: your avatar, larger, ringed in mint and lit, on top of the one after it. */
+.seat.me{
+  --s:44px;z-index:1;margin-right:6px;background:#0E4D3A;color:#B9FFE4;font-size:15px;
+  box-shadow:0 0 0 2px var(--mint),0 0 0 4px var(--ring),0 0 14px rgba(0,255,162,.4)
+}
+.seat.me::after{content:'';position:absolute;inset:-6px;border:2px solid var(--mint);border-radius:50%;opacity:0;pointer-events:none}
+.extra{flex:none;margin-left:14px;font:700 12px/1 'JetBrains Mono',monospace;color:var(--text3)}
+.count{display:flex;align-items:flex-start;font-family:'Anton',Impact,sans-serif;font-size:44px}
+.odo{display:block;height:1.1em;overflow:hidden}
+.odo-col{display:block;transition:transform .45s var(--eo),color .3s}
+.odo-col span,.count .max{display:block;height:1.1em;line-height:1.1em}
+.count .max{color:var(--faint)}
+.joined .odo-col{color:var(--mint)}
+
+/*
+ * An open Squad keeps your seat folded at the front of the rail, and marks its last circle. On hover
+ * the seat opens, the rail moves one chair to the right and the last circle folds into what the +N
+ * already counts, so the rail keeps its width and the +N stays true.
+ */
+.seat.me.preview{width:0;margin-right:8px;opacity:0;transform:scale(.4);
+  transition:width .35s var(--eo),margin-right .35s var(--eo),opacity .2s,transform .45s var(--spring)}
+.seat.folds{transition:width .35s var(--eo),margin-left .35s var(--eo),opacity .2s,transform .3s var(--eo)}
+
+/* ---------- Hover, real or shown ---------- */
+.wrap:is(:hover,.is-hover){transform:scale(1.02);z-index:2}
+.wrap:active{transform:scale(1.005);transition-duration:.1s}
+.wrap:is(:hover,.is-hover) .glow{opacity:.6;transform:translateY(14px) scale(1)}
+.wrap:is(:hover,.is-hover) .card{box-shadow:0 20px 40px -18px rgba(0,0,0,.85)}
+.wrap:is(:hover,.is-hover) .ambient{opacity:.88}
+.wrap:is(:hover,.is-hover) .poster img{transform:scale(1.04)}
+.wrap:not(.joined):not(.still):is(:hover,.is-hover) .seat.preview{width:var(--s);margin-right:6px;opacity:1;transform:scale(1)}
+.wrap:not(.joined):not(.still):is(:hover,.is-hover) .seat.preview::after{animation:ping .8s .25s ease-out}
+.wrap:not(.joined):not(.still):is(:hover,.is-hover) .seat.folds{width:0;margin-left:0;opacity:0;transform:scale(.4)}
+.wrap:not(.joined):not(.still):is(:hover,.is-hover) .odo-col{transform:translateY(-1.1em);color:var(--mint)}
+
+/*
+ * Another member arrives: the avatar fills the empty chair where it stands, and the chair throws the
+ * hero's mint outline (`seat-ping`: 2px, 3px out, growing to 1.7 as it fades). The count rolls one step.
+ */
+/* No z-index: like every other chair, the new member sits under the chair that follows it. */
+.flyer{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;opacity:0;box-shadow:0 0 0 3px var(--ring)}
+.land-ping{position:absolute;inset:-3px;z-index:4;border:2px solid var(--mint);border-radius:50%;opacity:0;pointer-events:none}
+.landing .flyer{animation:card-fill 450ms var(--spring) both}
+.landing .land-ping{animation:seat-ping 700ms var(--eo) 120ms forwards}
+.landing .odo-col{animation:card-count 450ms var(--eo) 120ms both}
+@keyframes card-fill{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+@keyframes seat-ping{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.7)}}
+@keyframes card-count{from{transform:translateY(0)}to{transform:translateY(-1.1em)}}
+
+@keyframes ping{0%{opacity:.9;transform:scale(.92)}100%{opacity:0;transform:scale(1.4)}}
+@media (prefers-reduced-motion:reduce){
+  .wrap,.wrap *{transition:none!important;animation:none!important}
+  .wrap:is(:hover,.is-hover){transform:none}
+  /* Nothing moves: the new member is simply in the chair and the count reads the new number. */
+  .landing .flyer{opacity:1}
+  .landing .odo-col{transform:translateY(-1.1em)}
+}
+</style>
+</head>
+<body>
+<main class="page" id="page"></main>
+<script>
+const ICON = {
+  globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
+  pc: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 2.3 6.5 1.4v6.2H0zM7.3 1.3 16 0v7.6H7.3zM0 8.4h6.5v6.2L0 13.7zM7.3 8.4H16V16l-8.7-1.2z"/></svg>',
+  ps5: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59l-.6 6A3 3 0 0 0 5.08 18c1.05 0 1.9-.67 2.36-1.6L8 15h8l.56 1.4c.46.93 1.31 1.6 2.36 1.6a3 3 0 0 0 2.98-3.41l-.6-6A4 4 0 0 0 17.32 5z"/></svg>',
+}
+const PLATFORM = { pc: 'PC', ps5: 'PS5' }
+const PALETTE = [
+  ['#3A2A5C', '#E7DBFF'], ['#5C3A1E', '#FFE2C7'], ['#1E3A5C', '#CFE6FF'],
+  ['#5C1E3A', '#FFD1E6'], ['#4A4A1E', '#F4F4C2'], ['#1E4A4A', '#C6F4F4'],
+]
+const cover = (id) => `https://images.igdb.com/igdb/image/upload/t_cover_big/${id}.jpg`
+/** The rail never draws more circles than this (`RAIL_LIMIT` in @squadzr/schemas). */
+const RAIL_LIMIT = 5
+
+/** `others` are the members besides the viewer, in the preview's order: host first, then by join time. */
+const SQUADS = {
+  val: { cover: 'cocqbp', game: 'Valorant', name: 'Premier quinta à noite', lang: 'PT-BR', platform: 'pc', code: 'K7QX2M', tags: ['premier', 'mic-on', 'sem-tilt'], others: ['MF', 'BR'], max: 5 },
+  inhouseOpen: { cover: 'cocqbp', game: 'Valorant', name: 'Inhouse 5x5 de sábado', lang: 'PT-BR', platform: 'pc', code: 'IH10XQ', tags: ['inhouse', 'custom'], others: ['TH', 'PS', 'MI', 'KZ', 'GB', 'DN'], max: 10, fits: 3 },
+  apex: { cover: 'cocqh2', game: 'Apex Legends', name: 'Trio ranked até Diamante', lang: 'EN', platform: 'ps5', code: 'AX3D7P', tags: ['ranked'], others: ['RX'], max: 3 },
+  inhouseMine: { cover: 'cocqbp', game: 'Valorant', name: 'Inhouse 5x5 de sábado', lang: 'PT-BR', platform: 'pc', code: 'IH10XQ', tags: ['inhouse', 'custom'], others: ['TH', 'PS', 'MI', 'KZ', 'GB', 'DN'], max: 10, fits: 3 },
+  valLand: { cover: 'cocqbp', game: 'Valorant', name: 'Premier quinta à noite', lang: 'PT-BR', platform: 'pc', code: 'K7QX2M', tags: ['premier', 'mic-on', 'sem-tilt'], others: ['MF', 'BR'], arriving: { initials: 'KZ', name: 'kaze' }, max: 5 },
+  lethalMine: { cover: 'co5ive', game: 'Lethal Company', name: 'Cota batida antes da meia-noite', lang: 'PT-BR', platform: 'pc', code: 'LC44Q1', tags: ['casual', 'mic-on'], others: ['DN', 'JN'], arriving: { initials: 'GB', name: 'gabs' }, max: 4 },
+}
+
+const SECTIONS = [
+  {
+    title: 'Membro: você na primeira cadeira',
+    text: 'O seu avatar fica sempre na primeira cadeira, maior que os outros, com anel mint e brilho. O número do placar também fica mint. Num squad grande, quem não cabe vai para o +N, mas você nunca.',
+    demo: false,
+    cards: [['apex', 'joined', 'Membro, trio'], ['inhouseMine', 'joined', 'Membro, squad de 10 (7/10)']],
+  },
+  {
+    title: 'Hover: você senta na primeira cadeira',
+    text: 'O card cresce 2% e solta a cor do jogo por baixo, sem borda. A fileira anda uma cadeira para a direita, o seu avatar entra na primeira e o placar rola. A última cadeira vai para o +N, então a fileira não muda de largura e a conta continua certa.',
+    demo: true,
+    cards: [['val', 'open', 'Aberto, 2/5'], ['inhouseOpen', 'open', 'Aberto, squad de 10 (6/10)']],
+  },
+  {
+    title: 'Alguém entrou: o avatar preenche a cadeira',
+    text: 'Quando outra pessoa entra, o avatar dela preenche a cadeira vazia ali mesmo, a cadeira solta o contorno mint da hero e o placar rola um número. No card de membro, o squad completo fecha em mint, como o 5/5 da hero.',
+    land: true,
+    cards: [['valLand', 'land', 'Aberto, alguém entra (2/5 → 3/5)'], ['lethalMine', 'joined land', 'Membro, o squad completa (3/4 → 4/4)']],
+  },
+]
+const INTRO = 'Passe o mouse nos cards. Enquanto o mouse não entra em nenhum, os cards de hover repetem a animação sozinhos. A chegada de um membro, no fim, se repete sempre.'
+
+function avatarColors(initials) {
+  const sum = [...initials].reduce((total, letter) => total + letter.charCodeAt(0), 0)
+  return PALETTE[sum % PALETTE.length]
+}
+
+function circle(slot, extraClass = '') {
+  if (slot.kind === 'me') return `<span class="seat me ${extraClass}">VC</span>`
+  if (slot.kind === 'vacant') return `<span class="seat vacant ${extraClass}"></span>`
+  if (slot.kind === 'arriving') {
+    const [background, color] = avatarColors(slot.initials)
+    return `<span class="seat vacant ${extraClass}">` +
+      `<span class="flyer" style="background:${background};color:${color}">${slot.initials}</span>` +
+      '<span class="land-ping"></span></span>'
+  }
+  const [background, color] = avatarColors(slot.initials)
+  return `<span class="seat ${extraClass}" style="background:${background};color:${color}">${slot.initials}</span>`
+}
+
+/**
+ * The rail, viewer first: `min(max, 5)` slots, you in the first when you are a member, the others in
+ * the preview's order, then the vacant ones. Only the circles that fit are drawn; every slot past them
+ * is the +N. An open Squad adds your folded seat at the front and marks its last circle to fold.
+ */
+function rail(squad, joined) {
+  const slots = Math.min(squad.max, RAIL_LIMIT)
+  const shown = Math.min(squad.fits ?? slots, slots)
+  const filled = squad.others.length + (joined ? 1 : 0)
+  const ordered = [
+    ...(joined ? [{ kind: 'me' }] : []),
+    ...squad.others.map((initials) => ({ kind: 'member', initials })),
+    ...(squad.arriving ? [{ kind: 'arriving', ...squad.arriving }] : []),
+  ]
+  while (ordered.length < slots) ordered.push({ kind: 'vacant' })
+  const circles = ordered.slice(0, shown).map((slot, index) =>
+    circle(slot, !joined && index === shown - 1 ? 'folds' : ''))
+  const preview = joined ? '' : circle({ kind: 'me' }, 'preview')
+  const extra = squad.max - shown
+  return {
+    html: preview + circles.join('') + (extra > 0 ? `<span class="extra">+${extra}</span>` : ''),
+    count: filled,
+  }
+}
+
+function card(key, state) {
+  const squad = SQUADS[key]
+  const joined = state.includes('joined')
+  const still = state.includes('land')
+  const seats = rail(squad, joined)
+  const next = Math.min(seats.count + 1, squad.max)
+  const shown = squad.tags.slice(0, 2).map((tag) => `<span class="tag">#${tag}</span>`).join('')
+  const more = squad.tags.length > 2 ? `<span class="more">+${squad.tags.length - 2}</span>` : ''
+  const src = cover(squad.cover)
+
+  return `
+    <div class="wrap${joined ? ' joined' : ''}${still ? ' still' : ''}" role="group" aria-label="${squad.name}, ${squad.game}">
+      <span class="glow" style="background-image:url(${src})"></span>
+      <div class="card">
+        <span class="ambient" style="background-image:url(${src})"></span>
+        <span class="shade"></span>
+        <span class="poster"><img src="${src}" alt="${squad.game}" /></span>
+        <span class="info">
+          <span class="meta">
+            <span class="chips">
+              <span class="chip">${ICON.globe}${squad.lang}</span>
+              <span class="chip">${ICON[squad.platform]}${PLATFORM[squad.platform]}</span>
+            </span>
+            <span class="code">#${squad.code}</span>
+          </span>
+          <span class="name">${squad.name}</span>
+          <span class="tags">${shown}${more}</span>
+          <span class="grow"></span>
+          <span class="foot">
+            <span class="rail">${seats.html}</span>
+            <span class="count"><span class="odo"><span class="odo-col"><span>${seats.count}</span><span>${next}</span></span></span><span class="max">/${squad.max}</span></span>
+          </span>
+        </span>
+      </div>
+    </div>`
+}
+
+function section({ title, text, demo, land, cards }) {
+  const cells = cards.map(([key, state, caption]) => `
+    <div class="cell">
+      <span class="cap">${caption}</span>
+      ${card(key, state)}
+    </div>`).join('')
+  return `
+    <section class="dir${demo ? ' demo' : ''}${land ? ' land' : ''}">
+      <h2>${title}</h2>
+      <p>${text}</p>
+      <div class="fit"><div class="stage"><div class="row">${cells}</div></div></div>
+    </section>`
+}
+
+document.getElementById('page').innerHTML =
+  `<p class="intro">${INTRO}</p>` + SECTIONS.map(section).join('')
+
+/* The demo: the hover cards play in a loop until the pointer reaches any card. */
+const demoCards = [...document.querySelectorAll('.demo .wrap')]
+let demoOn = false
+const demo = setInterval(() => {
+  demoOn = !demoOn
+  demoCards.forEach((wrap) => wrap.classList.toggle('is-hover', demoOn))
+}, 1800)
+document.addEventListener('pointerover', (event) => {
+  if (!event.target.closest('.wrap')) return
+  clearInterval(demo)
+  demoCards.forEach((wrap) => wrap.classList.remove('is-hover'))
+})
+
+/* The arrivals replay forever: the empty chair, the landing, a pause on the new count. */
+const landCards = [...document.querySelectorAll('.land .wrap')]
+function replayArrivals() {
+  landCards.forEach((wrap) => {
+    wrap.classList.remove('landing')
+    void wrap.offsetWidth
+  })
+  setTimeout(() => landCards.forEach((wrap) => wrap.classList.add('landing')), 700)
+}
+replayArrivals()
+setInterval(replayArrivals, 3800)
+
+function fit() {
+  document.querySelectorAll('.fit').forEach((box) => {
+    box.querySelector('.stage').style.zoom = Math.min(1, (box.clientWidth - 32) / 896)
+  })
+}
+addEventListener('resize', fit)
+fit()
+</script>
+</body>
+</html>

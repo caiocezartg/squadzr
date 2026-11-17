@@ -29,7 +29,8 @@ describe('squad board — server render', () => {
     )
 
     expect(markup).toContain(memberSquad.name)
-    expect(markup).toContain('Joined')
+    // The viewer's own seat leads the rail of a Squad they joined.
+    expect(markup).toContain('data-viewer-seat')
     expect(markup).not.toContain('JOIN SQUAD')
   })
 })

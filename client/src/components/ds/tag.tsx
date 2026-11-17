@@ -5,10 +5,13 @@ import type { Platform } from '@squadzr/schemas'
 import { cn } from '@/lib/utils'
 import { PlatformIcon } from './platform-icon'
 
-type StaticTagVariant = 'tag' | 'glass' | 'lang' | 'lang-light'
+type StaticTagVariant = 'tag' | 'glass' | 'lang' | 'lang-light' | 'lang-glass'
 
 interface StaticTagProps {
-  /** The read-only chips: a `#label`, its glass twin, and the Squad language with a globe. */
+  /**
+   * The read-only chips: a `#label`, its glass twin, and the Squad language with a globe, with its
+   * light twin for dark covers and its glass twin for the Squad card's coloured ground.
+   */
   readonly variant?: StaticTagVariant
   /** @default 'sm' */
   readonly size?: 'sm' | 'md'
@@ -16,9 +19,12 @@ interface StaticTagProps {
   readonly label: string
 }
 
-/** The read-only platform chip: an icon and the short label. `platform-light` is its twin for dark covers. */
+/**
+ * The read-only platform chip: an icon and the short label. `platform-light` is its twin for dark
+ * covers, `platform-glass` for the Squad card's coloured ground.
+ */
 interface PlatformTagProps {
-  readonly variant: 'platform' | 'platform-light'
+  readonly variant: 'platform' | 'platform-light' | 'platform-glass'
   /** @default 'sm' */
   readonly size?: 'sm' | 'md'
   readonly platform: Platform
@@ -73,6 +79,7 @@ const STATIC_STYLES: Record<StaticTagVariant, StaticTagStyle> = {
   glass: { classes: 'bg-white/8 text-text-2 font-semibold', hashed: true },
   lang: { classes: 'bg-line text-text font-bold', hashed: false },
   'lang-light': { classes: 'bg-text text-bg font-bold', hashed: false },
+  'lang-glass': { classes: 'bg-white/10 text-text font-bold', hashed: false },
 }
 
 const STATIC_SIZES = {
@@ -95,8 +102,8 @@ const BUTTON_BASE =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint'
 
 /**
- * The Redesign v2 tag (reference, Components). `tag`, `glass`, `lang`, `lang-light`, `platform` and
- * `platform-light` are read-only text; `toggle`, `suggest` and `removable` are buttons.
+ * The Redesign v2 tag (reference, Components). `tag`, `glass`, the `lang` and `platform` chips and
+ * their twins are read-only text; `toggle`, `suggest` and `removable` are buttons.
  */
 export function Tag(props: TagProps) {
   switch (props.variant) {
@@ -108,6 +115,7 @@ export function Tag(props: TagProps) {
       return <RemovableTag {...props} />
     case 'platform':
     case 'platform-light':
+    case 'platform-glass':
       return <PlatformTag {...props} />
     default:
       return <StaticTag {...props} />
@@ -133,9 +141,16 @@ function StaticTag({ variant = 'tag', size = 'sm', label }: StaticTagProps) {
   )
 }
 
-/** The platform chip wears the language chip's tokens: `lang` for `platform`, `lang-light` for its twin. */
+/** The language chip each platform chip wears the tokens of. */
+const PLATFORM_STYLES = {
+  platform: 'lang',
+  'platform-light': 'lang-light',
+  'platform-glass': 'lang-glass',
+} as const satisfies Record<PlatformTagProps['variant'], StaticTagVariant>
+
+/** The platform chip wears the language chip's tokens: `lang` for `platform`, and so on for its twins. */
 function PlatformTag({ variant, size = 'sm', platform, label }: PlatformTagProps) {
-  const style = STATIC_STYLES[variant === 'platform' ? 'lang' : 'lang-light']
+  const style = STATIC_STYLES[PLATFORM_STYLES[variant]]
   const sizes = STATIC_SIZES[size]
 
   return (
