@@ -109,6 +109,7 @@ export {
   roomResponseSchema,
   roomSchema,
   roomsResponseSchema,
+  squadCallSchema,
   type CreateRoomInput,
   type CreateRoomResponse,
   type JoinRoomResponse,
@@ -121,6 +122,7 @@ export {
   type RoomMemberDto,
   type RoomResponse,
   type RoomsResponse,
+  type SquadCallDto,
 } from './room'
 export {
   listNotificationsQuerySchema,

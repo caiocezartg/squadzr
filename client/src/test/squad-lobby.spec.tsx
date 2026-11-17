@@ -34,7 +34,24 @@ import {
 } from './fixtures'
 import { openLatestWebSocket, sendFromServer, serverSentFrames } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
+import type * as UseLobby from '@/features/lobby/use-lobby'
+import type { LobbyView } from '@/features/lobby/use-lobby'
 import type { RoomResponse, Squad } from '@/types'
+
+/** Every view the Lobby derived, in order, so a test reads what the page was handed. */
+const lobbyViews = vi.hoisted((): LobbyView[] => [])
+
+vi.mock('@/features/lobby/use-lobby', async (importOriginal) => {
+  const actual = await importOriginal<typeof UseLobby>()
+  return {
+    ...actual,
+    useLobbyView: (...args: Parameters<typeof actual.useLobbyView>) => {
+      const view = actual.useLobbyView(...args)
+      lobbyViews.push(view)
+      return view
+    },
+  }
+})
 
 const invalidDiscordSquad: Squad = {
   ...lobbySquad,
@@ -77,6 +94,7 @@ function tileOf(name: string): HTMLElement {
 }
 
 beforeEach(() => {
+  lobbyViews.length = 0
   registerLobbyRoutes()
 })
 
@@ -108,6 +126,18 @@ describe('squad lobby — snapshot handshake', () => {
     expect(await screen.findByText('Caio')).toBeInTheDocument()
     expect(screen.getByText('Ana')).toBeInTheDocument()
     expect(screen.getByText('2/3 players')).toBeInTheDocument()
+  })
+
+  it('hands the Lobby the Voice Call from the snapshot, and none before it', async () => {
+    renderSquadsFlow('/squads/LOBBY1')
+    expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
+    expect(lobbyViews.at(-1)?.discordCall).toBeNull()
+
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    await screen.findByText('Ana')
+
+    expect(lobbyViews.at(-1)?.discordCall).toEqual(lobbySquad.discordCall)
   })
 
   it('replaces the roster from every snapshot and never duplicates members', async () => {
@@ -437,7 +467,7 @@ describe('squad lobby — leave flow', () => {
 
   it('opens the public view, not the member Lobby, when the viewer goes back to a Squad they left', async () => {
     let left = false
-    const { discordLink: _discordLink, ...publicFields } = lobbySquad
+    const { discordLink: _discordLink, discordCall: _discordCall, ...publicFields } = lobbySquad
     onHttp('GET', '/api/rooms/:code', () =>
       left
         ? httpOk({ room: { ...publicFields, memberCount: 1, isMember: false } })

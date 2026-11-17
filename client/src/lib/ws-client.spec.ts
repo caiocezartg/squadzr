@@ -10,7 +10,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { SESSION_ENDED_CLOSE_CODE } from '@squadzr/schemas/ws'
+import { REALTIME_PROTOCOL_VERSION, SESSION_ENDED_CLOSE_CODE } from '@squadzr/schemas/ws'
 import { WebSocketClient } from './ws-client'
 import { MockWebSocket, latestWebSocket } from '@/test/ws-mock'
 
@@ -324,7 +324,10 @@ describe('protocol handshake', () => {
     client.connect()
     latestWebSocket().open()
 
-    latestWebSocket().serverSend({ type: 'protocol', payload: { version: 5 } })
+    latestWebSocket().serverSend({
+      type: 'protocol',
+      payload: { version: REALTIME_PROTOCOL_VERSION },
+    })
 
     expect(onProtocolFailure).not.toHaveBeenCalled()
     expect(client.status).toBe('open')

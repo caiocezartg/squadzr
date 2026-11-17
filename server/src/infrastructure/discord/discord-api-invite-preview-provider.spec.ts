@@ -296,6 +296,23 @@ describe('DiscordApiInvitePreviewProvider', () => {
       expect(fetchImpl).toHaveBeenCalledTimes(2)
     })
 
+    it.each([
+      ['a retry_after of 0', () => json({ retry_after: 0 }, 429)],
+      [
+        'a Retry-After header of 0',
+        () => new Response('', { status: 429, headers: { 'Retry-After': '0' } }),
+      ],
+    ])('never reports a zero wait: %s becomes 1 ms', async (_, zeroWait) => {
+      const { provider, sleep } = providerAnsweringInOrder([zeroWait(), zeroWait()])
+
+      await expect(provider.fetch('valorant')).resolves.toEqual({
+        kind: 'rate_limited',
+        retryAfterMs: 1,
+      })
+
+      expect(sleep).toHaveBeenCalledWith(1)
+    })
+
     it('reads a failure on the second ask by its own status', async () => {
       const { provider } = providerAnsweringInOrder([
         json({ retry_after: 1 }, 429),

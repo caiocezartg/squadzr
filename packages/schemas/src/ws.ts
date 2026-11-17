@@ -28,7 +28,7 @@ const wsMessageTypeSchema = z.enum([
   'chat_typing',
 ])
 
-export const REALTIME_PROTOCOL_VERSION = 5
+export const REALTIME_PROTOCOL_VERSION = 6
 export const WS_MAX_PAYLOAD_BYTES = 16 * 1024
 /** Close code of a socket whose sign-in session was signed out or expired; the app reconnects as a visitor. */
 export const SESSION_ENDED_CLOSE_CODE = 4001

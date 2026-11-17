@@ -42,6 +42,15 @@ export class InvalidDiscordInviteError extends AppError {
   }
 }
 
+export class DiscordInviteNotVoiceCallError extends AppError {
+  readonly statusCode = 422
+  readonly code = 'DISCORD_INVITE_NOT_VOICE_CALL'
+
+  constructor() {
+    super('The Discord invite does not point to a voice or stage channel')
+  }
+}
+
 export class RoomCreateLimitReachedError extends AppError {
   readonly statusCode = 422
   readonly code = 'ROOM_CREATE_LIMIT_REACHED'

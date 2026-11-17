@@ -106,8 +106,9 @@ describe('PostgreSQL 16 harness', () => {
     // #118 adds 0012 (the moderator and owner roles, at most one owner);
     // #121 adds 0013 (Activity Samples);
     // #122 adds 0014 (Catalog Import Runs);
-    // #179 adds 0015 (Squad Chat messages).
-    expect(Number(migrations.rows[0]?.total)).toBe(16)
+    // #179 adds 0015 (Squad Chat messages);
+    // #190 adds 0016 (the Squad Voice Call).
+    expect(Number(migrations.rows[0]?.total)).toBe(17)
     expect(gameCount?.total).toBe(0)
   })
 

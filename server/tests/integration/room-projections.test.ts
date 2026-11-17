@@ -21,7 +21,7 @@ import { buildTestServer, type TestServer } from '@test/harness/test-server'
 // room. CCC-36 added the Ready Room access rules (404 for non-members, 60min
 // retention) and the user-targeted notification push.
 
-const PRIVATE_ROOM_KEYS = ['discordLink', 'readyAt', 'lastActivityAt']
+const PRIVATE_ROOM_KEYS = ['discordLink', 'discordCall', 'readyAt', 'lastActivityAt']
 
 let server: TestServer
 let host: TestUser

@@ -7,7 +7,7 @@ import { lobbyMetadata } from './lobby-metadata'
 type RecordedInit = RequestInit & { next?: { revalidate?: number } }
 
 /** The Squad as a visitor reads it: the public projection, with no Discord invite. */
-const { discordLink: _discordLink, ...publicSquad } = lobbySquad
+const { discordLink: _discordLink, discordCall: _discordCall, ...publicSquad } = lobbySquad
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

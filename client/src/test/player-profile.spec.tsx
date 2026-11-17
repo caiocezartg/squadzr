@@ -125,7 +125,7 @@ describe('opening the profile', () => {
 
   it('opens from a tile of the Lobby a non-member sees too', async () => {
     registerRoutes({ [guestPlayer.id]: anaProfile })
-    const { discordLink: _discordLink, ...publicFields } = lobbySquad
+    const { discordLink: _discordLink, discordCall: _discordCall, ...publicFields } = lobbySquad
     onHttp('GET', '/api/rooms/:code', () =>
       httpOk({
         room: {

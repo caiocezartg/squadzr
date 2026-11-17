@@ -11,6 +11,7 @@ export { AdminRequiredError } from './admin-required.error'
 export { RateLimitedError } from './rate-limited.error'
 export { GameNotFoundError, RoomNotFoundError, UserNotFoundError } from './not-found.error'
 export {
+  DiscordInviteNotVoiceCallError,
   InvalidDiscordInviteError,
   RoomFullError,
   RoomReadyError,
@@ -31,4 +32,5 @@ export {
   CatalogImportRunningError,
   CatalogImportUnavailableError,
 } from './catalog-import.error'
+export { DiscordUnavailableError } from './discord-unavailable.error'
 export { ChatMessageIdConflictError, ChatRateLimitedError } from './chat.error'

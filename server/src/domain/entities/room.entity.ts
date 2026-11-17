@@ -1,4 +1,5 @@
 import type { Platform } from '@squadzr/schemas'
+import type { VoiceCall } from '../services/voice-call'
 import type { GameSummary } from './game.entity'
 
 /** One member of a Squad's preview: enough to show who joined, never the roster. */
@@ -18,6 +19,8 @@ export interface Room {
   readonly game: GameSummary
   readonly maxPlayers: number
   readonly discordLink: string | null
+  /** The Voice Call the invite pointed to when the Squad was created; null for a Squad that predates it. */
+  readonly discordCall: VoiceCall | null
   readonly tags: string[]
   readonly language: 'en' | 'pt-br'
   /** The platform the group plays on; null when the Game has none (or the Squad predates platforms). */
@@ -40,6 +43,7 @@ export interface NewRoom {
   readonly gameId: string
   readonly maxPlayers: number
   readonly discordLink: string
+  readonly discordCall: VoiceCall
   readonly tags?: string[]
   readonly language?: 'en' | 'pt-br'
   readonly platform?: Platform | null
