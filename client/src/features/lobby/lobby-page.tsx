@@ -203,8 +203,7 @@ function MemberInvite({ squadCode, lobby, entering }: MemberInviteProps) {
       invite={invite}
       squadName={lobby.squad.name}
       coverUrl={lobby.game?.coverUrl ?? null}
-      online={Object.values(lobby.presence).filter((member) => member.online).length}
-      members={lobby.players.length}
+      call={lobby.discordCall}
       preview={discord.preview}
       previewPending={discord.pending}
       entering={entering}

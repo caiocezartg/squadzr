@@ -56,10 +56,7 @@
       "copyLink": "Copiar link",
       "copied": "Copiado",
       "slotsLeft": "{count, plural, one {Falta # vaga} other {Faltam # vagas}}",
-      "statOnline": "online",
-      "statMembers": "{count, plural, one {membro} other {membros}}",
-      "statInRoom": "na sala agora",
-      "statPlayers": "{count, plural, one {jogador} other {jogadores}}"
+      "joinCall": "Entre na call"
     },
     "close": "Fechar",
     "pagination": {
