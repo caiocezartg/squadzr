@@ -8,7 +8,7 @@ import type { MockupMode } from './use-mockup-timeline'
   The parts the three mockups of "Como funciona" share (sign-in-, find-squad- and close-team-mockup.tsx;
   docs/design/Main.dc.html, #como-funciona). Each mockup is a short
   script of beats (use-mockup-timeline.ts) that acts its step out in the product's own look: a pointer,
-  hover and press states, a member joining as the hero's carousel draws it, and the Lobby's Discord invite
+  hover and press states, a member joining with a mint flash, and the Lobby's Discord invite
   unlocking. Every change between beats is a CSS transition on transform and opacity (and colours for
   grounds and rings), so nothing restarts from zero. In the stage each mockup sits on a 380 × 300 frame,
   and the pointer's positions are in that frame. The stacked cards draw the last beat at any width, with
@@ -55,7 +55,7 @@ export function Pointer({ at, shown, pressed }: PointerProps) {
 }
 
 /**
- * A member arriving, as the hero's carousel draws it: a mint disc pops over the seat and fades, and a ring
+ * A member arriving: a mint disc pops over the seat and fades, and a ring
  * flashes once. It renders only while the beats play; at rest the member is simply there.
  */
 export function JoinFlash() {

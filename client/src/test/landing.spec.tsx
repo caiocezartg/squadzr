@@ -1,8 +1,7 @@
 /**
  * The landing on the App Router (CCC-77, CCC-115). The page renders on the server: its navigation,
- * headline, copy, calls to action, the squad carousel with its first squad full, the popular games'
- * towers, "How it works", the FAQ, the closing call and the footer are in the server HTML (CCC-116,
- * CCC-117).
+ * headline, copy, calls to action, the hero's squad, the popular games' towers, "How it works", the
+ * FAQ, the closing call and the footer are in the server HTML (CCC-116, CCC-117).
  */
 
 import { existsSync } from 'node:fs'
@@ -72,14 +71,14 @@ describe('landing server HTML', () => {
   it('renders the headline and the one sentence that says what the product is for', async () => {
     await showServerHtml()
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'Build your squad Play tonight'
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName(
+      'Stop playing solo Build your squad'
     )
-    expect(
-      screen.getByText(
-        'No more queueing with randoms. Find the players your team is missing and get into the match now.'
-      )
-    ).toBeInTheDocument()
+    // The sentence leans on its last words.
+    const fullTeam = screen.getByText('full team', { selector: 'strong' })
+    expect(fullTeam.closest('p')).toHaveTextContent(
+      'Find people who play the same game as you and drop into the match with a full team.'
+    )
   })
 
   it('renders the headline without a hidden entrance state', async () => {
@@ -187,18 +186,15 @@ describe('landing server HTML', () => {
     )
   })
 
-  it('renders the hero carousel with its first squad full and in the centre, and no code field', async () => {
+  it('keeps the hero squad and the solo life out of the accessibility tree, and has no code field', async () => {
     await showServerHtml()
-    const carousel = screen.getByRole('region', { name: 'Squads forming right now' })
-    const centre = within(carousel).getByRole('group', {
-      name: 'Premier quinta à noite, a Valorant squad: 5 of 5 players',
-    })
+    const section = within(hero())
 
-    expect(within(centre).getByText('Full')).toBeInTheDocument()
-    expect(within(carousel).getAllByRole('group')).toHaveLength(1)
-    expect(
-      within(carousel).getByRole('button', { name: 'Show Premier quinta à noite (Valorant)' })
-    ).toHaveAttribute('aria-current', 'true')
+    // The struck word is read once, not letter by letter.
+    expect(section.getAllByText('solo')).toHaveLength(1)
+    for (const decoration of ['solo queue', 'duo invite', 'YOU', 'mia.f', 'luiza']) {
+      expect(section.getByText(decoration).closest('[aria-hidden="true"]')).not.toBeNull()
+    }
     expect(screen.queryByLabelText('Have a code?')).not.toBeInTheDocument()
   })
 

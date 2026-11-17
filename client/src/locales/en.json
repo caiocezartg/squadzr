@@ -235,24 +235,44 @@
       "signIn": "Sign in with Discord"
     },
     "hero": {
-      "titleLine1": "Build your squad",
-      "titleLine2": "Play tonight",
-      "subtitle": "No more queueing with randoms. Find the players your team is missing and get into the match now.",
+      "titleLead": "Stop playing",
+      "titleStruck": "solo",
+      "titleLine2Lead": "Build your",
+      "titleLine2Word": "squad",
+      "subtitle": "Find people who play the same game as you and drop into the match with a <strong>full team</strong>.",
       "exploreSquads": "Explore squads",
       "createSquad": "Create squad",
       "trustDiscord": "Discord login",
       "trustPlayers": "2 to 40 players",
-      "trustFree": "Free"
-    },
-    "showcase": {
-      "label": "Squads forming right now",
-      "roleDescription": "carousel",
-      "slide": "squad",
-      "squadLabel": "{name}, a {game} squad: {count} of {total} players",
-      "goTo": "Show {name} ({game})",
-      "pause": "Pause the carousel",
-      "play": "Resume the carousel",
-      "full": "Full"
+      "trustFree": "Free",
+      "you": "YOU",
+      "youLabel": "you",
+      "solo": {
+        "queue": {
+          "label": "solo queue",
+          "value": "18:42"
+        },
+        "friends": {
+          "label": "friends online",
+          "value": "0"
+        },
+        "lobby": {
+          "label": "lobby",
+          "value": "1/5"
+        },
+        "invite": {
+          "label": "duo invite",
+          "value": "expired"
+        },
+        "searching": {
+          "label": "finding a match",
+          "value": "14 min"
+        },
+        "duo": {
+          "label": "duo",
+          "value": "offline"
+        }
+      }
     },
     "games": {
       "label": "Available games",

@@ -44,11 +44,11 @@ export function HeroCoverWall() {
           <WallColumn key={index} index={index} />
         ))}
       </div>
-      {/* A dark pool behind the headline and the carousel, the corners in the dark, and the page ground below. */}
+      {/* A dark pool behind the headline and the squad, the corners in the dark, and the page ground below. */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_50%_42%,var(--color-bg)_0%,rgba(7,8,10,0.7)_45%,transparent_80%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_80%_at_50%_45%,transparent_40%,var(--color-bg)_100%)]" />
       <div className="from-bg/80 to-bg absolute inset-0 bg-linear-to-b via-transparent via-50%" />
-      {/* The brand's light, faint, rising from behind the carousel. */}
+      {/* The brand's light, faint, rising from behind the squad. */}
       <div className="absolute inset-x-0 bottom-0 h-2/3 bg-[radial-gradient(ellipse_45%_50%_at_50%_70%,rgba(0,255,162,0.07),transparent_70%)]" />
     </div>
   )

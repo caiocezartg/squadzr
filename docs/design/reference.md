@@ -36,11 +36,12 @@ Corners are square everywhere. Only avatars, presence dots, the bell badge and t
 
 ### Typography
 
-Three families, loaded with `next/font/google` and exposed as CSS variables:
+Three families for the app, plus Anton for the landing hero's headline alone (the landing layout loads it), all with `next/font/google` and exposed as CSS variables:
 
 | Role           | Family            | Weight · size / line-height                     | Notes                        |
 | -------------- | ----------------- | ----------------------------------------------- | ---------------------------- |
-| Display        | Big Shoulders     | 900 · `clamp(88px, 11vw, 176px)` / 0.94         | Hero, uppercase              |
+| Hero headline  | Anton             | 400 · `min(15.5cqw, 72px)` / 1.06 below 768px, `clamp(64px, 7.2vw, 112px)` / 0.96 from 768px | Landing hero, uppercase |
+| Display        | Big Shoulders     | 900 · `clamp(88px, 11vw, 176px)` / 0.94         | Uppercase                    |
 | Section title  | Big Shoulders     | 900 · `clamp(56px, 6.4vw, 92px)` / 1            | Landing sections, uppercase  |
 | Page title     | Big Shoulders     | 900 · 60 / 0.96                                 | "Explorar squads", uppercase |
 | Panel title    | Big Shoulders     | 900 · 40 (modal) or 28 (popover) / 1            | Uppercase                    |
@@ -105,7 +106,7 @@ There are no mobile artboards, so these rules are the contract. Widths: narrow i
 - **Squad Board:** 2 columns of large cards at wide widths, 1 column of medium cards below 1024px. The page title drops to 44px below 640px. Filters and notifications open as popovers from 640px up, and as bottom sheets below 640px.
 - **Lobby:** cover panel on the left and, at wide widths, the members panel with the invite under it on the right, so the cover stretches to the height of the column; the page stops at 76rem and centers on wider screens, so a big screen keeps the 1440px composition instead of stretching the cover; stacked below 1024px (cover, members, invite), with the cover panel shortened to a 16:9 band. Member tiles: 2 columns from 640px up, 1 column below. Header actions wrap; below 640px the copy and leave actions become icon buttons with accessible labels.
 - **Create Squad:** the modal is full screen below 640px, with the footer actions pinned to the bottom.
-- **Landing:** the navigation collapses into a menu below 640px. The hero card and its toasts sit below the copy below 1024px, and the toasts hide below 640px. The games panel stacks above the list below 1024px. "Como funciona" is sticky only at wide widths (see Motion); below 1024px it is three stacked cards.
+- **Landing:** the navigation collapses into a menu below 640px. Below 768px the hero headline takes four lines and keeps four of its six chips (see Hero). The games panel stacks above the list below 1024px. "Como funciona" is sticky only at wide widths (see Motion); below 1024px it is three stacked cards.
 - Every screen is checked at 1440, 768 and 390px wide.
 
 ## 5. Motion
@@ -126,7 +127,7 @@ Values come from the canvas `.ds-` styles, corrected by the `emil-design-eng` ru
 ### Rules
 
 - Animate `transform` and `opacity` only. The FAQ accordion is the one height animation.
-- CSS transitions and `@starting-style` by default. The `motion` library only drives the scroll-linked "Como funciona", the hero demo's springs, the in-view reveal and the realtime member entrances, always with full `transform` strings.
+- CSS transitions and `@starting-style` by default. The `motion` library only drives the scroll-linked "Como funciona", the in-view reveal and the realtime member entrances, always with full `transform` strings.
 - Exits are faster than entrances.
 - Hover effects sit behind `@media (hover: hover) and (pointer: fine)`.
 - Content that arrives ready (server render or warm cache) never animates in. No route-level loading states.
@@ -156,14 +157,13 @@ Values come from the canvas `.ds-` styles, corrected by the `emil-design-eng` ru
 
 ### Hero
 
-The hero card tells the product story once, 600ms after the hero becomes visible:
+The hero takes the first screen, over the wall of covers, and tells one story once: "Chega de jogar solo", with SOLO struck out, then "Monte seu squad" as four players fill the visitor's squad. It runs on CSS from the first paint; the moments live in `client/src/components/landing/hero-timeline.ts`, the animations in `globals.css`.
 
-1. The card shows 2/5 members.
-2. Every 900ms a member avatar enters (`scale(0.9)`, spring bounce 0.15) and a toast "X entrou · n/5" slides in from 14px right and leaves 1.6s later. The counter and meter follow.
-3. At 5/5 the card's ring turns mint with a soft glow and the "Squad completo — convite liberado" bar rises 18px into place.
-4. The card holds its final state. It does not loop.
+1. **Solo (0–3.1s).** The headline, in Anton, reads "Chega de jogar solo". The letters of SOLO (`muted`) drift apart, each 0.09em further than the one before it (2800ms `--ease-in-out`). The visitor sits alone in the rail: a mint "VC" seat, four vacant ones and `1/5`. Around the headline the solo life rises in, one chip every 230ms from 250ms (520ms `--ease-out`, from 10px lower, `scale(0.94)` and a 4px blur), in this order: `fila solo · 18:42`, `procurando partida · 14 min`, `lobby · 1/5`, `convite pro duo · expirou`, `amigos online · 0`, `duo · offline`, each with an icon in a vacant seat's circle and its value in `danger`. Four players float at the hero's sides, at `scale(0.82)` and 85% opacity, with their names under them; each bobs once.
+2. **Strike (3.1s).** A mint strike draws through SOLO (560ms `--ease-out`) as its letters settle back together and dim to 30% (55% below 768px).
+3. **Squad (3.58s).** "Monte seu squad" rises from below its line (900ms `--ease-out`) and the chips blur away, 45ms apart (420ms). From 3.8s the players fly into their seats, 110ms apart (1000ms `--ease-in-out`), dropping their names; each seat flashes its mint ring as its player lands, and the counter rolls one step per landing to `5/5`, turning mint with the last.
 
-The toasts are hidden below 640px. Under reduced motion the card renders its final state.
+It plays once and holds. Below 768px each line of the headline takes two and four chips show (no lobby, no friends); from 1280px all six do. The squad and the chips are decoration, hidden from assistive technology, and the struck word is read once. Every element rests in the story's end, so reduced motion shows SOLO struck, the second line in place and the squad full, with no chips. The story is the one exception to "content that arrives ready never animates in": its second line waits for the strike.
 
 ### "Como funciona"
 
