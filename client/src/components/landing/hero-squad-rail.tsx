@@ -51,9 +51,10 @@ function SquadmateSeat({ squadmate, index, flyerRef }: SquadmateSeatProps) {
         className="motion-safe:animate-hero-fly absolute inset-0 z-3 transition-opacity duration-500 motion-safe:[&:not([data-placed])]:opacity-0"
       >
         <span className="motion-safe:animate-hero-appear block size-full">
-          <span className="motion-safe:animate-hero-bob relative block size-full rounded-full shadow-[0_0_0_4px_var(--color-bg)]">
-            {/* The avatar's 72px drawing, scaled to the seat: 44px, and 60px from 640px. */}
-            <span className="block origin-top-left scale-[0.6111] sm:scale-[0.8333]">
+          <span className="motion-safe:animate-hero-bob before:bg-bg relative block size-full rounded-full before:absolute before:-inset-1 before:rounded-full">
+            {/* The avatar's 72px drawing, scaled to the seat: 44px, and 60px from 640px. A solid disc of the page
+                ground 4px wider sits behind it, so its edge never lets the seat before it show through. */}
+            <span className="relative block origin-top-left scale-[0.6111] sm:scale-[0.8333]">
               <Avatar size={72} playerId={squadmate.id} name={squadmate.name} />
             </span>
             <span className={cn(NAME, 'text-text')}>{squadmate.name}</span>
