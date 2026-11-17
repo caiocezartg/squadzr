@@ -9,6 +9,12 @@ import {
   type PresenceState,
   type SquadSnapshot,
 } from './squad-snapshot'
+import { useSquadSnapshotCache } from './squad-snapshot-cache'
+
+/** The Presence a cached snapshot carries, which the fresh snapshot replaces; none on a cold cache. */
+function presenceOfCached(snapshot: SquadSnapshot | null): PresenceState {
+  return snapshot ? presenceFromSnapshot(snapshot) : {}
+}
 
 /** Squad codes travel uppercased by contract; URLs may still arrive lowercase. */
 function matchesSquadCode(eventCode: string, squadCode: string): boolean {
@@ -43,6 +49,10 @@ export interface SquadChannel {
  * The Lobby's realtime channel. Owns the socket, the join/leave lifecycle of the squad channel, the
  * authoritative snapshot, Presence and the membership error state.
  *
+ * The last snapshot of each Squad outlives the page in the query cache. A return to a Squad renders it at
+ * once, and the fresh snapshot the join delivers replaces it entirely, Presence included. A Squad the
+ * viewer lost access to drops its entry, so a stale roster never shows.
+ *
  * Unmounting the Lobby only closes the channel: the server then drops this tab's Presence. Leaving the
  * Squad is a different workflow (see `use-squad-membership`), because it also ends the durable Membership.
  */
@@ -51,9 +61,25 @@ export function useSquadChannel({
   enabled,
   onSquadRemoved,
 }: UseSquadChannelOptions): SquadChannel {
-  const [snapshot, setSnapshot] = useState<SquadSnapshot | null>(null)
-  const [presence, setPresence] = useState<PresenceState>({})
+  const snapshotCache = useSquadSnapshotCache()
+  const [snapshot, setSnapshot] = useState<SquadSnapshot | null>(() =>
+    snapshotCache.read(squadCode)
+  )
+  const [presence, setPresence] = useState<PresenceState>(() =>
+    presenceOfCached(snapshotCache.read(squadCode))
+  )
   const [errorCode, setErrorCode] = useState<string | null>(null)
+  // The Squad the live state above belongs to. It is adjusted while rendering, so a page that moves to another
+  // Squad never paints the previous one's roster for a commit: it shows the new Squad's cached snapshot, or
+  // placeholders on a cold cache.
+  const [stateCode, setStateCode] = useState(squadCode)
+  if (!matchesSquadCode(stateCode, squadCode)) {
+    const cached = snapshotCache.read(squadCode)
+    setStateCode(squadCode)
+    setSnapshot(cached)
+    setPresence(presenceOfCached(cached))
+    setErrorCode(null)
+  }
   // The Squad whose Membership was revoked, so a stale flag never reaches the next Squad this page renders:
   // the reset below only lands a commit after the code changes.
   const [revokedCode, setRevokedCode] = useState<string | null>(null)
@@ -82,9 +108,11 @@ export function useSquadChannel({
   }, [squadCode, status])
 
   useEffect(() => {
-    // A different Squad code must never show the previous Squad's live state.
-    setSnapshot(null)
-    setPresence({})
+    // A different Squad code must never show the previous Squad's live state: it starts from the snapshot the
+    // cache holds for this Squad, which the join's fresh snapshot replaces.
+    const cached = snapshotCache.read(squadCode)
+    setSnapshot(cached)
+    setPresence(presenceOfCached(cached))
     setErrorCode(null)
     setRevokedCode(null)
 
@@ -108,6 +136,7 @@ export function useSquadChannel({
           // Events for the previous Squad may still be in flight while the server processes the switch;
           // they must never touch this page.
           if (!matchesSquadCode(payload.room.code, squadCode)) return
+          snapshotCache.write(squadCode, payload)
           setSnapshot(payload)
           setPresence(presenceFromSnapshot(payload))
           // The authoritative snapshot of this Squad supersedes any error a previous join left behind
@@ -126,6 +155,7 @@ export function useSquadChannel({
         },
         room_deleted: (payload) => {
           if (!matchesSquadCode(payload.roomCode, squadCode)) return
+          snapshotCache.discard(squadCode)
           onSquadRemoved(payload.roomId)
         },
         error: (payload) => {
@@ -135,7 +165,8 @@ export function useSquadChannel({
           setErrorCode(payload.code)
           if (payload.code === 'NOT_ROOM_MEMBER') {
             // Membership was revoked: the last snapshot is no longer authorized, so the page falls back to
-            // the error alone.
+            // the error alone, and the cache forgets it.
+            snapshotCache.discard(squadCode)
             setSnapshot(null)
             setPresence({})
             setRevokedCode(squadCode)
@@ -143,7 +174,7 @@ export function useSquadChannel({
         },
       }
     )
-  }, [subscribe, send, enabled, squadCode, onSquadRemoved])
+  }, [subscribe, send, enabled, squadCode, onSquadRemoved, snapshotCache])
 
   const dismissError = useCallback(() => setErrorCode(null), [])
 

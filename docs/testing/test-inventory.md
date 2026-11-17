@@ -57,6 +57,11 @@ and the check refuses one call column without the other) and changes `rooms-http
 read, 422 `DISCORD_INVITE_NOT_VOICE_CALL` and 503 `DISCORD_UNAVAILABLE` with `retryAfterMs` and `Retry-After`, each persisting nothing, and
 the call going to members only: not to a visitor, a non-member or the board).
 
+Issue #197 (Lobby warm return) keeps each Squad's last snapshot in the query cache, so a return renders the roster and the invite panel at once. 
+`squad-lobby-warm-return.spec.tsx` (11 tests) covers the cold load with placeholders, the cached roster and invite on a return with no placeholder, the fresh snapshot replacing the 
+cached one (roster, readiness and Presence) and updating the cache for the next return, a dropped cache entry reading cold again, a Squad switch never showing another Squad's 
+snapshot (and showing the cached one of the Squad it moves to), and the cache entry going away on a revoked Membership, a deleted Squad and a leave.
+
 Issue #192 (Create form: voice-call rule, blocked outage and help dialog) moves the form to the new rule. `create-squad.spec.tsx` replaces
 its two "lets the squad be created" cases (Discord unknown, Discord still being asked) and its muted-line wording: the call shown under the
 server row and announced, `not_voice_call` with the inline help link, `unknown` (also a failed or rate-limited check) as a blocked outage with
