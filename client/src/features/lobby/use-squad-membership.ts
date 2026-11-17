@@ -8,6 +8,7 @@ import { useAppNavigation } from '@/lib/navigation'
 import { notifyError } from '@/lib/notify'
 import type { PublicSquad } from '@/types'
 import { useSquadDetailsCommands } from './squad-details-cache'
+import { useSquadSnapshotCache } from './squad-snapshot-cache'
 
 interface UseSquadMembershipOptions {
   squadCode: string
@@ -35,12 +36,15 @@ export function useSquadMembership({
   const t = useTranslations()
   const { refreshMySquads } = useMySquadsCommands()
   const { refreshSquadDetails } = useSquadDetailsCommands()
+  const snapshotCache = useSquadSnapshotCache()
 
   const leaveSquad = useCallback(async () => {
     try {
       const isHost = squad?.hostId === userId
       notifySquadLeave(squadCode)
       await api.post(`/api/rooms/${encodeURIComponent(squadCode)}/leave`, {})
+      // The viewer is out of the Squad: the roster the cache holds is no longer theirs to show.
+      snapshotCache.discard(squadCode)
       if (isHost && squad) {
         board.removeSquad(squad.id)
       }
@@ -64,6 +68,7 @@ export function useSquadMembership({
     board,
     refreshMySquads,
     refreshSquadDetails,
+    snapshotCache,
     navigateApp,
     t,
   ])
