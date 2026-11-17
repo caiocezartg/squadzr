@@ -38,7 +38,7 @@ const INVALID_INVITE_MESSAGE =
 const EXPIRES_WARNING =
   'This invite expires. Create one that never expires so your squad keeps the link.'
 const UNAVAILABLE_MESSAGE = "We couldn't reach Discord. Try again in a few seconds."
-const NOT_VOICE_CALL_MESSAGE = "This invite doesn't point to a voice call"
+const NOT_VOICE_CALL_MESSAGE = "This invite doesn't point to a voice call."
 const HELP_TRIGGER = 'How do I invite to a voice call?'
 const HELP_TITLE = 'How to invite to a voice call'
 

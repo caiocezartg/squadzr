@@ -500,7 +500,7 @@
     "CATALOG_IMPORT_UNAVAILABLE": "O import do catálogo não está configurado neste servidor, então não dá para rodá-lo daqui.",
     "CATALOG_IMPORT_MANUAL_LIMIT": "Já houve um import manual do catálogo nas últimas 24 horas.",
     "CATALOG_IMPORT_RUNNING": "Já existe um import do catálogo na fila ou em andamento.",
-    "DISCORD_INVITE_NOT_VOICE_CALL": "Esse convite não aponta para uma chamada de voz",
+    "DISCORD_INVITE_NOT_VOICE_CALL": "Esse convite não aponta para uma chamada de voz.",
     "DISCORD_UNAVAILABLE": "Não conseguimos falar com o Discord. Tente de novo em alguns segundos.",
     "DEFAULT": "Algo deu errado. Por favor, tente novamente."
   },

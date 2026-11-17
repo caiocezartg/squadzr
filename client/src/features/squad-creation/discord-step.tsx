@@ -82,6 +82,17 @@ export function DiscordStep({ game, invite, onRetryInvite }: DiscordStepProps) {
         <FormField
           htmlFor={inputId}
           label={t('ds.createSquad.discordLabel')}
+          labelAction={
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              aria-label={t('ds.createSquad.voiceCallHelp.trigger')}
+              title={t('ds.createSquad.voiceCallHelp.trigger')}
+              className="text-mint hover-fine:text-text focus-visible:outline-mint -m-1.5 inline-flex size-7 items-center justify-center rounded-full focus-visible:outline-2"
+            >
+              <CircleHelp aria-hidden className="size-4" strokeWidth={2.4} />
+            </button>
+          }
           errorId={errorId}
           error={errorMessage}
           errorAction={
@@ -145,14 +156,6 @@ export function DiscordStep({ game, invite, onRetryInvite }: DiscordStepProps) {
             {t('ds.createSquad.discordExpires')}
           </p>
         )}
-        <button
-          type="button"
-          onClick={() => setHelpOpen(true)}
-          className="text-text-3 hover-fine:text-text focus-visible:outline-mint inline-flex min-h-9 items-center gap-2 self-start text-[12.5px] leading-normal font-bold focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
-          <CircleHelp aria-hidden className="text-mint size-3.5 shrink-0" strokeWidth={2.4} />
-          {t('ds.createSquad.voiceCallHelp.trigger')}
-        </button>
         <VoiceCallHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
         <p role="status" className="sr-only">
           {announcement}

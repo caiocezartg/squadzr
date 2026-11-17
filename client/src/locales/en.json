@@ -500,7 +500,7 @@
     "CATALOG_IMPORT_UNAVAILABLE": "The catalog import is not set up on this server, so it cannot be run from here.",
     "CATALOG_IMPORT_MANUAL_LIMIT": "A manual catalog import was already requested in the last 24 hours.",
     "CATALOG_IMPORT_RUNNING": "A catalog import is already queued or running.",
-    "DISCORD_INVITE_NOT_VOICE_CALL": "This invite doesn't point to a voice call",
+    "DISCORD_INVITE_NOT_VOICE_CALL": "This invite doesn't point to a voice call.",
     "DISCORD_UNAVAILABLE": "We couldn't reach Discord. Try again in a few seconds.",
     "DEFAULT": "Something went wrong. Please try again."
   },

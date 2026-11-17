@@ -14,6 +14,8 @@ export interface FormFieldProps {
   /** The id of the label, for a group of controls that `aria-labelledby` points at. */
   labelId?: string
   label: ReactNode
+  /** Sits right after the label, such as a small help button. */
+  labelAction?: ReactNode
   /** Sits at the end of the label row, such as the name's character counter. */
   aside?: ReactNode
   /** The id the error carries, so the control can name it in `aria-describedby`. */
@@ -38,6 +40,7 @@ export function FormField({
   htmlFor,
   labelId,
   label,
+  labelAction,
   aside,
   errorId,
   error,
@@ -48,15 +51,18 @@ export function FormField({
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       <div className="flex items-baseline justify-between gap-3">
-        {htmlFor ? (
-          <label id={labelId} htmlFor={htmlFor} className="text-sm font-bold">
-            {label}
-          </label>
-        ) : (
-          <span id={labelId} className="text-sm font-bold">
-            {label}
-          </span>
-        )}
+        <span className="inline-flex items-center gap-1.5">
+          {htmlFor ? (
+            <label id={labelId} htmlFor={htmlFor} className="text-sm font-bold">
+              {label}
+            </label>
+          ) : (
+            <span id={labelId} className="text-sm font-bold">
+              {label}
+            </span>
+          )}
+          {labelAction}
+        </span>
         {aside}
       </div>
       <div>
