@@ -30,7 +30,8 @@ export function discordInviteIssue(
   invite: DiscordInviteState,
   serverCode: DiscordServerErrorCode | null
 ): DiscordInviteIssue | null {
-  if (serverCode !== null) return { code: serverCode, retryable: false }
+  if (serverCode !== null)
+    return { code: serverCode, retryable: serverCode === 'DISCORD_UNAVAILABLE' }
 
   switch (invite.status) {
     case 'invalid':

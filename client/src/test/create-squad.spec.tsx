@@ -124,6 +124,7 @@ let stopEscapeMirror: (() => void) | undefined
 afterEach(() => {
   stopEscapeMirror?.()
   stopEscapeMirror = undefined
+  vi.restoreAllMocks()
 })
 
 /**
@@ -1374,8 +1375,48 @@ describe('create squad — discord step', () => {
 
     await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
+    // The submit asks Discord again, since an outage is not kept: still unknown, so it refuses.
+    await waitFor(() => expect(input).toHaveFocus())
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(2)
     expect(countHttpCalls('POST', '/api/rooms')).toBe(0)
-    expect(input).toHaveFocus()
+  })
+
+  it('asks Discord again on submit when the answer it holds is unknown, and creates once Discord answers', async () => {
+    let answers = 0
+    onHttp('GET', '/api/discord/invites/:code', () => {
+      answers += 1
+      return httpOk(answers === 1 ? { status: 'unknown' } : validInvite)
+    })
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    expect(await screen.findByText(UNAVAILABLE_MESSAGE)).toBeInTheDocument()
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(1)
+
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+
+    await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(1))
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(2)
+  })
+
+  it('keeps the keyboard focus on the field when the retry takes the button away', async () => {
+    const { response, respond } = deferredResponse()
+    let answers = 0
+    onHttp('GET', '/api/discord/invites/:code', () => {
+      answers += 1
+      return answers === 1 ? httpOk({ status: 'unknown' }) : response
+    })
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByText('CHECKING')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toHaveFocus()
+    respond(httpOk(validInvite))
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
   })
 
   it('reads a failed check as the same outage instead of an error', async () => {
@@ -1561,7 +1602,7 @@ describe('create squad — discord step', () => {
         ? httpError(503, { message: 'down', error: 'DISCORD_UNAVAILABLE' })
         : httpCreated(createSquadResponse)
     })
-    const { user } = renderSquadsFlow('/squads', { shell: true })
+    const { navigation, user } = renderSquadsFlow('/squads', { shell: true })
     await openCreateModal(user)
     await fillWizard(user)
     await screen.findByText('VALID')
@@ -1572,6 +1613,32 @@ describe('create squad — discord step', () => {
     await user.click(screen.getByRole('button', { name: 'Create squad' }))
 
     await waitFor(() => expect(countHttpCalls('POST', '/api/rooms')).toBe(2))
+    await waitFor(() =>
+      expect(navigation.history.location.pathname).toBe(`/squads/${createdSquad.code}`)
+    )
+    expect(screen.queryByText(UNAVAILABLE_MESSAGE, { selector: 'p' })).not.toBeInTheDocument()
+  })
+
+  it('offers a retry after the server refused for Discord being unreachable, which clears the refusal and asks Discord again', async () => {
+    onHttp('POST', '/api/rooms', () =>
+      httpError(503, { message: 'down', error: 'DISCORD_UNAVAILABLE' })
+    )
+    const { user } = renderSquadsFlow('/squads', { shell: true })
+    await openCreateModal(user)
+    await fillWizard(user)
+    await screen.findByText('VALID')
+    await user.click(screen.getByRole('button', { name: 'Create squad' }))
+    expect(await screen.findByText(UNAVAILABLE_MESSAGE, { selector: 'p' })).toBeInTheDocument()
+    const asked = countHttpCalls('GET', '/api/discord/invites/:code')
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+
+    await waitFor(() =>
+      expect(screen.queryByText(UNAVAILABLE_MESSAGE, { selector: 'p' })).not.toBeInTheDocument()
+    )
+    expect(countHttpCalls('GET', '/api/discord/invites/:code')).toBe(asked + 1)
+    expect(await screen.findByText('VALID')).toBeInTheDocument()
+    expect(screen.getByLabelText('Discord invite link')).toHaveFocus()
   })
 
   it('always shows the help button under the input, whatever the invite says', async () => {

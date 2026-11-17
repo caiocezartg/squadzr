@@ -106,6 +106,13 @@ export function CreateSquadDialog({
     form.setValue('gameId', game.id, { shouldValidate: form.formState.isSubmitted })
   }
 
+  // Asks Discord again and drops the server's own refusal, which was an outage the answer may have outlived.
+  const retryInvite = () => {
+    form.clearErrors('discordLink')
+    form.setFocus('discordLink')
+    inviteCheck.retry()
+  }
+
   const create = form.handleSubmit(async (data) => {
     // The answer for this very link, waiting for the debounce or a request in flight. Anything but a
     // voice call refuses here: the field already shows why, and nothing is sent.
@@ -190,7 +197,7 @@ export function CreateSquadDialog({
               <DiscordStep
                 game={selectedGame}
                 invite={inviteCheck.state}
-                onRetryInvite={inviteCheck.retry}
+                onRetryInvite={retryInvite}
               />
             )}
           </StepPanel>

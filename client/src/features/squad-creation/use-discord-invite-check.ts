@@ -10,7 +10,11 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value'
 
 /** How long the player pauses typing before Discord is asked about the invite. */
 const DEBOUNCE_MS = 400
-/** As long as the server keeps an invite Discord does not know: asking sooner reads the same answer. */
+/**
+ * As long as the server keeps an answer about an invite: asking sooner reads the same answer. An
+ * "unknown" is the exception, because the server only keeps an outage for a few seconds, so the submit
+ * asks again instead of refusing on an answer that may have gone stale.
+ */
 const CHECK_STALE_MS = 60_000
 
 function inviteCheckQueryKey(code: string) {
@@ -45,7 +49,8 @@ function toInviteState(data: DiscordInviteCheckResponse): DiscordInviteState {
 
 /**
  * What Discord says about the link right now, for the submit. It waits for a request in flight and
- * for the debounce that has not asked yet, and reuses an answer the browser already holds. A request
+ * for the debounce that has not asked yet, and reuses an answer the browser already holds, except an
+ * "unknown", which it asks Discord about again. A request
  * that fails reads as "unknown", like in the field.
  */
 async function settleInviteCheck(
@@ -55,7 +60,9 @@ async function settleInviteCheck(
   const code = inviteCodeOf(link)
   if (code === null) return { status: 'idle' }
   try {
-    return toInviteState(await queryClient.fetchQuery(inviteCheckQuery(code)))
+    const cached = queryClient.getQueryData<DiscordInviteCheckResponse>(inviteCheckQueryKey(code))
+    const staleTime = cached?.status === 'unknown' ? 0 : CHECK_STALE_MS
+    return toInviteState(await queryClient.fetchQuery({ ...inviteCheckQuery(code), staleTime }))
   } catch {
     return { status: 'unknown' }
   }
