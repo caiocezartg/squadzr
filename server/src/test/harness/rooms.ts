@@ -116,6 +116,8 @@ export interface CreateRoomBody {
   gameId: string
   maxPlayers?: number
   discordLink?: string
+  /** Not part of the contract: a test sends it to prove the server never reads it. */
+  discordCall?: { id: string; name: string }
   tags?: string[]
   language?: 'en' | 'pt-br'
   platform?: Platform | null

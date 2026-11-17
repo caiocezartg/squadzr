@@ -5,6 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { REALTIME_PROTOCOL_VERSION } from '@squadzr/schemas/ws'
 import { WebSocketClient } from './ws-client'
 import { parseServerEvent } from './ws-validators'
 import { latestWebSocket } from '@/test/ws-mock'
@@ -119,7 +120,10 @@ describe('diagnostics', () => {
     expect(handler).not.toHaveBeenCalled()
     expect(vi.mocked(console.error).mock.calls).toEqual([
       ['Invalid WebSocket message:', { issues: [{ path: '', code: 'invalid_json' }] }],
-      ['Realtime protocol failure:', { reason: 'unparseable_frame', expectedVersion: 5 }],
+      [
+        'Realtime protocol failure:',
+        { reason: 'unparseable_frame', expectedVersion: REALTIME_PROTOCOL_VERSION },
+      ],
     ])
     // A frame that cannot be parsed is a protocol failure: the connection
     // closes so the app can reload into the matching build.
@@ -187,7 +191,7 @@ describe('diagnostics', () => {
     })
     expect(console.error).toHaveBeenCalledWith('Realtime protocol failure:', {
       reason: 'unparseable_frame',
-      expectedVersion: 5,
+      expectedVersion: REALTIME_PROTOCOL_VERSION,
     })
     expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(SECRET_INVITE)
   })

@@ -39,16 +39,16 @@ export function HeroCoverWall() {
       aria-hidden="true"
       className="pointer-events-none absolute inset-x-0 -top-40 bottom-0 -z-10 overflow-hidden"
     >
-      <div className="absolute -top-64 left-1/2 flex w-[260%] origin-top -translate-x-1/2 -rotate-12 gap-3 opacity-[0.07] blur-[1.5px] saturate-[0.5] sm:w-[170%] sm:gap-4 lg:w-[150%]">
+      <div className="absolute -top-64 left-1/2 flex w-[260%] origin-top -translate-x-1/2 -rotate-12 gap-3 opacity-[0.11] blur-[1.5px] saturate-[0.5] sm:w-[170%] sm:gap-4 lg:w-[150%]">
         {Array.from({ length: WALL.columns }, (_, index) => (
           <WallColumn key={index} index={index} />
         ))}
       </div>
-      {/* A dark pool behind the headline and the carousel, the corners in the dark, and the page ground below. */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_50%_42%,var(--color-bg)_0%,rgba(7,8,10,0.7)_45%,transparent_80%)]" />
+      {/* A dark pool behind the headline and the squad, the corners in the dark, and the page ground below. */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_50%_42%,var(--color-bg)_0%,rgba(7,8,10,0.55)_45%,transparent_80%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_80%_at_50%_45%,transparent_40%,var(--color-bg)_100%)]" />
-      <div className="from-bg/80 to-bg absolute inset-0 bg-linear-to-b via-transparent via-50%" />
-      {/* The brand's light, faint, rising from behind the carousel. */}
+      <div className="from-bg/60 to-bg absolute inset-0 bg-linear-to-b via-transparent via-50%" />
+      {/* The brand's light, faint, rising from behind the squad. */}
       <div className="absolute inset-x-0 bottom-0 h-2/3 bg-[radial-gradient(ellipse_45%_50%_at_50%_70%,rgba(0,255,162,0.07),transparent_70%)]" />
     </div>
   )

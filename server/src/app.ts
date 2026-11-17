@@ -133,7 +133,14 @@ export async function buildApp({
   })
 
   fastify.decorate('clock', clock ?? new SystemClock())
-  fastify.decorate('discordPreviews', discordPreviews ?? createDiscordInvitePreviews(fastify.clock))
+  fastify.decorate(
+    'discordPreviews',
+    discordPreviews ??
+      createDiscordInvitePreviews(fastify.clock, {
+        ...(env.DISCORD_BOT_TOKEN === undefined ? {} : { botToken: env.DISCORD_BOT_TOKEN }),
+        logger: fastify.log,
+      })
+  )
 
   // Route schemas validate and serialize all HTTP input and output: set them before any route.
   fastify.setValidatorCompiler(validatorCompiler)
@@ -147,6 +154,8 @@ export async function buildApp({
   await fastify.register(cors, {
     origin: env.CORS_ORIGIN,
     credentials: true,
+    // The browser app lives on another origin: without this it cannot read how long a 429 asks it to wait.
+    exposedHeaders: ['Retry-After'],
   })
 
   // CORS keeps another site from reading an answer, not from sending a cookie-bearing request: the guard

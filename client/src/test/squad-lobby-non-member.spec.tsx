@@ -26,7 +26,7 @@ const REDUCED_ENTRANCE_CLASS = 'motion-reduce:animate-invite-fade'
 const outsider = { id: 'user-7', name: 'Outsider', email: 'outsider@squadzr.test', image: null }
 
 /** The Squad as the server answers a viewer outside it: the public projection, with its member preview. */
-const { discordLink: _discordLink, ...publicFields } = lobbySquad
+const { discordLink: _discordLink, discordCall: _discordCall, ...publicFields } = lobbySquad
 const publicSquad = { ...publicFields, memberCount: 1, isMember: false }
 
 /** The same Squad once the outsider is a member: the member view, with the roster and the invite. */
@@ -127,7 +127,6 @@ describe('the Lobby for a signed-in non-member', () => {
     if (!host) throw new Error('The host has no tile')
     expect(within(host).queryByText('In the room now')).not.toBeInTheDocument()
     expect(within(host).queryByText(/^Out of the room/)).not.toBeInTheDocument()
-    expect(screen.queryByText('LIVE')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Leave squad' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Copy squad link' })).not.toBeInTheDocument()
 
@@ -189,7 +188,7 @@ describe('the Lobby for a signed-in non-member', () => {
       }),
     })
     expect(await screen.findByText('Outsider')).toBeInTheDocument()
-    expect(screen.getByText('LIVE')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Leave squad' })).toBeInTheDocument()
   })
 
   it('stays on the public view and says why when the join fails', async () => {

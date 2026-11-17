@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { playerSchema, publicRoomSchema, roomSchema } from './room'
 import { isoDateTimeSchema } from './date'
 import { userNotificationSchema } from './notification'
+import { chatMessageSchema } from './chat'
 
 const wsMessageTypeSchema = z.enum([
   'join_room',
@@ -22,9 +23,12 @@ const wsMessageTypeSchema = z.enum([
   'room_snapshot',
   'presence_updated',
   'room_removed',
+  // Squad Chat
+  'chat_message',
+  'chat_typing',
 ])
 
-export const REALTIME_PROTOCOL_VERSION = 5
+export const REALTIME_PROTOCOL_VERSION = 6
 export const WS_MAX_PAYLOAD_BYTES = 16 * 1024
 /** Close code of a socket whose sign-in session was signed out or expired; the app reconnects as a visitor. */
 export const SESSION_ENDED_CLOSE_CODE = 4001
@@ -47,6 +51,17 @@ const joinRoomMessageSchema = baseWsMessageSchema.extend({
 
 const leaveRoomMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('leave_room'),
+  payload: z.object({
+    roomCode: z
+      .string()
+      .length(6)
+      .transform((code) => code.toUpperCase()),
+  }),
+})
+
+// Typing travels only over the WebSocket and is never stored. The sender is the socket's own user.
+const chatTypingFrameSchema = baseWsMessageSchema.extend({
+  type: z.literal('chat_typing'),
   payload: z.object({
     roomCode: z
       .string()
@@ -120,6 +135,18 @@ const notificationMessageSchema = baseWsMessageSchema.extend({
   }),
 })
 
+// Sent to every socket that joined the Squad's channel, the author's other tabs included.
+const chatMessageMessageSchema = baseWsMessageSchema.extend({
+  type: z.literal('chat_message'),
+  payload: z.object({ message: chatMessageSchema }),
+})
+
+// Sent to the other members' sockets of the Squad, never to a socket of the member who is typing.
+const chatTypingEventSchema = baseWsMessageSchema.extend({
+  type: z.literal('chat_typing'),
+  payload: z.object({ roomCode: z.string().length(6), playerId: z.string() }),
+})
+
 export const protocolMessageSchema = baseWsMessageSchema.extend({
   type: z.literal('protocol'),
   payload: z.object({ version: z.literal(REALTIME_PROTOCOL_VERSION) }),
@@ -169,6 +196,7 @@ export const wsIncomingMessageSchema = z.discriminatedUnion('type', [
   pingMessageSchema,
   subscribeLobbyMessageSchema,
   unsubscribeLobbyMessageSchema,
+  chatTypingFrameSchema,
 ])
 
 export const wsServerMessageSchema = z.discriminatedUnion('type', [
@@ -183,6 +211,8 @@ export const wsServerMessageSchema = z.discriminatedUnion('type', [
   roomSnapshotMessageSchema,
   presenceUpdatedMessageSchema,
   roomRemovedMessageSchema,
+  chatMessageMessageSchema,
+  chatTypingEventSchema,
 ])
 
 // Frame envelope every server message shares, before its payload is checked per event
@@ -211,6 +241,8 @@ export const wsServerEventPayloadSchemas = {
   room_snapshot: roomSnapshotMessageSchema.shape.payload,
   presence_updated: presenceUpdatedMessageSchema.shape.payload,
   room_removed: roomRemovedMessageSchema.shape.payload,
+  chat_message: chatMessageMessageSchema.shape.payload,
+  chat_typing: chatTypingEventSchema.shape.payload,
 } as const
 
 export type WsServerEventType = keyof typeof wsServerEventPayloadSchemas
@@ -225,3 +257,4 @@ export type WsIncomingMessageInput = z.input<typeof wsIncomingMessageSchema>
 export type WsServerMessage = z.infer<typeof wsServerMessageSchema>
 export type JoinRoomMessage = z.infer<typeof joinRoomMessageSchema>
 export type LeaveRoomMessage = z.infer<typeof leaveRoomMessageSchema>
+export type ChatTypingFrame = z.infer<typeof chatTypingFrameSchema>

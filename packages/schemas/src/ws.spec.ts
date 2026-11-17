@@ -58,11 +58,11 @@ const notification = {
 }
 
 const serverMessages = [
-  { type: 'protocol', payload: { version: 5 } },
+  { type: 'protocol', payload: { version: 6 } },
   {
     type: 'room_snapshot',
     payload: {
-      room: { ...publicRoom, discordLink: INVITE },
+      room: { ...publicRoom, discordLink: INVITE, discordCall: { name: 'Squad call' } },
       players: [player],
       readyAt: null,
       expiresAt: publicRoom.updatedAt,
@@ -86,6 +86,19 @@ const serverMessages = [
   { type: 'room_updated', payload: { roomId: ROOM_ID, roomCode: 'ABC123', memberCount: 2 } },
   { type: 'room_deleted', payload: { roomId: ROOM_ID, roomCode: 'ABC123' } },
   { type: 'notification', payload: { notification } },
+  {
+    type: 'chat_message',
+    payload: {
+      message: {
+        id: '0b7a6a3e-5f43-4f0b-8f4a-0d3f1c9a2b11',
+        roomCode: 'ABC123',
+        body: 'oi',
+        createdAt: '2026-09-27T12:30:00.000Z',
+        author: { id: 'user-1', name: 'Caio', image: null },
+      },
+    },
+  },
+  { type: 'chat_typing', payload: { roomCode: 'ABC123', playerId: 'user-1' } },
 ].map((message) => ({ ...message, timestamp: 1_769_000_000_000 }))
 
 describe('wsIncomingMessageSchema', () => {
@@ -95,6 +108,7 @@ describe('wsIncomingMessageSchema', () => {
     [{ type: 'subscribe_lobby' }],
     [{ type: 'unsubscribe_lobby' }],
     [{ type: 'ping' }],
+    [{ type: 'chat_typing', payload: { roomCode: 'ABC123' } }],
   ])('accepts %j and stamps it with a timestamp', (message) => {
     const parsed = wsIncomingMessageSchema.parse(message)
 
@@ -107,9 +121,25 @@ describe('wsIncomingMessageSchema', () => {
     ['an unknown type', { type: 'game_start' }],
     ['a missing payload', { type: 'join_room' }],
     ['a room code with the wrong length', { type: 'join_room', payload: { roomCode: 'ABC' } }],
+    ['a typing frame without a room code', { type: 'chat_typing', payload: {} }],
+    [
+      'a typing frame with a short room code',
+      { type: 'chat_typing', payload: { roomCode: 'ABC' } },
+    ],
     ['a value that is not an object', 42],
   ])('rejects %s', (_label, message) => {
     expect(wsIncomingMessageSchema.safeParse(message).success).toBe(false)
+  })
+})
+
+describe('chat_typing frame', () => {
+  it('uppercases the room code, like join_room', () => {
+    const parsed = wsIncomingMessageSchema.parse({
+      type: 'chat_typing',
+      payload: { roomCode: 'abc123' },
+    })
+
+    expect(parsed).toMatchObject({ payload: { roomCode: 'ABC123' } })
   })
 })
 
@@ -130,7 +160,7 @@ describe('wsServerMessageSchema', () => {
       {
         type: 'room_snapshot',
         payload: {
-          room: { ...publicRoom, discordLink: INVITE },
+          room: { ...publicRoom, discordLink: INVITE, discordCall: null },
           players: [{ id: 'u' }],
           readyAt: null,
           expiresAt: publicRoom.updatedAt,
@@ -140,6 +170,26 @@ describe('wsServerMessageSchema', () => {
     ],
   ])('rejects %s', (_label, message) => {
     expect(wsServerMessageSchema.safeParse({ ...message, timestamp: 0 }).success).toBe(false)
+  })
+
+  it('gives members the Voice Call in room_snapshot and never in room_created', () => {
+    const snapshot = wsServerMessageSchema.parse({
+      ...serverMessages.find((message) => message.type === 'room_snapshot'),
+      timestamp: 0,
+    })
+    const created = wsServerMessageSchema.parse({
+      type: 'room_created',
+      timestamp: 0,
+      payload: {
+        room: { ...publicRoom, discordLink: INVITE, discordCall: { name: 'Squad call' } },
+      },
+    })
+
+    expect(snapshot.type === 'room_snapshot' && snapshot.payload.room.discordCall).toEqual({
+      name: 'Squad call',
+    })
+    expect(JSON.stringify(created)).not.toContain('Squad call')
+    expect(JSON.stringify(created)).not.toContain(INVITE)
   })
 
   it('discriminates the payload type by message type', () => {
@@ -157,7 +207,7 @@ describe('member presence', () => {
     type: 'room_snapshot',
     timestamp: 0,
     payload: {
-      room: { ...publicRoom, discordLink: INVITE },
+      room: { ...publicRoom, discordLink: INVITE, discordCall: null },
       players: [player],
       readyAt: null,
       expiresAt: publicRoom.updatedAt,
@@ -198,14 +248,14 @@ describe('member presence', () => {
 })
 
 describe('REALTIME_PROTOCOL_VERSION', () => {
-  it('is 5 and is the only version the protocol message accepts', () => {
-    expect(REALTIME_PROTOCOL_VERSION).toBe(5)
+  it('is 6 and is the only version the protocol message accepts', () => {
+    expect(REALTIME_PROTOCOL_VERSION).toBe(6)
     expect(
-      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 5 } })
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 6 } })
         .success
     ).toBe(true)
     expect(
-      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 4 } })
+      wsServerMessageSchema.safeParse({ type: 'protocol', timestamp: 0, payload: { version: 5 } })
         .success
     ).toBe(false)
   })

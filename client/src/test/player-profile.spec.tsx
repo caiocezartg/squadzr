@@ -99,7 +99,10 @@ describe('opening the profile', () => {
     expect(navigation.history.location.pathname).toBe('/squads/LOBBY1')
     // The page below never navigated: no router call, and the Lobby is still live.
     expect(navigation.calls).toEqual([])
-    expect(screen.getByText('Connected')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Squad ready check', hidden: true })
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Disconnected')).not.toBeInTheDocument()
     expect(within(dialog).getByRole('heading', { name: 'Ana' })).toBeInTheDocument()
   })
 
@@ -122,7 +125,7 @@ describe('opening the profile', () => {
 
   it('opens from a tile of the Lobby a non-member sees too', async () => {
     registerRoutes({ [guestPlayer.id]: anaProfile })
-    const { discordLink: _discordLink, ...publicFields } = lobbySquad
+    const { discordLink: _discordLink, discordCall: _discordCall, ...publicFields } = lobbySquad
     onHttp('GET', '/api/rooms/:code', () =>
       httpOk({
         room: {

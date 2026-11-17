@@ -27,10 +27,10 @@
         "awaySince": "Out of the room · {time}",
         "open": "Waiting for a player"
       },
-      "viewProfile": "View {name}'s profile"
+      "viewProfile": "View {name}'s profile",
+      "typing": "Typing"
     },
     "lobby": {
-      "live": "LIVE",
       "exploreSquads": "Explore squads",
       "copyLink": "Copy squad link",
       "linkCopied": "Link copied",
@@ -44,6 +44,7 @@
       "created": "Created {time}",
       "members": "Members",
       "playerCount": "{current}/{max} players",
+      "loadingMembers": "Loading members",
       "joinSquad": "Join squad"
     },
     "invite": {
@@ -55,10 +56,7 @@
       "copyLink": "Copy link",
       "copied": "Copied",
       "slotsLeft": "{count, plural, one {# slot left} other {# slots left}}",
-      "statOnline": "online",
-      "statMembers": "{count, plural, one {member} other {members}}",
-      "statInRoom": "in the room now",
-      "statPlayers": "{count, plural, one {player} other {players}}"
+      "joinCall": "Join the call"
     },
     "close": "Close",
     "pagination": {
@@ -148,10 +146,24 @@
       "discordValidAnnouncement": "Valid Discord invite",
       "discordChecking": "CHECKING",
       "discordCheckingAnnouncement": "Checking the Discord invite",
-      "discordServerAnnouncement": "Valid Discord invite: {name}",
+      "discordServerAnnouncement": "Valid Discord invite: {name}, voice call {call}",
       "discordServerMembers": "{count, plural, one {# member} other {# members}}",
       "discordExpires": "This invite expires. Create one that never expires so your squad keeps the link.",
-      "discordUnknown": "We couldn't reach Discord to check this invite right now.",
+      "discordCallLabel": "Voice call",
+      "discordRetry": "Try again",
+      "discordHelpInline": "See how",
+      "voiceCallHelp": {
+        "trigger": "How do I invite to a voice call?",
+        "title": "How to invite to a voice call",
+        "mediaAlt": "Discord screen recording: right-click the voice call, choose Invite to voice, open Edit invite link, set Expire after to Never, generate a new link and copy it.",
+        "playAnimation": "Play animation",
+        "stepsLabel": "Steps",
+        "step1": "Right-click the voice call and choose \"Invite to voice\".",
+        "step2": "Click \"Edit invite link\", set \"Expire after\" to \"Never\" and click \"Generate a new link\".",
+        "step3": "Click \"Copy\", then paste the link here.",
+        "mobileHint": "On mobile, press and hold the call.",
+        "vanityNote": "Server vanity links (discord.gg/name) usually point to a text channel and won't work here."
+      },
       "discordHint": "Only members see it once the squad completes. Use an invite that doesn't expire.",
       "preview": "Preview",
       "previewNameFallback": "Squad name",
@@ -171,8 +183,6 @@
       "squads": "Squads",
       "allSquads": "All squads",
       "mySquads": "My squads",
-      "mySquadsSignIn": "Sign in to see the squads you host or joined.",
-      "mySquadsSignInAction": "Sign in",
       "signIn": "Sign in with Discord",
       "account": "Account menu",
       "createSignIn": "You can explore squads as a guest, but creating a squad requires signing in with Discord.",
@@ -225,24 +235,43 @@
       "signIn": "Sign in with Discord"
     },
     "hero": {
-      "titleLine1": "Build your squad",
-      "titleLine2": "Play tonight",
-      "subtitle": "No more queueing with randoms. Find the players your team is missing and get into the match now.",
+      "titleLead": "Stop playing",
+      "titleStruck": "solo",
+      "titleLine2Lead": "Build your",
+      "titleLine2Word": "squad",
+      "subtitle": "Find people who play the same game as you and drop into the match with a <strong>full team</strong>.",
       "exploreSquads": "Explore squads",
       "createSquad": "Create squad",
       "trustDiscord": "Discord login",
       "trustPlayers": "2 to 40 players",
-      "trustFree": "Free"
-    },
-    "showcase": {
-      "label": "Squads forming right now",
-      "roleDescription": "carousel",
-      "slide": "squad",
-      "squadLabel": "{name}, a {game} squad: {count} of {total} players",
-      "goTo": "Show {name} ({game})",
-      "pause": "Pause the carousel",
-      "play": "Resume the carousel",
-      "full": "Full"
+      "trustFree": "Free",
+      "you": "YOU",
+      "solo": {
+        "queue": {
+          "label": "solo queue",
+          "value": "18:42"
+        },
+        "friends": {
+          "label": "friends online",
+          "value": "0"
+        },
+        "lobby": {
+          "label": "lobby",
+          "value": "1/5"
+        },
+        "invite": {
+          "label": "duo invite",
+          "value": "expired"
+        },
+        "searching": {
+          "label": "finding a match",
+          "value": "14 min"
+        },
+        "duo": {
+          "label": "duo",
+          "value": "offline"
+        }
+      }
     },
     "games": {
       "label": "Available games",
@@ -420,8 +449,6 @@
     "updating": "A new version is available. Reloading…",
     "updateRequired": "A new version is available. Reload the page to update.",
     "reload": "Reload",
-    "connected": "Connected",
-    "connecting": "Connecting…",
     "reconnecting": "Reconnecting…",
     "disconnected": "Disconnected"
   },
@@ -438,6 +465,32 @@
   "languages": {
     "ptBr": "PT-BR",
     "enUs": "EN-US"
+  },
+  "chat": {
+    "launcher": "Chat",
+    "title": "Squad chat",
+    "close": "Close chat",
+    "messages": "Chat messages",
+    "composerLabel": "Message",
+    "placeholder": "Message your squad",
+    "send": "Send",
+    "counter": "{count, number}/{max, number}",
+    "empty": "No messages yet. Say hi to your squad.",
+    "loadFailed": "We could not load the chat.",
+    "retry": "Try again",
+    "sendFailed": "Your message was not sent. Try again.",
+    "linksNotAllowed": "Links are not allowed in the chat.",
+    "cooldown": "Easy there — send again in {seconds}s",
+    "cooldownAnnouncement": "Too many messages in a row. You can send again in {seconds, plural, one {# second} other {# seconds}}.",
+    "readOnly": "Squad complete",
+    "sending": "Sending",
+    "today": "Today",
+    "unread": "{count, plural, one {# unread message} other {# unread messages}}",
+    "loading": "Loading messages",
+    "loadingOlder": "Loading older messages",
+    "loadOlderFailed": "Could not load older messages.",
+    "newMessages": "New messages",
+    "typing": "{count, plural, one {{name} is typing…} other {# people are typing…}}"
   },
   "errors": {
     "GAME_NOT_FOUND": "This game could not be found.",
@@ -463,6 +516,8 @@
     "CATALOG_IMPORT_UNAVAILABLE": "The catalog import is not set up on this server, so it cannot be run from here.",
     "CATALOG_IMPORT_MANUAL_LIMIT": "A manual catalog import was already requested in the last 24 hours.",
     "CATALOG_IMPORT_RUNNING": "A catalog import is already queued or running.",
+    "DISCORD_INVITE_NOT_VOICE_CALL": "This invite doesn't point to a voice call.",
+    "DISCORD_UNAVAILABLE": "We couldn't reach Discord. Try again in a few seconds.",
     "DEFAULT": "Something went wrong. Please try again."
   },
   "playerProfile": {

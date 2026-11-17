@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { parseDiscordInvite } from '@squadzr/schemas'
@@ -9,6 +9,7 @@ import { MotionProvider } from '@/components/ui/motion-provider'
 import { useSession } from '@/hooks/use-session'
 import { translateErrorCode } from '@/lib/error-messages'
 import { useJoinSquad } from '@/features/squad-joining/join'
+import { SquadChatDock, useSquadTyping } from '@/features/squad-chat'
 import { LockedInvite, ReadyInvite } from './components/discord-invite'
 import { LobbyBackLink } from './components/lobby-back-link'
 import { LobbyActions } from './components/lobby-actions'
@@ -83,9 +84,19 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
   const { join, joining } = useJoinSquad()
   const readyEntrance = useReadyEntrance({
     squadCode,
-    hasSnapshot: lobby.hasSnapshot,
+    hasLiveSnapshot: lobby.hasLiveSnapshot,
     isReady: lobby.isReady,
     isOutside: !lobby.isMember && lobby.squad !== null,
+  })
+  // One record of who is typing, read by both the members panel and the chat footer.
+  const typingMembers = useMemo(
+    () => lobby.players.map(({ id, name }) => ({ id, name })),
+    [lobby.players]
+  )
+  const typing = useSquadTyping(squadCode, channel, {
+    enabled: lobby.isMember,
+    isReady: lobby.isReady,
+    members: typingMembers,
   })
 
   if (!session?.user) {
@@ -120,7 +131,8 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-304 flex-col gap-5 px-4 pt-6.5 pb-12 sm:px-6 lg:px-10">
+    // The bottom padding keeps the chat launcher, fixed in the corner, clear of the invite's actions.
+    <div className="mx-auto flex w-full max-w-304 flex-col gap-5 px-4 pt-6.5 pb-28 sm:px-6 lg:px-10">
       <LobbyActions
         squadCode={squadCode}
         connectionStatus={lobby.connectionStatus}
@@ -142,9 +154,20 @@ function LobbyContent({ squadCode, channel }: LobbyContentProps) {
           presence={lobby.presence}
           viewerId={session.user.id}
           isReady={lobby.isReady}
+          pending={!lobby.hasSnapshot}
+          typingIds={typing.typingIds}
         />
         <MemberInvite squadCode={squadCode} lobby={lobby} entering={readyEntrance} />
       </LobbyColumns>
+
+      <SquadChatDock
+        key={squadCode}
+        squadCode={squadCode}
+        channel={channel}
+        enabled={lobby.isMember}
+        isReady={lobby.isReady}
+        typers={typing.typers}
+      />
     </div>
   )
 }
@@ -165,7 +188,13 @@ function MemberInvite({ squadCode, lobby, entering }: MemberInviteProps) {
   const discord = useDiscordPreview(squadCode, invite !== null && lobby.squad !== null)
 
   if (!lobby.isReady) {
-    return <LockedInvite filled={lobby.players.length} total={lobby.maxPlayers} />
+    return (
+      <LockedInvite
+        filled={lobby.players.length}
+        total={lobby.maxPlayers}
+        pending={!lobby.hasSnapshot}
+      />
+    )
   }
   if (!invite || !lobby.squad) return null
 
@@ -174,8 +203,7 @@ function MemberInvite({ squadCode, lobby, entering }: MemberInviteProps) {
       invite={invite}
       squadName={lobby.squad.name}
       coverUrl={lobby.game?.coverUrl ?? null}
-      online={Object.values(lobby.presence).filter((member) => member.online).length}
-      members={lobby.players.length}
+      call={lobby.discordCall}
       preview={discord.preview}
       previewPending={discord.pending}
       entering={entering}

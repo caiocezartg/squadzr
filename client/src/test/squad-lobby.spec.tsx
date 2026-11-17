@@ -34,7 +34,24 @@ import {
 } from './fixtures'
 import { openLatestWebSocket, sendFromServer, serverSentFrames } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
+import type * as UseLobby from '@/features/lobby/use-lobby'
+import type { LobbyView } from '@/features/lobby/use-lobby'
 import type { RoomResponse, Squad } from '@/types'
+
+/** Every view the Lobby derived, in order, so a test reads what the page was handed. */
+const lobbyViews = vi.hoisted((): LobbyView[] => [])
+
+vi.mock('@/features/lobby/use-lobby', async (importOriginal) => {
+  const actual = await importOriginal<typeof UseLobby>()
+  return {
+    ...actual,
+    useLobbyView: (...args: Parameters<typeof actual.useLobbyView>) => {
+      const view = actual.useLobbyView(...args)
+      lobbyViews.push(view)
+      return view
+    },
+  }
+})
 
 const invalidDiscordSquad: Squad = {
   ...lobbySquad,
@@ -62,13 +79,6 @@ function registerLobbyRoutes(): void {
   onHttp('POST', '/api/rooms/:code/leave', () => httpOk({ ok: true }))
 }
 
-/** The number of a count in the Ready panel's server card, by what it counts. */
-function statValue(panel: HTMLElement, label: string): HTMLElement {
-  const value = within(panel).getByText(label).closest('dt')?.nextElementSibling
-  if (!(value instanceof HTMLElement)) throw new Error(`${label} has no value`)
-  return value
-}
-
 /** The tile of a member, by the name it shows. */
 function tileOf(name: string): HTMLElement {
   const tile = screen.getByText(name).closest('li')
@@ -77,6 +87,7 @@ function tileOf(name: string): HTMLElement {
 }
 
 beforeEach(() => {
+  lobbyViews.length = 0
   registerLobbyRoutes()
 })
 
@@ -85,9 +96,9 @@ describe('squad lobby — snapshot handshake', () => {
     renderSquadsFlow('/squads/LOBBY1')
 
     expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
-    // HTTP alone does not seed the live roster: it is empty until the snapshot.
-    expect(screen.getByText('0/3 players')).toBeInTheDocument()
-    expect(screen.getAllByText('Open slot')).toHaveLength(3)
+    // HTTP alone does not seed the live roster: it shows placeholders until the snapshot.
+    expect(screen.getByText('Loading members')).toBeInTheDocument()
+    expect(screen.getAllByTestId('member-tile-skeleton')).toHaveLength(3)
     expect(screen.getByRole('button', { name: 'End squad' })).toBeInTheDocument()
 
     openLatestWebSocket()
@@ -108,6 +119,18 @@ describe('squad lobby — snapshot handshake', () => {
     expect(await screen.findByText('Caio')).toBeInTheDocument()
     expect(screen.getByText('Ana')).toBeInTheDocument()
     expect(screen.getByText('2/3 players')).toBeInTheDocument()
+  })
+
+  it('hands the Lobby the Voice Call from the snapshot, and none before it', async () => {
+    renderSquadsFlow('/squads/LOBBY1')
+    expect(await screen.findByText('Squad ready check')).toBeInTheDocument()
+    expect(lobbyViews.at(-1)?.discordCall).toBeNull()
+
+    openLatestWebSocket()
+    sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
+    await screen.findByText('Ana')
+
+    expect(lobbyViews.at(-1)?.discordCall).toEqual(lobbySquad.discordCall)
   })
 
   it('replaces the roster from every snapshot and never duplicates members', async () => {
@@ -149,11 +172,9 @@ describe('squad lobby — snapshot handshake', () => {
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     expect(await screen.findByText('Ana')).toBeInTheDocument()
 
-    // Presence never relies on color alone: each tile says it in words, and the overall connection
-    // state has its own text.
+    // Presence never relies on color alone: each tile says it in words.
     expect(screen.getAllByText('In the room now')).toHaveLength(1)
     expect(screen.getAllByText('Out of the room')).toHaveLength(1)
-    expect(screen.getAllByText('Connected')).toHaveLength(1)
     expect(tileOf('Caio')).toHaveAttribute('title', 'In the room now')
     expect(tileOf('Ana')).toHaveAttribute('title', 'Out of the room')
 
@@ -233,14 +254,20 @@ describe('squad lobby — snapshot handshake', () => {
     expect(screen.queryByText(/Out of the room ·/)).not.toBeInTheDocument()
   })
 
-  it('shows the overall connection state with accessible text', async () => {
+  it('marks only a lost connection, never a live or pending one', async () => {
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
 
-    expect(screen.getByText('Connecting…')).toBeInTheDocument()
+    // Not connected yet: nothing reads as lost.
+    expect(screen.queryByText('Disconnected')).not.toBeInTheDocument()
+    expect(screen.queryByText('Connecting…')).not.toBeInTheDocument()
 
     openLatestWebSocket()
-    expect(screen.getByText('Connected')).toBeInTheDocument()
+    expect(screen.queryByText('LIVE')).not.toBeInTheDocument()
+    expect(screen.queryByText('Connected')).not.toBeInTheDocument()
+
+    act(() => latestWebSocket().close(1006))
+    expect(await screen.findByText('Reconnecting…')).toBeInTheDocument()
   })
 })
 
@@ -283,7 +310,7 @@ describe('squad lobby — readiness from the snapshot', () => {
     expectLockedInvite()
   })
 
-  it('builds the server card of the Ready panel from the Squad when Discord has no preview: name, cover, who is in the room, players', async () => {
+  it('builds the server card of the Ready panel from the Squad when Discord has no preview: name, cover and the call to join', async () => {
     renderSquadsFlow('/squads/LOBBY1')
     await screen.findByText('Squad ready check')
     openLatestWebSocket()
@@ -306,9 +333,11 @@ describe('squad lobby — readiness from the snapshot', () => {
     expect(inPanel.getByText('SERVER INVITE')).toBeInTheDocument()
     // The card holds a skeleton until the preview read settles, and then falls back to the Squad.
     expect(await inPanel.findByText('Squad ready check')).toBeInTheDocument()
-    expect(inPanel.getByText('in the room now')).toBeInTheDocument()
-    expect(statValue(panel, 'in the room now')).toHaveTextContent('1')
-    expect(statValue(panel, 'players')).toHaveTextContent('2')
+    expect(inPanel.getByText('Join the call')).toBeInTheDocument()
+    expect(inPanel.getByText('Squad call')).toBeInTheDocument()
+    for (const label of ['online', 'members', 'in the room now', 'players']) {
+      expect(inPanel.queryByText(label)).not.toBeInTheDocument()
+    }
     expect(panel.querySelector('img')).toHaveAttribute('src', lobbySquad.game.coverUrl)
     expect(inPanel.getByText('discord.gg/')).toBeInTheDocument()
   })
@@ -433,7 +462,7 @@ describe('squad lobby — leave flow', () => {
 
   it('opens the public view, not the member Lobby, when the viewer goes back to a Squad they left', async () => {
     let left = false
-    const { discordLink: _discordLink, ...publicFields } = lobbySquad
+    const { discordLink: _discordLink, discordCall: _discordCall, ...publicFields } = lobbySquad
     onHttp('GET', '/api/rooms/:code', () =>
       left
         ? httpOk({ room: { ...publicFields, memberCount: 1, isMember: false } })
@@ -767,7 +796,7 @@ describe('squad lobby — the member Lobby', () => {
     expect(screen.getByText('#squad')).toBeInTheDocument()
     expect(screen.getByText(/^Created /)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Explore squads' })).toHaveAttribute('href', '/squads')
-    expect(screen.getByText('LIVE')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy squad link' })).toBeInTheDocument()
   })
 
   it('shows the platform chip right after the language', async () => {

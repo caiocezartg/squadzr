@@ -15,7 +15,7 @@ import { httpOk, onHttp } from './http-router'
 import { boardSquads, openSquad } from './fixtures'
 import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { latestWebSocket } from './ws-mock'
-import { SESSION_ENDED_CLOSE_CODE } from '@squadzr/schemas/ws'
+import { REALTIME_PROTOCOL_VERSION, SESSION_ENDED_CLOSE_CODE } from '@squadzr/schemas/ws'
 import { setRealtimeUpdateNotice } from '@/lib/realtime-update-store'
 
 const originalLocation = window.location
@@ -104,7 +104,7 @@ describe('realtime protocol handshake', () => {
     await screen.findByText(openSquad.name)
 
     openLatestWebSocket()
-    sendFromServer({ type: 'protocol', payload: { version: 5 } })
+    sendFromServer({ type: 'protocol', payload: { version: REALTIME_PROTOCOL_VERSION } })
     serverSquads.rooms = serverSquads.rooms.filter((squad) => squad.id !== openSquad.id)
     sendFromServer({
       type: 'room_removed',

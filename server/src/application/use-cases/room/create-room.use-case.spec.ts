@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CreateRoomUseCase } from './create-room.use-case'
 import type {
+  DiscordInviteChannel,
   DiscordInvitePreviewOutcome,
   DiscordInvitePreviewProvider,
 } from '@domain/services/discord-invite-preview-provider.interface'
 import {
+  DiscordInviteNotVoiceCallError,
+  DiscordUnavailableError,
   GameNotAvailableError,
   InvalidDiscordInviteError,
   InvalidGameError,
@@ -50,6 +53,7 @@ describe('CreateRoomUseCase', () => {
           memberCount: 10,
           onlineCount: 5,
           expiresAt: null,
+          channel: { id: '1234', name: 'Squad call', kind: 'voice' },
         },
       }),
     }
@@ -96,6 +100,7 @@ describe('CreateRoomUseCase', () => {
         gameId: 'game-123',
         maxPlayers: 5,
         discordLink: 'https://discord.gg/test',
+        discordCall: { id: '1234', name: 'Squad call' },
         platform: null,
       })
       expect(mockRoomRepository.create).toHaveBeenCalledOnce()
@@ -368,27 +373,93 @@ describe('CreateRoomUseCase', () => {
         expect(mockDiscordPreviews.fetch).not.toHaveBeenCalled()
       })
 
-      it.each<DiscordInvitePreviewOutcome>([
-        { kind: 'rate_limited' },
-        { kind: 'unreachable' },
-        {
-          kind: 'found',
-          preview: {
-            name: 'Expiring',
-            iconUrl: null,
-            backdropUrl: null,
-            memberCount: null,
-            onlineCount: null,
-            expiresAt: '2026-11-01T12:00:00+00:00',
-          },
+      const foundWith = (
+        channel: DiscordInviteChannel | null,
+        expiresAt: string | null = null
+      ): DiscordInvitePreviewOutcome => ({
+        kind: 'found',
+        preview: {
+          name: 'Server',
+          iconUrl: null,
+          backdropUrl: null,
+          memberCount: null,
+          onlineCount: null,
+          expiresAt,
+          channel,
         },
-      ])('creates the Squad when Discord answers $kind', async (outcome) => {
-        mockDiscordPreviews.fetch.mockResolvedValue(outcome)
+      })
+
+      it.each<[string, DiscordInviteChannel]>([
+        ['a voice channel', { id: '11', name: 'Ranked call', kind: 'voice' }],
+        ['a stage channel', { id: '12', name: 'Stage', kind: 'stage' }],
+      ])(
+        'stores the id and name of the call when the invite points to %s',
+        async (_label, channel) => {
+          mockDiscordPreviews.fetch.mockResolvedValue(foundWith(channel))
+
+          await useCase.execute(input)
+
+          expect(mockRoomRepository.create).toHaveBeenCalledWith(
+            expect.objectContaining({ discordCall: { id: channel.id, name: channel.name } })
+          )
+        }
+      )
+
+      it('creates the Squad for an invite that expires, as the create form only warns about it', async () => {
+        mockDiscordPreviews.fetch.mockResolvedValue(
+          foundWith({ id: '11', name: 'Call', kind: 'voice' }, '2026-11-01T12:00:00+00:00')
+        )
 
         const result = await useCase.execute(input)
 
         expect(result.room).toBeDefined()
         expect(mockRoomRepository.create).toHaveBeenCalledOnce()
+      })
+
+      it.each<[string, DiscordInviteChannel | null]>([
+        ['a text channel', { id: '13', name: 'general', kind: 'other' }],
+        ['no channel', null],
+      ])(
+        'throws DiscordInviteNotVoiceCallError without creating the Squad when the invite points to %s',
+        async (_label, channel) => {
+          mockDiscordPreviews.fetch.mockResolvedValue(foundWith(channel))
+
+          await expect(useCase.execute(input)).rejects.toThrow(DiscordInviteNotVoiceCallError)
+          expect(mockRoomRepository.create).not.toHaveBeenCalled()
+        }
+      )
+
+      it.each<[DiscordInvitePreviewOutcome, number | undefined]>([
+        [{ kind: 'rate_limited', retryAfterMs: 1500 }, 1500],
+        [{ kind: 'rate_limited' }, undefined],
+        [{ kind: 'unreachable' }, undefined],
+        [{ kind: 'unreachable', status: 503 }, undefined],
+      ])(
+        'throws DiscordUnavailableError without creating the Squad when Discord answers %j',
+        async (outcome, retryAfterMs) => {
+          mockDiscordPreviews.fetch.mockResolvedValue(outcome)
+
+          const error = await useCase.execute(input).catch((thrown: unknown) => thrown)
+
+          expect(error).toBeInstanceOf(DiscordUnavailableError)
+          expect((error as DiscordUnavailableError).retryAfterMs).toBe(retryAfterMs)
+          expect(mockRoomRepository.create).not.toHaveBeenCalled()
+        }
+      )
+
+      it('never reads a call sent with the input', async () => {
+        mockDiscordPreviews.fetch.mockResolvedValue(
+          foundWith({ id: '11', name: 'Ranked call', kind: 'voice' })
+        )
+
+        await useCase.execute({
+          ...input,
+          discordCall: { id: 'sent', name: 'Sent by the client' },
+        } as typeof input)
+
+        expect(mockRoomRepository.create).toHaveBeenCalledWith(
+          expect.objectContaining({ discordCall: { id: '11', name: 'Ranked call' } })
+        )
       })
 
       it('refuses a link with no invite code without asking Discord', async () => {

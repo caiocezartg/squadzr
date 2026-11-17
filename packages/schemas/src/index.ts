@@ -109,6 +109,7 @@ export {
   roomResponseSchema,
   roomSchema,
   roomsResponseSchema,
+  squadCallSchema,
   type CreateRoomInput,
   type CreateRoomResponse,
   type JoinRoomResponse,
@@ -121,6 +122,7 @@ export {
   type RoomMemberDto,
   type RoomResponse,
   type RoomsResponse,
+  type SquadCallDto,
 } from './room'
 export {
   listNotificationsQuerySchema,
@@ -280,3 +282,16 @@ export {
   type SquadPreviewKey,
 } from './squad-preview'
 export { RAIL_LIMIT, avatarRail, type AvatarRail, type RailSlot } from './avatar-rail'
+export {
+  CHAT,
+  chatHistoryQuerySchema,
+  chatHistoryResponseSchema,
+  chatMessageBodySchema,
+  chatMessageSchema,
+  sendChatMessageRequestSchema,
+  type ChatHistoryQuery,
+  type ChatHistoryResponse,
+  type ChatMessageDto,
+  type SendChatMessageRequest,
+} from './chat'
+export { containsLink } from './chat-link'

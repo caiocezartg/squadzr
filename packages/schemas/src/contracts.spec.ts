@@ -75,7 +75,7 @@ const publicRoom = {
   createdAt: CREATED_AT,
   updatedAt: CREATED_AT,
 }
-const memberRoom = { ...publicRoom, discordLink: INVITE }
+const memberRoom = { ...publicRoom, discordLink: INVITE, discordCall: { name: 'Ranked call' } }
 const players = [{ id: 'user-1', name: 'Caio', image: null, isHost: true }]
 
 describe('isoDateTimeSchema', () => {
@@ -368,7 +368,9 @@ describe('Squad platform', () => {
     const { platform: _platform, ...withoutPlatform } = publicRoom
 
     expect(publicRoomSchema.safeParse(withoutPlatform).success).toBe(false)
-    expect(roomSchema.safeParse({ ...withoutPlatform, discordLink: null }).success).toBe(false)
+    expect(
+      roomSchema.safeParse({ ...withoutPlatform, discordLink: null, discordCall: null }).success
+    ).toBe(false)
     expect(publicRoomSchema.parse({ ...publicRoom, platform: null }).platform).toBeNull()
     expect(roomSchema.parse({ ...memberRoom, platform: 'switch-2' }).platform).toBe('switch-2')
     expect(publicRoomSchema.safeParse({ ...publicRoom, platform: 'ps3' }).success).toBe(false)
@@ -434,7 +436,9 @@ describe('public and private room projections', () => {
 
   it('requires the Discord invite field on the private projection', () => {
     expect(roomSchema.parse(memberRoom).discordLink).toBe(INVITE)
-    expect(roomSchema.parse({ ...publicRoom, discordLink: null }).discordLink).toBeNull()
+    expect(
+      roomSchema.parse({ ...publicRoom, discordLink: null, discordCall: null }).discordLink
+    ).toBeNull()
     expect(roomSchema.safeParse(publicRoom).success).toBe(false)
   })
 
@@ -459,6 +463,50 @@ describe('public and private room projections', () => {
   })
 })
 
+describe('Squad Voice Call', () => {
+  it('is on the private projection as a name or null, and never as an id', () => {
+    expect(roomSchema.parse(memberRoom).discordCall).toEqual({ name: 'Ranked call' })
+    expect(roomSchema.parse({ ...memberRoom, discordCall: null }).discordCall).toBeNull()
+    expect(roomSchema.safeParse({ ...memberRoom, discordCall: undefined }).success).toBe(false)
+    expect(
+      roomSchema.parse({ ...memberRoom, discordCall: { id: '1234', name: 'Ranked call' } })
+        .discordCall
+    ).toEqual({ name: 'Ranked call' })
+    expectTypeOf<RoomDto['discordCall']>().toEqualTypeOf<{ name: string } | null>()
+  })
+
+  it('names the call with 1 to 100 characters, Discord limit', () => {
+    const named = (name: string) => roomSchema.safeParse({ ...memberRoom, discordCall: { name } })
+
+    expect(named('a').success).toBe(true)
+    expect(named('a'.repeat(100)).success).toBe(true)
+    expect(named('').success).toBe(false)
+    expect(named('a'.repeat(101)).success).toBe(false)
+  })
+
+  it('is dropped from the public projection and the catalog response', () => {
+    expect(publicRoomSchema.parse(memberRoom)).not.toHaveProperty('discordCall')
+    expect(JSON.stringify(roomsResponseSchema.parse({ rooms: [memberRoom] }))).not.toContain(
+      'Ranked call'
+    )
+    expectTypeOf<PublicRoomDto>().not.toHaveProperty('discordCall')
+  })
+
+  it('is refused on the non-member answer of a Squad, so a leak fails the contract', () => {
+    const leaked = { room: { ...publicRoom, discordCall: { name: 'Ranked call' } } }
+
+    expect(roomResponseSchema.safeParse(leaked).success).toBe(false)
+    expect(roomResponseSchema.safeParse({ room: publicRoom }).success).toBe(true)
+  })
+
+  it('is part of the lobby details a member receives', () => {
+    const { discordCall: _call, ...withoutCall } = memberRoom
+
+    expect(roomLobbyResponseSchema.safeParse({ room: memberRoom, players }).success).toBe(true)
+    expect(roomLobbyResponseSchema.safeParse({ room: withoutCall, players }).success).toBe(false)
+  })
+})
+
 describe('member preview', () => {
   const entry = (n: number) => ({ id: `user-${n}`, name: `Player ${n}`, image: null })
 
@@ -468,7 +516,7 @@ describe('member preview', () => {
     expect(publicRoomSchema.parse(publicRoom).memberPreview).toEqual(publicRoom.memberPreview)
     expect(roomSchema.parse(memberRoom).memberPreview).toEqual(publicRoom.memberPreview)
     expect(publicRoomSchema.safeParse(withoutPreview).success).toBe(false)
-    expect(roomSchema.safeParse({ ...withoutPreview, discordLink: INVITE }).success).toBe(false)
+    expect(roomSchema.safeParse({ ...memberRoom, memberPreview: undefined }).success).toBe(false)
   })
 
   it('reaches the create response and the member lobby response', () => {
@@ -547,22 +595,26 @@ describe('roomResponseSchema', () => {
     expect(describeContractIssues(result.error).map((issue) => issue.path)).toEqual(paths)
   })
 
-  // Half of the lobby details is neither projection: the missing half and the
-  // unexpected half are both reported.
+  // Half of the lobby details is neither projection. The invite and the call go together, so the
+  // diagnostics name the branch the payload was closest to: the roster, which is the half that differs.
   it.each([
-    ['an invite without a roster', { room: memberRoom }],
-    ['a null invite without a roster', { room: { ...publicRoom, discordLink: null } }],
+    ['an invite and a call without a roster', { room: memberRoom }],
+    [
+      'a null invite and call without a roster',
+      { room: { ...publicRoom, discordLink: null, discordCall: null } },
+    ],
     ['a roster without an invite', { room: publicRoom, players }],
     ['an empty roster without an invite', { room: publicRoom, players: [] }],
   ])('rejects %s', (_label, payload) => {
     const result = roomResponseSchema.safeParse(payload)
 
     if (result.success) throw new Error('expected an invalid response')
+    expect(roomLobbyResponseSchema.safeParse(payload).success).toBe(false)
     expect(
       describeContractIssues(result.error)
         .map((issue) => issue.path)
         .sort()
-    ).toEqual(['players', 'room.discordLink'])
+    ).toEqual(['players'])
   })
 
   it('keeps ignoring unknown fields that are not lobby details', () => {

@@ -17,7 +17,7 @@ import { openLatestWebSocket, sendFromServer } from './ws-flows'
 import { toastStore } from './stubs'
 import type { PublicSquad, RoomsResponse } from '@/types'
 
-const { discordLink: _discordLink, ...publicLobbySquad } = lobbySquad
+const { discordLink: _discordLink, discordCall: _discordCall, ...publicLobbySquad } = lobbySquad
 
 const newSquad: PublicSquad = {
   ...openSquad,

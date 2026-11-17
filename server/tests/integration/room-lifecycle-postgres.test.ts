@@ -61,6 +61,8 @@ describe('rooms schema after the lifecycle migration', () => {
       [
         'code',
         'created_at',
+        'discord_call_id',
+        'discord_call_name',
         'discord_link',
         'game_id',
         'host_id',
@@ -121,7 +123,7 @@ describe('rooms schema after the lifecycle migration', () => {
 })
 
 describe('lifecycle CHECK constraints', () => {
-  it('declares the three lifecycle invariants and the platform list on rooms', async () => {
+  it('declares the three lifecycle invariants, the platform list and the call pair on rooms', async () => {
     const constraints = await server.app.db.execute<{ conname: string }>(sql`
       SELECT conname
       FROM pg_constraint
@@ -130,6 +132,7 @@ describe('lifecycle CHECK constraints', () => {
     `)
 
     expect(constraints.rows.map((row) => row.conname)).toEqual([
+      'rooms_discord_call_both_or_neither',
       'rooms_last_activity_after_created',
       'rooms_platform_in_enum',
       'rooms_ready_after_created',

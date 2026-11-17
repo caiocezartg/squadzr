@@ -46,6 +46,12 @@ async function readBody(response: Response): Promise<unknown> {
   }
 }
 
+/** The wait in a `Retry-After` header given in seconds, in milliseconds; an HTTP date or junk is ignored. */
+function retryAfterHeaderMs(response: Response): number | undefined {
+  const seconds = Number(response.headers.get('Retry-After'))
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds * 1000) : undefined
+}
+
 /**
  * Sends a request with the session cookie. A non-2xx response throws `ApiClientError` with the
  * server's error code. With a schema, the response body is parsed before it is returned and a
@@ -72,7 +78,12 @@ async function request<S extends z.ZodType>(
 
   if (!response.ok) {
     const error = parseApiResponse(errorResponseSchema, context, body)
-    throw new ApiClientError(error.message, response.status, error.error)
+    throw new ApiClientError(
+      error.message,
+      response.status,
+      error.error,
+      error.retryAfterMs ?? retryAfterHeaderMs(response)
+    )
   }
   if (!schema) return
   return parseApiResponse(schema, context, body)

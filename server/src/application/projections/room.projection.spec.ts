@@ -6,6 +6,7 @@ import { toMemberRoom, toPublicRoom, toRoomMemberDto } from './room.projection'
 const ROOM_ID = '3fa85f64-5717-4562-b3fc-2c963f66afa6'
 const GAME_ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7'
 const INVITE = 'https://discord.gg/squadzr'
+const CALL_ID = '1234567890123456'
 
 const game = createMockGame({ id: GAME_ID })
 
@@ -14,6 +15,7 @@ const readyRoom = createMockRoom({
   gameId: GAME_ID,
   game,
   discordLink: INVITE,
+  discordCall: { id: CALL_ID, name: 'Ranked call' },
   readyAt: new Date('2024-01-02T10:00:00.000Z'),
   lastActivityAt: new Date('2024-01-02T09:59:59.000Z'),
   createdAt: new Date('2024-01-01T08:30:00.000Z'),
@@ -51,7 +53,9 @@ describe('toPublicRoom', () => {
     const projection = toPublicRoom(readyRoom)
 
     expect(JSON.stringify(projection)).not.toContain(INVITE)
+    expect(JSON.stringify(projection)).not.toContain('Ranked call')
     expect(projection).not.toHaveProperty('discordLink')
+    expect(projection).not.toHaveProperty('discordCall')
     expect(projection).not.toHaveProperty('readyAt')
     expect(projection).not.toHaveProperty('lastActivityAt')
   })
@@ -126,10 +130,25 @@ describe('toPublicRoom', () => {
 })
 
 describe('toMemberRoom', () => {
-  it('adds the Discord invite to the public projection', () => {
+  it('adds the Discord invite and the name of the Voice Call to the public projection', () => {
     const projection = toMemberRoom(readyRoom)
 
-    expect(projection).toEqual({ ...toPublicRoom(readyRoom), discordLink: INVITE })
+    expect(projection).toEqual({
+      ...toPublicRoom(readyRoom),
+      discordLink: INVITE,
+      discordCall: { name: 'Ranked call' },
+    })
+    expect(roomSchema.parse(projection)).toEqual(projection)
+  })
+
+  it('never carries the id of the Voice Call', () => {
+    expect(JSON.stringify(toMemberRoom(readyRoom))).not.toContain(CALL_ID)
+  })
+
+  it('carries a null call for a Squad that predates calls', () => {
+    const projection = toMemberRoom({ ...readyRoom, discordCall: null })
+
+    expect(projection.discordCall).toBeNull()
     expect(roomSchema.parse(projection)).toEqual(projection)
   })
 })

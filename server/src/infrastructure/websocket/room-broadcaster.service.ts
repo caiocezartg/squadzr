@@ -1,9 +1,15 @@
 import type { WebSocket } from '@fastify/websocket'
 import type { FastifyBaseLogger } from 'fastify'
+import type { ChatMessageView } from '@domain/entities/chat-message.entity'
 import type { Room } from '@domain/entities/room.entity'
 import type { UserNotification } from '@domain/entities/user-notification.entity'
 import type { Clock } from '@domain/services/clock.interface'
-import { toMemberRoom, toPublicRoom, toUserNotificationDto } from '@application/projections'
+import {
+  toChatMessageDto,
+  toMemberRoom,
+  toPublicRoom,
+  toUserNotificationDto,
+} from '@application/projections'
 import type { IGetRealtimeSnapshotUseCase } from '@application/use-cases/room/get-realtime-snapshot.use-case'
 import type { RealtimeSnapshot } from '@application/use-cases/room/helpers/realtime-snapshot'
 import type { IRoomBroadcaster } from '@domain/services/room-broadcaster.interface'
@@ -227,6 +233,38 @@ export class WsRoomBroadcaster implements IRoomBroadcaster {
           type: 'presence_updated',
           timestamp: this.clock.now().getTime(),
           payload: { roomCode, playerId, online, offlineSince },
+        })
+      })
+    }
+  }
+
+  broadcastChatMessage(roomCode: string, message: ChatMessageView): void {
+    if (this.stopped) return
+    const payload = { message: toChatMessageDto(message, roomCode) }
+    for (const socket of this.connectionManager.getRoomSockets(roomCode) ?? [])
+      this.publish(socket, () => {
+        // A socket revoked or departed earlier in its ordered queue no longer belongs here.
+        if (this.connectionManager.getClientData(socket)?.roomCode !== roomCode) return
+        this.connectionManager.sendToSocket(socket, {
+          type: 'chat_message',
+          timestamp: this.clock.now().getTime(),
+          payload,
+        })
+      })
+  }
+
+  /** Typing is signalled to the other members only: every socket of the typist's user is skipped. */
+  broadcastChatTyping(roomCode: string, typistId: string): void {
+    if (this.stopped) return
+    for (const socket of this.connectionManager.getRoomSockets(roomCode) ?? []) {
+      if (this.connectionManager.getClientData(socket)?.userId === typistId) continue
+      this.publish(socket, () => {
+        // A socket revoked or departed earlier in its ordered queue no longer belongs here.
+        if (this.connectionManager.getClientData(socket)?.roomCode !== roomCode) return
+        this.connectionManager.sendToSocket(socket, {
+          type: 'chat_typing',
+          timestamp: this.clock.now().getTime(),
+          payload: { roomCode, playerId: typistId },
         })
       })
     }

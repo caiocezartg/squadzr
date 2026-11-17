@@ -29,11 +29,15 @@ export function toPublicRoom(room: Room): PublicRoomDto {
   }
 }
 
-/** Private projection of a room: only for authenticated members of that room. */
+/**
+ * Private projection of a room: only for authenticated members of that room. It carries the call's
+ * name and never its id: the invite already lands in the call.
+ */
 export function toMemberRoom(room: Room): RoomDto {
   return {
     ...toPublicRoom(room),
     discordLink: room.discordLink,
+    discordCall: room.discordCall && { name: room.discordCall.name },
   }
 }
 

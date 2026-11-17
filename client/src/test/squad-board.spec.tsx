@@ -68,6 +68,7 @@ const extraSquad: Squad = {
   game: gameLolSummary,
   maxPlayers: 5,
   discordLink: null,
+  discordCall: null,
   tags: [],
   language: 'en',
   platform: null,

@@ -41,7 +41,7 @@ export const discordRoutes: FastifyPluginAsync<DiscordRoutesOptions> = async (
     schema: {
       tags: ['Discord'],
       summary: 'Check a Discord invite',
-      description: `Asks Discord whether an invite code exists, as the create form does while a Squad host types the link. Returns the server behind a valid invite and whether the invite expires, \`invalid\` for an invite Discord does not know, and \`unknown\` when Discord could not be asked (slow, down or rate limiting). Answers are cached by the server. Requires authentication. Each user may make ${rateLimit.max} checks per ${rateLimit.timeWindowMs / 1000} seconds; beyond that the route answers 429 \`RATE_LIMITED\`, and the \`Retry-After\` header says how long to wait.`,
+      description: `Asks Discord whether an invite code exists, as the create form does while a Squad host types the link. \`valid\` means an invite that points to a Voice Call (a voice or stage channel): it returns the server, the call's name (1 to 100 characters) and whether the invite expires. \`not_voice_call\` means the invite exists but its channel is any other, or it has none. \`invalid\` is an invite Discord does not know, and \`unknown\` is returned when Discord could not be asked (slow, down or rate limiting). Answers are cached by the server. Requires authentication. Each user may make ${rateLimit.max} checks per ${rateLimit.timeWindowMs / 1000} seconds; beyond that the route answers 429 \`RATE_LIMITED\`, and the \`Retry-After\` header says how long to wait.`,
       security: [{ session: [] }],
       params: discordInviteCodeParamSchema,
       response: {

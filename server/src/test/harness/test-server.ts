@@ -10,7 +10,8 @@ import { createIsolatedDatabase } from './postgres'
 
 /**
  * Discord's answer for every invite unless a test says otherwise: tests never reach the network. Every
- * invite exists, so the suites that create Squads are not stopped by the create-time check.
+ * invite exists and points to a voice channel, so the suites that create Squads are not stopped by the
+ * create-time check.
  */
 export const KNOWN_INVITES: DiscordInvitePreviewProvider = {
   fetch: () =>
@@ -23,6 +24,7 @@ export const KNOWN_INVITES: DiscordInvitePreviewProvider = {
         memberCount: 42,
         onlineCount: 7,
         expiresAt: null,
+        channel: { id: '1234567890123456', name: 'Squad call', kind: 'voice' },
       },
     }),
 }

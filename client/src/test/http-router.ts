@@ -22,6 +22,8 @@ export interface MockHttpRequest {
 export interface MockHttpResponse {
   status?: number
   body?: unknown
+  /** Response headers beyond the JSON content type, such as `Retry-After`. */
+  headers?: Record<string, string>
 }
 
 export type MockHttpHandler = (
@@ -45,8 +47,12 @@ export function httpCreated(body: unknown): MockHttpResponse {
   return { status: 201, body }
 }
 
-export function httpError(status: number, body: unknown): MockHttpResponse {
-  return { status, body }
+export function httpError(
+  status: number,
+  body: unknown,
+  headers?: Record<string, string>
+): MockHttpResponse {
+  return { status, body, headers }
 }
 
 /** Registers a route handler. Later registrations win over earlier ones. */
@@ -114,7 +120,7 @@ const httpFetch = async (input: string | URL, init: RequestInit = {}): Promise<R
   const status = result.status ?? 200
 
   // A successful response always has a body; an error keeps exactly the body the test gave it.
-  return jsonResponse(status, status >= 400 ? result.body : (result.body ?? {}))
+  return jsonResponse(status, status >= 400 ? result.body : (result.body ?? {}), result.headers)
 }
 
 /**
@@ -188,12 +194,16 @@ function parseBody(data: unknown, method: string): unknown {
 }
 
 /** A JSON response, or one without a body when the handler gave none. */
-function jsonResponse(status: number, body: unknown): Response {
+function jsonResponse(
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {}
+): Response {
   const hasNoBody = status === 204 || status === 205 || status === 304
   return new Response(hasNoBody || body === undefined ? null : JSON.stringify(body), {
     status,
     statusText: statusTextFor(status),
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
   })
 }
 

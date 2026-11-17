@@ -60,6 +60,7 @@ describe('POST /api/rooms', () => {
       [
         'code',
         'createdAt',
+        'discordCall',
         'discordLink',
         'game',
         'gameId',
@@ -80,6 +81,7 @@ describe('POST /api/rooms', () => {
       gameId,
       maxPlayers: 4,
       discordLink: DISCORD_INVITE,
+      discordCall: { name: 'Squad call' },
       tags: ['ranked', 'eu'],
       language: 'en',
     })
@@ -181,22 +183,102 @@ describe('POST /api/rooms', () => {
     }
   })
 
-  it.each(['rate_limited', 'unreachable'] as const)(
-    'creates the Squad when Discord cannot be asked (%s)',
-    async (kind) => {
-      const lenient = await buildTestServer(
+  it('stores the Voice Call the invite points to and shows its name, not its id, to the host', async () => {
+    const response = await postRoom(server, host, { gameId })
+
+    expect(response.statusCode).toBe(201)
+    const { room } = response.json<{ room: { id: string; discordCall: unknown } }>()
+    expect(room.discordCall).toEqual({ name: 'Squad call' })
+    expect(response.body).not.toContain('1234567890123456')
+    expect(await findRoomRow(server, room.id)).toMatchObject({
+      discordCallId: '1234567890123456',
+      discordCallName: 'Squad call',
+    })
+  })
+
+  it('never reads a call sent by the client', async () => {
+    const response = await postRoom(server, host, {
+      gameId,
+      discordCall: { id: '999', name: 'Sent by the client' },
+    })
+
+    expect(response.statusCode).toBe(201)
+    const { room } = response.json<{ room: { id: string; discordCall: unknown } }>()
+    expect(room.discordCall).toEqual({ name: 'Squad call' })
+    expect(await findRoomRow(server, room.id)).toMatchObject({
+      discordCallId: '1234567890123456',
+      discordCallName: 'Squad call',
+    })
+  })
+
+  it.each([
+    ['a text channel', { id: '1', name: 'general', kind: 'other' as const }],
+    ['no channel', null],
+  ])(
+    'rejects an invite that points to %s with 422 DISCORD_INVITE_NOT_VOICE_CALL and persists nothing',
+    async (_label, channel) => {
+      const strict = await buildTestServer(
         {},
-        { discordPreviews: { fetch: () => Promise.resolve({ kind }) } }
+        {
+          discordPreviews: {
+            fetch: () =>
+              Promise.resolve({
+                kind: 'found',
+                preview: {
+                  name: 'Server',
+                  iconUrl: null,
+                  backdropUrl: null,
+                  memberCount: null,
+                  onlineCount: null,
+                  expiresAt: null,
+                  channel,
+                },
+              }),
+          },
+        }
       )
       try {
-        const owner = await signIn(lenient, 'Owner')
-        const lenientGame = await insertGame(lenient)
+        const owner = await signIn(strict, 'Owner')
+        const strictGame = await insertGame(strict)
 
-        const response = await postRoom(lenient, owner, { gameId: lenientGame.id })
+        const response = await postRoom(strict, owner, { gameId: strictGame.id })
 
-        expect(response.statusCode).toBe(201)
+        expect(response.statusCode).toBe(422)
+        expect(response.json()).toMatchObject({ error: 'DISCORD_INVITE_NOT_VOICE_CALL' })
+        expect(await strict.app.db.select().from(rooms)).toEqual([])
       } finally {
-        await lenient.close()
+        await strict.close()
+      }
+    }
+  )
+
+  it.each([
+    ['rate_limited', { kind: 'rate_limited', retryAfterMs: 1500 } as const, 1500],
+    ['rate_limited without a wait', { kind: 'rate_limited' } as const, undefined],
+    ['unreachable', { kind: 'unreachable' } as const, undefined],
+  ])(
+    'rejects with 503 DISCORD_UNAVAILABLE when Discord cannot be asked (%s) and persists nothing',
+    async (_label, outcome, retryAfterMs) => {
+      const down = await buildTestServer(
+        {},
+        { discordPreviews: { fetch: () => Promise.resolve(outcome) } }
+      )
+      try {
+        const owner = await signIn(down, 'Owner')
+        const downGame = await insertGame(down)
+
+        const response = await postRoom(down, owner, { gameId: downGame.id })
+
+        expect(response.statusCode).toBe(503)
+        const body = response.json<Record<string, unknown>>()
+        expect(body).toMatchObject({ error: 'DISCORD_UNAVAILABLE' })
+        expect(body['retryAfterMs']).toBe(retryAfterMs)
+        expect(response.headers['retry-after']).toBe(
+          retryAfterMs === undefined ? undefined : String(Math.ceil(retryAfterMs / 1000))
+        )
+        expect(await down.app.db.select().from(rooms)).toEqual([])
+      } finally {
+        await down.close()
       }
     }
   )
@@ -418,8 +500,28 @@ describe('GET /api/rooms/:code', () => {
     const body = response.json<{ room: Record<string, unknown> }>()
     expect(body.room).toMatchObject({ id: room.id, code: room.code })
     expect(body.room).not.toHaveProperty('discordLink')
+    expect(body.room).not.toHaveProperty('discordCall')
     expect(body).not.toHaveProperty('players')
     expect(response.body).not.toContain(DISCORD_INVITE)
+  })
+
+  it('gives the Voice Call to members only: not to a visitor, a non-member or the board', async () => {
+    const room = await createRoom(server, host, { gameId })
+    const [outsider] = await signInMany(server, 1)
+
+    const asMember = await get(server, `/api/rooms/${room.code}`, host)
+    const asOutsider = await get(server, `/api/rooms/${room.code}`, outsider)
+    const asVisitor = await get(server, `/api/rooms/${room.code}`)
+    const board = await get(server, '/api/rooms', outsider)
+
+    expect(asMember.json<{ room: unknown }>().room).toMatchObject({
+      discordCall: { name: 'Squad call' },
+    })
+    for (const response of [asOutsider, asVisitor, board]) {
+      expect(response.statusCode).toBe(200)
+      expect(response.body).not.toContain('discordCall')
+      expect(response.body).not.toContain('Squad call')
+    }
   })
 
   it('answers 404 to non-members of a Ready Room, even with the code', async () => {

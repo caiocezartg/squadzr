@@ -13,11 +13,13 @@ export class RoomReadyError extends AppError {
   readonly statusCode = 422
   readonly code = 'ROOM_READY'
 
-  constructor(roomId: string, action: 'join' | 'leave' = 'leave') {
+  constructor(roomId: string, action: 'join' | 'leave' | 'chat' = 'leave') {
     super(
-      action === 'join'
-        ? `Room "${roomId}" is ready — it no longer accepts members`
-        : `Room "${roomId}" is ready — players cannot leave`
+      {
+        join: `Room "${roomId}" is ready — it no longer accepts members`,
+        leave: `Room "${roomId}" is ready — players cannot leave`,
+        chat: `Room "${roomId}" is ready — its chat is read-only`,
+      }[action]
     )
   }
 }
@@ -37,6 +39,15 @@ export class InvalidDiscordInviteError extends AppError {
 
   constructor() {
     super('The Discord invite does not exist or has expired')
+  }
+}
+
+export class DiscordInviteNotVoiceCallError extends AppError {
+  readonly statusCode = 422
+  readonly code = 'DISCORD_INVITE_NOT_VOICE_CALL'
+
+  constructor() {
+    super('The Discord invite does not point to a voice or stage channel')
   }
 }
 

@@ -1,7 +1,8 @@
-import { useCallback, useMemo } from 'react'
-import { isRoomLobbyResponse } from '@squadzr/schemas'
+import { useCallback, useEffect, useMemo } from 'react'
+import { isRoomLobbyResponse, type RoomDto } from '@squadzr/schemas'
 import { useMySquadsCommands } from '@/features/my-squads'
 import { useSquadBoardCommands } from '@/features/squad-board'
+import { useSquadChatCommands } from '@/features/squad-chat'
 import { useSession } from '@/hooks/use-session'
 import { useAppNavigation } from '@/lib/navigation'
 import type { RealtimeStatus } from '@/lib/ws-client'
@@ -25,8 +26,12 @@ export interface LobbyView {
   presence: PresenceState
   /** The invite, which only a snapshot carries: a Squad's HTTP read never decides what the invite shows. */
   discordLink: string | null
+  /** The Voice Call the invite lands in, which only a snapshot carries; null before it or for a Squad without one. */
+  discordCall: RoomDto['discordCall']
   /** A snapshot has arrived, so the roster, Presence and readiness are the server's and not placeholders. */
   hasSnapshot: boolean
+  /** The snapshot came from the socket, so what it says about readiness is what the viewer watched happen. */
+  hasLiveSnapshot: boolean
   isReady: boolean
   connectionStatus: RealtimeStatus
   /** The code of the latest realtime error, translated by the page; null when none shows. */
@@ -46,23 +51,33 @@ export function useLobbyChannel(squadCode: string): SquadChannel {
   const navigateApp = useAppNavigation()
   const board = useSquadBoardCommands()
   const { refreshMySquads } = useMySquadsCommands()
+  const { discardSquadChat } = useSquadChatCommands()
   const userId = session?.user?.id
   const access = useSquadAccess(squadCode)
 
   const handleSquadRemoved = useCallback(
     (squadId: string) => {
       board.removeSquad(squadId)
+      discardSquadChat(squadCode)
       void refreshMySquads()
       navigateApp('/squads')
     },
-    [board, refreshMySquads, navigateApp]
+    [board, discardSquadChat, squadCode, refreshMySquads, navigateApp]
   )
 
-  return useSquadChannel({
+  const channel = useSquadChannel({
     squadCode,
     enabled: !!userId && access !== 'non-member',
     onSquadRemoved: handleSquadRemoved,
   })
+
+  // A revoked Membership leaves the page with the error alone, so the chat's history goes with it.
+  const { membershipRevoked } = channel
+  useEffect(() => {
+    if (membershipRevoked) discardSquadChat(squadCode)
+  }, [membershipRevoked, discardSquadChat, squadCode])
+
+  return channel
 }
 
 /**
@@ -95,6 +110,7 @@ export function useLobbyView(squadCode: string, channel: SquadChannel): LobbyVie
   )
   const maxPlayers = squad?.maxPlayers ?? 5
   const discordLink = channel.snapshot?.room.discordLink ?? null
+  const discordCall = channel.snapshot?.room.discordCall ?? null
 
   return {
     squadMissing: details === null,
@@ -106,7 +122,9 @@ export function useLobbyView(squadCode: string, channel: SquadChannel): LobbyVie
     maxPlayers,
     presence: channel.presence,
     discordLink,
+    discordCall,
     hasSnapshot: channel.snapshot !== null,
+    hasLiveSnapshot: channel.snapshotIsLive,
     isReady: channel.snapshot?.readyAt != null,
     connectionStatus: channel.status,
     errorCode: channel.errorCode,

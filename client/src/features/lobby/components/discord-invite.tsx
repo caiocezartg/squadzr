@@ -1,9 +1,9 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { Check, Copy, ExternalLink, Link as LinkIcon, Lock } from 'lucide-react'
-import { useFormatter, useTranslations } from 'next-intl'
-import type { DiscordInviteLink, DiscordServerPreviewDto } from '@squadzr/schemas'
+import { Check, Copy, ExternalLink, Link as LinkIcon, Lock, Volume2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import type { DiscordInviteLink, DiscordServerPreviewDto, SquadCallDto } from '@squadzr/schemas'
 import { Button } from '@/components/ds/button'
 import { CopySwap } from '@/components/ds/copy-swap'
 import { SlotMeter } from '@/components/ds/slot-meter'
@@ -23,8 +23,8 @@ const FOOTER_CLASSES =
 const ACTIONS_CLASSES = 'grid grid-cols-1 gap-2 min-[425px]:grid-cols-2 @2xl:flex @2xl:shrink-0'
 const ACTION_CLASSES = 'max-sm:px-2.5 @2xl:px-4'
 
-/** The server card's stats row, which the locked panel's slots row matches in height. */
-const STATS_CLASSES = 'flex min-h-12 flex-wrap items-center gap-x-4 gap-y-1 border-t px-3.5 py-2.5'
+/** The call line stands where the stats row was and matches the locked panel's slots row. */
+const CALL_CLASSES = 'flex min-h-12 items-center gap-3 border-t px-3.5 py-2.5'
 
 /** The two actions of the locked panel, dimmed until the Squad completes. */
 const DIMMED_ACTIONS = [
@@ -39,6 +39,8 @@ interface LockedInviteProps {
   /** Members the Squad has. */
   readonly filled: number
   readonly total: number
+  /** The roster has not arrived yet: the meter and the slots left pulse as placeholders. */
+  readonly pending?: boolean
 }
 
 /**
@@ -47,7 +49,7 @@ interface LockedInviteProps {
  * about its height, so the column does not jump when the Squad completes. The mask is not the invite, so it
  * never carries a character of it.
  */
-export function LockedInvite({ filled, total }: LockedInviteProps) {
+export function LockedInvite({ filled, total, pending = false }: LockedInviteProps) {
   const t = useTranslations('ds.invite')
 
   return (
@@ -65,12 +67,16 @@ export function LockedInvite({ filled, total }: LockedInviteProps) {
             <p className="text-text-3 text-[14px] leading-snug font-semibold">{t('lockedBody')}</p>
           </div>
           <div className="border-line flex min-h-12 items-center justify-between gap-4 border-t px-3.5">
-            <div className="min-w-0">
+            <div className={cn('min-w-0', pending && 'animate-pulse')}>
               <SlotMeter filled={filled} total={total} tone="discord" />
             </div>
-            <span className="type-label text-text-3 shrink-0 text-right">
-              {t('slotsLeft', { count: Math.max(0, total - filled) })}
-            </span>
+            {pending ? (
+              <span aria-hidden="true" className="bg-track h-3 w-20 shrink-0 animate-pulse" />
+            ) : (
+              <span className="type-label text-text-3 shrink-0 text-right">
+                {t('slotsLeft', { count: Math.max(0, total - filled) })}
+              </span>
+            )}
           </div>
           <LinkRow
             tone="border-line text-[#4a4c54]"
@@ -94,10 +100,9 @@ interface ReadyInviteProps {
   readonly squadName: string
   /** The game's cover, which stands in as the server's icon. */
   readonly coverUrl: string | null
-  /** Members in the room now, from Presence. */
-  readonly online: number
-  readonly members: number
-  /** The Discord server behind the invite. `null` falls back to the Squad's own name, cover and counts. */
+  /** The Discord voice call the Squad meets in. `null` leaves the call line out. */
+  readonly call: SquadCallDto | null
+  /** The Discord server behind the invite. `null` falls back to the Squad's own name and cover. */
   readonly preview: DiscordServerPreviewDto | null
   /** The preview is still being read for the first time: the card holds its place with a skeleton. */
   readonly previewPending: boolean
@@ -107,22 +112,21 @@ interface ReadyInviteProps {
 
 /**
  * The invite once the last slot closes (reference, DiscordInvite): the "Bora pro Discord" panel. Its card
- * shows the Discord server (icon, name and counts, over its banner) when the API could read the invite, and
- * the Squad's own cover, name and counts otherwise. Either way the card has the same structure, so nothing
- * moves when the server arrives. The sheen sweeps once on entry and never loops.
+ * shows the Discord server (icon and name, over its banner) when the API could read the invite, and the
+ * Squad's own cover and name otherwise, then the voice call to join (a Squad without one has no call line).
+ * Either way the card has the same structure, so nothing moves when the server arrives. The sheen
+ * sweeps once on entry and never loops.
  */
 export function ReadyInvite({
   invite,
   squadName,
   coverUrl,
-  online,
-  members,
+  call,
   preview,
   previewPending,
   entering,
 }: ReadyInviteProps) {
   const t = useTranslations('ds.invite')
-  const format = useFormatter()
   const [copied, markCopied] = useCopiedFlag(COPIED_MS)
 
   const copyInvite = async () => {
@@ -131,23 +135,6 @@ export function ReadyInvite({
   }
   const copyLabel = copied ? t('copied') : t('copyLink')
   const backdropUrl = preview?.backdropUrl ?? null
-
-  const inRoom = { value: online, label: t('statInRoom'), dot: 'bg-mint' }
-  const stats: readonly Stat[] =
-    preview?.onlineCount != null && preview.memberCount != null
-      ? [
-          { value: preview.onlineCount, label: t('statOnline'), dot: 'bg-[#43e08a]' },
-          {
-            value: preview.memberCount,
-            label: t('statMembers', { count: preview.memberCount }),
-            dot: 'bg-white/55',
-          },
-          inRoom,
-        ]
-      : [
-          inRoom,
-          { value: members, label: t('statPlayers', { count: members }), dot: 'bg-white/55' },
-        ]
 
   return (
     <section
@@ -202,29 +189,7 @@ export function ReadyInvite({
             </div>
           </div>
 
-          <dl className={cn(STATS_CLASSES, 'border-white/10')}>
-            {previewPending ? (
-              <Skeleton className="h-5.5 w-2/3" />
-            ) : (
-              stats.map((stat) => (
-                <div key={stat.label} className="flex items-baseline gap-1.5">
-                  <dt className="order-2 text-[12.5px] font-semibold text-white/65">
-                    {stat.label}
-                  </dt>
-                  <dd className="font-display order-1 text-[18px] leading-none font-extrabold tabular-nums">
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        'mr-1.5 inline-block size-2 rounded-full align-middle',
-                        stat.dot
-                      )}
-                    />
-                    {format.number(stat.value, { notation: 'compact', maximumFractionDigits: 1 })}
-                  </dd>
-                </div>
-              ))
-            )}
-          </dl>
+          {call && <CallLine name={call.name} label={t('joinCall')} />}
 
           <LinkRow
             tone="border-white/10 text-white"
@@ -298,11 +263,25 @@ function LinkRow({ tone, link, actions }: LinkRowProps) {
   )
 }
 
-interface Stat {
-  readonly value: number
+interface CallLineProps {
+  /** The Discord voice call's name, shown as plain text whatever it holds (emoji, symbols). */
+  readonly name: string
   readonly label: string
-  /** The class that colours the dot before the label. */
-  readonly dot: string
+}
+
+/** The server card's call line: the voice call the Squad meets in, its name truncated when long. */
+function CallLine({ name, label }: CallLineProps) {
+  return (
+    <p className={cn(CALL_CLASSES, 'border-white/10')}>
+      <span className="type-label shrink-0 text-white/75">{label}</span>
+      <span className="flex min-w-0 flex-1 items-center gap-2">
+        <Volume2 aria-hidden="true" className="size-4 shrink-0 stroke-[2.4] opacity-70" />
+        <span className="min-w-0 truncate text-[15px]/5 font-extrabold" title={name}>
+          {name}
+        </span>
+      </span>
+    </p>
+  )
 }
 
 function Skeleton({ className }: { readonly className: string }) {
