@@ -79,6 +79,9 @@ function watchAdded(matches: (element: Element) => boolean) {
   }
 }
 
+/** The page's first commit for `squadCode`: the DOM when the socket sends its join. */
+const captureAtFirstJoin = (squadCode: string) => captureAtFirstFrame('join_room', squadCode)
+
 const isSkeleton = (element: Element) => element.matches('[data-testid="member-tile-skeleton"]')
 const isTileOf = (name: string) => (element: Element) =>
   element.matches('li') && element.textContent?.includes(name) === true
@@ -310,15 +313,16 @@ describe('squad lobby — warm return after losing access', () => {
 const ENTRANCE_CLASS = 'motion-safe:animate-invite-enter'
 
 /**
- * What the page shows at the moment its socket sends the join for `squadCode`. The join is sent from an
- * effect, so this is the DOM of the page's first commit for that Squad, before any state an effect sets.
+ * What the page shows at the moment its socket first sends a `frameType` frame for `squadCode`. Join and
+ * leave are sent from an effect, so this is the DOM of the commit that triggered them, before any state an
+ * effect sets.
  */
-function captureAtFirstJoin(squadCode: string) {
+function captureAtFirstFrame(frameType: 'join_room' | 'leave_room', squadCode: string) {
   let seen: { ana: boolean; duda: boolean; placeholders: number } | null = null
   const socket = latestWebSocket()
   const send = socket.send.bind(socket)
   vi.spyOn(socket, 'send').mockImplementation((data) => {
-    if (seen === null && data.includes('join_room') && data.includes(squadCode)) {
+    if (seen === null && data.includes(frameType) && data.includes(squadCode)) {
       seen = {
         ana: screen.queryByText('Ana') !== null,
         duda: screen.queryByText('Duda') !== null,
@@ -329,7 +333,7 @@ function captureAtFirstJoin(squadCode: string) {
   })
   return {
     seen: () => {
-      if (seen === null) throw new Error(`the socket never sent the join for ${squadCode}`)
+      if (seen === null) throw new Error(`the socket never sent ${frameType} for ${squadCode}`)
       return seen
     },
   }
@@ -424,12 +428,15 @@ describe('squad lobby — warm return as a viewer outside the Squad', () => {
     sendFromServer({ type: 'room_snapshot', payload: lobbySnapshot() })
     await screen.findByText('Ana')
     expect(queryClient.getQueryData(squadSnapshotQueryKey('LOBBY1'))).toBeDefined()
+    // The flip's first commit: the channel releases the Squad from an effect, after that commit paints.
+    const frames = captureAtFirstFrame('leave_room', 'LOBBY1')
 
     act(() => {
       queryClient.setQueryData(squadQueryKey('LOBBY1'), { room: publicSquad })
     })
 
     expect(await screen.findByRole('button', { name: 'Join squad' })).toBeInTheDocument()
+    expect(frames.seen()).toEqual({ ana: false, duda: false, placeholders: 0 })
     expect(screen.queryByText('Ana')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Leave squad' })).not.toBeInTheDocument()
     await waitFor(() =>
