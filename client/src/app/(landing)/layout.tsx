@@ -1,20 +1,12 @@
-import { Anton } from 'next/font/google'
 import type { ReactNode } from 'react'
 
-// The hero headline's family (docs/design/reference.md, Typography). Only the landing uses it, so only
-// the landing loads it.
-const anton = Anton({
-  subsets: ['latin'],
-  weight: '400',
-  variable: '--font-anton',
-  display: 'swap',
-  fallback: ['Impact', 'sans-serif'],
-})
-
-/** The layout of the landing: its own page, with no sidebar. The landing's sections carry their own chrome. */
+/**
+ * The layout of the landing: its own page, with no sidebar. The landing's sections carry their own
+ * chrome. The hero's Anton family loads in the root layout, which the Squad card shares.
+ */
 export default function LandingLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <div id="root" className={`bg-bg min-h-screen ${anton.variable}`}>
+    <div id="root" className="bg-bg min-h-screen">
       <main>{children}</main>
     </div>
   )

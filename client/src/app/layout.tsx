@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Big_Shoulders, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google'
+import { Anton, Big_Shoulders, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale } from 'next-intl/server'
 import type { ReactNode } from 'react'
@@ -13,7 +13,7 @@ import { getRequestSession } from '@/lib/server/session'
 import { ROOT_METADATA } from '@/lib/site-metadata'
 import '../styles/globals.css'
 
-// The design system's families (docs/design/reference.md, Typography): display, body and mono.
+// The design system's families (docs/design/reference.md, Typography): display, body, mono and hero.
 const bigShoulders = Big_Shoulders({
   subsets: ['latin'],
   weight: ['700', '800', '900'],
@@ -38,7 +38,17 @@ const jetBrainsMono = JetBrains_Mono({
   display: 'swap',
 })
 
-const fontVariables = [bigShoulders, plusJakartaSans, jetBrainsMono]
+// The hero family: the landing's headline and count, and the Squad card's name and count. The board
+// draws it on its first paint, so it loads here with the others rather than in the landing's layout.
+const anton = Anton({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-anton',
+  display: 'swap',
+  fallback: ['Impact', 'sans-serif'],
+})
+
+const fontVariables = [bigShoulders, plusJakartaSans, jetBrainsMono, anton]
   .map((font) => font.variable)
   .join(' ')
 
