@@ -38,6 +38,13 @@
   --color-discord-hover: #5d68f0;
   --color-discord-soft: #8b93f5;
   --color-danger: #ff8a8a;
+  /*
+    The Squad card's ground under its blurred cover, and the ring each rail circle draws around itself
+    (src/features/squad-list/squad-card-rail.tsx): half see-through, so it parts the circles without a
+    hard dark outline.
+  */
+  --color-squad-ground: #0d0e11;
+  --color-squad-cut: rgba(16, 17, 20, 0.5);
   --color-danger-ground: rgba(239, 68, 68, 0.1);
   --color-danger-ground-hover: rgba(239, 68, 68, 0.18);
 
@@ -91,6 +98,19 @@
     Used behind `motion-safe:` only, so under reduced motion the lines are simply there.
   */
   --animate-line-draw: line-draw 800ms var(--ease-out) both;
+
+  /*
+    The Squad card (src/features/squad-list/squad-card.tsx). When another player joins a Squad on
+    screen, their avatar pops into its seat, the seat throws the hero's mint outline (`seat-ping`, kept
+    hidden until its delay ends) and the count rolls one step per seat. On hover an open card's viewer
+    seat throws a mint ring once as it opens. Used behind `motion-safe:` only, so under reduced motion
+    the new member is simply in the seat and the count reads the new number.
+  */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-card-seat-fill: card-seat-fill 450ms var(--ease-spring) both;
+  --animate-card-seat-ping: seat-ping 700ms var(--ease-out) forwards;
+  --animate-card-count-step: card-count-step 450ms var(--ease-out) both;
+  --animate-card-viewer-ping: card-viewer-ping 800ms ease-out 250ms;
 
   /*
     The Squad Chat's typing dots: each dot bobs 3px over 1.2s, the three staggered by 0.15s
@@ -193,6 +213,27 @@
     to {
       opacity: 0;
       transform: scale(1.7);
+    }
+  }
+  @keyframes card-seat-fill {
+    from {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+  }
+  @keyframes card-count-step {
+    from {
+      transform: translateY(1.1em);
+    }
+  }
+  @keyframes card-viewer-ping {
+    from {
+      opacity: 0.9;
+      transform: scale(0.92);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.4);
     }
   }
   @keyframes hero-solo-drift {
@@ -336,12 +377,15 @@
 }
 
 /*
-  Theme values that read custom properties set below the root: the landing layout's Anton family and
-  the hero's clock. Inlined, so each utility resolves them on its own element instead of on the root,
+  Theme values that read custom properties set below the root: the Anton family the root layout sets
+  on <html>, and the hero's clock. Inlined, so each utility resolves them on its own element instead of on the root,
   where they are not set.
 */
 @theme inline {
-  /* The hero headline's family (reference, Typography), which only the landing layout loads. */
+  /*
+    The hero family (reference, Typography): the landing's headline and count, and the Squad card's
+    name and count. The root layout loads it, so the board never waits on a fallback.
+  */
   --font-hero: var(--font-anton), sans-serif;
 
   /*
@@ -510,6 +554,46 @@
       @slot;
     }
   }
+}
+
+/*
+  The Squad card's lit state: a fine pointer over an interactive card, or keyboard focus on it. It
+  matches the card (`[data-lit-card]`) and everything inside it, so one variant drives the card's lift
+  and the colour, seat and count changes below it. Full and preview cards carry no `data-lit-card`, so
+  they never light.
+*/
+@custom-variant card-lit {
+  @media (hover: hover) and (pointer: fine) {
+    &:is([data-lit-card]:hover, [data-lit-card]:hover *) {
+      @slot;
+    }
+  }
+  &:is([data-lit-card]:focus-visible, [data-lit-card]:focus-visible *) {
+    @slot;
+  }
+}
+
+/*
+  The shade of the Squad card's blurred cover: clear behind the poster, dark under the text
+  (reference: rgba(10,11,14,.05) 0%, .55 36%, .82 100% across, and transparent 45% to .5 100% down).
+  It is a mask on the cover itself, not a layer over it: the shade's colour is the card's ground, so
+  shading by s is the cover drawn at 1 - s over the ground. A separate layer got clipped a fraction of
+  a pixel differently from the composited blur once the card scaled on hover, and the unshaded cover
+  showed along the card's edge. The cover overflows the card by 30% on each side, so the card spans
+  18.75% to 81.25% of it, and the stops are mapped onto that span.
+*/
+@utility squad-card-ground-shade {
+  mask-image:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.95) 18.75%,
+      rgba(0, 0, 0, 0.45) 41.25%,
+      rgba(0, 0, 0, 0.18) 81.25%
+    ),
+    linear-gradient(180deg, #000 46.875%, rgba(0, 0, 0, 0.5) 81.25%);
+  mask-composite: intersect;
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
 }
 
 @utility scrollbar-thin {

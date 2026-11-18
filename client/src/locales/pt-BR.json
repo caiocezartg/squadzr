@@ -391,10 +391,8 @@
       "emptyDescriptionFiltered": "Nenhum squad corresponde aos seus filtros. Tente ajustar sua busca."
     },
     "card": {
-      "joined": "Entrou",
-      "openRoom": "Abrir sala",
-      "enter": "Entrar",
       "full": "Cheio",
+      "you": "VC",
       "label": "{name} — {game}, {language}, {members} de {max} jogadores",
       "labelPlatform": "{name} — {game}, {language}, {platform}, {members} de {max} jogadores"
     },

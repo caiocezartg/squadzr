@@ -391,10 +391,8 @@
       "emptyDescriptionFiltered": "No squads match your filters. Try adjusting your search or filters."
     },
     "card": {
-      "joined": "Joined",
-      "openRoom": "Open room",
-      "enter": "Enter",
       "full": "Full",
+      "you": "YOU",
       "label": "{name} — {game}, {language}, {members} of {max} players",
       "labelPlatform": "{name} — {game}, {language}, {platform}, {members} of {max} players"
     },

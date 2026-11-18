@@ -123,7 +123,8 @@ describe('squad board — rendering', () => {
       name: 'Casual five stack — League of Legends, PT-BR, 3 of 4 players',
     })
     expect(joined).toHaveAttribute('href', '/squads/MEM111')
-    expect(within(joined).getByText('Joined')).toBeInTheDocument()
+    // The viewer's own seat leads the rail of a Squad they joined.
+    expect(joined.querySelector('[data-viewer-seat]')).not.toBeNull()
     expect(screen.getByText('3 open squads')).toBeInTheDocument()
   })
 
@@ -1335,7 +1336,9 @@ describe('squad board — seeded server page', () => {
     )
     // The event only schedules a refetch and does not patch the cache, so the squad's new count shows once the refetch is applied.
     const pageTwoCard = () => screen.getByText('Page squad 7').closest('button')
-    await waitFor(() => expect(pageTwoCard()).toHaveTextContent('2/5'))
+    await waitFor(() => expect(pageTwoCard()).toHaveAccessibleName(/, 2 of 5 players$/))
+    // The card was on screen when the count rose, so the new member fills their seat.
+    expect(pageTwoCard()?.querySelector('[data-arriving]')).not.toBeNull()
     expect(screen.getByText('Page squad 7')).toBeInTheDocument()
     expect(screen.queryByText('Page squad 1')).not.toBeInTheDocument()
   })
