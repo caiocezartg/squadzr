@@ -327,7 +327,7 @@ describe('squad card — non-member, open', () => {
     const card = screen.getByRole('button')
     const seat = viewerSeat(card)
     expect(seat).toHaveAttribute('aria-hidden', 'true')
-    expect(seat).toHaveClass('w-0', 'card-lit:w-8.5')
+    expect(seat).toHaveClass('w-0', 'card-lit:w-7')
     expect(seat).toHaveTextContent('CA')
     // The last drawn circle folds as the seat opens, so the rail keeps its width.
     const circles = railCircles(card)
@@ -507,12 +507,12 @@ describe('squad card — who joined', () => {
   })
 
   describe('on a narrow card', () => {
-    /** jsdom has no layout: the rail gets `railWidth`, each circle 28px and the viewer's seat 34px. */
+    /** jsdom has no layout: the rail gets `railWidth`, each circle 28px, the viewer's seat too. */
     function layOutRail(railWidth: number) {
       Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
         configurable: true,
         get(this: HTMLElement) {
-          if (this.hasAttribute('data-rail-viewer-face')) return 34
+          if (this.hasAttribute('data-rail-viewer-face')) return 28
           return this.hasAttribute('data-rail-circle') ? 28 : 0
         },
       })
@@ -555,7 +555,7 @@ describe('squad card — who joined', () => {
       expect(screen.getByText('+6')).toBeInTheDocument()
     })
 
-    it("fits fewer circles after a member's larger seat, and never folds the viewer", () => {
+    it("fits a member's seat as one more circle, and never folds the viewer", () => {
       signInAsFakeUser({ name: 'Caio' })
       layOutRail(110)
       render(

@@ -3,8 +3,8 @@ import { circlesThatFit } from './use-fitting-circles'
 
 /** Circles of 28px, each covering 6px of the one before: 22px per circle after the first. */
 const CIRCLE = 28
-/** The viewer's seat below the wide breakpoint. */
-const VIEWER = 34
+/** The viewer's seat below the wide breakpoint: the size of any other circle. */
+const VIEWER = 28
 
 describe('circlesThatFit', () => {
   it('fits every circle when the rail has the room', () => {
@@ -33,11 +33,11 @@ describe('circlesThatFit', () => {
     ).toBe(2)
   })
 
-  it('counts the viewer seat as its own width before the other circles', () => {
-    // 34 + 28 + 3 × 22 = 128 fits in 150.
+  it('counts the viewer seat as one more circle, overlapped by the next', () => {
+    // 28 + 4 × 22 = 116 fits in 120.
     expect(
       circlesThatFit({
-        width: 150,
+        width: 120,
         circleWidth: CIRCLE,
         viewerWidth: VIEWER,
         seat: 'seated',
@@ -45,7 +45,7 @@ describe('circlesThatFit', () => {
         hasExtra: false,
       })
     ).toBe(4)
-    // In 110 only 34 + 28 + 22 = 84 fits, with 44px left for the +N.
+    // 116 does not fit in 110, which keeps 44px for the +N: the seat and one circle, 50px.
     expect(
       circlesThatFit({
         width: 110,
@@ -59,7 +59,7 @@ describe('circlesThatFit', () => {
   })
 
   it('keeps room for the +N of the seats past the rail', () => {
-    // 200 - 34 - 44 = 122: the four circles take 94.
+    // 200 - 22 - 44 = 134: the four circles take 94.
     expect(
       circlesThatFit({
         width: 200,
@@ -82,11 +82,11 @@ describe('circlesThatFit', () => {
     ).toBe(2)
   })
 
-  it('leaves room for the seat that opens on hover while the last circle folds', () => {
-    // At rest five circles take 116px, but on hover the seat opens (34) and the last folds (-22): 128.
+  it('needs no room for the seat that opens on hover, as the last circle folds', () => {
+    // Five circles take 116px at rest and on hover, when the seat opens (22) and the last folds (-22).
     expect(
       circlesThatFit({
-        width: 120,
+        width: 115,
         circleWidth: CIRCLE,
         viewerWidth: VIEWER,
         seat: 'on-hover',
@@ -96,7 +96,7 @@ describe('circlesThatFit', () => {
     ).toBe(2)
     expect(
       circlesThatFit({
-        width: 128,
+        width: 116,
         circleWidth: CIRCLE,
         viewerWidth: VIEWER,
         seat: 'on-hover',

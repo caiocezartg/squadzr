@@ -27,7 +27,7 @@ interface SquadCardRailProps {
  * others' circles that fit whole, then `+N` for every seat the rail does not draw. On an open card's
  * hover the viewer's seat opens while the last circle folds, so the rail keeps its width and the `+N`
  * keeps its number: it counts seats, not people. The rail's 20px padding, taken back by its margins,
- * leaves the rings, the glow and the mint rings room inside its clip: the viewer seat's ring and the
+ * leaves the rings and the glow room inside its clip: the viewer seat's ring and the
  * arrival's outline both grow to about 18px past their circle before they fade.
  */
 export function SquadCardRail({
@@ -68,10 +68,10 @@ export function SquadCardRail({
 }
 
 /**
- * The viewer's seat: larger than the others, ringed in mint, cut out of the card's ground and lit, on
- * top of the circle after it with 6px more room. The avatar draws at 44px and shrinks to 34px below
- * the wide breakpoint. Folded (an open card), it waits at zero width and opens on hover, popping in
- * and throwing a mint ring once; the folded seat is decoration, so it is hidden from assistive tech.
+ * The viewer's seat: the size of the other circles and under the one after it like them, ringed in
+ * mint and lit. Folded (an open card), it waits at zero width, with the 6px the next circle's overlap
+ * takes back, and opens on hover, popping in and throwing a mint ring once; the folded seat is
+ * decoration, so it is hidden from assistive tech.
  */
 function ViewerSeatCircle({
   viewer,
@@ -85,17 +85,17 @@ function ViewerSeatCircle({
       data-viewer-seat=""
       aria-hidden={folded || undefined}
       className={cn(
-        'relative z-1 mr-1.5 block shrink-0',
+        'relative block shrink-0',
         folded
-          ? 'w-0 scale-40 opacity-0 transition-[width,opacity,scale] [transition-duration:350ms,200ms,450ms] [transition-timing-function:var(--ease-out),ease,var(--ease-spring)] card-lit:w-8.5 card-lit:scale-100 card-lit:opacity-100 lg:card-lit:w-11'
-          : 'w-8.5 lg:w-11'
+          ? 'mr-1.5 w-0 scale-40 opacity-0 transition-[width,margin-right,opacity,scale] [transition-duration:350ms,350ms,200ms,450ms] [transition-timing-function:var(--ease-out),var(--ease-out),ease,var(--ease-spring)] card-lit:mr-0 card-lit:w-7 card-lit:scale-100 card-lit:opacity-100 lg:card-lit:w-9'
+          : 'w-7 lg:w-9'
       )}
     >
       <span
         data-rail-viewer-face=""
-        className="relative block size-8.5 rounded-full shadow-[0_0_0_2px_var(--color-mint),0_0_0_4px_var(--color-squad-cut),0_0_14px_rgba(0,255,162,0.4)] lg:size-11"
+        className="relative block size-7 rounded-full shadow-[0_0_0_2px_var(--color-mint),0_0_0_4px_var(--color-squad-cut),0_0_14px_rgba(0,255,162,0.4)] lg:size-9"
       >
-        <span className="block size-11 origin-top-left scale-[0.7727] lg:scale-100">
+        <span className="block size-9 origin-top-left scale-[0.7778] lg:scale-100">
           <ViewerFace viewer={viewer} labelled={!folded} />
         </span>
         {folded && (
@@ -119,7 +119,7 @@ function ViewerFace({
     return (
       <span
         aria-hidden="true"
-        className="flex size-11 items-center justify-center rounded-full bg-mint text-sm font-extrabold text-mint-ink"
+        className="flex size-9 items-center justify-center rounded-full bg-mint text-xs font-extrabold text-mint-ink"
       >
         {t('you')}
       </span>
@@ -128,7 +128,7 @@ function ViewerFace({
 
   return (
     <Avatar
-      size={44}
+      size={36}
       playerId={viewer.id}
       name={viewer.name}
       image={viewer.image}
@@ -140,7 +140,7 @@ function ViewerFace({
 /**
  * One of the others' circles. The avatar draws at its 36px size and shrinks to 28px below the wide
  * breakpoint, so the size follows the card without a media query in script. Each circle sits under the
- * one after it, cut out of it by a ring of the card's ground. The last circle of an open card folds on
+ * one after it, parted from it by a half see-through ring of the card's ground. The last circle of an open card folds on
  * hover, as the viewer's seat opens. A live arrival pops the avatar into its seat and throws the hero's
  * mint outline, which alone draws over the neighbours; the avatar stays under the next circle.
  */

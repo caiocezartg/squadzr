@@ -21,9 +21,9 @@ export interface RailFit {
 
 /** The width the viewer's seat takes from the regular circles at its widest. */
 function viewerReserve({ seat, viewerWidth, circleWidth }: RailFit): number {
-  // The seat leaves 6px after itself, which the next circle's overlap takes back.
-  if (seat === 'seated') return viewerWidth
-  if (seat === 'on-hover') return Math.max(0, viewerWidth - (circleWidth - OVERLAP_PX))
+  // The next circle covers the seat as it covers any other; on hover the last circle folds for it.
+  if (seat === 'seated') return viewerWidth - OVERLAP_PX
+  if (seat === 'on-hover') return Math.max(0, viewerWidth - circleWidth)
   return 0
 }
 
